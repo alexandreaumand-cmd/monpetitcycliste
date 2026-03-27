@@ -1,27 +1,74 @@
 
 
-## Supprimer le scroll horizontal sur mobile — Base de données des Enchères
+## Fix auto-scrape qui ne fonctionne pas (Live Broadcast)
 
-### Problème
-Le composant `AuctionDatabaseTab` utilise un `<Table>` HTML avec 7 colonnes, ce qui déborde sur mobile (393px) et force un scroll horizontal.
+### Probleme identifie
+Le `setInterval` de l'auto-scrape capture une **closure perimee** de `handleScrape` et `isScraping` car :
+1. `handleScrape` n'est pas dans le tableau de dependances du `useEffect`
+2. `handleScrape` n'est pas memoize (`useCallback`) — il est recree a chaque render
+3. `isScraping` dans la closure du `doAutoScrape` reste figee a la valeur au moment de la creation de l'intervalle
 
-### Solution
-Détecter mobile via `useIsMobile()` et afficher des **cartes compactes** au lieu du tableau :
+Resultat : l'intervalle tourne mais appelle une version perimee de `handleScrape`, ou `isScraping` reste `true` dans la closure, bloquant chaque execution.
 
-**`src/components/auction/v2/AuctionDatabaseTab.tsx`** :
+Les logs de production confirment : **0 appel** a `scrape-live-race` — le scrape ne se declenche jamais.
 
-1. **Header** : rendre le titre + stats responsive (stack vertical sur mobile au lieu de `flex items-center justify-between`)
+### Solution — `src/pages/admin/SuperAdminLiveBroadcastPage.tsx`
 
-2. **Filtres** : déjà en `grid sm:grid-cols-2` → OK, rien à changer
+1. **Utiliser des refs** pour `isScraping` et `handleScrape` afin d'eviter les problemes de closure :
 
-3. **Contenu principal** — sur mobile, remplacer le `<Table>` par une liste de cartes :
-   - Chaque carte affiche : nom du coureur, équipe, prix d'achat, manager (badge), round (badge)
-   - Cote et nombre de battus en ligne secondaire
-   - Tap pour expand les concurrents battus (même logique `expandedRows`)
-   - Boutons de tri simplifiés en barre horizontale au-dessus des cartes (tri par Prix, Round, Manager)
+```typescript
+const isScrapingRef = useRef(false);
+const handleScrapeRef = useRef(handleScrape);
 
-4. **Desktop** : garder le tableau existant inchangé
+// Garder la ref a jour
+useEffect(() => {
+  handleScrapeRef.current = handleScrape;
+});
+```
 
-### Fichier impacté
-- `src/components/auction/v2/AuctionDatabaseTab.tsx`
+2. **Mettre a jour `handleScrape`** pour synchroniser `isScrapingRef` avec `isScraping` :
+
+```typescript
+const handleScrape = async (isAuto = false) => {
+  if (!scrapeUrl || !activeCourseId) return;
+  if (isScrapingRef.current) return; // Guard via ref
+  setIsScraping(true);
+  isScrapingRef.current = true;
+  // ... existing logic ...
+  finally {
+    setIsScraping(false);
+    isScrapingRef.current = false;
+    setLastAutoScrapeAt(new Date());
+  }
+};
+```
+
+3. **Corriger le `useEffect` de l'intervalle** pour utiliser les refs :
+
+```typescript
+useEffect(() => {
+  if (autoScrapeRef.current) {
+    clearInterval(autoScrapeRef.current);
+    autoScrapeRef.current = null;
+  }
+  if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
+
+  const doAutoScrape = () => {
+    if (isScrapingRef.current) return;
+    handleScrapeRef.current(true);
+  };
+
+  // Fire immediately on enable, then every 60s
+  doAutoScrape();
+  autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
+  return () => {
+    if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
+  };
+}, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
+```
+
+4. **Bonus** : declencher immediatement un premier scrape quand on active l'auto-scrape (au lieu d'attendre 60s).
+
+### Fichier impacte
+- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` uniquement
 
