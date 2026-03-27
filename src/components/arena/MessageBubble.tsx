@@ -56,13 +56,18 @@ export const MessageBubble = ({
 
   // Render content with @mentions and {rider} mentions
   const renderedContent = useMemo(() => {
-    // Split on @mentions AND {RiderName} patterns
-    return message.content.split(/([@][^\s@#]+|\{[^}]+\})/g).map((part, i) => {
+    // Split on @mentions, {RiderName}, and **bold** patterns
+    return message.content.split(/([@][^\s@#]+|\{[^}]+\}|\*\*[^*]+\*\*)/g).map((part, i) => {
       if (part.startsWith("@")) {
         return (
           <span key={i} className="font-semibold text-primary">
             {part}
           </span>
+        );
+      }
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={i}>{part.slice(2, -2)}</strong>
         );
       }
       if (part.startsWith("{") && part.endsWith("}")) {
