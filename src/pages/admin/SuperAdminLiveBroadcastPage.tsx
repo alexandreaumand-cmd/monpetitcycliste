@@ -348,27 +348,35 @@ export const SuperAdminLiveBroadcastPage = () => {
         return result;
       };
 
+      const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
+
       if (events.length > 0 && managerId) {
         const reversedEvents = [...events].reverse();
-        let sent = 0;
-        for (const evt of reversedEvents) {
-          const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
-          const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
-          const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
-          try {
-            await new Promise<void>((resolve, reject) => {
-              broadcastMessage.mutate(
-                { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
-                { onSuccess: () => resolve(), onError: (e) => reject(e) }
-              );
-            });
-            sent++;
-          } catch (e) {
-            console.error("Failed to broadcast event:", e);
+        const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
+        if (newEvents.length > 0) {
+          let sent = 0;
+          for (const evt of newEvents) {
+            const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
+            const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
+            const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
+            try {
+              await new Promise<void>((resolve, reject) => {
+                broadcastMessage.mutate(
+                  { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
+                  { onSuccess: () => resolve(), onError: (e) => reject(e) }
+                );
+              });
+              sent++;
+              sentEventsRef.current.add(eventKey(evt));
+            } catch (e) {
+              console.error("Failed to broadcast event:", e);
+            }
           }
+          toast.success(`${sent} nouveaux événements diffusés`);
+        } else {
+          console.log("[auto-scrape] Pas de nouveaux événements");
         }
-        toast.success(`${sent}/${events.length} événements diffusés automatiquement`);
-      } else {
+      } else if (events.length === 0) {
         toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
       }
 
