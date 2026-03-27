@@ -22,7 +22,7 @@ export const AnnouncementManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('auctions')
-        .select('*, phases(*, saisons(*))')
+        .select('*, phases!auctions_phase_id_fkey(*, saisons(*))')
         .eq('statut', 'closed')
         .order('created_at', { ascending: false });
       if (error) throw error;
