@@ -757,7 +757,6 @@ export const SuperAdminLiveBroadcastPage = () => {
                     disabled={broadcastMessage.isPending || !managerId}
                     startlistRiders={startlistRiders}
                     importedSituation={importedSituation}
-                    rosterOwners={rosterOwners}
                   />
                 </CardContent>
               </Card>
