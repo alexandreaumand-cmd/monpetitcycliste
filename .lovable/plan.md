@@ -1,62 +1,44 @@
 
 
-## Fix de l'auto-import : dédupliquer les événements diffusés
+## Fix : le coureur en tête (Van der Poel) n'apparaît pas dans la situation de course
 
-### Problème principal
-Chaque auto-scrape (toutes les 60s) **re-diffuse TOUS les événements** de la timeline vers les ligues. Le scraper L'Équipe retourne tous les événements visibles sur la page, et `handleScrape` les broadcast tous à chaque exécution — sans aucune déduplication. Résultat : les ligues reçoivent des dizaines de messages dupliqués.
+### Cause racine
 
-Même problème pour la situation de course : elle est re-diffusée intégralement toutes les 60s.
+Le `situationZone` est construit à partir de la première occurrence d'un mot-clé de groupe (`Gr.`, `Peloton`, `Échappée`...) trouvée après "km/h" (ligne 197). Or "Van der Poel" n'est pas un mot-clé — c'est un nom de coureur **sans écart** (leader). Le `zoneStart` saute directement à "Gr. Vermeersch", excluant tout ce qui précède, y compris le nom du leader.
 
-### Problème secondaire — erreur de déploiement
-L'erreur `GIT_FILES_NOT_LISTABLE` est une erreur d'infrastructure transitoire (git interne). Elle se résoudra au prochain déploiement. Je vais déclencher un re-deploy de l'edge function après les changements.
+Pass 4 cherche le leader dans `beforeFirst` (avant le premier groupe dans la zone), mais cette zone est soit vide, soit pleine de JSON-LD/commentaires car le découpage était trop tardif.
 
 ### Solution
 
-**`src/pages/admin/SuperAdminLiveBroadcastPage.tsx`** — 3 modifications :
+**Fichier : `supabase/functions/scrape-live-race/index.ts`** — 2 modifications :
 
-#### 1. Tracker des événements déjà diffusés
-Ajouter un `useRef<Set<string>>` qui stocke une signature unique par événement déjà envoyé (combinaison `time + title + text.substring(0,50)`). Avant de broadcaster un événement, vérifier s'il est déjà dans le set.
+#### 1. Élargir la zone de situation pour inclure le texte avant le premier groupe
+Ligne 197 : ajouter la détection de noms propres suivis de rien (le leader) comme indicateur de début de zone. Concrètement, reculer le `zoneStart` de ~200 caractères avant le premier mot-clé de groupe pour capturer le nom du leader qui le précède :
 
 ```typescript
-const sentEventsRef = useRef<Set<string>>(new Set());
-
-// Signature d'un événement
-const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
+const groupIndicator = afterKmh.search(/(?:Échapp[ée]e|Peloton|Gr\.\s|Groupe\s+de|Poursuivants?|Favoris|T[eê]te\s+de\s+course)/i);
+// Back up to capture potential leader name before the first group keyword
+const zoneStart = groupIndicator >= 0 
+  ? kmhIdx + Math.max(0, groupIndicator - 200) 
+  : kmhIdx;
 ```
 
-#### 2. Filtrer les nouveaux événements avant broadcast
-Dans la section auto-broadcast (~ligne 347-366), ne broadcaster que les événements dont la clé n'est pas dans `sentEventsRef` :
+#### 2. Améliorer Pass 4 pour mieux détecter le leader
+Actuellement le `beforeFirst` peut contenir du texte parasite. Renforcer la détection en cherchant spécifiquement un pattern L'Équipe : le nom du leader apparaît **seul sur une ligne logique**, souvent juste avant "Gr." ou "Peloton", sans gap. Scanner les ~300 derniers caractères avant le premier groupe détecté :
 
 ```typescript
-const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
-if (newEvents.length === 0) {
-  // Pas de nouveaux événements, skip
-} else {
-  for (const evt of newEvents) {
-    // ... broadcast ...
-    sentEventsRef.current.add(eventKey(evt));
-  }
-  toast.success(`${sent} nouveaux événements diffusés`);
+// Pass 4: improved — search specifically in the 300 chars before the first group
+if (uniqueHeaders.length > 0 && !uniqueHeaders.some(h => h.gap === "0:00")) {
+  const firstGroupIdx = uniqueHeaders[0].index;
+  const searchStart = Math.max(0, firstGroupIdx - 300);
+  const beforeFirst = situationZone.substring(searchStart, firstGroupIdx).trim();
+  
+  // Look for a standalone name pattern (possibly with flag emoji)
+  const leaderRx = /(?:[\u{1F1E0}-\u{1F1FF}]{2}\s*)?([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/iu;
+  // ... rest of validation unchanged
 }
 ```
-
-#### 3. Dédupliquer la situation de course
-Stocker la dernière signature de situation diffusée (hash des groupes + km). Ne re-diffuser que si elle a changé :
-
-```typescript
-const lastSituationRef = useRef<string>("");
-
-// Avant de broadcaster la situation
-const sitKey = JSON.stringify(situation.groups.map(g => g.name + g.gap + g.riders.length)) + situation.kmRemaining;
-if (sitKey !== lastSituationRef.current) {
-  // broadcast...
-  lastSituationRef.current = sitKey;
-}
-```
-
-#### 4. Reset des trackers quand la course change
-Quand `activeCourseId` change, vider `sentEventsRef` et `lastSituationRef`.
 
 ### Fichier impacté
-- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — ajout de la déduplication des broadcasts
+- `supabase/functions/scrape-live-race/index.ts` — élargissement zone + amélioration Pass 4
 
