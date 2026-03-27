@@ -205,184 +205,34 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!managerB && !!rostersB && !!leagueId,
   });
 
-  // Fetch bonus_points for manager A
-  const { data: bonusPointsA } = useQuery({
-    queryKey: ["bonus-points-a", managerA, phaseId, saisonId],
+  // Fetch standings data for KPIs (total_points, nb_scoreurs, nb_victoires)
+  const { data: standingsData } = useQuery({
+    queryKey: ["standings-comparison", managerA, managerB, phaseId, saisonId, leagueId],
     queryFn: async () => {
-      if (!managerA) return null;
-
-      let query = supabase
-        .from("bonus_points")
-        .select("points, phase_id")
-        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`)
-        .eq("league_id", leagueId!);
-
+      const ids = [managerA, managerB].filter(Boolean) as string[];
+      if (!ids.length || !leagueId) return [];
       if (phaseId) {
-        query = query.eq("phase_id", phaseId);
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_phase_v2")
+          .select("manager_id, total_points, nb_scoreurs, nb_victoires")
+          .eq("league_id", leagueId)
+          .eq("phase_id", phaseId)
+          .in("manager_id", ids);
+        if (error) throw error;
+        return data;
       } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_season_v2")
+          .select("manager_id, total_points, nb_scoreurs, nb_victoires")
+          .eq("league_id", leagueId)
+          .eq("saison_id", saisonId)
+          .in("manager_id", ids);
+        if (error) throw error;
+        return data;
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      return [];
     },
-    enabled: !!managerA && !!leagueId,
-  });
-
-  // Fetch bonus_points for manager B
-  const { data: bonusPointsB } = useQuery({
-    queryKey: ["bonus-points-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      let query = supabase
-        .from("bonus_points")
-        .select("points, phase_id")
-        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`)
-        .eq("league_id", leagueId!);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!managerB && !!leagueId,
-  });
-
-  // Fetch manager_bonus_points for manager A
-  const { data: managerBonusA } = useQuery({
-    queryKey: ["manager-bonus-a", managerA, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      let query = leagueClient
-        .from("manager_bonus_points")
-        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
-        .eq("manager_id", managerA);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!managerA,
-  });
-
-  // Fetch manager_bonus_points for manager B
-  const { data: managerBonusB } = useQuery({
-    queryKey: ["manager-bonus-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      let query = leagueClient
-        .from("manager_bonus_points")
-        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
-        .eq("manager_id", managerB);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!managerB,
-  });
-
-  // 4. Récupérer les infos des coureurs avec équipe de saison
-  const { data: coureurs } = useQuery({
-    queryKey: ["coureurs-comparison", managerA, managerB, saisonId],
-    queryFn: async () => {
-      if (!rostersA || !rostersB) return null;
-
-      const allCoureurIds = [
-        ...new Set([
-          ...rostersA.map(r => r.coureur_id),
-          ...rostersB.map(r => r.coureur_id)
-        ])
-      ];
-
-      // Récupérer d'abord les coureurs avec leur équipe de base
-      const { data, error } = await supabase
-        .from("coureurs")
-        .select("id, nom, equipe")
-        .in("id", allCoureurIds);
-      
-      if (error) throw error;
-
-      // Enrichir avec l'équipe de la saison si saisonId disponible
-      if (!saisonId) {
-        return (data || []).map(c => ({ ...c, equipe: c.equipe || 'N/A' as string }));
-      }
-
-      const enrichedData = await Promise.all(
-        (data || []).map(async (coureur) => {
-          const { data: seasonData } = await supabase
-            .from('coureurs_saisons')
-            .select(`
-              equipe_id,
-              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
-            `)
-            .eq('coureur_id', coureur.id)
-            .eq('saison_id', saisonId)
-            .maybeSingle();
-
-          return {
-            ...coureur,
-            equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || coureur.equipe || 'N/A' as string
-          };
-        })
-      );
-
-      return enrichedData;
-    },
-    enabled: !!rostersA && !!rostersB,
+    enabled: !!(managerA || managerB) && !!leagueId,
   });
 
   // 5. Récupérer les infos des courses pour catégoriser les points
@@ -400,13 +250,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           .from("phases")
           .select("id")
           .eq("saison_id", saisonId);
-        
         if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
+          query = query.in("phase_id", phases.map(p => p.id));
         }
       }
-      // ELSE: No filter = all courses (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
@@ -414,44 +261,6 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     },
   });
 
-  // 6. Récupérer les victoires depuis la vue standings (filtrage correct par league scope + date)
-  const fetchVictoriesFromStandings = async (managerId: string): Promise<number> => {
-    if (!leagueId) return 0;
-
-    if (phaseId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_phase_v2")
-        .select("nb_victoires")
-        .eq("manager_id", managerId)
-        .eq("league_id", leagueId)
-        .eq("phase_id", phaseId)
-        .maybeSingle();
-      return data?.nb_victoires || 0;
-    } else if (saisonId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_season_v2")
-        .select("nb_victoires")
-        .eq("manager_id", managerId)
-        .eq("league_id", leagueId)
-        .maybeSingle();
-      return data?.nb_victoires || 0;
-    }
-    return 0;
-  };
-
-  const { data: victoriesCountA } = useQuery({
-    queryKey: ["victories-manager-a", managerA, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictoriesFromStandings(managerA!),
-    enabled: !!managerA && !!leagueId,
-  });
-
-  const { data: victoriesCountB } = useQuery({
-    queryKey: ["victories-manager-b", managerB, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictoriesFromStandings(managerB!),
-    enabled: !!managerB && !!leagueId,
-  });
-
-  // Calculer les points par type de barème (9 catégories détaillées)
   const pointsByBaremeType = useMemo(() => {
     if (!pointsA || !pointsB || !courses) return null;
 
@@ -681,34 +490,21 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     );
   };
 
-  // Calculer les métriques globales - CORRIGÉ: ajouter bonus
-  const totalPointsA =
-    (pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
-    (bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
-    (managerBonusA?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
-      (mb.bonus_scoreurs || 0), 0) || 0);
-
-  const totalPointsB = 
-    (pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
-    (bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
-    (managerBonusB?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
-      (mb.bonus_scoreurs || 0), 0) || 0);
-
-  const scoreursA = new Set(pointsA?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
-  const scoreursB = new Set(pointsB?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
+  // KPIs from standings views
+  const standA = standingsData?.find(s => s.manager_id === managerA);
+  const standB = standingsData?.find(s => s.manager_id === managerB);
+  const totalPointsA = Math.round(standA?.total_points || 0);
+  const totalPointsB = Math.round(standB?.total_points || 0);
+  const scoreursA = standA?.nb_scoreurs || 0;
+  const scoreursB = standB?.nb_scoreurs || 0;
+  const victoiresA = standA?.nb_victoires || 0;
+  const victoiresB = standB?.nb_victoires || 0;
 
   const budgetA = rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
   const budgetB = rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
 
    const roiA = Math.round(totalPointsA / budgetA).toString();
    const roiB = Math.round(totalPointsB / budgetB).toString();
-
-  const victoiresA = victoriesCountA || 0;
-  const victoiresB = victoriesCountB || 0;
 
   const managerAData = selectedManagers?.find(m => m.id === managerA);
   const managerBData = selectedManagers?.find(m => m.id === managerB);
