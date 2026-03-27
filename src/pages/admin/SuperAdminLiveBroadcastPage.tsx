@@ -272,8 +272,8 @@ export const SuperAdminLiveBroadcastPage = () => {
           let sent = 0;
           for (const evt of newEvents) {
             const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
-            const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
-            const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
+            const titlePart = evt.title ? `**${cleanText(evt.title)}**\n` : "";
+            const content = `${typeEmoji} ${evt.time} — ${titlePart}${cleanText(evt.text)}`;
             try {
               await new Promise<void>((resolve, reject) => {
                 broadcastMessage.mutate(
