@@ -1,36 +1,26 @@
 
 
-## Filtrer les courses par `started_at_effective` dans la page Courses
+## Différencier le visuel "phase en cours" du tick "sélectionné"
 
 ### Problème
-La page "Toutes les courses de la saison" affiche toutes les courses de la ligue, y compris celles antérieures au `started_at_effective` (27/03/2026). Or seules les courses à partir de cette date comptent pour les points.
-
-La fonction SQL `get_league_courses_with_points` ne filtre pas par `started_at_effective` — elle retourne toutes les courses dans le scope de la ligue.
+Dans le sélecteur de phase (Rankings), la phase active affiche `✓` (via `t('phase.active')`) qui ressemble au checkmark de sélection du composant `Select`. Résultat : quand "Global" est sélectionné, on voit deux ticks — un pour la sélection et un pour la phase en cours.
 
 ### Solution
 
-**Filtrer côté frontend** dans `UpcomingCourses.desktop.tsx` et `UpcomingCourses.mobile.tsx` :
+**`src/pages/Rankings.tsx`** (ligne 71) — Remplacer le `✓` par un indicateur visuel différent, par exemple un petit point coloré ou le texte "(en cours)" :
 
-1. **Récupérer `started_at_effective`** depuis la table `leagues` (une seule requête supplémentaire, ou utiliser le contexte de ligue s'il est déjà disponible)
-2. **Filtrer les courses** dont `date_debut >= started_at_effective` avant affichage
+```typescript
+// Avant :
+P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
 
-Concrètement :
-- Ajouter une requête pour récupérer `started_at_effective` de la ligue courante
-- Dans le filtre `filteredCourses`, exclure les courses dont `date_debut < started_at_effective`
-
-### Alternative (plus propre)
-Ajouter le filtre directement dans la fonction SQL `get_league_courses_with_points` en récupérant `started_at_effective` depuis la table `leagues` :
-
-```sql
-AND vcp.date_debut >= COALESCE(
-  (SELECT started_at_effective FROM leagues WHERE id = p_league_id),
-  '1900-01-01'
-)
+// Après :
+P{phase.index_dans_saison}{phase.statut === 'active' ? ' 🟢' : ''}
 ```
 
-Cette approche est préférable car elle filtre à la source et impacte tous les consommateurs.
+Un petit cercle vert `🟢` est immédiatement distinct du checkmark de sélection et indique clairement "phase en cours".
+
+**`src/i18n/locales/fr/rankings.json`** et **`src/i18n/locales/en/rankings.json`** — Optionnel : mettre à jour `phase.active` de `"✓"` à `"🟢"` si on veut garder la logique via i18n (ou supprimer cette clé puisqu'on utilise directement l'emoji dans le code).
 
 ### Fichiers impactés
-- 1 migration SQL — modification de `get_league_courses_with_points`
-- Aucun changement frontend nécessaire si le filtre est en SQL
+- `src/pages/Rankings.tsx` — changement du visuel d'indicateur de phase active
 
