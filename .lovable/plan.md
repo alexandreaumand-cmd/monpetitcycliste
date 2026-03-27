@@ -1,38 +1,62 @@
 
 
-## Corriger l'extraction des coureurs dans la situation de course L'Équipe
+## Fix de l'auto-import : dédupliquer les événements diffusés
 
-### Problème
-Le scraper détecte correctement les 4 groupes (Van der Poel, Dewulf, Gr. Morgado, Peloton) mais affiche **0 coureurs** dans chaque groupe. La cause est à la ligne 300 du scraper :
+### Problème principal
+Chaque auto-scrape (toutes les 60s) **re-diffuse TOUS les événements** de la timeline vers les ligues. Le scraper L'Équipe retourne tous les événements visibles sur la page, et `handleScrape` les broadcast tous à chaque exécution — sans aucune déduplication. Résultat : les ligues reçoivent des dizaines de messages dupliqués.
 
-```typescript
-const detailCut = section.search(/masquer le d[ée]tail|afficher le d[ée]tail/i);
-if (detailCut > 0) section = section.substring(0, detailCut);
-```
+Même problème pour la situation de course : elle est re-diffusée intégralement toutes les 60s.
 
-Ce code **coupe la section AVANT** "afficher le détail des écarts", mais sur L'Équipe, la liste détaillée des coureurs se trouve **après** ce texte (dans le HTML statique, le contenu détaillé est présent mais masqué par CSS — le `textContent` les contient tous). Résultat : le pattern d'extraction des coureurs (ligne 304) s'applique sur une section vide.
+### Problème secondaire — erreur de déploiement
+L'erreur `GIT_FILES_NOT_LISTABLE` est une erreur d'infrastructure transitoire (git interne). Elle se résoudra au prochain déploiement. Je vais déclencher un re-deploy de l'edge function après les changements.
 
 ### Solution
 
-**`supabase/functions/scrape-live-race/index.ts`** — 2 modifications :
+**`src/pages/admin/SuperAdminLiveBroadcastPage.tsx`** — 3 modifications :
 
-#### 1. Inverser la logique du `detailCut`
-Au lieu de couper au "afficher le détail", chercher les coureurs dans la **totalité** de la section. Supprimer le `detailCut` ou le changer pour couper uniquement à "masquer le détail" (qui indique la fin de la vue détaillée) :
-
-```typescript
-// Supprimer les lignes 299-301
-// Ou les remplacer par : ne couper qu'au "masquer" (fin de la liste expanded)
-const detailCut = section.search(/masquer le d[ée]tail/i);
-if (detailCut > 0) section = section.substring(0, detailCut);
-```
-
-#### 2. Améliorer le riderPattern pour gérer les flags emoji
-L'Équipe préfixe chaque coureur d'un drapeau emoji (🇳🇱, 🇫🇷, etc.) qui peut interférer avec la regex. Le pattern actuel (ligne 304) attend que le nom commence par `[A-ZÀ-Ü]`, mais le flag emoji est avant. Ajouter un skip optionnel pour les emojis/flags :
+#### 1. Tracker des événements déjà diffusés
+Ajouter un `useRef<Set<string>>` qui stocke une signature unique par événement déjà envoyé (combinaison `time + title + text.substring(0,50)`). Avant de broadcaster un événement, vérifier s'il est déjà dans le set.
 
 ```typescript
-const riderPattern = /(?:[\u{1F1E0}-\u{1F1FF}]{2}\s*)?([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/gu;
+const sentEventsRef = useRef<Set<string>>(new Set());
+
+// Signature d'un événement
+const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
 ```
+
+#### 2. Filtrer les nouveaux événements avant broadcast
+Dans la section auto-broadcast (~ligne 347-366), ne broadcaster que les événements dont la clé n'est pas dans `sentEventsRef` :
+
+```typescript
+const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
+if (newEvents.length === 0) {
+  // Pas de nouveaux événements, skip
+} else {
+  for (const evt of newEvents) {
+    // ... broadcast ...
+    sentEventsRef.current.add(eventKey(evt));
+  }
+  toast.success(`${sent} nouveaux événements diffusés`);
+}
+```
+
+#### 3. Dédupliquer la situation de course
+Stocker la dernière signature de situation diffusée (hash des groupes + km). Ne re-diffuser que si elle a changé :
+
+```typescript
+const lastSituationRef = useRef<string>("");
+
+// Avant de broadcaster la situation
+const sitKey = JSON.stringify(situation.groups.map(g => g.name + g.gap + g.riders.length)) + situation.kmRemaining;
+if (sitKey !== lastSituationRef.current) {
+  // broadcast...
+  lastSituationRef.current = sitKey;
+}
+```
+
+#### 4. Reset des trackers quand la course change
+Quand `activeCourseId` change, vider `sentEventsRef` et `lastSituationRef`.
 
 ### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — lignes 299-304
+- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — ajout de la déduplication des broadcasts
 
