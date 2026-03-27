@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
         
         const { data: currentAuction, error: auctionError } = await supabase
           .from('auctions')
-          .select('phase_id, round_number, league_id')
+          .select('phase_id, effective_phase_id, round_number, league_id')
           .eq('id', auction_id)
           .single();
         
