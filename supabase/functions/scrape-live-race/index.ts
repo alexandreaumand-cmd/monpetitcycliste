@@ -296,12 +296,12 @@ function parseLEquipeLive(doc: any, html: string): {
       const end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
       let section = situationZone.substring(start, end);
 
-      // Cut at "masquer/afficher le détail" which marks end of the rider list
-      const detailCut = section.search(/masquer le d[ée]tail|afficher le d[ée]tail/i);
+      // Cut only at "masquer le détail" (end of expanded view), NOT "afficher le détail"
+      const detailCut = section.search(/masquer le d[ée]tail/i);
       if (detailCut > 0) section = section.substring(0, detailCut);
 
-      // Extract rider names: "X. LastName (Team)" or "FirstName LastName (Team)" pattern
-      const riderPattern = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/g;
+      // Extract rider names: handle optional flag emojis before name
+      const riderPattern = /(?:[\u{1F1E0}-\u{1F1FF}]{2}\s*)?([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/gu;
       const groupRiders: string[] = [];
       let rMatch;
       while ((rMatch = riderPattern.exec(section)) !== null) {
