@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
-import { MessageInput } from "./MessageInput";
+
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
   useArenaChannels,
