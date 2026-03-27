@@ -110,61 +110,34 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     enabled: !!managerB && !!rostersB,
   });
 
-  // Fetch bonus_points for a manager
-  const fetchBonusPoints = async (managerId: string) => {
-    if (!managerId) return null;
-    let query = supabase
-      .from("bonus_points")
-      .select("points")
-      .or(`target_manager_id.eq.${managerId},manager_id.eq.${managerId}`);
-
-    if (leagueId) query = query.eq("league_id", leagueId);
-    const pIds = await getPhaseIds();
-    if (pIds.length > 0) query = query.in("phase_id", pIds);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-  };
-
-  const { data: bonusPointsA } = useQuery({
-    queryKey: ["bonus-points-a", managerA, phaseId, saisonId],
-    queryFn: () => fetchBonusPoints(managerA),
-    enabled: !!managerA,
-  });
-
-  const { data: bonusPointsB } = useQuery({
-    queryKey: ["bonus-points-b", managerB, phaseId, saisonId],
-    queryFn: () => fetchBonusPoints(managerB),
-    enabled: !!managerB,
-  });
-
-  // Fetch manager_bonus_points
-  const fetchManagerBonus = async (managerId: string) => {
-    if (!managerId) return null;
-    let query = leagueClient
-      .from("manager_bonus_points")
-      .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
-      .eq("manager_id", managerId);
-
-    const pIds = await getPhaseIds();
-    if (pIds.length > 0) query = query.in("phase_id", pIds);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-  };
-
-  const { data: managerBonusA } = useQuery({
-    queryKey: ["manager-bonus-a", managerA, phaseId, saisonId],
-    queryFn: () => fetchManagerBonus(managerA),
-    enabled: !!managerA,
-  });
-
-  const { data: managerBonusB } = useQuery({
-    queryKey: ["manager-bonus-b", managerB, phaseId, saisonId],
-    queryFn: () => fetchManagerBonus(managerB),
-    enabled: !!managerB,
+  // Fetch standings data for KPIs
+  const { data: standingsData } = useQuery({
+    queryKey: ["standings-comparison", managerA, managerB, phaseId, saisonId, leagueId],
+    queryFn: async () => {
+      const ids = [managerA, managerB].filter(Boolean);
+      if (!ids.length || !leagueId) return [];
+      if (phaseId) {
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_phase_v2")
+          .select("manager_id, total_points, nb_scoreurs, nb_victoires")
+          .eq("league_id", leagueId)
+          .eq("phase_id", phaseId)
+          .in("manager_id", ids);
+        if (error) throw error;
+        return data;
+      } else if (saisonId) {
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_season_v2")
+          .select("manager_id, total_points, nb_scoreurs, nb_victoires")
+          .eq("league_id", leagueId)
+          .eq("saison_id", saisonId)
+          .in("manager_id", ids);
+        if (error) throw error;
+        return data;
+      }
+      return [];
+    },
+    enabled: !!(managerA || managerB) && !!leagueId,
   });
 
   // Fetch courses
