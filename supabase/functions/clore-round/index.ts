@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     // Get auction details and verify it belongs to the league
     const { data: auction, error: auctionError } = await supabase
       .from('auctions')
-      .select('*, phases(*)')
+      .select('*, phases!auctions_phase_id_fkey(*)')
       .eq('id', auction_id)
       .single();
 
