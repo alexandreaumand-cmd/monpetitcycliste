@@ -51,6 +51,7 @@ type SortField = "coureur_nom" | "cote_initiale" | "winning_amount" | "round_num
 type SortDirection = "asc" | "desc";
 
 export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProps) {
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedManager, setSelectedManager] = useState<string>("all");
   const [selectedRound, setSelectedRound] = useState<string>("all");
