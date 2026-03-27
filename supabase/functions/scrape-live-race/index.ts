@@ -346,6 +346,21 @@ function parseLEquipeLive(doc: any, html: string): {
     if (text.length > 500) text = text.substring(0, 500) + "...";
     if (!text || text.length < 10) continue;
 
+    // Split into title + body (L'Équipe style)
+    let title = "";
+    let body = text;
+    const splitMatch = text.match(/^([^.]{10,120}\.)\s+([A-ZÀ-Ü])/);
+    if (splitMatch) {
+      title = splitMatch[1];
+      body = text.substring(splitMatch[1].length).trim();
+    } else if (text.length > 80) {
+      const dotIdx = text.indexOf('.');
+      if (dotIdx > 10 && dotIdx < 120) {
+        title = text.substring(0, dotIdx + 1);
+        body = text.substring(dotIdx + 1).trim();
+      }
+    }
+
     let type = "info";
     const textLower = text.toLowerCase();
     if (textLower.includes("chute") || textLower.includes("tombé")) type = "crash";
