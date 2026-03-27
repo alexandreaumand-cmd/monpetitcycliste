@@ -1,31 +1,24 @@
 
 
-## Fix : la page Courses affiche des courses hors scope WT
+## Fix : exclure E3 Saxo Classic des classements et résultats
 
-### Deux problèmes identifiés
+### Problème
 
-#### 1. Le filtre `wt_only` est ignoré quand la ligue a des phases explicites
+Le fix précédent a changé `>=` en `>` uniquement dans `get_league_courses_with_points` (onglet Courses). Mais deux autres endroits utilisent encore `>=` :
 
-La fonction `get_league_course_ids` a deux branches :
-- **Branche "phases"** (lignes 35-63) : utilisée quand `phases` est renseigné → applique `course_filters` mais **ignore `wt_only`**
-- **Branche "fallback"** (lignes 66-78) : utilisée quand `phases` est vide → applique `wt_only`
+1. **`results_courses_with_entries`** (onglet Résultats) — ligne 48 : `c.date_debut >= COALESCE(...)` → la course E3 Saxo Classic (même date que `started_at_effective`) apparaît encore
+2. **`v_manager_standings_by_phase_v2`** et **`v_manager_standings_by_season_v2`** (classements) — 10 occurrences de `>= COALESCE(l.started_at_effective...)` → les points de E3 Saxo Classic comptent dans les standings
 
-La ligue "Ligue publique WT sans bonus" a `wt_only = true` ET `phases` renseigné (5 phases). La branche "phases" est donc utilisée, et comme `course_filters` est vide (`{}`), **toutes** les courses des phases sont retournées (1.1, 1.pro, 2.1, etc.).
+### Solution
 
-**Fix** : ajouter le filtre `wt_only` dans la branche "phases" :
-```sql
-AND (NOT COALESCE(v_scope.wt_only, false) OR c.categorie LIKE '%WT%' OR c.categorie LIKE '%Grand Tour%')
-```
+Une seule migration SQL qui recrée ces 3 objets en remplaçant **tous** les `>=` par `>` sur le filtre `started_at_effective` :
 
-#### 2. E3 Saxo Classic incluse alors que les enchères se sont clôturées ce jour-là
+- `results_courses_with_entries` : ligne 48, `>=` → `>`
+- `v_manager_standings_by_phase_v2` : 5 CTEs (race_pts, rider_bonus_pts, scoreurs, victories × `>=`) → `>`
+- `v_manager_standings_by_season_v2` : 5 CTEs identiques → `>`
 
-`started_at_effective = 2026-03-27` et E3 Saxo Classic `date_debut = 2026-03-27`. Le filtre utilise `>=` donc la course du jour est incluse. Puisque les enchères se sont fermées **le jour de la course**, les managers n'avaient pas encore leur effectif quand la course a eu lieu.
-
-**Fix** : changer le filtre de `>=` à `>` dans `get_league_courses_with_points` :
-```sql
-AND vcp.date_debut > COALESCE(...)
-```
+Après le déploiement, rafraîchir les standings matérialisées.
 
 ### Fichier impacté
-- **Migration SQL** — recréation de `get_league_course_ids` (ajout filtre `wt_only`/`gt_only` dans la branche phases) et `get_league_courses_with_points` (`>` au lieu de `>=`)
+- **Migration SQL** — recréation de `results_courses_with_entries`, `v_manager_standings_by_phase_v2`, `v_manager_standings_by_season_v2` avec `>` au lieu de `>=`
 
