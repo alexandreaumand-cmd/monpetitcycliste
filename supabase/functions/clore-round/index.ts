@@ -60,19 +60,31 @@ Deno.serve(async (req) => {
       const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', { l_id: league_id });
 
       if (!isLeagueAdmin) {
-        const { data: membership } = await supabase
-          .from('league_members')
-          .select('role_in_league')
-          .eq('league_id', league_id)
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Check if user is superadmin
+        const { data: isSuperAdmin } = await supabase.rpc('is_superadmin');
 
-        const role = membership?.role_in_league as string | undefined;
-        if (!role || !['owner', 'admin'].includes(role)) {
-          return new Response(
-            JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        if (isSuperAdmin) {
+          console.log('🔑 Superadmin bypass: allowing round close for any league');
+          // Switch to service role client so RLS doesn't block operations
+          supabase = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            serviceRoleKey
           );
+        } else {
+          const { data: membership } = await supabase
+            .from('league_members')
+            .select('role_in_league')
+            .eq('league_id', league_id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          const role = membership?.role_in_league as string | undefined;
+          if (!role || !['owner', 'admin'].includes(role)) {
+            return new Response(
+              JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       }
     }
