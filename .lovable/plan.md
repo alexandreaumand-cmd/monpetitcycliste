@@ -1,46 +1,11 @@
+## ✅ Fix complet : effective_phase_id sur les enchères (implémenté)
 
+### Changements effectués
 
-## Ajouter le bypass superadmin dans `clore-round`
-
-### Changement
-
-Dans `supabase/functions/clore-round/index.ts`, après la vérification `is_league_admin` (ligne 60), ajouter un check `is_superadmin()` avant de rejeter l'accès. Si l'utilisateur est superadmin, on bypasse le contrôle league admin et on utilise un client service_role pour les opérations (car le superadmin n'est pas forcément membre de la ligue, donc les RLS bloqueraient).
-
-### Modification (lignes 60-77)
-
-```typescript
-const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', { l_id: league_id });
-
-if (!isLeagueAdmin) {
-  // Check if user is superadmin
-  const { data: isSuperAdmin } = await supabase.rpc('is_superadmin');
-  
-  if (isSuperAdmin) {
-    console.log('🔑 Superadmin bypass: allowing round close for any league');
-    // Switch to service role client so RLS doesn't block operations
-    supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      serviceRoleKey
-    );
-  } else {
-    const { data: membership } = await supabase
-      .from('league_members')
-      .select('role_in_league')
-      .eq('league_id', league_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const role = membership?.role_in_league as string | undefined;
-    if (!role || !['owner', 'admin'].includes(role)) {
-      return new Response(
-        JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-  }
-}
-```
-
-### Fichier impacté
-- `supabase/functions/clore-round/index.ts` — ajout check `is_superadmin` + switch vers service role client
-
+1. **Migration SQL** : ajout colonne `effective_phase_id uuid` sur `auctions` + backfill avec `phase_id`
+2. **`leagues-create`** : accepte `startingPhaseIndex`, crée l'auction avec `effective_phase_id` figé
+3. **`clore-round`** : suppression résolution dynamique de phase, utilise `auction.effective_phase_id ?? auction.phase_id`
+4. **`ouvrir-nouveau-round`** : accepte et persiste `effective_phase_id` sur les nouvelles auctions
+5. **`publier-annonce`** : propage `effective_phase_id` lors de l'auto-lancement du round suivant
+6. **UI création de ligue** : sélecteur de phase de départ (Phase 1-5) pour les ligues five_phases
+7. **Fix TS** : hint FK `phases!auctions_phase_id_fkey` dans AnnouncementManager (ambiguïté 2 FK)
