@@ -80,6 +80,11 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
   }, [activeCourseId]);
 
+  // Keep handleScrapeRef in sync
+  useEffect(() => {
+    handleScrapeRef.current = handleScrape;
+  });
+
   // Auto-scrape every 60s when enabled
   useEffect(() => {
     if (autoScrapeRef.current) {
@@ -89,10 +94,12 @@ export const SuperAdminLiveBroadcastPage = () => {
     if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
 
     const doAutoScrape = () => {
-      if (isScraping) return;
-      handleScrape(true);
+      if (isScrapingRef.current) return;
+      handleScrapeRef.current?.(true);
     };
 
+    // Fire immediately, then every 60s
+    doAutoScrape();
     autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
     return () => {
       if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
