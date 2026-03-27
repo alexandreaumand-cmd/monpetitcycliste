@@ -169,6 +169,7 @@ Deno.serve(async (req) => {
       .from('auctions')
       .insert({
         phase_id,
+        effective_phase_id: effective_phase_id || phase_id,
         league_id,
         round_number: newRoundNumber,
         deadline_at,
