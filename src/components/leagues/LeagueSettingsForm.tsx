@@ -158,7 +158,7 @@ export function LeagueSettingsForm({
             </RadioGroup>
           </div>
 
-          <p className="text-sm text-muted-foreground italic">
+          <p className="text-xs text-muted-foreground">
             {t('settings.startingPhaseAuto')}
           </p>
 
