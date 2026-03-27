@@ -28,6 +28,7 @@ import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
@@ -36,6 +37,9 @@ export const RankingsMobile = () => {
   const { t } = useTranslation('rankings');
   const { selectedSeason, phases, activePhase } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
@@ -309,24 +313,26 @@ export const RankingsMobile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-4 pb-0">
-        <Select 
-          value={selectedPhase || "null"} 
-          onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t('phase.global')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">{t('phase.global')}</SelectItem>
-            {phases?.map((phase) => (
-              <SelectItem key={phase.id} value={phase.id}>
-                Phase {phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isPerCourse && (
+        <div className="p-4 pb-0">
+          <Select 
+            value={selectedPhase || "null"} 
+            onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t('phase.global')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="null">{t('phase.global')}</SelectItem>
+              {phases?.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  Phase {phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
         <div className="py-2 px-4">

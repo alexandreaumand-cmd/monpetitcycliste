@@ -21,12 +21,16 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { RankingsMobile } from "./Rankings.mobile";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 
 export default function Rankings() {
   const { t } = useTranslation('rankings');
   const isMobile = useIsMobile();
   const { selectedSeason, phases } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -57,22 +61,24 @@ export default function Rankings() {
               <TabsTrigger value="mountain">{t('tabs.mountain', '🏔️ Montagne')}</TabsTrigger>
             </TabsList>
             
-            <Select 
-              value={selectedPhase || "all"} 
-              onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
-            >
-              <SelectTrigger className="w-40 shrink-0">
-                <SelectValue placeholder={t('phase.global')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('phase.global')}</SelectItem>
-                {phases?.map((phase) => (
-                  <SelectItem key={phase.id} value={phase.id}>
-                    P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isPerCourse && (
+              <Select 
+                value={selectedPhase || "all"} 
+                onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
+              >
+                <SelectTrigger className="w-40 shrink-0">
+                  <SelectValue placeholder={t('phase.global')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('phase.global')}</SelectItem>
+                  {phases?.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <TabsContent value="standings" className="space-y-4">
