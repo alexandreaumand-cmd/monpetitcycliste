@@ -208,13 +208,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           )}
         </div>
 
-        {/* Read-only indicator */}
-        <MessageInput
-          onSend={() => {}}
-          managers={managers}
-          disabled
-          readOnly
-        />
       </div>
 
       {/* Right: Race situation panel (desktop only) */}
