@@ -157,81 +157,21 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Fetch victories from standings view (correct league scope + date filtering)
-  const fetchVictoriesFromStandings = async (managerId: string): Promise<number> => {
-    if (!managerId || !leagueId) return 0;
-
-    if (phaseId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_phase_v2")
-        .select("nb_victoires")
-        .eq("manager_id", managerId)
-        .eq("league_id", leagueId)
-        .eq("phase_id", phaseId)
-        .maybeSingle();
-      return data?.nb_victoires || 0;
-    } else if (saisonId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_season_v2")
-        .select("nb_victoires")
-        .eq("manager_id", managerId)
-        .eq("league_id", leagueId)
-        .maybeSingle();
-      return data?.nb_victoires || 0;
-    }
-    return 0;
-  };
-
-  const { data: victoriesCountA } = useQuery({
-    queryKey: ["victories-a", managerA, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictoriesFromStandings(managerA!),
-    enabled: !!managerA && !!leagueId,
-  });
-
-  const { data: victoriesCountB } = useQuery({
-    queryKey: ["victories-b", managerB, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictoriesFromStandings(managerB!),
-    enabled: !!managerB && !!leagueId,
-  });
-
-  // Metrics
-  const totalPointsA = useMemo(() => {
-    const racePts = pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-    const bonusPts = bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-    const mgrBonus = managerBonusA?.reduce((sum, mb) =>
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) +
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) +
-      (mb.bonus_scoreurs || 0), 0) || 0;
-    return racePts + bonusPts + mgrBonus;
-  }, [pointsA, bonusPointsA, managerBonusA]);
-
-  const totalPointsB = useMemo(() => {
-    const racePts = pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-    const bonusPts = bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-    const mgrBonus = managerBonusB?.reduce((sum, mb) =>
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) +
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) +
-      (mb.bonus_scoreurs || 0), 0) || 0;
-    return racePts + bonusPts + mgrBonus;
-  }, [pointsB, bonusPointsB, managerBonusB]);
-
-  const scoreursA = useMemo(() => {
-    if (!pointsA) return 0;
-    return new Set(pointsA.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size;
-  }, [pointsA]);
-
-  const scoreursB = useMemo(() => {
-    if (!pointsB) return 0;
-    return new Set(pointsB.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size;
-  }, [pointsB]);
+  // Metrics from standings views
+  const standA = standingsData?.find(s => s.manager_id === managerA);
+  const standB = standingsData?.find(s => s.manager_id === managerB);
+  const totalPointsA = Math.round(standA?.total_points || 0);
+  const totalPointsB = Math.round(standB?.total_points || 0);
+  const scoreursA = standA?.nb_scoreurs || 0;
+  const scoreursB = standB?.nb_scoreurs || 0;
+  const victoiresA = standA?.nb_victoires || 0;
+  const victoiresB = standB?.nb_victoires || 0;
 
   const budgetA = useMemo(() => rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 0, [rostersA]);
   const budgetB = useMemo(() => rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 0, [rostersB]);
 
   const roiA = budgetA > 0 ? totalPointsA / budgetA : 0;
   const roiB = budgetB > 0 ? totalPointsB / budgetB : 0;
-  const victoiresA = victoriesCountA || 0;
-  const victoiresB = victoriesCountB || 0;
 
   const coursesMap = useMemo(() => {
     if (!courses) return new Map();
