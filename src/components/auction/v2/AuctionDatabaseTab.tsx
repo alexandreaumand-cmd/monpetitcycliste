@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -50,6 +51,7 @@ type SortField = "coureur_nom" | "cote_initiale" | "winning_amount" | "round_num
 type SortDirection = "asc" | "desc";
 
 export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProps) {
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedManager, setSelectedManager] = useState<string>("all");
   const [selectedRound, setSelectedRound] = useState<string>("all");
@@ -231,7 +233,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
     <div className="space-y-6">
       <Card>
         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-background">
-          <div className="flex items-center justify-between">
+          <div className={isMobile ? "space-y-2" : "flex items-center justify-between"}>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Database className="h-5 w-5 text-primary" />
               Base de données des Enchères
@@ -246,7 +248,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
           </div>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className={isMobile ? "p-3" : "p-6"}>
           {/* Filters */}
           <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
@@ -302,133 +304,229 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
             </div>
           </div>
 
+          {isMobile ? (
+            /* ============ MOBILE: Cards ============ */
+            <div className="space-y-1">
+              {/* Sort bar */}
+              <div className="flex gap-1 overflow-x-auto pb-2">
+                {([
+                  ["coureur_nom", "Nom"],
+                  ["winning_amount", "Prix"],
+                  ["round_number", "Round"],
+                  ["winning_manager", "Manager"],
+                ] as [SortField, string][]).map(([field, label]) => (
+                  <Button
+                    key={field}
+                    variant={sortField === field ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs px-2 shrink-0"
+                    onClick={() => handleSort(field)}
+                  >
+                    {label}
+                    <SortIcon field={field} />
+                  </Button>
+                ))}
+              </div>
 
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("coureur_nom")} className="h-8 px-2">
-                      Coureur
-                      <SortIcon field="coureur_nom" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("cote_initiale")} className="h-8 px-2">
-                      Cote
-                      <SortIcon field="cote_initiale" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("winning_amount")} className="h-8 px-2">
-                      Prix d'achat
-                      <SortIcon field="winning_amount" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("winning_manager")} className="h-8 px-2">
-                      Manager
-                      <SortIcon field="winning_manager" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("round_number")} className="h-8 px-2">
-                      Round
-                      <SortIcon field="round_number" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Battus</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Aucun résultat trouvé
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAndSortedData.map((item) => (
-                    <Collapsible key={`${item.coureur_id}-${item.round_number}`} asChild open={expandedRows.has(`${item.coureur_id}-${item.round_number}`)}>
-                      <>
-                        <TableRow className="hover:bg-muted/50 transition-colors">
-                          <TableCell>
-                            <CollapsibleTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => toggleRow(item.coureur_id, item.round_number)}
-                                disabled={item.concurrents_battus.length === 0}
-                              >
-                                {item.concurrents_battus.length > 0 && (
-                                  <ChevronDown
-                                    className={`h-4 w-4 transition-transform ${
-                                      expandedRows.has(`${item.coureur_id}-${item.round_number}`) ? "rotate-180" : ""
-                                    }`}
-                                  />
-                                )}
-                              </Button>
-                            </CollapsibleTrigger>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{item.coureur_nom}</div>
-                              <div className="text-xs text-muted-foreground">{item.coureur_equipe}</div>
-                            </div>
-                          </TableCell>
-                  <TableCell className="font-mono">{item.cote_initiale}</TableCell>
-                  <TableCell className="font-mono font-semibold">{item.winning_amount}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.winning_manager}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">R{item.round_number}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="secondary" className="bg-primary/10">
-                              {item.concurrents_battus.length}
+              {filteredAndSortedData.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Aucun résultat trouvé
+                </div>
+              ) : (
+                filteredAndSortedData.map((item) => {
+                  const rowKey = `${item.coureur_id}-${item.round_number}`;
+                  const isExpanded = expandedRows.has(rowKey);
+                  const hasConcurrents = item.concurrents_battus.length > 0;
+
+                  return (
+                    <div
+                      key={rowKey}
+                      className="rounded-xl border border-border bg-card p-3 space-y-1"
+                    >
+                      <div
+                        className={hasConcurrents ? "cursor-pointer active:scale-[0.98] transition-transform" : ""}
+                        onClick={() => hasConcurrents && toggleRow(item.coureur_id, item.round_number)}
+                      >
+                        {/* Row 1: Name + Price */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-sm truncate">{item.coureur_nom}</div>
+                            <div className="text-xs text-muted-foreground truncate">{item.coureur_equipe}</div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-mono font-semibold text-sm">{item.winning_amount}</div>
+                            <div className="text-xs text-muted-foreground font-mono">Cote {item.cote_initiale}</div>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Manager + Round + Battus */}
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <Badge variant="outline" className="text-xs h-5 px-1.5">{item.winning_manager}</Badge>
+                          <Badge variant="secondary" className="text-xs h-5 px-1.5">R{item.round_number}</Badge>
+                          {hasConcurrents && (
+                            <Badge variant="secondary" className="text-xs h-5 px-1.5 bg-primary/10">
+                              {item.concurrents_battus.length} battu{item.concurrents_battus.length > 1 ? "s" : ""}
                             </Badge>
-                          </TableCell>
-                        </TableRow>
-                        {item.concurrents_battus.length > 0 && (
-                          <CollapsibleContent asChild>
-                            <TableRow className="bg-muted/30">
-                              <TableCell colSpan={8} className="p-0">
-                                <div className="px-12 py-3 space-y-2">
-                                  <div className="text-xs font-semibold text-muted-foreground mb-2">
-                                    Concurrents battus:
-                                  </div>
-                                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                    {item.concurrents_battus.map((concurrent, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="flex items-center justify-between p-2 rounded-md bg-background border border-border"
-                                      >
-                                        <span className="text-sm">{concurrent.manager_nom}</span>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-mono">{concurrent.my_bid}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            ({(concurrent.my_bid - item.winning_amount).toFixed(0)})
-                                          </span>
+                          )}
+                          {hasConcurrents && (
+                            <ChevronDown className={`h-3.5 w-3.5 ml-auto text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expanded: concurrents */}
+                      {isExpanded && hasConcurrents && (
+                        <div className="pt-2 mt-2 border-t border-border space-y-1.5">
+                          <div className="text-xs font-semibold text-muted-foreground">Concurrents battus :</div>
+                          {item.concurrents_battus.map((concurrent, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border"
+                            >
+                              <span className="text-sm">{concurrent.manager_nom}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-mono">{concurrent.my_bid}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({(concurrent.my_bid - item.winning_amount).toFixed(0)})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            /* ============ DESKTOP: Table ============ */
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]"></TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" onClick={() => handleSort("coureur_nom")} className="h-8 px-2">
+                        Coureur
+                        <SortIcon field="coureur_nom" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" onClick={() => handleSort("cote_initiale")} className="h-8 px-2">
+                        Cote
+                        <SortIcon field="cote_initiale" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" onClick={() => handleSort("winning_amount")} className="h-8 px-2">
+                        Prix d'achat
+                        <SortIcon field="winning_amount" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" onClick={() => handleSort("winning_manager")} className="h-8 px-2">
+                        Manager
+                        <SortIcon field="winning_manager" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" onClick={() => handleSort("round_number")} className="h-8 px-2">
+                        Round
+                        <SortIcon field="round_number" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="text-right">Battus</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Aucun résultat trouvé
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAndSortedData.map((item) => (
+                      <Collapsible key={`${item.coureur_id}-${item.round_number}`} asChild open={expandedRows.has(`${item.coureur_id}-${item.round_number}`)}>
+                        <>
+                          <TableRow className="hover:bg-muted/50 transition-colors">
+                            <TableCell>
+                              <CollapsibleTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => toggleRow(item.coureur_id, item.round_number)}
+                                  disabled={item.concurrents_battus.length === 0}
+                                >
+                                  {item.concurrents_battus.length > 0 && (
+                                    <ChevronDown
+                                      className={`h-4 w-4 transition-transform ${
+                                        expandedRows.has(`${item.coureur_id}-${item.round_number}`) ? "rotate-180" : ""
+                                      }`}
+                                    />
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{item.coureur_nom}</div>
+                                <div className="text-xs text-muted-foreground">{item.coureur_equipe}</div>
+                              </div>
+                            </TableCell>
+                    <TableCell className="font-mono">{item.cote_initiale}</TableCell>
+                    <TableCell className="font-mono font-semibold">{item.winning_amount}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{item.winning_manager}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">R{item.round_number}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="secondary" className="bg-primary/10">
+                                {item.concurrents_battus.length}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                          {item.concurrents_battus.length > 0 && (
+                            <CollapsibleContent asChild>
+                              <TableRow className="bg-muted/30">
+                                <TableCell colSpan={8} className="p-0">
+                                  <div className="px-12 py-3 space-y-2">
+                                    <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                      Concurrents battus:
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                      {item.concurrents_battus.map((concurrent, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="flex items-center justify-between p-2 rounded-md bg-background border border-border"
+                                        >
+                                          <span className="text-sm">{concurrent.manager_nom}</span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-mono">{concurrent.my_bid}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                              ({(concurrent.my_bid - item.winning_amount).toFixed(0)})
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          </CollapsibleContent>
-                        )}
-                      </>
-                    </Collapsible>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleContent>
+                          )}
+                        </>
+                      </Collapsible>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
