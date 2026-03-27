@@ -198,7 +198,9 @@ export const SuperAdminLiveBroadcastPage = () => {
 
   const handleScrape = async (isAuto = false) => {
     if (!scrapeUrl || !activeCourseId) return;
+    if (isScrapingRef.current) return;
     setIsScraping(true);
+    isScrapingRef.current = true;
 
     // Persist URL to DB
     if (!isAuto) {
