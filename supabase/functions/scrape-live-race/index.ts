@@ -195,7 +195,8 @@ function parseLEquipeLive(doc: any, html: string): {
     const afterKmh = textContent.substring(kmhIdx);
     // Look for first group indicator to start the zone
     const groupIndicator = afterKmh.search(/(?:Échapp[ée]e|Peloton|Gr\.\s|Groupe\s+de|Poursuivants?|Favoris|T[eê]te\s+de\s+course)/i);
-    const zoneStart = groupIndicator >= 0 ? kmhIdx + groupIndicator : kmhIdx;
+    // Back up ~200 chars before the first group keyword to capture the leader name
+    const zoneStart = groupIndicator >= 0 ? kmhIdx + Math.max(0, groupIndicator - 200) : kmhIdx;
     // End at timeline or limit
     const zoneEnd = firstEventIdx > zoneStart ? firstEventIdx : zoneStart + 3000;
     situationZone = textContent.substring(zoneStart, zoneEnd);
