@@ -126,11 +126,12 @@ Deno.serve(async (req) => {
         if (auctionError || !currentAuction) {
           console.error('Error fetching auction:', auctionError);
         } else {
-          // Check if all rosters are complete before opening next round
+          const effectivePhase = currentAuction.effective_phase_id ?? currentAuction.phase_id;
+          
           const { data: rosterStatuses } = await supabase
             .from('managers_rosters_status')
             .select('manager_id, slots_restants')
-            .eq('phase_id', currentAuction.phase_id)
+            .eq('phase_id', effectivePhase)
             .eq('league_id', currentAuction.league_id);
 
           const allComplete = rosterStatuses && rosterStatuses.length > 0 && rosterStatuses.every(m => (m.slots_restants ?? 0) === 0);
