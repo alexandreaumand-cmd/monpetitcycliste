@@ -400,6 +400,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       toast.error(err.message || "Erreur lors de l'import");
     } finally {
       setIsScraping(false);
+      isScrapingRef.current = false;
       setLastAutoScrapeAt(new Date());
     }
   };
