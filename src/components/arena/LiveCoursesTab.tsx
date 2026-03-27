@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
-import { MessageInput } from "./MessageInput";
+
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
   useArenaChannels,
@@ -208,13 +208,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           )}
         </div>
 
-        {/* Read-only indicator */}
-        <MessageInput
-          onSend={() => {}}
-          managers={managers}
-          disabled
-          readOnly
-        />
       </div>
 
       {/* Right: Race situation panel (desktop only) */}

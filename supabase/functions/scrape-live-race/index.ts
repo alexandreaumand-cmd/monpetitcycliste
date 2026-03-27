@@ -270,6 +270,24 @@ function parseLEquipeLive(doc: any, html: string): {
       return true;
     });
 
+    // Pass 4: Leader detection — if no group has gap "0:00", look for a rider name before the first group
+    if (uniqueHeaders.length > 0 && !uniqueHeaders.some(h => h.gap === "0:00")) {
+      const firstGroupIdx = uniqueHeaders[0].index;
+      const beforeFirst = situationZone.substring(0, firstGroupIdx).trim();
+      // Look for a rider name pattern: "M. Van der Poel" or "Van der Poel" (possibly with team in parentheses)
+      const leaderRx = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/;
+      const leaderMatch = beforeFirst.match(leaderRx);
+      if (leaderMatch && leaderMatch[1].length >= 4 && leaderMatch[1].length <= 40) {
+        const leaderName = leaderMatch[1].trim();
+        const lc = leaderName.toLowerCase();
+        const badWords = ['il ', 'elle ', 'ils ', ' est ', ' sont ', ' a ', ' ont ', ' va ', ' fait '];
+        if (!badWords.some(w => lc.includes(w))) {
+          console.log(`[L'Équipe] Leader detected before first group: "${leaderName}"`);
+          uniqueHeaders.unshift({ name: leaderName, gap: "0:00", index: 0 });
+        }
+      }
+    }
+
     console.log(`[L'Équipe] Found ${uniqueHeaders.length} group headers: ${uniqueHeaders.map(h => `${h.name} (${h.gap})`).join(', ')}`);
 
     // Extract riders for each group section
