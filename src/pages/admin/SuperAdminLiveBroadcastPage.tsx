@@ -42,6 +42,8 @@ export const SuperAdminLiveBroadcastPage = () => {
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
+  const sentEventsRef = useRef<Set<string>>(new Set());
+  const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
   const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
@@ -67,6 +69,8 @@ export const SuperAdminLiveBroadcastPage = () => {
   useEffect(() => {
     if (!activeCourseId) return;
     setAutoScrapeEnabled(false);
+    sentEventsRef.current = new Set();
+    lastSituationRef.current = "";
     supabase
       .from("arena_live_courses")
       .select("live_scrape_url")
@@ -344,56 +348,70 @@ export const SuperAdminLiveBroadcastPage = () => {
         return result;
       };
 
+      const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
+
       if (events.length > 0 && managerId) {
         const reversedEvents = [...events].reverse();
-        let sent = 0;
-        for (const evt of reversedEvents) {
-          const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
-          const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
-          const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
-          try {
-            await new Promise<void>((resolve, reject) => {
-              broadcastMessage.mutate(
-                { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
-                { onSuccess: () => resolve(), onError: (e) => reject(e) }
-              );
-            });
-            sent++;
-          } catch (e) {
-            console.error("Failed to broadcast event:", e);
+        const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
+        if (newEvents.length > 0) {
+          let sent = 0;
+          for (const evt of newEvents) {
+            const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
+            const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
+            const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
+            try {
+              await new Promise<void>((resolve, reject) => {
+                broadcastMessage.mutate(
+                  { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
+                  { onSuccess: () => resolve(), onError: (e) => reject(e) }
+                );
+              });
+              sent++;
+              sentEventsRef.current.add(eventKey(evt));
+            } catch (e) {
+              console.error("Failed to broadcast event:", e);
+            }
           }
+          toast.success(`${sent} nouveaux événements diffusés`);
+        } else {
+          console.log("[auto-scrape] Pas de nouveaux événements");
         }
-        toast.success(`${sent}/${events.length} événements diffusés automatiquement`);
-      } else {
+      } else if (events.length === 0) {
         toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
       }
 
-      // Auto-broadcast situation de course if available
+      // Auto-broadcast situation de course if available (with deduplication)
       if (data.situation?.groups?.length > 0 && managerId) {
-        // Use the already-enriched groups from the edge function (with riderIds)
         const enrichedSitGroups = data.situation.groups.map((g: any) => ({
           ...g,
           riderIds: g.riderIds || [],
         }));
         const situation = { groups: enrichedSitGroups, kmRemaining: data.situation.kmRemaining || 0 };
-        const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
-        for (const g of situation.groups) {
-          (g.riders || []).forEach((name: string, ri: number) => {
-            const id = g.riderIds?.[ri];
-            if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
-          });
-        }
-        const sitContent = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
-        try {
-          await new Promise<void>((resolve, reject) => {
-            broadcastMessage.mutate(
-              { content: sitContent, courseId: activeCourseId, managerId, metadata: { race_situation: situation, rider_mentions: riderMentions, ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}) } },
-              { onSuccess: () => resolve(), onError: (e) => reject(e) }
-            );
-          });
-          console.log("[auto-scrape] Situation de course diffusée");
-        } catch (e) {
-          console.error("Failed to broadcast situation:", e);
+        const sitKey = JSON.stringify(situation.groups.map((g: any) => g.name + g.gap + (g.riders?.length || 0))) + situation.kmRemaining;
+        
+        if (sitKey !== lastSituationRef.current) {
+          const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
+          for (const g of situation.groups) {
+            (g.riders || []).forEach((name: string, ri: number) => {
+              const id = g.riderIds?.[ri];
+              if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
+            });
+          }
+          const sitContent = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+          try {
+            await new Promise<void>((resolve, reject) => {
+              broadcastMessage.mutate(
+                { content: sitContent, courseId: activeCourseId, managerId, metadata: { race_situation: situation, rider_mentions: riderMentions, ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}) } },
+                { onSuccess: () => resolve(), onError: (e) => reject(e) }
+              );
+            });
+            lastSituationRef.current = sitKey;
+            console.log("[auto-scrape] Situation de course diffusée (mise à jour)");
+          } catch (e) {
+            console.error("Failed to broadcast situation:", e);
+          }
+        } else {
+          console.log("[auto-scrape] Situation inchangée, skip");
         }
       }
     } catch (err: any) {
@@ -739,7 +757,6 @@ export const SuperAdminLiveBroadcastPage = () => {
                     disabled={broadcastMessage.isPending || !managerId}
                     startlistRiders={startlistRiders}
                     importedSituation={importedSituation}
-                    rosterOwners={rosterOwners}
                   />
                 </CardContent>
               </Card>
