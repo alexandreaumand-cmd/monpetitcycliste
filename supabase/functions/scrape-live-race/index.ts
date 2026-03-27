@@ -176,78 +176,95 @@ function parseLEquipeLive(doc: any, html: string): {
   if (speedMatch) speed = speedMatch[1] + " km/h";
 
   // ── Extract race situation (groups + riders) ──
-  // Restrict to the situation zone: between "km/h" and the first "il y a" (timeline start)
-  // This avoids picking up groups from article text
+  // Strategy: find a tight zone containing structured group data.
+  // L'Équipe format examples:
+  //   "Échappée" (leading, no gap)
+  //   "Gr. Van Dijke | +01'18""
+  //   "Van der Poel | +00'31""
+  //   "Peloton | +02'41""
 
   const situationGroups: { name: string; gap: string; riders: string[]; riderCount: number; isPeloton: boolean }[] = [];
 
+  // Build situation zone: restrict tightly to avoid commentary leaking in
   const kmhIdx = textContent.indexOf("km/h");
   const firstEventIdx = textContent.indexOf("il y a ");
-  // Situation zone is between km/h and the first timeline event
-  const situationZone = kmhIdx >= 0 && firstEventIdx > kmhIdx
-    ? textContent.substring(kmhIdx, firstEventIdx)
-    : kmhIdx >= 0
-      ? textContent.substring(kmhIdx, kmhIdx + 3000)
-      : "";
 
-  console.log(`[L'Équipe] Situation zone length: ${situationZone.length}, starts at ${kmhIdx}, events at ${firstEventIdx}`);
+  // Try to find a tighter zone by looking for the first group-like pattern after km/h
+  let situationZone = "";
+  if (kmhIdx >= 0) {
+    const afterKmh = textContent.substring(kmhIdx);
+    // Look for first group indicator to start the zone
+    const groupIndicator = afterKmh.search(/(?:Échapp[ée]e|Peloton|Gr\.\s|Groupe\s+de|Poursuivants?|Favoris|T[eê]te\s+de\s+course)/i);
+    const zoneStart = groupIndicator >= 0 ? kmhIdx + groupIndicator : kmhIdx;
+    // End at timeline or limit
+    const zoneEnd = firstEventIdx > zoneStart ? firstEventIdx : zoneStart + 3000;
+    situationZone = textContent.substring(zoneStart, zoneEnd);
+  }
+
+  console.log(`[L'Équipe] Situation zone length: ${situationZone.length}`);
+  if (situationZone) {
+    console.log(`[L'Équipe] Situation zone preview: ${situationZone.substring(0, 600)}`);
+  }
 
   if (situationZone) {
-    // Match group headers: known cycling group names + rider names with gaps
-    // Known keywords: Échappée, Poursuivants, Peloton, Groupe de X, Contre, Maillot X
-    // Also matches "Rider Name | +02'16" patterns (individual or small group named after a rider)
-    const knownGroupKeywords = /(?:Échapp[ée]e|[EÉ]chapp[ée]e|Poursuivants?|Peloton|Groupe\s+de\s+\w+|Contre|Maillot\s+\w+|Favoris|Chasse|T[eê]te\s+de\s+course)/i;
-    
-    // Broad pattern: capture either a known keyword OR a capitalized name, followed by optional gap
-    // Gap formats: +02'41'', à 2'41, |+2:41, +2min41s, à 02'16", etc.
-    const gapPattern = /[|·\s]*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?/;
-    
-    // First pass: find all known keyword groups
+    // ─── Detect group headers ───
+    // Pattern 1: Known keywords (Échappée, Peloton, Poursuivants, Groupe de X, Contre, Favoris, etc.)
+    // Pattern 2: "Gr. Name" prefix
+    // Pattern 3: Rider name followed by gap (e.g. "Van der Poel | +00'31"")
+    //
+    // Gap formats supported:
+    //   +01'18"  +01'18''  +1'18"  à 01'18"  | +01:18  +1min18s
+
+    const gapRx = `[|·,\\s]*(?:[àa]\\s*)?\\+?\\s*(\\d{1,3})\\s*['′':min]\\s*(\\d{1,2})\\s*["″''s]?\\s*["″''s]?`;
+
     const groupHeaders: { name: string; gap: string; index: number }[] = [];
-    const keywordPattern = new RegExp(
-      `(${knownGroupKeywords.source})\\s*(?:[|·\\s]*(?:[àa]\\s*)?(?:\\+?\\s*)(\\d{1,3})\\s*[':′''min]\\s*(\\d{1,2})\\s*[":″''s]?\\s*[":″''s]?)?`,
-      'gi'
-    );
-    let gMatch;
-    while ((gMatch = keywordPattern.exec(situationZone)) !== null) {
+
+    // Pass 1: known keywords with optional gap
+    const knownKwSource = `(?:Échapp[ée]e|[EÉ]chapp[ée]e|Poursuivants?|Peloton|Groupe\\s+de\\s+\\w+|Contre|Maillot\\s+\\w+|Favoris|Chasse|T[eê]te\\s+de\\s+course)`;
+    const kwRx = new RegExp(`(${knownKwSource})\\s*${gapRx}?`, 'gi');
+    let m;
+    while ((m = kwRx.exec(situationZone)) !== null) {
       let gap = "0:00";
-      if (gMatch[2] && gMatch[3]) {
-        gap = `+${parseInt(gMatch[2])}:${gMatch[3].padStart(2, '0')}`;
+      if (m[2] && m[3]) {
+        gap = `+${parseInt(m[2])}:${m[3].padStart(2, '0')}`;
       }
-      groupHeaders.push({ name: gMatch[1], gap, index: gMatch.index });
+      groupHeaders.push({ name: m[1], gap, index: m.index });
     }
 
-    // Second pass: find rider-name-based groups (e.g. "Garcia Cortina | +02'16"")
-    // Pattern: Capitalized name (2+ words) followed by a gap
-    const riderGroupPattern = /([A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-ZÀ-Ü][a-zà-ü'-]+)+)\s*[|·]\s*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?/g;
-    let rGroupMatch;
-    while ((rGroupMatch = riderGroupPattern.exec(situationZone)) !== null) {
-      // Skip if this position is already covered by a keyword group
-      const alreadyCovered = groupHeaders.some(h => Math.abs(h.index - rGroupMatch!.index) < 20);
+    // Pass 2: "Gr. Name" prefix groups (e.g. "Gr. Van Dijke | +01'18"")
+    const grPrefixRx = new RegExp(`Gr\\.\\s+([A-ZÀ-Ü][a-zà-ü'-]+(?:\\s+[A-Za-zÀ-ü'-]+)*)\\s*${gapRx}`, 'g');
+    while ((m = grPrefixRx.exec(situationZone)) !== null) {
+      const alreadyCovered = groupHeaders.some(h => Math.abs(h.index - m!.index) < 30);
       if (alreadyCovered) continue;
-      const gap = `+${parseInt(rGroupMatch[2])}:${rGroupMatch[3].padStart(2, '0')}`;
-      groupHeaders.push({ name: rGroupMatch[1], gap, index: rGroupMatch.index });
+      const gap = `+${parseInt(m[2])}:${m[3].padStart(2, '0')}`;
+      groupHeaders.push({ name: `Gr. ${m[1]}`, gap, index: m.index });
+    }
+
+    // Pass 3: Rider name + gap as group header (e.g. "Van der Poel | +00'31"")
+    // Must have explicit separator (| or ·) to avoid matching random text
+    const riderGrpRx = new RegExp(
+      `([A-ZÀ-Ü][a-zà-ü'-]+(?:\\s+(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da))?(?:\\s+[A-Za-zÀ-ü'-]+)+)\\s*[|·]\\s*(?:[àa]\\s*)?\\+?\\s*(\\d{1,3})\\s*['′':min]\\s*(\\d{1,2})\\s*["″''s]?\\s*["″''s]?`,
+      'g'
+    );
+    while ((m = riderGrpRx.exec(situationZone)) !== null) {
+      const alreadyCovered = groupHeaders.some(h => Math.abs(h.index - m!.index) < 30);
+      if (alreadyCovered) continue;
+      // Validate it's a plausible name (not commentary)
+      const nameLc = m[1].toLowerCase();
+      const badWords = ['il ', 'elle ', 'ils ', ' est ', ' sont ', ' a ', ' ont ', ' va ', ' fait ', ' sur ', ' dans ', ' pour ', ' avec ', ' qui ', ' que ', ' les ', ' des ', ' une '];
+      if (badWords.some(w => nameLc.includes(w))) continue;
+      if (m[1].length < 4 || m[1].length > 40) continue;
+      const gap = `+${parseInt(m[2])}:${m[3].padStart(2, '0')}`;
+      groupHeaders.push({ name: m[1], gap, index: m.index });
     }
 
     // Sort by position in text
     groupHeaders.sort((a, b) => a.index - b.index);
 
-    // Broad gap search for headers that didn't capture a gap
-    for (const header of groupHeaders) {
-      if (header.gap !== "0:00") continue;
-      const afterHeader = situationZone.substring(header.index, Math.min(header.index + 200, situationZone.length));
-      const broadGap = afterHeader.match(/[+àa]\s*(\d{1,3})\s*['′''min:]\s*(\d{1,2})\s*['″''s":]*(?:\s*['″''s":])*/);
-      if (broadGap) {
-        header.gap = `+${parseInt(broadGap[1])}:${broadGap[2].padStart(2, '0')}`;
-      }
-    }
-
-    console.log(`[L'Équipe] Situation zone preview: ${situationZone.substring(0, 500)}`);
-
-    // Deduplicate (L'Équipe shows expanded + collapsed)
+    // Deduplicate (L'Équipe shows expanded + collapsed views)
     const seenGroups = new Set<string>();
     const uniqueHeaders = groupHeaders.filter(h => {
-      const key = h.name.toLowerCase();
+      const key = h.name.toLowerCase().replace(/^gr\.\s*/, '');
       if (seenGroups.has(key)) return false;
       seenGroups.add(key);
       return true;
@@ -255,29 +272,32 @@ function parseLEquipeLive(doc: any, html: string): {
 
     console.log(`[L'Équipe] Found ${uniqueHeaders.length} group headers: ${uniqueHeaders.map(h => `${h.name} (${h.gap})`).join(', ')}`);
 
+    // Extract riders for each group section
     for (let i = 0; i < uniqueHeaders.length; i++) {
       const start = uniqueHeaders[i].index;
-      let end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
+      const end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
       let section = situationZone.substring(start, end);
 
       // Cut at "masquer/afficher le détail" which marks end of the rider list
       const detailCut = section.search(/masquer le d[ée]tail|afficher le d[ée]tail/i);
       if (detailCut > 0) section = section.substring(0, detailCut);
 
-      // Extract rider names: "X. LastName (Team)" pattern
+      // Extract rider names: "X. LastName (Team)" or "FirstName LastName (Team)" pattern
       const riderPattern = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/g;
       const groupRiders: string[] = [];
       let rMatch;
       while ((rMatch = riderPattern.exec(section)) !== null) {
         const riderName = rMatch[1].trim();
         const team = rMatch[2].trim();
-        if (riderName.toLowerCase().includes("groupe") || riderName.toLowerCase().includes("peloton")) continue;
-        if (riderName.length < 4) continue;
-        if (riderName.toLowerCase().startsWith("photo")) continue;
-        // Filter out sentence-like matches (contain common words)
+        // Filter out false positives
+        if (riderName.length < 4 || riderName.length > 50) continue;
         const lc = riderName.toLowerCase();
-        if (lc.includes(" sur ") || lc.includes(" la ") || lc.includes(" le ") || lc.includes(" les ") || lc.includes(" un ") || lc.includes(" des ") || lc.includes(" est ") || lc.includes(" qui ") || lc.includes(" point ")) continue;
-        
+        if (lc.includes("groupe") || lc.includes("peloton") || lc.startsWith("photo")) continue;
+        // Reject sentence fragments
+        if (/\b(sur|la|le|les|un|des|est|qui|point|dans|pour|avec|que|cette|son|ses|leur|nous|vous|ils|elle|elles|ont|sont|fait|mais|donc|car|comme)\b/.test(lc)) continue;
+        // Reject if team name looks like a sentence (contains verbs/articles)
+        if (/\b(est|sont|a été|ont été|fait|dans|pour)\b/.test(team.toLowerCase())) continue;
+
         groupRiders.push(riderName);
         riders.push({ name: riderName, team, position: undefined, gap: uniqueHeaders[i].gap });
       }
@@ -293,6 +313,9 @@ function parseLEquipeLive(doc: any, html: string): {
       console.log(`[L'Équipe] Group "${uniqueHeaders[i].name}": ${groupRiders.length} riders, gap=${uniqueHeaders[i].gap}`);
     }
   }
+
+  // If no structured groups found, do NOT create a fake "peloton" with all content
+  // Return empty situation instead of corrupted data
 
   // ── Extract timeline events ──
   // Format: "il y a Xmin, Y km <text>" — note the comma and space variations
