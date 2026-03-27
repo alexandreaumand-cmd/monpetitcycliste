@@ -144,7 +144,8 @@ Deno.serve(async (req) => {
             
             const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
               body: {
-                phase_id: currentAuction.phase_id,
+                phase_id: effectivePhase,
+                effective_phase_id: effectivePhase,
                 deadline_at: deadlineAt.toISOString(),
                 league_id: currentAuction.league_id,
                 auto_launched: true
