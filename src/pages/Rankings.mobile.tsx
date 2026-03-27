@@ -28,6 +28,7 @@ import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
