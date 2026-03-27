@@ -21,12 +21,16 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { RankingsMobile } from "./Rankings.mobile";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 
 export default function Rankings() {
   const { t } = useTranslation('rankings');
   const isMobile = useIsMobile();
   const { selectedSeason, phases } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
