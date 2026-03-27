@@ -42,6 +42,8 @@ export const SuperAdminLiveBroadcastPage = () => {
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
+  const sentEventsRef = useRef<Set<string>>(new Set());
+  const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
   const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
