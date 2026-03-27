@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       firstAuctionStartsAt,
       // five_phases specific
       variant,        // 'full_season' | 'wt_only'
+      startingPhaseIndex,  // number (0-based) - optional, for five_phases
       
       // per_course specific
       selectedCourseIds, // string[]
