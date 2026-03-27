@@ -193,12 +193,23 @@ function parseLEquipeLive(doc: any, html: string): {
   console.log(`[L'Équipe] Situation zone length: ${situationZone.length}, starts at ${kmhIdx}, events at ${firstEventIdx}`);
 
   if (situationZone) {
-    // Match group headers: "Groupe de tête", "Peloton" followed by optional gap in various formats
-    // Gaps can be: +02'41'', à 2'41, |+2:41, +2min41s, etc.
-    const groupHeaderPattern = /(Groupe\s+de\s+t[êe]te|Peloton)\s*(?:[|·\s]*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?)?/gi;
+    // Match group headers: known cycling group names + rider names with gaps
+    // Known keywords: Échappée, Poursuivants, Peloton, Groupe de X, Contre, Maillot X
+    // Also matches "Rider Name | +02'16" patterns (individual or small group named after a rider)
+    const knownGroupKeywords = /(?:Échapp[ée]e|[EÉ]chapp[ée]e|Poursuivants?|Peloton|Groupe\s+de\s+\w+|Contre|Maillot\s+\w+|Favoris|Chasse|T[eê]te\s+de\s+course)/i;
+    
+    // Broad pattern: capture either a known keyword OR a capitalized name, followed by optional gap
+    // Gap formats: +02'41'', à 2'41, |+2:41, +2min41s, à 02'16", etc.
+    const gapPattern = /[|·\s]*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?/;
+    
+    // First pass: find all known keyword groups
     const groupHeaders: { name: string; gap: string; index: number }[] = [];
+    const keywordPattern = new RegExp(
+      `(${knownGroupKeywords.source})\\s*(?:[|·\\s]*(?:[àa]\\s*)?(?:\\+?\\s*)(\\d{1,3})\\s*[':′''min]\\s*(\\d{1,2})\\s*[":″''s]?\\s*[":″''s]?)?`,
+      'gi'
+    );
     let gMatch;
-    while ((gMatch = groupHeaderPattern.exec(situationZone)) !== null) {
+    while ((gMatch = keywordPattern.exec(situationZone)) !== null) {
       let gap = "0:00";
       if (gMatch[2] && gMatch[3]) {
         gap = `+${parseInt(gMatch[2])}:${gMatch[3].padStart(2, '0')}`;
@@ -206,16 +217,28 @@ function parseLEquipeLive(doc: any, html: string): {
       groupHeaders.push({ name: gMatch[1], gap, index: gMatch.index });
     }
 
-    // Also try a second pass: look for gap patterns near group names if not captured
-    // e.g. "Peloton à 2'41''" or "Peloton+02'41"
-    if (groupHeaders.length > 0 && groupHeaders.every(h => h.gap === "0:00")) {
-      // Try broader gap search near each header
-      for (const header of groupHeaders) {
-        const afterHeader = situationZone.substring(header.index, Math.min(header.index + 200, situationZone.length));
-        const broadGap = afterHeader.match(/[+àa]\s*(\d{1,3})\s*['′''min:]\s*(\d{1,2})\s*['″''s":]*(?:\s*['″''s":])*/);
-        if (broadGap) {
-          header.gap = `+${parseInt(broadGap[1])}:${broadGap[2].padStart(2, '0')}`;
-        }
+    // Second pass: find rider-name-based groups (e.g. "Garcia Cortina | +02'16"")
+    // Pattern: Capitalized name (2+ words) followed by a gap
+    const riderGroupPattern = /([A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-ZÀ-Ü][a-zà-ü'-]+)+)\s*[|·]\s*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?/g;
+    let rGroupMatch;
+    while ((rGroupMatch = riderGroupPattern.exec(situationZone)) !== null) {
+      // Skip if this position is already covered by a keyword group
+      const alreadyCovered = groupHeaders.some(h => Math.abs(h.index - rGroupMatch!.index) < 20);
+      if (alreadyCovered) continue;
+      const gap = `+${parseInt(rGroupMatch[2])}:${rGroupMatch[3].padStart(2, '0')}`;
+      groupHeaders.push({ name: rGroupMatch[1], gap, index: rGroupMatch.index });
+    }
+
+    // Sort by position in text
+    groupHeaders.sort((a, b) => a.index - b.index);
+
+    // Broad gap search for headers that didn't capture a gap
+    for (const header of groupHeaders) {
+      if (header.gap !== "0:00") continue;
+      const afterHeader = situationZone.substring(header.index, Math.min(header.index + 200, situationZone.length));
+      const broadGap = afterHeader.match(/[+àa]\s*(\d{1,3})\s*['′''min:]\s*(\d{1,2})\s*['″''s":]*(?:\s*['″''s":])*/);
+      if (broadGap) {
+        header.gap = `+${parseInt(broadGap[1])}:${broadGap[2].padStart(2, '0')}`;
       }
     }
 
