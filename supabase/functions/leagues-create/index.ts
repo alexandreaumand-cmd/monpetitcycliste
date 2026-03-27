@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
       byPhase = true;
       wtOnly = variant === 'wt_only';
       gtOnly = false;
+      leagueStartingPhaseIndex = typeof startingPhaseIndex === 'number' ? startingPhaseIndex : null;
       leagueStartingPhaseIndex = null;
 
       // Get all phases (starting phase determined after auctions)
