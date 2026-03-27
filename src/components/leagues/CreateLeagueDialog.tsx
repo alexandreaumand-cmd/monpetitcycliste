@@ -34,6 +34,7 @@ import {
   Gift,
   MapPin,
   Trophy,
+  Flag,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
@@ -539,8 +540,12 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               value={selectedMode === 'five_phases' ? t('templates.five_phases.name') : t('templates.perCourse.name')} />
             <RecapRow icon={<CalendarIcon className="h-4 w-4" />} label={t('wizard.recapName')} value={name} />
             {selectedMode === 'five_phases' && (
-              <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapVariant')}
-                value={variant === 'full_season' ? t('settings.variantFull') : t('settings.variantWT')} />
+              <>
+                <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapVariant')}
+                  value={variant === 'full_season' ? t('settings.variantFull') : t('settings.variantWT')} />
+                <RecapRow icon={<Flag className="h-4 w-4" />} label={t('wizard.recapStartingPhase')}
+                  value={startingPhaseIndex === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex + 1 })} />
+              </>
             )}
             {selectedMode === 'per_course' && selectedCoursesData.length > 0 && (
               <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapCourses')}
