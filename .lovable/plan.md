@@ -1,63 +1,52 @@
 
 
-## Incohérence standings vides vs points visibles — ligue "TEST Saison entière 3 managers"
+## Fix : le dialog "Coureurs bonusés" affiche des points hors scope de la ligue
 
 ### Cause racine
 
-Deux problèmes combinés :
+Dans `LeagueBonusRidersDialog.tsx`, les requêtes `points_ledger` (ligne 114) et `bonus_points` (ligne 130) filtrent uniquement par `phase_id` — elles ignorent complètement le scope de la ligue (courses autorisées + date plancher `started_at_effective`).
 
-1. **Le filtre `>` est trop strict pour cette ligue** : `started_at_effective = 2026-03-27` et E3 Saxo Classic a lieu le `2026-03-27`. Avec le filtre `date_debut > started_at_effective`, la course est exclue des standings. Les enchères ont pourtant été fermées le 26 mars (dernier round à 19:17 le 26/03), donc la course DEVRAIT compter.
+Résultat : Noa Isidore affiche 250 points et +62.5 bonus alors qu'il n'a aucun point **dans cette ligue**.
 
-2. **Les edge functions (get-team-scoring, etc.) n'appliquent pas le même filtre** : elles montrent les points sans vérifier `started_at_effective` avec `>`, d'où des points visibles mais des standings vides.
+### Solution
 
-### Le vrai problème : sémantique de `started_at_effective`
+Ajouter le filtrage par scope de ligue dans les deux requêtes :
 
-Le code dans `clore-round` fixe `started_at_effective = date du jour + 1` au premier round. Combiné avec le filtre `>` (strict), cela crée une zone morte d'un jour.
+1. **Récupérer les course_ids autorisées** via `get_league_course_ids(leagueId)` + la date `started_at_effective` de la ligue
+2. **Filtrer `points_ledger`** avec `.in('course_id', leagueCourseIds)` et exclure les courses avant la date plancher
+3. **Filtrer `bonus_points`** de la même façon (les bonus avec `course_id` doivent être dans le scope)
 
-| Ligue | Dernier round fermé | started_at_effective | E3 Saxo (27/03) | Filtre `>` | Résultat |
-|---|---|---|---|---|---|
-| WT sans bonus | 27/03 | 27/03 | 27/03 | `27 > 27` = false | ✅ Correct (exclu) |
-| TEST 3 managers | 26/03 | 27/03 | 27/03 | `27 > 27` = false | ❌ Bug (exclu alors que devrait compter) |
+### Détails techniques
 
-### Solution : changer la sémantique de `started_at_effective`
+Dans `LeagueBonusRidersDialog.tsx`, avant les requêtes de points :
 
-`started_at_effective` doit représenter la **date de clôture du dernier round d'enchères** (pas J+1). Le filtre `>` fera alors le bon travail :
+```typescript
+// Get league scope
+const { data: leagueCourseIds } = await supabase.rpc('get_league_course_ids', { p_league_id: leagueId });
+const validCourseIds = leagueCourseIds?.map((r: any) => r.course_id) || [];
 
-- WT sans bonus : `started_at_effective = 2026-03-27` (fermé le 27) → `27 > 27` = false → E3 exclue ✅
-- TEST 3 managers : `started_at_effective = 2026-03-26` (fermé le 26) → `27 > 26` = true → E3 incluse ✅
+const { data: leagueData } = await supabase
+  .from('leagues')
+  .select('started_at_effective')
+  .eq('id', leagueId)
+  .single();
 
-### Changements
-
-#### 1. Migration SQL — corriger la valeur pour "TEST Saison entière 3 managers"
-
-```sql
-UPDATE leagues
-SET started_at_effective = '2026-03-26'
-WHERE id = 'edb66d34-826e-435b-b033-b70ee36972aa';
-
-SELECT refresh_standings_views();
+// If date floor, filter courses by date
+let scopedCourseIds = validCourseIds;
+if (leagueData?.started_at_effective && validCourseIds.length > 0) {
+  const dateFloor = leagueData.started_at_effective.substring(0, 10);
+  const { data: coursesData } = await supabase
+    .from('courses')
+    .select('id, date_debut')
+    .in('id', validCourseIds);
+  scopedCourseIds = (coursesData || [])
+    .filter(c => c.date_debut && c.date_debut > dateFloor)
+    .map(c => c.id);
+}
 ```
 
-#### 2. `clore-round/index.ts` — ne plus ajouter J+1
+Puis filtrer les deux requêtes avec `.in('course_id', scopedCourseIds)`.
 
-Ligne 292-294, remplacer :
-```ts
-const closedDate = new Date();
-closedDate.setDate(closedDate.getDate() + 1);
-const effectiveDate = closedDate.toISOString().split('T')[0];
-```
-Par :
-```ts
-const effectiveDate = new Date().toISOString().split('T')[0];
-```
-
-La date effective devient le jour de clôture, et le filtre `>` exclut naturellement les courses de ce jour.
-
-#### 3. Vérifier les autres ligues existantes
-
-Vérifier si d'autres ligues ont un `started_at_effective` décalé de J+1 et les corriger si nécessaire.
-
-### Fichiers impactés
-- **Migration SQL** — correction de `started_at_effective` pour cette ligue + refresh standings
-- `supabase/functions/clore-round/index.ts` — supprimer le `+1` jour
+### Fichier impacté
+- `src/components/team/LeagueBonusRidersDialog.tsx` — ajout filtrage scope ligue sur points_ledger et bonus_points
 
