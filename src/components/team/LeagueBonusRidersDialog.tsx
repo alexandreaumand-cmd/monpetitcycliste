@@ -133,9 +133,10 @@ export function LeagueBonusRidersDialog({
           .map(c => c.id);
       }
 
-      if (scopedCourseIds.length === 0) {
-        return result.sort((a, b) => b.points_total - a.points_total);
-      }
+      const pointsByRider: Record<string, number> = {};
+      const bonusByRider: Record<string, number> = {};
+
+      if (scopedCourseIds.length > 0) {
 
       const { data: pointsData } = await supabase
         .from("points_ledger")
