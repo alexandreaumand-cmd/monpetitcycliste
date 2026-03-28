@@ -93,6 +93,9 @@ function GroupRow({
             {gapDisplay}
           </span>
         )}
+        <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+          ({group.riderCount || group.riders.length})
+        </span>
       </div>
 
       {/* Vertical separator bar */}
