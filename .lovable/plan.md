@@ -1,42 +1,48 @@
 
 
-## Fix : auto-scroll vers la dernière situation de course sur la page Live Broadcast
+## Fix : extraction des dossards et parsing complet des coureurs PCS
 
-### Problème
+### Problème identifié
 
-Quand la page Live Broadcast reçoit une mise à jour (auto-scrape ou import manuel), la situation de course est mise à jour dans le panneau droit mais l'utilisateur doit scroller manuellement vers le haut pour la voir — le contenu au-dessus (sélection de course, barre d'import) pousse le panneau hors de la vue.
+Sur PCS, chaque ligne de coureur dans un groupe suit cette structure :
+```
+[rang dans le groupe] [image maillot] [dossard] [nom] [écart GC]
+```
+Exemple pour Carapaz : `9 🇪🇨 111 CARAPAZ Richard +1:38`
+
+Le scraper actuel a un bug dans l'extraction des dossards (ligne 196) :
+```typescript
+const bibMatch = parentText.match(/^\s*(\d{1,3})\s/);
+```
+Ce regex capture le **premier nombre** du texte parent, qui est le **rang dans le groupe** (1, 2, 3…) et non le **dossard** (14, 32, 111…). Le dossard est le deuxième nombre dans la ligne.
 
 ### Solution
 
-Deux ajustements dans `SuperAdminLiveBroadcastPage.tsx` :
+Modifier l'extraction du dossard dans `parsePCSLive` pour :
 
-1. **Rendre le panneau droit sticky** : ajouter `sticky top-20` sur la colonne droite (Situation de course) pour qu'elle reste visible pendant le scroll dans l'historique à gauche
+1. **Identifier correctement le dossard** : chercher le nombre qui précède immédiatement le nom du coureur (pas le rang qui est en début de ligne). Le pattern est : `rang` → image/flag → `dossard` → `nom`. On peut extraire le dossard comme le dernier nombre trouvé avant le texte du lien rider.
 
-2. **Auto-scroll vers le haut** quand `importedSituation` change : ajouter un `useEffect` qui scroll `window.scrollTo(0, 0)` ou vers le bloc situation quand une nouvelle situation est importée (via scrape)
+2. **Regex corrigé** : au lieu de `^\s*(\d{1,3})\s`, chercher le nombre juste avant le nom du coureur dans le texte parent. Pattern : `(\d{1,3})\s+RIDER_NAME` ou extraire tous les nombres et prendre le deuxième (qui est le dossard, le premier étant le rang).
 
 ### Changement concret
 
-```tsx
-// Colonne droite : ajouter sticky
-<div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-base">Situation de course</CardTitle>
-    </CardHeader>
-    ...
-  </Card>
-</div>
-```
+Dans `supabase/functions/scrape-live-race/index.ts`, lignes 190-201 :
 
-```tsx
-// Auto-scroll quand la situation change
-useEffect(() => {
-  if (importedSituation) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}, [importedSituation]);
+```typescript
+// Extract bib: it's the number just before the rider name in the parent text
+// Format: "rank [flag] bib RIDER_NAME +GC_gap"
+// We need the LAST number before the rider's name, not the first (which is the rank)
+const parentText = parentEl.textContent || "";
+const riderName = name.split(' ').pop() || name; // Use last name for matching
+const beforeName = parentText.substring(0, parentText.indexOf(riderName)).trim();
+const allNumbers = beforeName.match(/\d+/g);
+if (allNumbers && allNumbers.length >= 2) {
+  bib = allNumbers[allNumbers.length - 1]; // Last number before name = bib
+} else if (allNumbers && allNumbers.length === 1) {
+  bib = allNumbers[0]; // Only one number = likely the bib
+}
 ```
 
 ### Fichier impacté
-- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — sticky + auto-scroll
+- `supabase/functions/scrape-live-race/index.ts` — lignes 190-201, correction de l'extraction du dossard dans `parsePCSLive`
 
