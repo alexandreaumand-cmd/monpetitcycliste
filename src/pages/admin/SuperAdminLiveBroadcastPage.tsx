@@ -61,6 +61,13 @@ export const SuperAdminLiveBroadcastPage = () => {
     (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
      selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
 
+  // Auto-scroll to top when imported situation changes
+  useEffect(() => {
+    if (importedSituation) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [importedSituation]);
+
   useEffect(() => {
     setSelectedEtape(isMultiStage ? 1 : null);
   }, [activeCourseId, isMultiStage]);
@@ -651,7 +658,7 @@ export const SuperAdminLiveBroadcastPage = () => {
             </div>
 
             {/* Right column: Situation de course */}
-            <div className="space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Situation de course</CardTitle>
