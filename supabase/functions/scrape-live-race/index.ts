@@ -246,6 +246,38 @@ function parsePCSLive(doc: any, html: string): {
 
       console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);
     }
+
+    // Post-process: merge orphan single-rider groups into previous group
+    // This handles cases where nested .sit-grp filtering wasn't enough
+    const isRealGroupName = (n: string) => {
+      const lower = n.toLowerCase();
+      return lower.includes("breakaway") || lower.includes("chase") || lower.includes("peloton")
+        || lower.includes("group") || lower.includes("favour") || lower.includes("favor")
+        || lower.includes("maglia") || lower.includes("maillot") || lower.includes("jersey");
+    };
+
+    const merged: typeof situationGroups = [];
+    for (const g of situationGroups) {
+      const isOrphan = g.riders.length <= 1
+        && !g.isPeloton
+        && !isRealGroupName(g.name);
+      if (isOrphan && merged.length > 0 && !merged[merged.length - 1].isPeloton) {
+        const prev = merged[merged.length - 1];
+        prev.riders.push(...g.riders);
+        prev.riderIds?.push(...(g.riderIds || []));
+        prev.riderBibs?.push(...(g.riderBibs || []));
+        prev.riderGcGaps?.push(...(g.riderGcGaps || []));
+        prev.riderCount = prev.riders.length;
+      } else {
+        merged.push(g);
+      }
+    }
+
+    if (merged.length !== situationGroups.length) {
+      console.log(`[PCS Live] Merged ${situationGroups.length} groups into ${merged.length}`);
+      situationGroups.length = 0;
+      situationGroups.push(...merged);
+    }
   }
 
   // Fallback: parse from text if no DOM groups found
