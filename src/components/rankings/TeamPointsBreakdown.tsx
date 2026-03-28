@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TeamPointsBreakdownProps {
   saisonId: string;
+  leagueId?: string;
 }
 
 export const TeamPointsBreakdown = ({ saisonId }: TeamPointsBreakdownProps) => {
