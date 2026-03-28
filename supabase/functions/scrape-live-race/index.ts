@@ -186,15 +186,26 @@ function parsePCSLive(doc: any, html: string): {
           groupRiders.push(name);
           groupPcsSlugs.push(slug);
 
-          // Extract bib: look for previous sibling text or parent text before the link
+          // Extract bib and GC gap from parent text
+          // Format: "rank [flag] bib RIDER_NAME +GC_gap"
+          // The rank is the first number, the bib is the last number before the rider name
           const parentEl = link.parentElement;
           let bib = "";
           let gcGap = "";
           if (parentEl) {
             const parentText = parentEl.textContent || "";
-            // Bib is typically a number before the rider name
-            const bibMatch = parentText.match(/^\s*(\d{1,3})\s/);
-            if (bibMatch) bib = bibMatch[1];
+            // Find text before rider name to extract bib (last number before name)
+            const riderLastName = name.split(' ').pop() || name;
+            const nameIdx = parentText.indexOf(riderLastName);
+            if (nameIdx > 0) {
+              const beforeName = parentText.substring(0, nameIdx).trim();
+              const allNumbers = beforeName.match(/\d+/g);
+              if (allNumbers && allNumbers.length >= 2) {
+                bib = allNumbers[allNumbers.length - 1]; // Last number = bib (first = rank)
+              } else if (allNumbers && allNumbers.length === 1) {
+                bib = allNumbers[0];
+              }
+            }
             // GC gap is typically after the rider name, format +H:MM:SS or +MM:SS
             const gcMatch = parentText.match(/(\+\d+:\d{2}(?::\d{2})?)\s*$/);
             if (gcMatch) gcGap = gcMatch[1];
