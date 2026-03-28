@@ -1,38 +1,55 @@
 
 
-## Refonte layout RaceSituationDisplay — style PCS avec barres horizontales de séparation
+## Fix : le filtrage `.sit-grp` exclut tous les groupes — 0 top-level trouvé
 
-### Layout cible (basé sur l'image PCS)
+### Problème racine
 
-```text
-┌─────────────────────────────────────────┐
-│ 1  │ 🏃 21 VINGEGAARD Jonas       +1:13 │
-├────┼────────────────────────────────────┤
-│    │                                     │
-│+0:15  ← écart entre groupe 1 et 2       │
-│    │                                     │
-├────┼────────────────────────────────────┤
-│ 2  │ 🏃 2  LIPOWITZ Florian       +1:13 │
-│    │ 🏃 91 MARTINEZ Lenny         +1:09 │
-├────┼────────────────────────────────────┤
-│+0:25                                     │
-├────┼────────────────────────────────────┤
-│ 3  │ 🏃 56 PARET-PEINTRE Valentin +1:15 │
-└─────────────────────────────────────────┘
+Les logs montrent clairement :
+```
+Found 5 .sit-grp elements
+After filtering nested: 0 top-level groups
+No .sit-grp found, trying text-based parsing
 ```
 
-### Changements
+La structure HTML PCS est un conteneur `.sit-grp` qui contient des `.sit-grp` enfants (les vrais groupes). Le filtre actuel cherche des `.sit-grp` **sans aucun ancêtre** `.sit-grp` → seul le conteneur externe passerait, mais il est lui-même le parent, donc les groupes réels (qui ont un parent `.sit-grp`) sont tous exclus.
 
-1. **Séparer gap et groupe** : le gap entre deux groupes devient une **ligne de séparation horizontale dédiée** entre les groupes, avec l'écart affiché en gras/couleur à gauche (ex: `+0:15`). Le premier groupe n'a pas de séparateur au-dessus.
+Le fallback text-based ne capture que les headers de groupe (nom + gap + count) via regex, mais **aucun coureur individuel** — d'où des groupes vides ou mal formés.
 
-2. **Structure du composant** : au lieu de mettre le gap dans la colonne gauche du groupe, on insère un élément séparateur entre chaque groupe :
-   - `GapSeparator` : barre horizontale avec l'écart affiché en bleu/primary, fond léger
-   - `GroupRow` : badge numéroté à gauche + liste des coureurs à droite (sans le gap)
+### Solution
 
-3. **Badge** reste dans la colonne gauche du groupe (numéro ou P), avec le nombre de coureurs en dessous.
+Remplacer la logique de filtrage par une approche à **deux niveaux** :
 
-4. **Barre verticale** supprimée — on utilise uniquement des séparations horizontales comme sur PCS.
+1. **Trouver le conteneur racine** : le `.sit-grp` qui n'a **pas** de parent `.sit-grp` (il n'y en a qu'un)
+2. **Sélectionner ses enfants directs** `.sit-grp` : ce sont les vrais groupes de course, chacun contenant les riders
+
+```typescript
+// Find the root .sit-grp container (the one with no .sit-grp ancestor)
+const rootSitGrp = Array.from(allSitGrps).find(el => {
+  let parent = el.parentElement;
+  while (parent) {
+    if (parent.classList?.contains("sit-grp")) return false;
+    parent = parent.parentElement;
+  }
+  return true;
+});
+
+// The real groups are the direct .sit-grp children of the root
+const sitGroups = rootSitGrp 
+  ? Array.from(rootSitGrp.querySelectorAll(":scope > .sit-grp"))
+  : [];
+```
+
+Si `:scope` n'est pas supporté par le parser HTML (deno-dom), utiliser un fallback :
+```typescript
+const sitGroups = rootSitGrp
+  ? Array.from(rootSitGrp.children).filter(
+      (el: any) => el.classList?.contains("sit-grp")
+    )
+  : [];
+```
+
+Cela donnera les vrais groupes (5 dans l'exemple) avec leurs coureurs correctement imbriqués. Le reste du parsing (extraction riders, bibs, GC gaps) reste identique.
 
 ### Fichier impacté
-- `src/components/arena/RaceSituationDisplay.tsx` — refonte du layout avec séparateurs horizontaux entre groupes
+- `supabase/functions/scrape-live-race/index.ts` — lignes 130-139, remplacer le filtrage top-level par la sélection des enfants directs du conteneur racine
 
