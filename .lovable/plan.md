@@ -1,31 +1,21 @@
 
 
-## Ajouter le nombre de coureurs dans la colonne gauche (style PCS)
+## Fix : arrêter de fusionner les groupes solo — chaque `.sit-grp` PCS est un vrai groupe
 
-### Constat (image PCS)
+### Problème
 
-Sur PCS, la colonne gauche de chaque groupe affiche **3 informations empilées** :
-1. **Numéro du groupe** (1, 2, 3… ou P)
-2. **Écart avec le groupe de tête** (+0:20, +1:30, +1:58, +2:24)
-3. **Nombre de coureurs** dans le groupe (5, 2, 2, 6, 1)
+Le post-processing de fusion (lignes 250-280) considère tout groupe avec ≤1 coureur et sans nom reconnu ("breakaway", "peloton", etc.) comme un "orphelin" et le fusionne dans le groupe précédent. C'est faux : sur PCS, chaque `.sit-grp` avec son propre écart est un **groupe distinct** — un coureur seul en tête est un vrai groupe, pas un orphelin.
 
-Actuellement, notre `RaceSituationDisplay` n'affiche que le numéro et l'écart dans la colonne gauche. Le nombre de coureurs est absent.
+Résultat actuel : VINGEGAARD (solo, groupe 1) est fusionné avec le groupe 2, PARET-PEINTRE (solo) est fusionné avec le groupe suivant, etc. La structure de 8 groupes distincts est perdue.
 
-### Changement
+### Solution
 
-Dans `RaceSituationDisplay.tsx`, modifier la colonne gauche du `GroupRow` pour ajouter le `riderCount` sous l'écart :
+**Supprimer entièrement la logique de fusion orphan** (lignes 250-280). Le filtrage top-level des `.sit-grp` imbriqués (lignes 131-138) suffit déjà à isoler les vrais groupes. Chaque `.sit-grp` top-level avec son propre gap est un groupe légitime, qu'il contienne 1 ou 10 coureurs.
 
-```text
-  ┌─────┐
-  │  1  │   ← badge numéro
-  └─────┘
-  +1:30     ← écart (déjà présent)
-   (2)      ← nombre de coureurs (NOUVEAU)
-```
+### Changement concret
 
-- Afficher `riderCount` pour tous les groupes (y compris le peloton)
-- Style : `text-[10px] text-muted-foreground` entre parenthèses ou avec un petit indicateur visuel
+Dans `supabase/functions/scrape-live-race/index.ts`, supprimer les lignes 250-280 (bloc `isRealGroupName` + boucle de merge + remplacement de `situationGroups`).
 
 ### Fichier impacté
-- `src/components/arena/RaceSituationDisplay.tsx` — ajouter `riderCount` dans la colonne gauche du `GroupRow`
+- `supabase/functions/scrape-live-race/index.ts` — suppression du post-processing de fusion
 
