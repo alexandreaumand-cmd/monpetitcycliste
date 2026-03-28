@@ -1,49 +1,35 @@
 
 
-## Améliorer le rendu "Situation de course" dans la page Live Broadcast admin
+## Refonte du panneau "Situation de course" (côté droit) — style PCS avec barres verticales
 
-### Constat
+### Problème
 
-La page admin affiche la situation de course de deux manières :
-1. **RaceSituationEditor** (colonne droite) — formulaire d'édition brut sans aperçu visuel du résultat
-2. **Historique** (colonne gauche) — utilise déjà `RaceSituationDisplay` mais il est imbriqué dans un petit bloc de message, peu lisible
+Le panneau latéral droit dans `LiveCoursesTab.tsx` (desktop + mobile) utilise un rendu custom inline au lieu du composant `RaceSituationDisplay` déjà refactoré avec le style PCS (badges numérotés, barres verticales, dossards, etc.). De plus, les écarts affichés (`+9:26`, `+15:43`...) sont les écarts GC individuels, pas les écarts entre groupes — ce qui est trompeur dans un contexte de situation de course.
 
-### Changements proposés
+### Solution
 
-#### 1. Ajouter un aperçu live dans le RaceSituationEditor
+**Remplacer le rendu inline par `RaceSituationDisplay`** dans les deux sections (desktop et mobile) du panneau "Situation de course" de `LiveCoursesTab.tsx`. Ce composant gère déjà :
+- Les badges numérotés (1, 2, 3… P)
+- Les barres verticales colorées entre groupes
+- Les écarts de groupe (gap entre groupes, pas GC)
+- Les dossards et écarts GC par coureur (affichés à droite, séparément)
+- Le label "PELOTON" et le `(-)` pour les coureurs sans manager
 
-Sous les groupes éditables et au-dessus du bouton "Diffuser", afficher un **aperçu en temps réel** utilisant `RaceSituationDisplay` avec les données du formulaire. Cela permet à l'admin de voir exactement ce que les utilisateurs verront avant de diffuser.
+Le header `🏁 X km restants` sera retiré du panneau car `RaceSituationDisplay` l'affiche déjà en interne.
 
-```text
-┌─ Situation de course ─────────────────┐
-│ Km restants: [___]                    │
-│                                       │
-│ ┌─ Groupe 1 ────────────────────────┐ │
-│ │ Nom / Nb coureurs / Écart / ...   │ │
-│ └───────────────────────────────────┘ │
-│ ┌─ Peloton ─────────────────────────┐ │
-│ │ ...                               │ │
-│ └───────────────────────────────────┘ │
-│                                       │
-│ ── Aperçu ──────────────────────────  │
-│ 🏁 120 km restants                    │
-│ ① THE BREAKAWAY        +0:00         │
-│ │ 1  14  SOLER Marc (Manager1)       │
-│ │ 2  32  HIRSCHI Marc (-)            │
-│ ② CHASE GROUP          +1:45         │
-│ │ ...                                │
-│ Ⓟ PELOTON              +3:20         │
-│   142 coureurs                        │
-│                                       │
-│ [+ Groupe]    [📡 Diffuser]          │
-└───────────────────────────────────────┘
+### Changement concret
+
+Dans `LiveCoursesTab.tsx`, lignes 226-253 (desktop) et 277-299 (mobile) :
+
+Remplacer le bloc de rendu custom par :
+```tsx
+<RaceSituationDisplay
+  groups={latestSituation.groups}
+  kmRemaining={latestSituation.kmRemaining}
+  rosterOwners={rosterOwners}
+/>
 ```
 
-#### 2. Améliorer le rendu dans l'historique
-
-Donner plus d'espace au `RaceSituationDisplay` dans les messages de l'historique : retirer le padding excessif et laisser le composant occuper toute la largeur du bloc message.
-
-### Fichiers impactés
-- `src/components/arena/RaceSituationEditor.tsx` — importer `RaceSituationDisplay` et ajouter la section aperçu
-- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — ajustements mineurs de style sur le rendu historique
+### Fichier impacté
+- `src/components/arena/LiveCoursesTab.tsx` — remplacement du rendu inline par `RaceSituationDisplay` (desktop + mobile)
 
