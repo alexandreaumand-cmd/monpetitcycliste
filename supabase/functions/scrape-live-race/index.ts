@@ -140,13 +140,9 @@ function parsePCSLive(doc: any, html: string): {
       const groupRiders: string[] = [];
       const groupPcsSlugs: string[] = [];
 
-      // Parse rider count (first number)
-      const countMatch = grpText.match(/^\s*(\d+)\s/);
-      if (countMatch) riderCount = parseInt(countMatch[1], 10);
-
-      // Find group name - look for text that's not a number and not a gap
+      // Find group name and gap from text lines
       for (const line of lines) {
-        if (/^\d+$/.test(line)) continue; // skip pure numbers
+        if (/^\d+$/.test(line)) continue; // skip pure numbers (bib numbers)
         if (/^\+?\d+:\d+/.test(line)) {
           gap = line.startsWith('+') ? line : `+${line}`;
           continue;
@@ -174,22 +170,21 @@ function parsePCSLive(doc: any, html: string): {
         }
       }
 
+      riderCount = groupRiders.length;
       if (!groupName) groupName = riderCount > 20 ? "Peloton" : `Groupe`;
 
-      const isPeloton = groupName.toLowerCase().includes("peloton") || riderCount > 50;
-
-      if (riderCount === 0 && groupRiders.length > 0) riderCount = groupRiders.length;
+      const isPeloton = groupName.toLowerCase().includes("peloton");
 
       situationGroups.push({
         name: groupName,
         gap,
         riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
-        riderIds: [], // will be enriched later
-        riderCount: riderCount || groupRiders.length,
+        riderIds: [],
+        riderCount,
         isPeloton,
       });
 
-      console.log(`[PCS Live] Group "${groupName}": ${groupRiders.length} riders parsed, ${riderCount} total, gap=${gap}`);
+      console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);
     }
   }
 
