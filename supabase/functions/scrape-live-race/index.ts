@@ -127,16 +127,23 @@ function parsePCSLive(doc: any, html: string): {
   const allSitGrps = doc.querySelectorAll(".sit-grp");
   console.log(`[PCS Live] Found ${allSitGrps.length} .sit-grp elements`);
 
-  // Filter to keep only top-level .sit-grp elements (exclude nested ones)
-  const sitGroups = Array.from(allSitGrps).filter(el => {
-    let parent = el.parentElement;
+  // Find the root .sit-grp container (the one with no .sit-grp ancestor)
+  const rootSitGrp = Array.from(allSitGrps).find(el => {
+    let parent = (el as any).parentElement;
     while (parent) {
       if (parent.classList?.contains("sit-grp")) return false;
       parent = parent.parentElement;
     }
     return true;
   });
-  console.log(`[PCS Live] After filtering nested: ${sitGroups.length} top-level groups`);
+
+  // The real groups are the direct .sit-grp children of the root container
+  const sitGroups = rootSitGrp
+    ? Array.from(rootSitGrp.children).filter(
+        (el: any) => el.classList?.contains("sit-grp")
+      )
+    : [];
+  console.log(`[PCS Live] Root container found: ${!!rootSitGrp}, direct .sit-grp children: ${sitGroups.length}`);
 
   if (sitGroups.length > 0) {
     for (const grp of sitGroups) {
