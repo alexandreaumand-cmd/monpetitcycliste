@@ -1,48 +1,62 @@
 
 
-## Fix : extraction des dossards et parsing complet des coureurs PCS
+## Fix : regrouper correctement les coureurs par groupe dans le scraper PCS
 
-### Problème identifié
+### Problème
 
-Sur PCS, chaque ligne de coureur dans un groupe suit cette structure :
-```
-[rang dans le groupe] [image maillot] [dossard] [nom] [écart GC]
-```
-Exemple pour Carapaz : `9 🇪🇨 111 CARAPAZ Richard +1:38`
+Le scraper PCS utilise `doc.querySelectorAll(".sit-grp")` qui retourne **tous** les éléments avec cette classe, y compris ceux imbriqués (les lignes de coureurs individuels). Résultat : au lieu de 3-4 groupes (7 coureurs, 4 coureurs, 3 coureurs, peloton), le scraper crée un "groupe" par coureur avec le GC gap individuel comme écart de groupe.
 
-Le scraper actuel a un bug dans l'extraction des dossards (ligne 196) :
-```typescript
-const bibMatch = parentText.match(/^\s*(\d{1,3})\s/);
-```
-Ce regex capture le **premier nombre** du texte parent, qui est le **rang dans le groupe** (1, 2, 3…) et non le **dossard** (14, 32, 111…). Le dossard est le deuxième nombre dans la ligne.
+### Cause racine
 
-### Solution
+PCS utilise `.sit-grp` à **deux niveaux** :
+- Au niveau groupe (The Breakaway, Group of Favorites, Peloton)
+- Au niveau coureur individuel (imbriqué dans le groupe parent)
 
-Modifier l'extraction du dossard dans `parsePCSLive` pour :
+`querySelectorAll` retourne les deux niveaux à plat, et le scraper traite chaque élément comme un groupe distinct.
 
-1. **Identifier correctement le dossard** : chercher le nombre qui précède immédiatement le nom du coureur (pas le rang qui est en début de ligne). Le pattern est : `rang` → image/flag → `dossard` → `nom`. On peut extraire le dossard comme le dernier nombre trouvé avant le texte du lien rider.
+### Solution en 2 étapes
 
-2. **Regex corrigé** : au lieu de `^\s*(\d{1,3})\s`, chercher le nombre juste avant le nom du coureur dans le texte parent. Pattern : `(\d{1,3})\s+RIDER_NAME` ou extraire tous les nombres et prendre le deuxième (qui est le dossard, le premier étant le rang).
+#### 1. Filtrer les `.sit-grp` imbriqués (scraper)
 
-### Changement concret
-
-Dans `supabase/functions/scrape-live-race/index.ts`, lignes 190-201 :
+Dans `parsePCSLive`, après le `querySelectorAll(".sit-grp")`, ne garder que les éléments **top-level** — ceux qui n'ont pas de parent `.sit-grp` :
 
 ```typescript
-// Extract bib: it's the number just before the rider name in the parent text
-// Format: "rank [flag] bib RIDER_NAME +GC_gap"
-// We need the LAST number before the rider's name, not the first (which is the rank)
-const parentText = parentEl.textContent || "";
-const riderName = name.split(' ').pop() || name; // Use last name for matching
-const beforeName = parentText.substring(0, parentText.indexOf(riderName)).trim();
-const allNumbers = beforeName.match(/\d+/g);
-if (allNumbers && allNumbers.length >= 2) {
-  bib = allNumbers[allNumbers.length - 1]; // Last number before name = bib
-} else if (allNumbers && allNumbers.length === 1) {
-  bib = allNumbers[0]; // Only one number = likely the bib
+const allSitGrps = doc.querySelectorAll(".sit-grp");
+const topLevelGrps = Array.from(allSitGrps).filter(el => {
+  let parent = el.parentElement;
+  while (parent) {
+    if (parent.classList?.contains("sit-grp")) return false;
+    parent = parent.parentElement;
+  }
+  return true;
+});
+```
+
+#### 2. Post-processing de sécurité
+
+Après la boucle de parsing, ajouter une étape de fusion : si un groupe n'a **qu'un seul coureur**, pas de nom de groupe explicite (ou le nom = le nom du coureur), et que le groupe précédent n'est pas un peloton, fusionner ce coureur dans le groupe précédent. Cela protège contre les cas où le filtrage de niveau 1 ne suffit pas.
+
+```typescript
+// Post-process: merge orphan single-rider groups into previous group
+const merged: typeof situationGroups = [];
+for (const g of situationGroups) {
+  const isOrphan = g.riders.length <= 1 
+    && !g.isPeloton 
+    && !isGroupName(g.name); // e.g. not "The Breakaway", "Group of favorites"
+  if (isOrphan && merged.length > 0 && !merged[merged.length-1].isPeloton) {
+    const prev = merged[merged.length-1];
+    prev.riders.push(...g.riders);
+    prev.riderBibs?.push(...(g.riderBibs || []));
+    prev.riderGcGaps?.push(...(g.riderGcGaps || []));
+    prev.riderCount = prev.riders.length;
+  } else {
+    merged.push(g);
+  }
 }
 ```
 
+Avec une heuristique `isGroupName` qui reconnaît les vrais noms de groupe : contient "breakaway", "chase", "peloton", "group", "favourites/favorites", ou commence par une majuscule avec plus de 2 mots.
+
 ### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — lignes 190-201, correction de l'extraction du dossard dans `parsePCSLive`
+- `supabase/functions/scrape-live-race/index.ts` — filtrage des `.sit-grp` imbriqués + post-processing de fusion dans `parsePCSLive`
 
