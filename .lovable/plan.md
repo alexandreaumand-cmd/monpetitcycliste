@@ -1,46 +1,44 @@
 
 
-## Vérification compatibilité mobile — Page Live (ligues) et Live Broadcast (admin)
+## Fix : la ligue "TEST Ligue P3 sans bonus" affiche des courses hors scope (phases 1-2)
 
-### Analyse des composants
+### Cause racine
 
-**LiveCoursesTab (page Live des ligues)** :
-- Layout `flex-col lg:flex-row` → sur mobile, tout s'empile verticalement ✅
-- Panneau "Situation de course" : collapsible `lg:hidden` sur mobile ✅
-- Hauteur fixe `h-[calc(100vh-260px)]` → peut poser problème sur mobile avec des hauteurs de header variables
+Cette ligue a été créée **avant** le fix de `leagues-create`. En conséquence :
+- `starting_phase_index` est `NULL` en base
+- `scope.phases` contient les 5 phases (1 à 5) au lieu de seulement 3, 4, 5
 
-**RaceSituationDisplay** (utilisé partout) :
-- `RiderRow` : affiche rang + dossard + nom + propriétaire + écart GC sur une seule ligne. Sur un écran étroit (~320px), cette ligne peut déborder car il n'y a pas de `overflow-hidden` sur le conteneur de la ligne, et le `truncate` sur le nom a besoin d'un parent à largeur contrainte
-- Le conteneur parent a `flex-1 min-w-0` mais la `RiderRow` elle-même n'a pas `min-w-0` → le texte peut pousser au-delà
+Le filtre SQL dans `get_league_course_ids` vérifie `starting_phase_index`, mais comme il est `NULL`, il ne filtre rien → toutes les courses des 5 phases sont retournées.
 
-**SuperAdminLiveBroadcastPage** :
-- Grid `grid-cols-1 lg:grid-cols-2` → s'empile sur mobile ✅
-- Barre URL d'import : `flex items-center gap-2` avec Input + 2 boutons → peut être serré sur mobile, mais les `shrink-0` sur les boutons protègent le layout ✅
-- Le sticky `lg:sticky lg:top-20` ne s'applique pas sur mobile → pas de problème ✅
+### Solution
 
-### Problèmes identifiés
+**Migration SQL** pour corriger les données existantes de cette ligue (et toute autre ligue dans le même cas) :
 
-1. **RiderRow overflow sur mobile** : la ligne avec 5 éléments (rang, dossard, nom, propriétaire, gcGap) n'a pas de `min-w-0` ni `overflow-hidden`, ce qui peut provoquer un débordement horizontal sur les écrans < 360px
-2. **Hauteur LiveCoursesTab** : `h-[calc(100vh-260px)]` est un magic number qui ne s'adapte pas aux différentes tailles de header/nav mobile
+1. **Mettre à jour `starting_phase_index`** pour les ligues qui ont été créées avec un starting phase > 1 mais dont le champ est resté `NULL`. On peut identifier ces ligues par leur nom ou manuellement.
 
-### Changements proposés
+2. **Nettoyer `scope.phases`** pour retirer les phases antérieures au `starting_phase_index`.
 
-#### 1. Fix RiderRow overflow (`RaceSituationDisplay.tsx`)
-- Ajouter `min-w-0 overflow-hidden` sur le conteneur de la `RiderRow` (ligne 158)
-- Réduire le gap sur mobile et s'assurer que le nom tronque correctement
+Concrètement pour "TEST Ligue P3 sans bonus" (id: `ed007344-2243-4553-94ae-10028086bcd8`) :
 
-```tsx
-// Ligne 158 : ajouter min-w-0
-<div className="flex items-center gap-1 sm:gap-1.5 text-xs leading-relaxed min-w-0">
+```sql
+-- Fix starting_phase_index
+UPDATE leagues 
+SET starting_phase_index = 3 
+WHERE id = 'ed007344-2243-4553-94ae-10028086bcd8';
+
+-- Fix scope.phases : ne garder que les phases 3, 4, 5
+UPDATE league_scopes 
+SET phases = ARRAY(
+  SELECT p.id FROM phases p 
+  WHERE p.id = ANY(phases) 
+  AND p.index_dans_saison >= 3
+  ORDER BY p.index_dans_saison
+)
+WHERE league_id = 'ed007344-2243-4553-94ae-10028086bcd8';
 ```
 
-#### 2. Fix hauteur mobile LiveCoursesTab (`LiveCoursesTab.tsx`)
-- Remplacer le magic number par une hauteur plus adaptative sur mobile :
-```tsx
-className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)] lg:h-[calc(100vh-260px)] min-h-[400px]"
-```
+Cela réaligne les données avec ce que le fix `leagues-create` aurait produit si la ligue avait été créée après le correctif.
 
-### Fichiers impactés
-- `src/components/arena/RaceSituationDisplay.tsx` — fix overflow RiderRow
-- `src/components/arena/LiveCoursesTab.tsx` — hauteur responsive
+### Fichier impacté
+- Migration SQL — correction des données pour la ligue existante
 
