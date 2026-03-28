@@ -111,36 +111,62 @@ export function LeagueBonusRidersDialog({
         }
       }
 
-      const { data: pointsData } = await supabase
-        .from("points_ledger")
-        .select("coureur_id, points")
-        .eq("phase_id", phaseId)
-        .in("coureur_id", coureurIds);
+      // Get league-scoped course IDs
+      const { data: leagueCourseIdsData } = await supabase.rpc('get_league_course_ids', { p_league_id: leagueId });
+      const validCourseIds = (leagueCourseIdsData as any[])?.map((r: any) => r.course_id) || [];
 
-      const pointsByRider: Record<string, number> = {};
-      if (pointsData) {
-        pointsData.forEach((p) => {
-          if (p.coureur_id) {
-            pointsByRider[p.coureur_id] = (pointsByRider[p.coureur_id] || 0) + p.points;
-          }
-        });
+      const { data: leagueData } = await supabase
+        .from("leagues")
+        .select("started_at_effective")
+        .eq("id", leagueId)
+        .single();
+
+      let scopedCourseIds = validCourseIds;
+      if (leagueData?.started_at_effective && validCourseIds.length > 0) {
+        const dateFloor = (leagueData.started_at_effective as string).substring(0, 10);
+        const { data: coursesData } = await supabase
+          .from("courses")
+          .select("id, date_debut")
+          .in("id", validCourseIds);
+        scopedCourseIds = (coursesData || [])
+          .filter(c => c.date_debut && c.date_debut > dateFloor)
+          .map(c => c.id);
       }
 
-      // Get bonus points earned per rider
-      const { data: bonusData } = await supabase
-        .from("bonus_points")
-        .select("coureur_id, points")
-        .eq("phase_id", phaseId)
-        .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
-        .in("coureur_id", coureurIds);
-
+      const pointsByRider: Record<string, number> = {};
       const bonusByRider: Record<string, number> = {};
-      if (bonusData) {
-        bonusData.forEach((b) => {
-          if (b.coureur_id) {
-            bonusByRider[b.coureur_id] = (bonusByRider[b.coureur_id] || 0) + b.points;
-          }
-        });
+
+      if (scopedCourseIds.length > 0) {
+        const { data: pointsData } = await supabase
+          .from("points_ledger")
+          .select("coureur_id, points")
+          .eq("phase_id", phaseId)
+          .in("coureur_id", coureurIds)
+          .in("course_id", scopedCourseIds);
+
+        if (pointsData) {
+          pointsData.forEach((p) => {
+            if (p.coureur_id) {
+              pointsByRider[p.coureur_id] = (pointsByRider[p.coureur_id] || 0) + p.points;
+            }
+          });
+        }
+
+        const { data: bonusData } = await supabase
+          .from("bonus_points")
+          .select("coureur_id, points")
+          .eq("phase_id", phaseId)
+          .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
+          .in("coureur_id", coureurIds)
+          .in("course_id", scopedCourseIds);
+
+        if (bonusData) {
+          bonusData.forEach((b) => {
+            if (b.coureur_id) {
+              bonusByRider[b.coureur_id] = (bonusByRider[b.coureur_id] || 0) + b.points;
+            }
+          });
+        }
       }
 
       const result: BonusRiderInfo[] = selections.map((s) => {
