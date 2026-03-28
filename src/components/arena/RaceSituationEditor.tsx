@@ -294,6 +294,23 @@ export const RaceSituationEditor = ({
         })}
       </div>
 
+      {/* Live preview */}
+      {groups.length > 0 && (
+        <div className="border-t pt-4 space-y-2">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Eye className="h-3.5 w-3.5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Aperçu</span>
+          </div>
+          <div className="bg-muted/30 p-3 rounded-lg border border-dashed">
+            <RaceSituationDisplay
+              groups={groups}
+              kmRemaining={kmRemaining}
+              rosterOwners={rosterOwners}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={addGroup} className="flex-1">
           <Plus className="h-4 w-4 mr-1" />
