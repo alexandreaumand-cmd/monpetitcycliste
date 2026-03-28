@@ -1,21 +1,38 @@
 
 
-## Fix : arrêter de fusionner les groupes solo — chaque `.sit-grp` PCS est un vrai groupe
+## Refonte layout RaceSituationDisplay — style PCS avec barres horizontales de séparation
 
-### Problème
+### Layout cible (basé sur l'image PCS)
 
-Le post-processing de fusion (lignes 250-280) considère tout groupe avec ≤1 coureur et sans nom reconnu ("breakaway", "peloton", etc.) comme un "orphelin" et le fusionne dans le groupe précédent. C'est faux : sur PCS, chaque `.sit-grp` avec son propre écart est un **groupe distinct** — un coureur seul en tête est un vrai groupe, pas un orphelin.
+```text
+┌─────────────────────────────────────────┐
+│ 1  │ 🏃 21 VINGEGAARD Jonas       +1:13 │
+├────┼────────────────────────────────────┤
+│    │                                     │
+│+0:15  ← écart entre groupe 1 et 2       │
+│    │                                     │
+├────┼────────────────────────────────────┤
+│ 2  │ 🏃 2  LIPOWITZ Florian       +1:13 │
+│    │ 🏃 91 MARTINEZ Lenny         +1:09 │
+├────┼────────────────────────────────────┤
+│+0:25                                     │
+├────┼────────────────────────────────────┤
+│ 3  │ 🏃 56 PARET-PEINTRE Valentin +1:15 │
+└─────────────────────────────────────────┘
+```
 
-Résultat actuel : VINGEGAARD (solo, groupe 1) est fusionné avec le groupe 2, PARET-PEINTRE (solo) est fusionné avec le groupe suivant, etc. La structure de 8 groupes distincts est perdue.
+### Changements
 
-### Solution
+1. **Séparer gap et groupe** : le gap entre deux groupes devient une **ligne de séparation horizontale dédiée** entre les groupes, avec l'écart affiché en gras/couleur à gauche (ex: `+0:15`). Le premier groupe n'a pas de séparateur au-dessus.
 
-**Supprimer entièrement la logique de fusion orphan** (lignes 250-280). Le filtrage top-level des `.sit-grp` imbriqués (lignes 131-138) suffit déjà à isoler les vrais groupes. Chaque `.sit-grp` top-level avec son propre gap est un groupe légitime, qu'il contienne 1 ou 10 coureurs.
+2. **Structure du composant** : au lieu de mettre le gap dans la colonne gauche du groupe, on insère un élément séparateur entre chaque groupe :
+   - `GapSeparator` : barre horizontale avec l'écart affiché en bleu/primary, fond léger
+   - `GroupRow` : badge numéroté à gauche + liste des coureurs à droite (sans le gap)
 
-### Changement concret
+3. **Badge** reste dans la colonne gauche du groupe (numéro ou P), avec le nombre de coureurs en dessous.
 
-Dans `supabase/functions/scrape-live-race/index.ts`, supprimer les lignes 250-280 (bloc `isRealGroupName` + boucle de merge + remplacement de `situationGroups`).
+4. **Barre verticale** supprimée — on utilise uniquement des séparations horizontales comme sur PCS.
 
 ### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — suppression du post-processing de fusion
+- `src/components/arena/RaceSituationDisplay.tsx` — refonte du layout avec séparateurs horizontaux entre groupes
 
