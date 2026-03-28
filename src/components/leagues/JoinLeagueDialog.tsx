@@ -103,7 +103,25 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
         body: { token: inviteCode.trim() },
       });
-      if (error) throw error;
+
+      if (error || data?.error) {
+        const serverMsg = data?.error || error?.message || '';
+        if (serverMsg.includes('Invalid token')) {
+          toast.error(t('errors.invalidCode'));
+        } else if (serverMsg.includes('revoked')) {
+          toast.error(t('errors.revokedInvite'));
+        } else if (serverMsg.includes('expired')) {
+          toast.error(t('errors.expiredInvite'));
+        } else if (serverMsg.includes('limit reached')) {
+          toast.error(t('errors.limitReached'));
+        } else if (serverMsg.includes('MANAGER_NOT_FOUND')) {
+          toast.error(t('errors.managerNotFound'));
+        } else {
+          toast.error(serverMsg || t('errors.joinError'));
+        }
+        return;
+      }
+
       toast.success(t('join.successWithName', { name: data.league_name }));
       await refetch();
       setLeagueId(data.league_id);
@@ -112,17 +130,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error joining by code:', error);
-      if (error.message?.includes('Invalid token')) {
-        toast.error(t('errors.invalidCode'));
-      } else if (error.message?.includes('revoked')) {
-        toast.error(t('errors.revokedInvite'));
-      } else if (error.message?.includes('expired')) {
-        toast.error(t('errors.expiredInvite'));
-      } else if (error.message?.includes('limit reached')) {
-        toast.error(t('errors.limitReached'));
-      } else {
-        toast.error(error.message || t('errors.joinError'));
-      }
+      toast.error(t('errors.joinError'));
     } finally {
       setIsJoiningByCode(false);
     }
