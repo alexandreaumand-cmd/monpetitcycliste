@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CategoryWeightProps {
   saisonId: string;
+  leagueId?: string;
 }
 
 export const CategoryWeight = ({ saisonId }: CategoryWeightProps) => {
