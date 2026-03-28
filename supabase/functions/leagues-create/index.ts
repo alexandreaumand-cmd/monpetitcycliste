@@ -93,9 +93,8 @@ Deno.serve(async (req) => {
       wtOnly = variant === 'wt_only';
       gtOnly = false;
       leagueStartingPhaseIndex = typeof startingPhaseIndex === 'number' ? startingPhaseIndex : null;
-      leagueStartingPhaseIndex = null;
 
-      // Get all phases (starting phase determined after auctions)
+      // Get all phases
       const { data: phases } = await supabase
         .from('phases')
         .select('id, index_dans_saison')
@@ -107,7 +106,15 @@ Deno.serve(async (req) => {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      phaseUuids = phases.map(p => p.id);
+
+      // Filter phases based on startingPhaseIndex
+      if (typeof startingPhaseIndex === 'number') {
+        phaseUuids = phases
+          .filter(p => p.index_dans_saison >= startingPhaseIndex)
+          .map(p => p.id);
+      } else {
+        phaseUuids = phases.map(p => p.id);
+      }
 
     } else if (gameMode === 'per_course') {
       if (!selectedCourseIds?.length) {
