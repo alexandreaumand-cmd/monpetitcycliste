@@ -1,38 +1,49 @@
 
 
-## Améliorations visuelles du RaceSituationDisplay
+## Améliorer le rendu "Situation de course" dans la page Live Broadcast admin
 
-### Changements demandés
+### Constat
 
-1. **Police plus grande** : passer les tailles de texte de `text-[11px]`/`text-[9px]` à `text-xs`/`text-[11px]` pour une meilleure lisibilité
-2. **Barre verticale entre groupes** : ajouter un trait vertical coloré (`border-l-2`) à gauche de chaque groupe pour séparer visuellement les sections
-3. **Coureur manquant** : c'est un bug scraper — le rider "SVESTAD-BÅRDSENG Embret" est probablement filtré par la condition `name.length >= 3` ou la regex de parsing. Vérifier le parsing PCS des noms avec caractères spéciaux (å, ø, etc.)
-4. **"(-)" pour coureurs sans manager** : ajouter `(-)` après le nom si le coureur n'a pas de propriétaire dans le roster
-5. **Peloton** : afficher le texte "PELOTON" en label et l'écart du peloton sous le badge "P"
+La page admin affiche la situation de course de deux manières :
+1. **RaceSituationEditor** (colonne droite) — formulaire d'édition brut sans aperçu visuel du résultat
+2. **Historique** (colonne gauche) — utilise déjà `RaceSituationDisplay` mais il est imbriqué dans un petit bloc de message, peu lisible
 
-### Détails techniques
+### Changements proposés
 
-#### `src/components/arena/RaceSituationDisplay.tsx`
+#### 1. Ajouter un aperçu live dans le RaceSituationEditor
 
-- **Layout GroupRow** : envelopper chaque groupe dans un conteneur avec `border-l-2 border-primary/30 pl-2` (ou `border-primary` pour le peloton) pour créer la barre verticale
-- **Tailles de police** : 
-  - Badge : `w-7 h-7 text-xs` (au lieu de `w-6 h-6 text-[10px]`)
-  - Nom du groupe : `text-[10px]` (au lieu de `text-[9px]`)
-  - Coureurs : `text-xs` (au lieu de `text-[11px]`)
-  - Dossards : `text-[10px]` (au lieu de `text-[9px]`)
-  - GC gap : `text-[10px]` (au lieu de `text-[9px]`)
-  - Gap de groupe : `text-[10px]` (au lieu de `text-[9px]`)
-- **RiderRow** : si `ownerName` est undefined/falsy, afficher `(-)` à la place (même style muted que le nom de manager)
-- **Peloton** : toujours afficher le label "PELOTON" et montrer l'écart (ne plus masquer le gap pour le peloton)
+Sous les groupes éditables et au-dessus du bouton "Diffuser", afficher un **aperçu en temps réel** utilisant `RaceSituationDisplay` avec les données du formulaire. Cela permet à l'admin de voir exactement ce que les utilisateurs verront avant de diffuser.
 
-#### `supabase/functions/scrape-live-race/index.ts`
+```text
+┌─ Situation de course ─────────────────┐
+│ Km restants: [___]                    │
+│                                       │
+│ ┌─ Groupe 1 ────────────────────────┐ │
+│ │ Nom / Nb coureurs / Écart / ...   │ │
+│ └───────────────────────────────────┘ │
+│ ┌─ Peloton ─────────────────────────┐ │
+│ │ ...                               │ │
+│ └───────────────────────────────────┘ │
+│                                       │
+│ ── Aperçu ──────────────────────────  │
+│ 🏁 120 km restants                    │
+│ ① THE BREAKAWAY        +0:00         │
+│ │ 1  14  SOLER Marc (Manager1)       │
+│ │ 2  32  HIRSCHI Marc (-)            │
+│ ② CHASE GROUP          +1:45         │
+│ │ ...                                │
+│ Ⓟ PELOTON              +3:20         │
+│   142 coureurs                        │
+│                                       │
+│ [+ Groupe]    [📡 Diffuser]          │
+└───────────────────────────────────────┘
+```
 
-Le coureur manquant est probablement lié à la condition de parsing du nom ou au traitement des caractères spéciaux dans `parsePCSLive`. Vérifier que :
-- Les noms avec des caractères nordiques (å, ø, æ, etc.) ne sont pas filtrés
-- Le `fullText.replace(lastName, "")` fonctionne bien avec ces caractères
-- Le rider n'est pas exclu par un filtre de longueur ou de format
+#### 2. Améliorer le rendu dans l'historique
+
+Donner plus d'espace au `RaceSituationDisplay` dans les messages de l'historique : retirer le padding excessif et laisser le composant occuper toute la largeur du bloc message.
 
 ### Fichiers impactés
-- `src/components/arena/RaceSituationDisplay.tsx` — refonte visuelle (tailles, barre verticale, `(-)`)
-- `supabase/functions/scrape-live-race/index.ts` — vérifier parsing noms spéciaux
+- `src/components/arena/RaceSituationEditor.tsx` — importer `RaceSituationDisplay` et ajouter la section aperçu
+- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — ajustements mineurs de style sur le rendu historique
 
