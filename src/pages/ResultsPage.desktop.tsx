@@ -184,22 +184,26 @@ export const ResultsPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden md:inline">Phase:</span>
-            <Select value={selectedPhaseId || 'global'} onValueChange={setSelectedPhaseId}>
-              <SelectTrigger className="w-full md:w-[250px]">
-                <SelectValue placeholder="Sélectionner une période" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">
-                  🌍 Global (toute la saison)
-                </SelectItem>
-                {phases.map((phase) => (
-                  <SelectItem key={phase.id} value={phase.id}>
-                    {getPhaseLabel(phase)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isPerCourse && (
+              <>
+                <span className="text-sm text-muted-foreground hidden md:inline">Phase:</span>
+                <Select value={selectedPhaseId || 'global'} onValueChange={setSelectedPhaseId}>
+                  <SelectTrigger className="w-full md:w-[250px]">
+                    <SelectValue placeholder="Sélectionner une période" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="global">
+                      🌍 Global (toute la saison)
+                    </SelectItem>
+                    {phases.map((phase) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        {getPhaseLabel(phase)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             
             {searchQuery && (
               <Button
