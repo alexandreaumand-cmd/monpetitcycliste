@@ -1,62 +1,50 @@
 
 
-## Plan : Ajouter PCS comme source de situation de course en live
+## Refonte : affichage de la situation de course style PCS
 
-### Contexte
+### Problème
 
-Le scraper actuel (`scrape-live-race`) supporte L'Equipe, PCS (résultats uniquement) et FirstCycling. La page PCS **live/livestats** contient une section "Situation" très structurée avec :
-- Des groupes nommés (The Breakaway, First chase group, peloton)
-- Des écarts précis (+0:10, +2:25)
-- Des coureurs avec dossard, nom, slug PCS et classement GC
-- Des km restants, vitesse, temps de course
+L'affichage actuel avec la route horizontale et les emojis de vélos est illisible quand il y a beaucoup de groupes — les labels se chevauchent et les noms sont tronqués.
+
+### Nouveau design (inspiré PCS)
+
+Remplacer la visualisation horizontale par une **liste verticale numérotée** :
+
+```text
+┌─────────────────────────────────────────────┐
+│ 🏁 60 km restants                           │
+├─────────────────────────────────────────────┤
+│ ❶  The Breakaway              +0:00         │
+│    SOLER Marc          +15:43  🎽 14        │
+│    MUNTON Byron         +7:58  🎽 222       │
+│                                              │
+│ ❷  +0:10                                    │
+│    CICCONE Giulio       +9:26  🎽 32        │
+│    CARAPAZ Richard      +3:55  🎽 111       │
+│                                              │
+│ ...                                          │
+│ P   Peloton             +1:49                │
+│    101 coureurs                              │
+└─────────────────────────────────────────────┘
+```
+
+Chaque groupe affiche :
+- **Numéro de groupe** dans un cercle coloré (1, 2, 3... P pour peloton) sur la gauche
+- **Nom du groupe** (si nommé : "The Breakaway", "First chase group") + **écart** sur la droite
+- **Liste des coureurs** avec nom + manager (si dans un roster) en dessous, indentée avec une bordure gauche
 
 ### Ce qui change
 
-Ajouter un parser `parsePCSLiveSituation` dans l'edge function `scrape-live-race/index.ts` qui extrait la situation de course structurée depuis la page PCS livestats, en complément du parser L'Equipe existant.
+Le composant `RaceSituationDisplay.tsx` est entièrement réécrit :
+- Suppression de la route horizontale, des emojis vélos, du positionnement absolu
+- Layout vertical en liste, chaque groupe = une rangée avec badge numéroté + gap + coureurs
+- Le badge du peloton affiche "P" au lieu d'un numéro
+- Les coureurs du roster de la ligue sont mis en valeur (couleur primary, nom du manager)
+- Tooltip conservé pour les groupes avec beaucoup de coureurs
+- Responsive : fonctionne bien en desktop (panneau latéral 340px) et mobile (accordion)
 
-### Structure HTML PCS à parser
+Le même composant est aussi utilisé dans `MessageBubble` (messages inline) et `SuperAdminLiveBroadcastPage` — le nouveau design vertical sera plus lisible dans tous ces contextes.
 
-```text
-### Situation
-- 10                          ← rider count
-  The Breakaway               ← group name  
-  +0:00??                     ← gap
-  - 1  14  SOLER Marc  +15:43 ← bib, rider link, GC time
-  - 2  222 MUNTON Byron +7:58
-
-- 20
-  First chase group
-  +0:10??
-  - 1  6  CATTANEO Mattia ...
-
-- P0
-  peloton
-  +2:25??
-```
-
-Infos course en haut :
-- `KM to go: 61.8` / `km done: 96.3` / `Avg. 40.4` / `Status: racing`
-
-### Implémentation
-
-**Fichier** : `supabase/functions/scrape-live-race/index.ts`
-
-1. **Nouvelle fonction `parsePCSLive(doc, html)`** qui retourne `{ riders, events, situation }` comme `parseLEquipeLive` :
-   - Extraire km to go, km done, avg speed depuis les éléments `li` en haut de page
-   - Parser la section "Situation" : chaque groupe est un bloc avec count, nom, gap, puis liste de coureurs avec dossard + lien `/rider/slug`
-   - Extraire la timeline PCS si disponible
-   - Matcher les coureurs via le slug PCS (`rider/marc-soler` → `coureurs.pcs_slug`)
-
-2. **Modifier la branche `isPCS`** (ligne 557) pour appeler `parsePCSLive` au lieu de `parsePCSResults` quand l'URL contient `/live`
-
-3. **Matching amélioré via PCS slug** : quand la source est PCS, utiliser le slug extrait des liens (`/rider/marc-soler`) pour matcher directement avec `coureurs.pcs_slug` en base, en plus du matching par nom existant
-
-### Avantages vs L'Equipe
-- Données structurées (pas de parsing de texte brut)
-- Slugs PCS pour matching précis des coureurs
-- Dossards inclus
-- Moins de faux positifs
-
-### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — ajout `parsePCSLive`, modification branche PCS pour URLs live
+### Fichier impacte
+- `src/components/arena/RaceSituationDisplay.tsx` — réécriture complète
 
