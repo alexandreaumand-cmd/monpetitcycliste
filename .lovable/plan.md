@@ -1,55 +1,46 @@
 
 
-## Fix : le `starting_phase_index` est ignoré — les ligues P3 voient toutes les phases
+## Vérification compatibilité mobile — Page Live (ligues) et Live Broadcast (admin)
 
-### Problème racine (2 bugs)
+### Analyse des composants
 
-**Bug 1 — `leagues-create/index.ts` ligne 96** : le `startingPhaseIndex` reçu du frontend est immédiatement écrasé par `null` :
-```typescript
-leagueStartingPhaseIndex = typeof startingPhaseIndex === 'number' ? startingPhaseIndex : null;
-leagueStartingPhaseIndex = null;  // ← BUG : écrase la valeur
+**LiveCoursesTab (page Live des ligues)** :
+- Layout `flex-col lg:flex-row` → sur mobile, tout s'empile verticalement ✅
+- Panneau "Situation de course" : collapsible `lg:hidden` sur mobile ✅
+- Hauteur fixe `h-[calc(100vh-260px)]` → peut poser problème sur mobile avec des hauteurs de header variables
+
+**RaceSituationDisplay** (utilisé partout) :
+- `RiderRow` : affiche rang + dossard + nom + propriétaire + écart GC sur une seule ligne. Sur un écran étroit (~320px), cette ligne peut déborder car il n'y a pas de `overflow-hidden` sur le conteneur de la ligne, et le `truncate` sur le nom a besoin d'un parent à largeur contrainte
+- Le conteneur parent a `flex-1 min-w-0` mais la `RiderRow` elle-même n'a pas `min-w-0` → le texte peut pousser au-delà
+
+**SuperAdminLiveBroadcastPage** :
+- Grid `grid-cols-1 lg:grid-cols-2` → s'empile sur mobile ✅
+- Barre URL d'import : `flex items-center gap-2` avec Input + 2 boutons → peut être serré sur mobile, mais les `shrink-0` sur les boutons protègent le layout ✅
+- Le sticky `lg:sticky lg:top-20` ne s'applique pas sur mobile → pas de problème ✅
+
+### Problèmes identifiés
+
+1. **RiderRow overflow sur mobile** : la ligne avec 5 éléments (rang, dossard, nom, propriétaire, gcGap) n'a pas de `min-w-0` ni `overflow-hidden`, ce qui peut provoquer un débordement horizontal sur les écrans < 360px
+2. **Hauteur LiveCoursesTab** : `h-[calc(100vh-260px)]` est un magic number qui ne s'adapte pas aux différentes tailles de header/nav mobile
+
+### Changements proposés
+
+#### 1. Fix RiderRow overflow (`RaceSituationDisplay.tsx`)
+- Ajouter `min-w-0 overflow-hidden` sur le conteneur de la `RiderRow` (ligne 158)
+- Réduire le gap sur mobile et s'assurer que le nom tronque correctement
+
+```tsx
+// Ligne 158 : ajouter min-w-0
+<div className="flex items-center gap-1 sm:gap-1.5 text-xs leading-relaxed min-w-0">
 ```
-Résultat : `starting_phase_index` est toujours `null` en base, et `scope.phases` contient les 5 phases au lieu de seulement les phases 3, 4, 5.
 
-**Bug 2 — `get_league_course_ids` SQL** : même si `starting_phase_index` était correctement stocké, la fonction SQL ne le consulte jamais. Elle retourne les courses de TOUTES les phases listées dans `scope.phases`.
-
-**Bug 3 — `get_league_courses_with_points` SQL** : utilise encore `'1900-01-01'` comme fallback au lieu de `created_at`.
-
-### Solution
-
-#### 1. Fix `leagues-create/index.ts`
-- **Supprimer la ligne 96** (`leagueStartingPhaseIndex = null;`)
-- **Filtrer `phaseUuids`** pour ne garder que les phases à partir de `startingPhaseIndex` :
-```typescript
-if (typeof startingPhaseIndex === 'number') {
-  phaseUuids = phases
-    .filter(p => p.index_dans_saison >= startingPhaseIndex)
-    .map(p => p.id);
-} else {
-  phaseUuids = phases.map(p => p.id);
-}
+#### 2. Fix hauteur mobile LiveCoursesTab (`LiveCoursesTab.tsx`)
+- Remplacer le magic number par une hauteur plus adaptative sur mobile :
+```tsx
+className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)] lg:h-[calc(100vh-260px)] min-h-[400px]"
 ```
-Cela garantit que `scope.phases` ne contient que les phases 3, 4, 5 pour une ligue P3.
-
-#### 2. Fix `get_league_course_ids` SQL
-Ajouter un filtre sur `starting_phase_index` dans la branche phases :
-```sql
--- Dans la branche "phases IS NOT NULL"
-AND (
-  (SELECT l.starting_phase_index FROM leagues l WHERE l.id = p_league_id) IS NULL
-  OR c.phase_id IN (
-    SELECT p.id FROM phases p 
-    WHERE p.id = ANY(v_scope.phases)
-    AND p.index_dans_saison >= (SELECT l.starting_phase_index FROM leagues l WHERE l.id = p_league_id)
-  )
-)
-```
-Cela couvre aussi les ligues existantes dont `scope.phases` contient déjà les 5 phases.
-
-#### 3. Fix `get_league_courses_with_points` SQL
-Remplacer `'1900-01-01'` par `(SELECT created_at FROM leagues WHERE id = p_league_id)` (même fix que `results_courses_with_entries`).
 
 ### Fichiers impactés
-- `supabase/functions/leagues-create/index.ts` — supprimer ligne 96, filtrer phases par startingPhaseIndex
-- Migration SQL — `get_league_course_ids` + `get_league_courses_with_points`
+- `src/components/arena/RaceSituationDisplay.tsx` — fix overflow RiderRow
+- `src/components/arena/LiveCoursesTab.tsx` — hauteur responsive
 
