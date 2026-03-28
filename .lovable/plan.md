@@ -1,21 +1,43 @@
 
 
-## Fix : le scraper PCS confond les dossards avec le nombre de coureurs
+## Ajouter les dossards et écarts GC par coureur (style PCS fidèle)
 
-### Problème
+### Contexte
 
-Dans `parsePCSLive` (ligne 144), le parser extrait le **premier nombre** du texte de chaque groupe et l'interprète comme le nombre de coureurs (`riderCount`). En réalité, ce nombre est le **dossard du premier coureur** (14, 32, 75, 111 dans l'exemple). Le vrai nombre de coureurs est simplement `groupRiders.length`.
+L'image PCS montre pour chaque coureur dans un groupe : **rang**, **dossard**, **drapeau**, **nom**, et **écart au classement général** à droite (+15:43, +9:26…). Actuellement, le scraper n'extrait ni les dossards ni les écarts GC individuels — seul le gap entre groupes est capturé.
 
-Conséquence : le groupe "The Breakaway" (4 coureurs) affiche `riderCount = 14` (le dossard de Soler), ce qui fausse la détection peloton (`riderCount > 50`) et l'affichage.
+Le layout actuel (gap de groupe sous le badge à gauche) est correct. Il manque les données par coureur.
 
-### Solution
+### Ce qui change
+
+#### 1. Scraper PCS — extraire dossard + GC gap par coureur
 
 Dans `supabase/functions/scrape-live-race/index.ts`, fonction `parsePCSLive` :
+- Chaque ligne coureur dans `.sit-grp` contient le **dossard** (dans un span avant le lien) et l'**écart GC** (texte après le lien, format `+MM:SS`)
+- Ajouter l'extraction de ces 2 champs pour chaque coureur
+- Les stocker dans les données de situation : `riders` devient un tableau d'objets `{ name, bib, gcGap, pcsSlug }` au lieu de simples strings
 
-1. **Supprimer la détection erronée** du rider count par regex (ligne 144-145)
-2. **Utiliser `groupRiders.length`** comme seul `riderCount` fiable
-3. **Ajuster la détection peloton** : se baser sur le nom du groupe (`peloton` dans le texte) plutôt que sur un seuil numérique arbitraire, car le count n'est plus fiable depuis le HTML
+#### 2. Interface RaceGroup — enrichir le modèle
 
-### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — lignes 143-145, 179, 181-188
+Dans `RaceSituationDisplay.tsx`, enrichir l'interface :
+- `riders` passe de `string[]` à `{ name: string; bib?: string; gcGap?: string }[]` (ou garder `string[]` pour les noms et ajouter `riderBibs?: string[]` et `riderGcGaps?: string[]` pour compatibilité)
+
+Approche retenue : ajouter `riderBibs?: string[]` et `riderGcGaps?: string[]` à `RaceGroup` pour ne pas casser les sources existantes (L'Equipe n'a pas ces infos).
+
+#### 3. Affichage — ajouter dossard et GC gap dans RiderRow
+
+Chaque ligne coureur affichera :
+```text
+1  14  SOLER Marc  (manager)  +15:43
+```
+- Rang (déjà présent)
+- Dossard (nouveau, petit texte muted)
+- Nom (déjà présent, highlight si manager)
+- GC gap à droite (nouveau, aligné à droite, font-mono)
+
+Le dossard et le GC gap ne s'affichent que si les données existent (optionnels).
+
+### Fichiers impactés
+- `supabase/functions/scrape-live-race/index.ts` — extraction dossard + GC gap dans `parsePCSLive`
+- `src/components/arena/RaceSituationDisplay.tsx` — interface enrichie + affichage dossard/GC gap dans `RiderRow`
 
