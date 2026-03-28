@@ -719,13 +719,19 @@ serve(async (req) => {
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
 
-    let lequipeSituation: any = null;
+    let liveSituation: any = null;
+    const isPCSLive = isPCS && /\/live\b/i.test(url);
 
     if (isLEquipe) {
       const result = parseLEquipeLive(doc, html);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
-      lequipeSituation = result.situation;
+      liveSituation = result.situation;
+    } else if (isPCSLive) {
+      const result = parsePCSLive(doc, html);
+      scrapedRiders = result.riders;
+      scrapedEvents = result.events;
+      liveSituation = result.situation;
     } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
