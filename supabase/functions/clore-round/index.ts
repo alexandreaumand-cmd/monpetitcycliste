@@ -289,9 +289,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (leagueRow && !leagueRow.started_at_effective) {
-      const closedDate = new Date();
-      closedDate.setDate(closedDate.getDate() + 1);
-      const effectiveDate = closedDate.toISOString().split('T')[0];
+      const effectiveDate = new Date().toISOString().split('T')[0];
       console.log(`Setting started_at_effective for league ${league_id} to ${effectiveDate}`);
       await supabase
         .from('leagues')
