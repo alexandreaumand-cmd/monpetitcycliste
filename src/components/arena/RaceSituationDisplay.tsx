@@ -1,11 +1,5 @@
 import { cn } from "@/lib/utils";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -32,24 +26,22 @@ export const RaceSituationDisplay = ({ groups, kmRemaining, rosterOwners }: Race
   if (groups.length === 0) return null;
 
   return (
-    <div className="w-full space-y-1">
+    <div className="w-full space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground px-1 pb-1 border-b border-border/50">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground px-1 pb-1.5 border-b border-border/50">
         <span>🏁</span>
         <span>{kmRemaining} km restants</span>
       </div>
 
-      {/* Groups list */}
-      <div className="space-y-0">
-        {groups.map((group, i) => (
-          <GroupRow
-            key={i}
-            group={group}
-            index={i + 1}
-            rosterOwners={rosterOwners}
-          />
-        ))}
-      </div>
+      {/* Groups */}
+      {groups.map((group, i) => (
+        <GroupRow
+          key={i}
+          group={group}
+          index={i + 1}
+          rosterOwners={rosterOwners}
+        />
+      ))}
     </div>
   );
 };
@@ -73,19 +65,18 @@ function GroupRow({
     return { name, ownerName };
   });
 
-  const hasRiders = riderItems.length > 0;
-  const showCollapsible = riderItems.length > 3;
-  const visibleRiders = showCollapsible ? riderItems.slice(0, 3) : riderItems;
-  const hiddenRiders = showCollapsible ? riderItems.slice(3) : [];
+  const showRiders = !group.isPeloton && riderItems.length > 0;
+  const showCollapsible = riderItems.length > 5;
+  const visibleRiders = showCollapsible ? riderItems.slice(0, 5) : riderItems;
+  const hiddenRiders = showCollapsible ? riderItems.slice(5) : [];
 
   return (
-    <div className="py-1.5 border-b border-border/30 last:border-b-0">
-      {/* Group header row */}
-      <div className="flex items-center gap-2 px-1">
-        {/* Badge */}
+    <div className="flex gap-2 py-1.5 border-b border-border/30 last:border-b-0 px-1">
+      {/* Left column: badge + gap */}
+      <div className="flex flex-col items-center w-8 flex-shrink-0 pt-0.5">
         <div
           className={cn(
-            "flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
             group.isPeloton
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-foreground border border-border"
@@ -93,59 +84,60 @@ function GroupRow({
         >
           {badgeLabel}
         </div>
-
-        {/* Name + count */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className={cn(
-              "text-xs font-semibold truncate",
-              group.isPeloton ? "text-primary" : "text-foreground"
-            )}>
-              {group.name || `Groupe ${index}`}
-            </span>
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              ({group.riderCount} crs)
-            </span>
-          </div>
-        </div>
-
-        {/* Gap */}
         {gapDisplay && (
-          <span className="text-[11px] font-mono font-medium text-muted-foreground flex-shrink-0">
+          <span className="text-[9px] font-mono text-muted-foreground mt-0.5 leading-tight">
             {gapDisplay}
           </span>
         )}
       </div>
 
-      {/* Riders list */}
-      {hasRiders && (
-        <div className="ml-9 mt-1 pl-2 border-l-2 border-border/40 space-y-0.5">
-          {visibleRiders.map((item, ri) => (
-            <RiderRow key={ri} name={item.name} ownerName={item.ownerName} />
-          ))}
+      {/* Right column: group name + riders */}
+      <div className="flex-1 min-w-0">
+        {/* Group name label */}
+        {group.name && (
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+            {group.name}
+          </div>
+        )}
 
-          {showCollapsible && (
-            <Collapsible open={open} onOpenChange={setOpen}>
-              <CollapsibleContent className="space-y-0.5">
-                {hiddenRiders.map((item, ri) => (
-                  <RiderRow key={ri} name={item.name} ownerName={item.ownerName} />
-                ))}
-              </CollapsibleContent>
-              <CollapsibleTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
-                <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
-                {open ? "Réduire" : `+${hiddenRiders.length} autres`}
-              </CollapsibleTrigger>
-            </Collapsible>
-          )}
-        </div>
-      )}
+        {/* Peloton: just show count */}
+        {group.isPeloton && (
+          <div className="text-[11px] text-muted-foreground">
+            {group.riderCount} coureurs
+          </div>
+        )}
+
+        {/* Rider list */}
+        {showRiders && (
+          <div className="space-y-0">
+            {visibleRiders.map((item, ri) => (
+              <RiderRow key={ri} rank={ri + 1} name={item.name} ownerName={item.ownerName} />
+            ))}
+
+            {showCollapsible && (
+              <Collapsible open={open} onOpenChange={setOpen}>
+                <CollapsibleContent className="space-y-0">
+                  {hiddenRiders.map((item, ri) => (
+                    <RiderRow key={ri} rank={visibleRiders.length + ri + 1} name={item.name} ownerName={item.ownerName} />
+                  ))}
+                </CollapsibleContent>
+                <CollapsibleTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+                  {open ? "Réduire" : `+${hiddenRiders.length} autres`}
+                </CollapsibleTrigger>
+              </Collapsible>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function RiderRow({ name, ownerName }: { name: string; ownerName?: string }) {
+function RiderRow({ rank, name, ownerName }: { rank: number; name: string; ownerName?: string }) {
   return (
-    <div className="flex items-center gap-1 text-[11px] leading-tight">
+    <div className="flex items-center gap-1.5 text-[11px] leading-relaxed">
+      <span className="w-3 text-right text-[10px] text-muted-foreground flex-shrink-0">{rank}</span>
       <span className={cn(
         "truncate",
         ownerName ? "font-medium text-primary" : "text-foreground"
