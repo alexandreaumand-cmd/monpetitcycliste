@@ -274,9 +274,9 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="ABC123DEF456"
+              placeholder="AmryaCqehtw64TeD..."
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              onChange={(e) => setInviteCode(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && inviteCode.trim()) {
                   handleJoinByCode();
