@@ -1,45 +1,42 @@
 
 
-## Fix : l'éditeur "Situation de course" confond dossards/écarts GC avec nb coureurs/écarts de groupe
+## Fix : auto-scroll vers la dernière situation de course sur la page Live Broadcast
 
 ### Problème
 
-Deux problèmes distincts dans le scraper PCS (`parsePCSLive`) :
-
-1. **Gap de groupe écrasé par les GC gaps** : la boucle lignes 144-153 parcourt toutes les lignes texte du bloc `.sit-grp` pour trouver le gap. Les écarts GC individuels (+9:26, +15:43) matchent le même pattern `+\d+:\d+` et écrasent `gap` à chaque itération → le gap final est celui du **dernier coureur** (GC), pas le gap du groupe.
-
-2. **riderCount potentiellement pollué** : si le parsing crée des groupes avec un seul coureur (mauvais découpage), le dossard du coureur peut apparaître dans le champ "Nb coureurs" de l'éditeur.
+Quand la page Live Broadcast reçoit une mise à jour (auto-scrape ou import manuel), la situation de course est mise à jour dans le panneau droit mais l'utilisateur doit scroller manuellement vers le haut pour la voir — le contenu au-dessus (sélection de course, barre d'import) pousse le panneau hors de la vue.
 
 ### Solution
 
-#### `supabase/functions/scrape-live-race/index.ts` — `parsePCSLive`
+Deux ajustements dans `SuperAdminLiveBroadcastPage.tsx` :
 
-**Gap de groupe** : sur PCS, le gap de groupe est dans un élément distinct (souvent un `<div>` ou `<span>` avec classe spécifique) au niveau du header du groupe, pas mélangé avec les GC gaps des coureurs. Modifier l'extraction :
+1. **Rendre le panneau droit sticky** : ajouter `sticky top-20` sur la colonne droite (Situation de course) pour qu'elle reste visible pendant le scroll dans l'historique à gauche
 
-1. Extraire le gap de groupe **uniquement** depuis les lignes texte **avant** le premier lien rider (le header du groupe contient le nom + gap, les riders viennent après)
-2. Ne pas laisser les GC gaps individuels écraser la variable `gap`
+2. **Auto-scroll vers le haut** quand `importedSituation` change : ajouter un `useEffect` qui scroll `window.scrollTo(0, 0)` ou vers le bloc situation quand une nouvelle situation est importée (via scrape)
 
-```typescript
-// Extraire gap uniquement depuis le texte AVANT le premier rider link
-const firstLink = grp.querySelector("a[href*='rider/']");
-const headerText = firstLink 
-  ? grpText.substring(0, grpText.indexOf(firstLink.textContent || ""))
-  : grpText;
-const headerLines = headerText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+### Changement concret
 
-for (const line of headerLines) {
-  if (/^\+?\d+:\d+/.test(line)) {
-    gap = line.startsWith('+') ? line : `+${line}`;
-    break; // Prendre le premier match uniquement
-  }
-  if (!groupName && !/^\d/.test(line) && line.length > 2 && line.length < 60) {
-    groupName = line;
-  }
-}
+```tsx
+// Colonne droite : ajouter sticky
+<div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+  <Card>
+    <CardHeader className="pb-3">
+      <CardTitle className="text-base">Situation de course</CardTitle>
+    </CardHeader>
+    ...
+  </Card>
+</div>
 ```
 
-Cela isole le gap de groupe (ex: +1:45) des GC gaps individuels (+9:26, +15:43) qui sont dans le corps du groupe avec les riders.
+```tsx
+// Auto-scroll quand la situation change
+useEffect(() => {
+  if (importedSituation) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}, [importedSituation]);
+```
 
 ### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — lignes 130-153, extraction du gap de groupe dans `parsePCSLive`
+- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — sticky + auto-scroll
 
