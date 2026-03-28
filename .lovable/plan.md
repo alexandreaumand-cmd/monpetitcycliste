@@ -1,39 +1,55 @@
 
 
-## Fix : la page Résultats affiche des courses hors scope quand `started_at_effective` est NULL
+## Fix : le `starting_phase_index` est ignoré — les ligues P3 voient toutes les phases
 
-### Problème
+### Problème racine (2 bugs)
 
-La fonction SQL `results_courses_with_entries` utilise ce fallback quand `started_at_effective` est NULL :
-
-```sql
-c.date_debut > COALESCE(l.started_at_effective::date, '1900-01-01'::date)
+**Bug 1 — `leagues-create/index.ts` ligne 96** : le `startingPhaseIndex` reçu du frontend est immédiatement écrasé par `null` :
+```typescript
+leagueStartingPhaseIndex = typeof startingPhaseIndex === 'number' ? startingPhaseIndex : null;
+leagueStartingPhaseIndex = null;  // ← BUG : écrase la valeur
 ```
+Résultat : `starting_phase_index` est toujours `null` en base, et `scope.phases` contient les 5 phases au lieu de seulement les phases 3, 4, 5.
 
-Pour une ligue dont les enchères n'ont pas encore été clôturées, `started_at_effective` est NULL → fallback à 1900 → **toutes les courses passent le filtre de date**, même celles des phases 1 et 2.
+**Bug 2 — `get_league_course_ids` SQL** : même si `starting_phase_index` était correctement stocké, la fonction SQL ne le consulte jamais. Elle retourne les courses de TOUTES les phases listées dans `scope.phases`.
 
-Les vues matérialisées (`v_manager_standings_by_phase_v2`, etc.) utilisent correctement `COALESCE(l.started_at_effective, l.created_at)` comme fallback, mais la fonction `results_courses_with_entries` est incohérente.
+**Bug 3 — `get_league_courses_with_points` SQL** : utilise encore `'1900-01-01'` comme fallback au lieu de `created_at`.
 
 ### Solution
 
-Aligner le fallback de `results_courses_with_entries` sur celui des vues : utiliser `l.created_at` au lieu de `'1900-01-01'`.
+#### 1. Fix `leagues-create/index.ts`
+- **Supprimer la ligne 96** (`leagueStartingPhaseIndex = null;`)
+- **Filtrer `phaseUuids`** pour ne garder que les phases à partir de `startingPhaseIndex` :
+```typescript
+if (typeof startingPhaseIndex === 'number') {
+  phaseUuids = phases
+    .filter(p => p.index_dans_saison >= startingPhaseIndex)
+    .map(p => p.id);
+} else {
+  phaseUuids = phases.map(p => p.id);
+}
+```
+Cela garantit que `scope.phases` ne contient que les phases 3, 4, 5 pour une ligue P3.
 
+#### 2. Fix `get_league_course_ids` SQL
+Ajouter un filtre sur `starting_phase_index` dans la branche phases :
 ```sql
--- Avant
-c.date_debut > COALESCE(
-  (SELECT l.started_at_effective::date FROM leagues l WHERE l.id = p_league_id),
-  '1900-01-01'::date
-)
-
--- Après
-c.date_debut > COALESCE(
-  (SELECT l.started_at_effective::date FROM leagues l WHERE l.id = p_league_id),
-  (SELECT l.created_at::date FROM leagues l WHERE l.id = p_league_id)
+-- Dans la branche "phases IS NOT NULL"
+AND (
+  (SELECT l.starting_phase_index FROM leagues l WHERE l.id = p_league_id) IS NULL
+  OR c.phase_id IN (
+    SELECT p.id FROM phases p 
+    WHERE p.id = ANY(v_scope.phases)
+    AND p.index_dans_saison >= (SELECT l.starting_phase_index FROM leagues l WHERE l.id = p_league_id)
+  )
 )
 ```
+Cela couvre aussi les ligues existantes dont `scope.phases` contient déjà les 5 phases.
 
-Ainsi, pour une ligue créée récemment (ex: mars 2026) avec enchères en cours, seules les courses postérieures à la date de création de la ligue seront affichées — excluant les courses de janvier/février qui appartiennent aux phases 1-2.
+#### 3. Fix `get_league_courses_with_points` SQL
+Remplacer `'1900-01-01'` par `(SELECT created_at FROM leagues WHERE id = p_league_id)` (même fix que `results_courses_with_entries`).
 
-### Fichier impacté
-- Migration SQL : `CREATE OR REPLACE FUNCTION results_courses_with_entries` — changer le fallback de `'1900-01-01'` à `l.created_at`
+### Fichiers impactés
+- `supabase/functions/leagues-create/index.ts` — supprimer ligne 96, filtrer phases par startingPhaseIndex
+- Migration SQL — `get_league_course_ids` + `get_league_courses_with_points`
 
