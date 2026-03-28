@@ -30,7 +30,7 @@ export const RaceSituationDisplay = ({ groups, kmRemaining, rosterOwners }: Race
   return (
     <div className="w-full space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground px-1 pb-1.5 border-b border-border/50">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground px-1 pb-2 border-b border-border/50">
         <span>🏁</span>
         <span>{kmRemaining} km restants</span>
       </div>
@@ -75,12 +75,12 @@ function GroupRow({
   const hiddenRiders = showCollapsible ? riderItems.slice(5) : [];
 
   return (
-    <div className="flex gap-2 py-1.5 border-b border-border/30 last:border-b-0 px-1">
+    <div className="flex gap-2 py-2 border-b border-border/30 last:border-b-0 px-1">
       {/* Left column: badge + gap */}
-      <div className="flex flex-col items-center w-8 flex-shrink-0 pt-0.5">
+      <div className="flex flex-col items-center w-9 flex-shrink-0 pt-0.5">
         <div
           className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+            "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
             group.isPeloton
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-foreground border border-border"
@@ -89,24 +89,30 @@ function GroupRow({
           {badgeLabel}
         </div>
         {gapDisplay && (
-          <span className="text-[9px] font-mono text-muted-foreground mt-0.5 leading-tight">
+          <span className="text-[10px] font-mono text-muted-foreground mt-0.5 leading-tight">
             {gapDisplay}
           </span>
         )}
       </div>
 
+      {/* Vertical separator bar */}
+      <div className={cn(
+        "w-0.5 self-stretch rounded-full flex-shrink-0",
+        group.isPeloton ? "bg-primary/40" : "bg-border"
+      )} />
+
       {/* Right column: group name + riders */}
       <div className="flex-1 min-w-0">
         {/* Group name label */}
         {group.name && (
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
             {group.name}
           </div>
         )}
 
-        {/* Peloton: just show count */}
+        {/* Peloton: show label + count */}
         {group.isPeloton && (
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {group.riderCount} coureurs
           </div>
         )}
@@ -125,7 +131,7 @@ function GroupRow({
                     <RiderRow key={ri} rank={visibleRiders.length + ri + 1} name={item.name} ownerName={item.ownerName} bib={item.bib} gcGap={item.gcGap} />
                   ))}
                 </CollapsibleContent>
-                <CollapsibleTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                <CollapsibleTrigger className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
                   <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
                   {open ? "Réduire" : `+${hiddenRiders.length} autres`}
                 </CollapsibleTrigger>
@@ -140,10 +146,10 @@ function GroupRow({
 
 function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: string; ownerName?: string; bib?: string; gcGap?: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-[11px] leading-relaxed">
-      <span className="w-3 text-right text-[10px] text-muted-foreground flex-shrink-0">{rank}</span>
+    <div className="flex items-center gap-1.5 text-xs leading-relaxed">
+      <span className="w-3.5 text-right text-[11px] text-muted-foreground flex-shrink-0">{rank}</span>
       {bib && (
-        <span className="w-5 text-right text-[9px] text-muted-foreground/60 flex-shrink-0">{bib}</span>
+        <span className="w-6 text-right text-[10px] text-muted-foreground/60 flex-shrink-0">{bib}</span>
       )}
       <span className={cn(
         "truncate",
@@ -151,13 +157,11 @@ function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: s
       )}>
         {name}
       </span>
-      {ownerName && (
-        <span className="text-[9px] text-muted-foreground flex-shrink-0">
-          ({ownerName})
-        </span>
-      )}
+      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+        {ownerName ? `(${ownerName})` : "(-)"}
+      </span>
       {gcGap && (
-        <span className="text-[9px] font-mono text-muted-foreground flex-shrink-0 ml-auto">
+        <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 ml-auto">
           {gcGap}
         </span>
       )}
