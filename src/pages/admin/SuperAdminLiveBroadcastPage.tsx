@@ -651,7 +651,7 @@ export const SuperAdminLiveBroadcastPage = () => {
             </div>
 
             {/* Right column: Situation de course */}
-            <div className="space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Situation de course</CardTitle>
