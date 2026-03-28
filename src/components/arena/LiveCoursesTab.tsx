@@ -2,9 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, MapPin, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 
