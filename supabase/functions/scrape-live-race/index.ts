@@ -83,6 +83,182 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
 }
 
 // ============================================================
+// PCS LIVE PARSER — parses procyclingstats.com /live pages
+// ============================================================
+
+function parsePCSLive(doc: any, html: string): {
+  riders: ScrapedRider[];
+  events: ScrapedEvent[];
+  situation: { groups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[]; kmRemaining: number; kmCovered: number; totalKm: number; speed: string };
+} {
+  const riders: ScrapedRider[] = [];
+  const events: ScrapedEvent[] = [];
+  const situationGroups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[] = [];
+
+  // ── Extract race metrics from livestats header ──
+  let kmRemaining = 0, kmCovered = 0, totalKm = 0, speed = "";
+
+  const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+  const kmToGoMatch = textContent.match(/KM\s+to\s+go[:\s]*(\d+[\d.]*)/i);
+  if (kmToGoMatch) kmRemaining = parseFloat(kmToGoMatch[1]);
+
+  const kmDoneMatch = textContent.match(/km\s+done[:\s]*(\d+[\d.]*)/i);
+  if (kmDoneMatch) kmCovered = parseFloat(kmDoneMatch[1]);
+
+  if (kmRemaining > 0 && kmCovered > 0) totalKm = kmRemaining + kmCovered;
+
+  const avgMatch = textContent.match(/Avg\.\s*(\d+[\d.]*)/i);
+  if (avgMatch) speed = avgMatch[1] + " km/h";
+
+  console.log(`[PCS Live] km remaining: ${kmRemaining}, km done: ${kmCovered}, speed: ${speed}`);
+
+  // ── Parse situation groups ──
+  // PCS structure: div.sit-grp contains groups, each with:
+  //   - span with rider count
+  //   - group name text
+  //   - gap text (e.g., "+0:10")
+  //   - nested rider rows with bib, rider link, GC time
+
+  // Strategy: Use markdown-like structure from the text since PCS HTML is consistent
+  // Look for the "Situation" section and parse groups
+
+  // Try DOM-based parsing first (more reliable)
+  const sitGroups = doc.querySelectorAll(".sit-grp");
+  console.log(`[PCS Live] Found ${sitGroups.length} .sit-grp elements`);
+
+  if (sitGroups.length > 0) {
+    for (const grp of sitGroups) {
+      const grpText = grp.textContent?.trim() || "";
+      
+      // Extract group name - first significant text line
+      const lines = grpText.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+      
+      let groupName = "";
+      let gap = "0:00";
+      let riderCount = 0;
+      const groupRiders: string[] = [];
+      const groupPcsSlugs: string[] = [];
+
+      // Parse rider count (first number)
+      const countMatch = grpText.match(/^\s*(\d+)\s/);
+      if (countMatch) riderCount = parseInt(countMatch[1], 10);
+
+      // Find group name - look for text that's not a number and not a gap
+      for (const line of lines) {
+        if (/^\d+$/.test(line)) continue; // skip pure numbers
+        if (/^\+?\d+:\d+/.test(line)) {
+          gap = line.startsWith('+') ? line : `+${line}`;
+          continue;
+        }
+        if (!groupName && !/^\d/.test(line) && line.length > 2 && line.length < 60) {
+          groupName = line;
+        }
+      }
+
+      // Extract riders from links
+      const riderLinks = grp.querySelectorAll("a[href*='rider/']");
+      for (const link of riderLinks) {
+        const href = link.getAttribute("href") || "";
+        const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
+        const uppercaseSpan = link.querySelector("span");
+        const lastName = uppercaseSpan?.textContent?.trim() || "";
+        const fullText = link.textContent?.trim() || "";
+        const firstName = fullText.replace(lastName, "").trim();
+        const name = firstName ? `${firstName} ${lastName}` : fullText;
+        
+        if (name && name.length >= 3) {
+          groupRiders.push(name);
+          groupPcsSlugs.push(slug);
+          riders.push({ name, team: "", position: undefined, gap });
+        }
+      }
+
+      if (!groupName) groupName = riderCount > 20 ? "Peloton" : `Groupe`;
+
+      const isPeloton = groupName.toLowerCase().includes("peloton") || riderCount > 50;
+
+      if (riderCount === 0 && groupRiders.length > 0) riderCount = groupRiders.length;
+
+      situationGroups.push({
+        name: groupName,
+        gap,
+        riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
+        riderIds: [], // will be enriched later
+        riderCount: riderCount || groupRiders.length,
+        isPeloton,
+      });
+
+      console.log(`[PCS Live] Group "${groupName}": ${groupRiders.length} riders parsed, ${riderCount} total, gap=${gap}`);
+    }
+  }
+
+  // Fallback: parse from text if no DOM groups found
+  if (situationGroups.length === 0) {
+    console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
+
+    // Look for "Situation" section in text
+    const sitIdx = textContent.indexOf("Situation");
+    if (sitIdx >= 0) {
+      const sitText = textContent.substring(sitIdx, sitIdx + 5000);
+      
+      // Parse groups: pattern is "COUNT GroupName +M:SS" followed by rider entries
+      const groupRx = /(\d+)\s+((?:The\s+)?[A-Z][a-zA-Zé\s]+?)\s+\+(\d+:\d+)/g;
+      let gm;
+      const foundGroups: { name: string; gap: string; count: number; index: number }[] = [];
+      
+      while ((gm = groupRx.exec(sitText)) !== null) {
+        foundGroups.push({
+          count: parseInt(gm[1], 10),
+          name: gm[2].trim(),
+          gap: `+${gm[3]}`,
+          index: gm.index,
+        });
+      }
+
+      for (let i = 0; i < foundGroups.length; i++) {
+        const fg = foundGroups[i];
+        const isPeloton = fg.name.toLowerCase().includes("peloton") || fg.count > 50;
+        situationGroups.push({
+          name: fg.name,
+          gap: fg.gap,
+          riders: [],
+          riderIds: [],
+          riderCount: fg.count,
+          isPeloton,
+        });
+      }
+    }
+  }
+
+  // ── Extract PCS slugs for matching ──
+  // Collect all rider links with their PCS slugs for enhanced matching
+  const allRiderLinks = doc.querySelectorAll("a[href*='rider/']");
+  const pcsSlugs: { slug: string; name: string }[] = [];
+  for (const link of allRiderLinks) {
+    const href = link.getAttribute("href") || "";
+    const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
+    if (!slug) continue;
+    const uppercaseSpan = link.querySelector("span");
+    const lastName = uppercaseSpan?.textContent?.trim() || "";
+    const fullText = link.textContent?.trim() || "";
+    const firstName = fullText.replace(lastName, "").trim();
+    const name = firstName ? `${firstName} ${lastName}` : fullText;
+    if (name && name.length >= 3) {
+      pcsSlugs.push({ slug, name });
+    }
+  }
+
+  console.log(`[PCS Live] Total: ${situationGroups.length} groups, ${riders.length} riders, ${pcsSlugs.length} PCS slugs`);
+
+  return {
+    riders,
+    events,
+    situation: { groups: situationGroups, kmRemaining, kmCovered, totalKm, speed },
+  };
+}
+
+// ============================================================
 // FIRSTCYCLING PARSER — matches actual firstcycling.com HTML
 // ============================================================
 
@@ -543,13 +719,19 @@ serve(async (req) => {
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
 
-    let lequipeSituation: any = null;
+    let liveSituation: any = null;
+    const isPCSLive = isPCS && /\/live\b/i.test(url);
 
     if (isLEquipe) {
       const result = parseLEquipeLive(doc, html);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
-      lequipeSituation = result.situation;
+      liveSituation = result.situation;
+    } else if (isPCSLive) {
+      const result = parsePCSLive(doc, html);
+      scrapedRiders = result.riders;
+      scrapedEvents = result.events;
+      liveSituation = result.situation;
     } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
@@ -713,14 +895,14 @@ serve(async (req) => {
       });
     }
 
-    // Use L'Équipe situation if available (it has structured groups already), otherwise use gap-based groups
-    const finalSituation = lequipeSituation && lequipeSituation.groups.length > 0
+    // Use live situation (L'Équipe or PCS live) if available, otherwise use gap-based groups
+    const finalSituation = liveSituation && liveSituation.groups.length > 0
       ? {
-          groups: enrichGroupsWithIds(lequipeSituation.groups),
-          kmRemaining: lequipeSituation.kmRemaining,
-          kmCovered: lequipeSituation.kmCovered,
-          totalKm: lequipeSituation.totalKm,
-          speed: lequipeSituation.speed,
+          groups: enrichGroupsWithIds(liveSituation.groups),
+          kmRemaining: liveSituation.kmRemaining,
+          kmCovered: liveSituation.kmCovered,
+          totalKm: liveSituation.totalKm,
+          speed: liveSituation.speed,
         }
       : { groups: enrichGroupsWithIds(groups), kmRemaining: 0 };
 
