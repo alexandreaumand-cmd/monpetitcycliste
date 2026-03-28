@@ -65,13 +65,24 @@ Deno.serve(async (req) => {
     }
 
     // Get all phases for the season
-    const { data: phases, error: phasesError } = await supabase
+    const { data: allPhases, error: phasesError } = await supabase
       .from('phases')
       .select('id, index_dans_saison')
       .eq('saison_id', saison_id)
       .order('index_dans_saison', { ascending: true });
 
     if (phasesError) throw phasesError;
+
+    // Filter phases by league scope
+    const { data: scopeData } = await supabase
+      .from('league_scopes')
+      .select('phases')
+      .eq('league_id', league_id)
+      .single();
+    const scopedPhaseIds = scopeData?.phases || [];
+    const phases = scopedPhaseIds.length > 0
+      ? allPhases.filter(p => scopedPhaseIds.includes(p.id))
+      : allPhases;
 
     // Fetch managers via league_members (works for both Legacy and private leagues)
     let managers: Array<{ id: string; nom: string; user_id: string }> | null;

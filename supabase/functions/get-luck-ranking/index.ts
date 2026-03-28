@@ -50,7 +50,20 @@ Deno.serve(async (req) => {
     const { data: phases, error: phasesError } = await supabase
       .from('phases').select('id').eq('saison_id', saison_id);
     if (phasesError) throw phasesError;
-    const phaseIds = phases.map(p => p.id);
+
+    // Filter phases by league scope
+    let phaseIds = phases.map(p => p.id);
+    if (league_id) {
+      const { data: scopeData } = await supabase
+        .from('league_scopes')
+        .select('phases')
+        .eq('league_id', league_id)
+        .single();
+      const scopedPhaseIds = scopeData?.phases || [];
+      if (scopedPhaseIds.length > 0) {
+        phaseIds = phaseIds.filter(id => scopedPhaseIds.includes(id));
+      }
+    }
 
     // Fetch all courses for name lookup
     const { data: coursesData } = await supabase.from('courses').select('id, nom');

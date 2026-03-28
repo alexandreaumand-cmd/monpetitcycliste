@@ -58,13 +58,27 @@ Deno.serve(async (req) => {
     if (managersError) throw managersError;
 
     // Get phases for this season (with numero for labeling)
-    const { data: phases, error: phasesError } = await supabase
+    const { data: allPhases, error: phasesError } = await supabase
       .from('phases')
       .select('id, numero')
       .eq('saison_id', saison_id)
       .order('numero', { ascending: true });
 
     if (phasesError) throw phasesError;
+
+    // Filter phases by league scope
+    let phases = allPhases;
+    if (league_id) {
+      const { data: scopeData } = await supabase
+        .from('league_scopes')
+        .select('phases')
+        .eq('league_id', league_id)
+        .single();
+      const scopedPhaseIds = scopeData?.phases || [];
+      if (scopedPhaseIds.length > 0) {
+        phases = allPhases.filter(p => scopedPhaseIds.includes(p.id));
+      }
+    }
 
     const phaseIds = phases.map(p => p.id);
     const phaseLabels = phases.map(p => `P${p.numero}`);
