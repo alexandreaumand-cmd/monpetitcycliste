@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 
 interface Race {
   course_id: string;
