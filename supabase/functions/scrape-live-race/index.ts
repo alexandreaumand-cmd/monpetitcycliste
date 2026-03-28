@@ -124,8 +124,19 @@ function parsePCSLive(doc: any, html: string): {
   // Look for the "Situation" section and parse groups
 
   // Try DOM-based parsing first (more reliable)
-  const sitGroups = doc.querySelectorAll(".sit-grp");
-  console.log(`[PCS Live] Found ${sitGroups.length} .sit-grp elements`);
+  const allSitGrps = doc.querySelectorAll(".sit-grp");
+  console.log(`[PCS Live] Found ${allSitGrps.length} .sit-grp elements`);
+
+  // Filter to keep only top-level .sit-grp elements (exclude nested ones)
+  const sitGroups = Array.from(allSitGrps).filter(el => {
+    let parent = el.parentElement;
+    while (parent) {
+      if (parent.classList?.contains("sit-grp")) return false;
+      parent = parent.parentElement;
+    }
+    return true;
+  });
+  console.log(`[PCS Live] After filtering nested: ${sitGroups.length} top-level groups`);
 
   if (sitGroups.length > 0) {
     for (const grp of sitGroups) {
