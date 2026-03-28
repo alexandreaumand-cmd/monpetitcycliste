@@ -137,39 +137,36 @@ export function LeagueBonusRidersDialog({
       const bonusByRider: Record<string, number> = {};
 
       if (scopedCourseIds.length > 0) {
+        const { data: pointsData } = await supabase
+          .from("points_ledger")
+          .select("coureur_id, points")
+          .eq("phase_id", phaseId)
+          .in("coureur_id", coureurIds)
+          .in("course_id", scopedCourseIds);
 
-      const { data: pointsData } = await supabase
-        .from("points_ledger")
-        .select("coureur_id, points")
-        .eq("phase_id", phaseId)
-        .in("coureur_id", coureurIds)
-        .in("course_id", scopedCourseIds);
+        if (pointsData) {
+          pointsData.forEach((p) => {
+            if (p.coureur_id) {
+              pointsByRider[p.coureur_id] = (pointsByRider[p.coureur_id] || 0) + p.points;
+            }
+          });
+        }
 
-      const pointsByRider: Record<string, number> = {};
-      if (pointsData) {
-        pointsData.forEach((p) => {
-          if (p.coureur_id) {
-            pointsByRider[p.coureur_id] = (pointsByRider[p.coureur_id] || 0) + p.points;
-          }
-        });
-      }
+        const { data: bonusData } = await supabase
+          .from("bonus_points")
+          .select("coureur_id, points")
+          .eq("phase_id", phaseId)
+          .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
+          .in("coureur_id", coureurIds)
+          .in("course_id", scopedCourseIds);
 
-      // Get bonus points earned per rider (scoped to league courses)
-      const { data: bonusData } = await supabase
-        .from("bonus_points")
-        .select("coureur_id, points")
-        .eq("phase_id", phaseId)
-        .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
-        .in("coureur_id", coureurIds)
-        .in("course_id", scopedCourseIds);
-
-      const bonusByRider: Record<string, number> = {};
-      if (bonusData) {
-        bonusData.forEach((b) => {
-          if (b.coureur_id) {
-            bonusByRider[b.coureur_id] = (bonusByRider[b.coureur_id] || 0) + b.points;
-          }
-        });
+        if (bonusData) {
+          bonusData.forEach((b) => {
+            if (b.coureur_id) {
+              bonusByRider[b.coureur_id] = (bonusByRider[b.coureur_id] || 0) + b.points;
+            }
+          });
+        }
       }
 
       const result: BonusRiderInfo[] = selections.map((s) => {
