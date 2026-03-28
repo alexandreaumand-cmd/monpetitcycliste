@@ -131,21 +131,27 @@ function parsePCSLive(doc: any, html: string): {
     for (const grp of sitGroups) {
       const grpText = grp.textContent?.trim() || "";
       
-      // Extract group name - first significant text line
-      const lines = grpText.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-      
       let groupName = "";
       let gap = "0:00";
       let riderCount = 0;
       const groupRiders: string[] = [];
       const groupPcsSlugs: string[] = [];
 
-      // Find group name and gap from text lines
-      for (const line of lines) {
+      // Extract gap and group name ONLY from header text (before the first rider link)
+      // This avoids confusing individual GC gaps with the group gap
+      const firstRiderLink = grp.querySelector("a[href*='rider/']");
+      const firstRiderText = firstRiderLink?.textContent || "";
+      const headerText = firstRiderText && grpText.includes(firstRiderText)
+        ? grpText.substring(0, grpText.indexOf(firstRiderText))
+        : grpText.split('\n').slice(0, 3).join('\n'); // fallback: first 3 lines only
+      
+      const headerLines = headerText.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+      
+      for (const line of headerLines) {
         if (/^\d+$/.test(line)) continue; // skip pure numbers (bib numbers)
         if (/^\+?\d+:\d+/.test(line)) {
           gap = line.startsWith('+') ? line : `+${line}`;
-          continue;
+          break; // Take only the first time match = group gap
         }
         if (!groupName && !/^\d/.test(line) && line.length > 2 && line.length < 60) {
           groupName = line;
