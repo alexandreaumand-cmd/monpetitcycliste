@@ -159,13 +159,24 @@ function parsePCSLive(doc: any, html: string): {
       for (const link of riderLinks) {
         const href = link.getAttribute("href") || "";
         const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
-        const uppercaseSpan = link.querySelector("span");
-        const lastName = uppercaseSpan?.textContent?.trim() || "";
-        const fullText = link.textContent?.trim() || "";
-        const firstName = fullText.replace(lastName, "").trim();
-        const name = firstName ? `${firstName} ${lastName}` : fullText;
+        const fullText = (link.textContent || "").trim();
         
-        if (name && name.length >= 3) {
+        // Try to extract last name from uppercase span, but fall back to full text
+        const uppercaseSpan = link.querySelector("span");
+        let name = fullText;
+        if (uppercaseSpan) {
+          const lastName = uppercaseSpan.textContent?.trim() || "";
+          if (lastName && fullText.includes(lastName)) {
+            const firstName = fullText.replace(lastName, "").trim();
+            name = firstName ? `${firstName} ${lastName}` : fullText;
+          }
+        }
+        // Also try slug-based name as fallback for special chars
+        if ((!name || name.length < 2) && slug) {
+          name = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+        
+        if (name && name.length >= 2) {
           groupRiders.push(name);
           groupPcsSlugs.push(slug);
 
