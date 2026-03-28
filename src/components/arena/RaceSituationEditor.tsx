@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { Plus, Minus, Bike, Flag, Users, Send, X } from "lucide-react";
+import { Plus, Minus, Bike, Flag, Users, Send, X, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { RaceSituationDisplay } from "@/components/arena/RaceSituationDisplay";
 
 export interface RaceGroup {
   name: string;
@@ -293,6 +294,23 @@ export const RaceSituationEditor = ({
           );
         })}
       </div>
+
+      {/* Live preview */}
+      {groups.length > 0 && (
+        <div className="border-t pt-4 space-y-2">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Eye className="h-3.5 w-3.5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Aperçu</span>
+          </div>
+          <div className="bg-muted/30 p-3 rounded-lg border border-dashed">
+            <RaceSituationDisplay
+              groups={groups}
+              kmRemaining={kmRemaining}
+              rosterOwners={rosterOwners}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={addGroup} className="flex-1">
