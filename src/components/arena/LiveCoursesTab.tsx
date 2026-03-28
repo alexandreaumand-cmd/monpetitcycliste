@@ -121,7 +121,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-260px)] min-h-[400px]">
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)] lg:h-[calc(100vh-260px)] min-h-[400px]">
       {/* Left: Messages feed */}
       <div className="flex-1 flex flex-col border rounded-xl overflow-hidden bg-background min-w-0">
         {/* Course selector */}
