@@ -35,18 +35,36 @@ export const RaceSituationDisplay = ({ groups, kmRemaining, rosterOwners }: Race
         <span>{kmRemaining} km restants</span>
       </div>
 
-      {/* Groups */}
+      {/* Groups with gap separators */}
       {groups.map((group, i) => (
-        <GroupRow
-          key={i}
-          group={group}
-          index={i + 1}
-          rosterOwners={rosterOwners}
-        />
+        <div key={i}>
+          {/* Gap separator between groups */}
+          {i > 0 && group.gap && group.gap !== "0:00" && (
+            <GapSeparator gap={group.gap.startsWith("+") ? group.gap : `+${group.gap}`} />
+          )}
+
+          <GroupRow
+            group={group}
+            index={i + 1}
+            rosterOwners={rosterOwners}
+          />
+        </div>
       ))}
     </div>
   );
 };
+
+function GapSeparator({ gap }: { gap: string }) {
+  return (
+    <div className="flex items-center gap-2 py-1.5 px-1">
+      <div className="h-px flex-1 bg-border" />
+      <span className="text-xs font-bold font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+        {gap}
+      </span>
+      <div className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
 
 function GroupRow({
   group,
@@ -59,7 +77,6 @@ function GroupRow({
 }) {
   const [open, setOpen] = useState(false);
   const badgeLabel = group.isPeloton ? "P" : String(index);
-  const gapDisplay = group.gap === "0:00" ? "" : (group.gap.startsWith("+") ? group.gap : `+${group.gap}`);
 
   const riderItems = group.riders.map((name, ri) => {
     const riderId = group.riderIds?.[ri];
@@ -75,8 +92,8 @@ function GroupRow({
   const hiddenRiders = showCollapsible ? riderItems.slice(5) : [];
 
   return (
-    <div className="flex gap-2 py-2 border-b border-border/30 last:border-b-0 px-1">
-      {/* Left column: badge + gap */}
+    <div className="flex gap-2 py-2 px-1">
+      {/* Left column: badge + rider count */}
       <div className="flex flex-col items-center w-9 flex-shrink-0 pt-0.5">
         <div
           className={cn(
@@ -88,21 +105,10 @@ function GroupRow({
         >
           {badgeLabel}
         </div>
-        {gapDisplay && (
-          <span className="text-[10px] font-mono text-muted-foreground mt-0.5 leading-tight">
-            {gapDisplay}
-          </span>
-        )}
         <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
           ({group.riderCount || group.riders.length})
         </span>
       </div>
-
-      {/* Vertical separator bar */}
-      <div className={cn(
-        "w-0.5 self-stretch rounded-full flex-shrink-0",
-        group.isPeloton ? "bg-primary/40" : "bg-border"
-      )} />
 
       {/* Right column: group name + riders */}
       <div className="flex-1 min-w-0">
