@@ -155,7 +155,7 @@ function GroupRow({
 
 function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: string; ownerName?: string; bib?: string; gcGap?: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs leading-relaxed">
+    <div className="flex items-center gap-1 sm:gap-1.5 text-xs leading-relaxed min-w-0 overflow-hidden">
       <span className="w-3.5 text-right text-[11px] text-muted-foreground flex-shrink-0">{rank}</span>
       {bib && (
         <span className="w-6 text-right text-[10px] text-muted-foreground/60 flex-shrink-0">{bib}</span>
