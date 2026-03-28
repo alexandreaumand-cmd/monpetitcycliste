@@ -3,6 +3,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 
