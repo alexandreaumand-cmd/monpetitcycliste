@@ -251,29 +251,11 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           <CollapsibleContent>
             <div className="p-4 max-h-[50vh] overflow-y-auto">
               {latestSituation ? (
-                <div className="space-y-3">
-                  {latestSituation.groups.map((group: any, gi: number) => (
-                    <div key={gi} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className={cn("text-xs font-semibold", group.isPeloton ? "text-primary" : "text-foreground")}>{group.name}</span>
-                        <div className="flex items-center gap-2">
-                          {group.gap !== "0:00" && <span className="text-[11px] text-muted-foreground">{group.gap.startsWith("+") ? group.gap : `+${group.gap}`}</span>}
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0"><Users className="h-2.5 w-2.5 mr-0.5" />{group.riderCount}</Badge>
-                        </div>
-                      </div>
-                      {group.riders?.length > 0 && (
-                        <div className="space-y-0.5 pl-2 border-l-2 border-primary/30">
-                          {group.riders.map((riderName: string, ri: number) => {
-                            const riderId = group.riderIds?.[ri];
-                            const normalizedName = riderName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\./g, "").replace(/\s+/g, " ").trim().toLowerCase();
-                            const managerName = (riderId && rosterOwners?.[riderId]) || rosterOwners?.[`name:${normalizedName}`];
-                            return (<div key={ri} className="text-xs py-0.5"><span className="font-medium text-foreground">{riderName}{managerName ? ` (${managerName})` : ""}</span></div>);
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <RaceSituationDisplay
+                  groups={latestSituation.groups}
+                  kmRemaining={latestSituation.kmRemaining}
+                  rosterOwners={rosterOwners}
+                />
               ) : (
                 <p className="text-xs text-center text-muted-foreground py-4">Aucune situation de course disponible</p>
               )}
