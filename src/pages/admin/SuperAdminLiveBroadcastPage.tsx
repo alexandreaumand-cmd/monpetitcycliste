@@ -61,6 +61,13 @@ export const SuperAdminLiveBroadcastPage = () => {
     (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
      selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
 
+  // Auto-scroll to top when imported situation changes
+  useEffect(() => {
+    if (importedSituation) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [importedSituation]);
+
   useEffect(() => {
     setSelectedEtape(isMultiStage ? 1 : null);
   }, [activeCourseId, isMultiStage]);
