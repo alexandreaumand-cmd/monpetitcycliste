@@ -111,11 +111,38 @@ export function LeagueBonusRidersDialog({
         }
       }
 
+      // Get league-scoped course IDs
+      const { data: leagueCourseIdsData } = await supabase.rpc('get_league_course_ids', { p_league_id: leagueId });
+      const validCourseIds = (leagueCourseIdsData as any[])?.map((r: any) => r.course_id) || [];
+
+      const { data: leagueData } = await supabase
+        .from("leagues")
+        .select("started_at_effective")
+        .eq("id", leagueId)
+        .single();
+
+      let scopedCourseIds = validCourseIds;
+      if (leagueData?.started_at_effective && validCourseIds.length > 0) {
+        const dateFloor = (leagueData.started_at_effective as string).substring(0, 10);
+        const { data: coursesData } = await supabase
+          .from("courses")
+          .select("id, date_debut")
+          .in("id", validCourseIds);
+        scopedCourseIds = (coursesData || [])
+          .filter(c => c.date_debut && c.date_debut > dateFloor)
+          .map(c => c.id);
+      }
+
+      if (scopedCourseIds.length === 0) {
+        return result.sort((a, b) => b.points_total - a.points_total);
+      }
+
       const { data: pointsData } = await supabase
         .from("points_ledger")
         .select("coureur_id, points")
         .eq("phase_id", phaseId)
-        .in("coureur_id", coureurIds);
+        .in("coureur_id", coureurIds)
+        .in("course_id", scopedCourseIds);
 
       const pointsByRider: Record<string, number> = {};
       if (pointsData) {
@@ -126,13 +153,14 @@ export function LeagueBonusRidersDialog({
         });
       }
 
-      // Get bonus points earned per rider
+      // Get bonus points earned per rider (scoped to league courses)
       const { data: bonusData } = await supabase
         .from("bonus_points")
         .select("coureur_id, points")
         .eq("phase_id", phaseId)
         .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
-        .in("coureur_id", coureurIds);
+        .in("coureur_id", coureurIds)
+        .in("course_id", scopedCourseIds);
 
       const bonusByRider: Record<string, number> = {};
       if (bonusData) {
