@@ -64,7 +64,9 @@ function GroupRow({
   const riderItems = group.riders.map((name, ri) => {
     const riderId = group.riderIds?.[ri];
     const ownerName = riderId && rosterOwners?.[riderId];
-    return { name, ownerName };
+    const bib = group.riderBibs?.[ri];
+    const gcGap = group.riderGcGaps?.[ri];
+    return { name, ownerName, bib, gcGap };
   });
 
   const showRiders = !group.isPeloton && riderItems.length > 0;
