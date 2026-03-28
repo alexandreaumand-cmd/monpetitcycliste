@@ -15,16 +15,16 @@ interface TeamPointsBreakdownProps {
   leagueId?: string;
 }
 
-export const TeamPointsBreakdown = ({ saisonId }: TeamPointsBreakdownProps) => {
+export const TeamPointsBreakdown = ({ saisonId, leagueId }: TeamPointsBreakdownProps) => {
   const { t } = useTranslation('statistics');
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['team-category-stats', saisonId],
+    queryKey: ['team-category-stats', saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-team-category-stats', {
-        body: { saison_id: saisonId }
+        body: { saison_id: saisonId, league_id: leagueId }
       });
       if (error) throw error;
       return data;

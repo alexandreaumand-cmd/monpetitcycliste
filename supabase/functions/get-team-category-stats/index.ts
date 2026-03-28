@@ -11,17 +11,31 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { saison_id } = await req.json();
+    const { saison_id, league_id } = await req.json();
     if (!saison_id) throw new Error('saison_id required');
 
     // Get phases for the season
-    const { data: phases } = await supabase
+    const { data: allPhases } = await supabase
       .from('phases')
       .select('id, index_dans_saison, statut')
       .eq('saison_id', saison_id)
       .order('index_dans_saison');
 
-    const activePhaseIds = (phases || [])
+    // Filter phases by league scope if league_id provided
+    let phases = allPhases || [];
+    if (league_id) {
+      const { data: scopeData } = await supabase
+        .from('league_scopes')
+        .select('phases')
+        .eq('league_id', league_id)
+        .single();
+      const scopedPhaseIds = scopeData?.phases || [];
+      if (scopedPhaseIds.length > 0) {
+        phases = phases.filter((p: any) => scopedPhaseIds.includes(p.id));
+      }
+    }
+
+    const activePhaseIds = phases
       .filter((p: any) => p.statut === 'active' || p.statut === 'completed')
       .map((p: any) => p.id);
 

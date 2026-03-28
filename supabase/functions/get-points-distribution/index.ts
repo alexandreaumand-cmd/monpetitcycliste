@@ -134,19 +134,30 @@ Deno.serve(async (req) => {
     }
 
     // Récupérer toutes les phases de la saison
-    const { data: phases, error: phasesError } = await supabase
+    const { data: allPhases, error: phasesError } = await supabase
       .from('phases')
       .select('id, index_dans_saison')
       .eq('saison_id', saisonId)
       .order('index_dans_saison');
 
     if (phasesError) throw phasesError;
-    if (!phases || phases.length === 0) {
+    if (!allPhases || allPhases.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No phases found for this season' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Filter phases by league scope
+    const { data: scopeData } = await supabase
+      .from('league_scopes')
+      .select('phases')
+      .eq('league_id', league_id)
+      .single();
+    const scopedPhaseIds = scopeData?.phases || [];
+    const phases = scopedPhaseIds.length > 0
+      ? allPhases.filter(p => scopedPhaseIds.includes(p.id))
+      : allPhases;
 
     console.log(`[get-points-distribution] Found ${phases.length} phases`);
 

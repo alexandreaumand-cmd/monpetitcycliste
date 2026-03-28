@@ -109,11 +109,11 @@ const Statistics = () => {
         </TabsContent>
 
         <TabsContent value="teams" className="mt-4 md:mt-6">
-          <TeamPointsBreakdown saisonId={selectedSeason.id} />
+          <TeamPointsBreakdown saisonId={selectedSeason.id} leagueId={leagueId} />
         </TabsContent>
 
         <TabsContent value="categories" className="mt-4 md:mt-6">
-          <CategoryWeight saisonId={selectedSeason.id} />
+          <CategoryWeight saisonId={selectedSeason.id} leagueId={leagueId} />
         </TabsContent>
       </Tabs>
     </PageContainer>

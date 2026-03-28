@@ -12,15 +12,15 @@ interface CategoryWeightProps {
   leagueId?: string;
 }
 
-export const CategoryWeight = ({ saisonId }: CategoryWeightProps) => {
+export const CategoryWeight = ({ saisonId, leagueId }: CategoryWeightProps) => {
   const { t } = useTranslation('statistics');
   const isMobile = useIsMobile();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['team-category-stats', saisonId],
+    queryKey: ['team-category-stats', saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-team-category-stats', {
-        body: { saison_id: saisonId }
+        body: { saison_id: saisonId, league_id: leagueId }
       });
       if (error) throw error;
       return data;
