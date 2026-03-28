@@ -1,17 +1,39 @@
 
 
-## Fix : masquer le sélecteur de phase sur la page Résultats pour les ligues "à la course"
+## Fix : la page Résultats affiche des courses hors scope quand `started_at_effective` est NULL
 
 ### Problème
 
-La page Résultats (desktop) affiche un sélecteur de phase même pour les ligues en mode `per_course`, où la notion de phase est redondante — comme déjà corrigé sur les pages Mon Équipe et Classement.
+La fonction SQL `results_courses_with_entries` utilise ce fallback quand `started_at_effective` est NULL :
+
+```sql
+c.date_debut > COALESCE(l.started_at_effective::date, '1900-01-01'::date)
+```
+
+Pour une ligue dont les enchères n'ont pas encore été clôturées, `started_at_effective` est NULL → fallback à 1900 → **toutes les courses passent le filtre de date**, même celles des phases 1 et 2.
+
+Les vues matérialisées (`v_manager_standings_by_phase_v2`, etc.) utilisent correctement `COALESCE(l.started_at_effective, l.created_at)` comme fallback, mais la fonction `results_courses_with_entries` est incohérente.
 
 ### Solution
 
-Ajouter la même vérification `isPerCourse` déjà utilisée dans les autres pages : importer `useUserLeagues`, détecter le `game_mode`, et conditionner l'affichage du sélecteur de phase avec `{!isPerCourse && ...}`.
+Aligner le fallback de `results_courses_with_entries` sur celui des vues : utiliser `l.created_at` au lieu de `'1900-01-01'`.
 
-### Fichiers impactés
+```sql
+-- Avant
+c.date_debut > COALESCE(
+  (SELECT l.started_at_effective::date FROM leagues l WHERE l.id = p_league_id),
+  '1900-01-01'::date
+)
 
-1. **`src/pages/ResultsPage.desktop.tsx`** (lignes 182-198) — entourer le bloc `<Select>` de phase avec `{!isPerCourse && (...)}`, ajouter les imports `useUserLeagues` et la détection du mode
-2. **`src/pages/ResultsPage.mobile.tsx`** — vérifier si un sélecteur de phase existe (il semble que non d'après le code, `phase_id: null` est hardcodé), mais ajouter la même garde par cohérence si nécessaire
+-- Après
+c.date_debut > COALESCE(
+  (SELECT l.started_at_effective::date FROM leagues l WHERE l.id = p_league_id),
+  (SELECT l.created_at::date FROM leagues l WHERE l.id = p_league_id)
+)
+```
+
+Ainsi, pour une ligue créée récemment (ex: mars 2026) avec enchères en cours, seules les courses postérieures à la date de création de la ligue seront affichées — excluant les courses de janvier/février qui appartiennent aux phases 1-2.
+
+### Fichier impacté
+- Migration SQL : `CREATE OR REPLACE FUNCTION results_courses_with_entries` — changer le fallback de `'1900-01-01'` à `l.created_at`
 
