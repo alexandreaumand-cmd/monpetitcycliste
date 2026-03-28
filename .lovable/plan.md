@@ -1,43 +1,38 @@
 
 
-## Ajouter les dossards et écarts GC par coureur (style PCS fidèle)
+## Améliorations visuelles du RaceSituationDisplay
 
-### Contexte
+### Changements demandés
 
-L'image PCS montre pour chaque coureur dans un groupe : **rang**, **dossard**, **drapeau**, **nom**, et **écart au classement général** à droite (+15:43, +9:26…). Actuellement, le scraper n'extrait ni les dossards ni les écarts GC individuels — seul le gap entre groupes est capturé.
+1. **Police plus grande** : passer les tailles de texte de `text-[11px]`/`text-[9px]` à `text-xs`/`text-[11px]` pour une meilleure lisibilité
+2. **Barre verticale entre groupes** : ajouter un trait vertical coloré (`border-l-2`) à gauche de chaque groupe pour séparer visuellement les sections
+3. **Coureur manquant** : c'est un bug scraper — le rider "SVESTAD-BÅRDSENG Embret" est probablement filtré par la condition `name.length >= 3` ou la regex de parsing. Vérifier le parsing PCS des noms avec caractères spéciaux (å, ø, etc.)
+4. **"(-)" pour coureurs sans manager** : ajouter `(-)` après le nom si le coureur n'a pas de propriétaire dans le roster
+5. **Peloton** : afficher le texte "PELOTON" en label et l'écart du peloton sous le badge "P"
 
-Le layout actuel (gap de groupe sous le badge à gauche) est correct. Il manque les données par coureur.
+### Détails techniques
 
-### Ce qui change
+#### `src/components/arena/RaceSituationDisplay.tsx`
 
-#### 1. Scraper PCS — extraire dossard + GC gap par coureur
+- **Layout GroupRow** : envelopper chaque groupe dans un conteneur avec `border-l-2 border-primary/30 pl-2` (ou `border-primary` pour le peloton) pour créer la barre verticale
+- **Tailles de police** : 
+  - Badge : `w-7 h-7 text-xs` (au lieu de `w-6 h-6 text-[10px]`)
+  - Nom du groupe : `text-[10px]` (au lieu de `text-[9px]`)
+  - Coureurs : `text-xs` (au lieu de `text-[11px]`)
+  - Dossards : `text-[10px]` (au lieu de `text-[9px]`)
+  - GC gap : `text-[10px]` (au lieu de `text-[9px]`)
+  - Gap de groupe : `text-[10px]` (au lieu de `text-[9px]`)
+- **RiderRow** : si `ownerName` est undefined/falsy, afficher `(-)` à la place (même style muted que le nom de manager)
+- **Peloton** : toujours afficher le label "PELOTON" et montrer l'écart (ne plus masquer le gap pour le peloton)
 
-Dans `supabase/functions/scrape-live-race/index.ts`, fonction `parsePCSLive` :
-- Chaque ligne coureur dans `.sit-grp` contient le **dossard** (dans un span avant le lien) et l'**écart GC** (texte après le lien, format `+MM:SS`)
-- Ajouter l'extraction de ces 2 champs pour chaque coureur
-- Les stocker dans les données de situation : `riders` devient un tableau d'objets `{ name, bib, gcGap, pcsSlug }` au lieu de simples strings
+#### `supabase/functions/scrape-live-race/index.ts`
 
-#### 2. Interface RaceGroup — enrichir le modèle
-
-Dans `RaceSituationDisplay.tsx`, enrichir l'interface :
-- `riders` passe de `string[]` à `{ name: string; bib?: string; gcGap?: string }[]` (ou garder `string[]` pour les noms et ajouter `riderBibs?: string[]` et `riderGcGaps?: string[]` pour compatibilité)
-
-Approche retenue : ajouter `riderBibs?: string[]` et `riderGcGaps?: string[]` à `RaceGroup` pour ne pas casser les sources existantes (L'Equipe n'a pas ces infos).
-
-#### 3. Affichage — ajouter dossard et GC gap dans RiderRow
-
-Chaque ligne coureur affichera :
-```text
-1  14  SOLER Marc  (manager)  +15:43
-```
-- Rang (déjà présent)
-- Dossard (nouveau, petit texte muted)
-- Nom (déjà présent, highlight si manager)
-- GC gap à droite (nouveau, aligné à droite, font-mono)
-
-Le dossard et le GC gap ne s'affichent que si les données existent (optionnels).
+Le coureur manquant est probablement lié à la condition de parsing du nom ou au traitement des caractères spéciaux dans `parsePCSLive`. Vérifier que :
+- Les noms avec des caractères nordiques (å, ø, æ, etc.) ne sont pas filtrés
+- Le `fullText.replace(lastName, "")` fonctionne bien avec ces caractères
+- Le rider n'est pas exclu par un filtre de longueur ou de format
 
 ### Fichiers impactés
-- `supabase/functions/scrape-live-race/index.ts` — extraction dossard + GC gap dans `parsePCSLive`
-- `src/components/arena/RaceSituationDisplay.tsx` — interface enrichie + affichage dossard/GC gap dans `RiderRow`
+- `src/components/arena/RaceSituationDisplay.tsx` — refonte visuelle (tailles, barre verticale, `(-)`)
+- `supabase/functions/scrape-live-race/index.ts` — vérifier parsing noms spéciaux
 
