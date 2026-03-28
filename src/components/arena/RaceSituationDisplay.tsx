@@ -14,6 +14,8 @@ interface RaceGroup {
   gap: string;
   isPeloton: boolean;
   riderIds?: string[];
+  riderBibs?: string[];
+  riderGcGaps?: string[];
 }
 
 interface RaceSituationDisplayProps {
