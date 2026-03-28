@@ -152,8 +152,10 @@ function parsePCSLive(doc: any, html: string): {
         }
       }
 
-      // Extract riders from links
+      // Extract riders from links with bib + GC gap
       const riderLinks = grp.querySelectorAll("a[href*='rider/']");
+      const groupBibs: string[] = [];
+      const groupGcGaps: string[] = [];
       for (const link of riderLinks) {
         const href = link.getAttribute("href") || "";
         const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
@@ -166,6 +168,23 @@ function parsePCSLive(doc: any, html: string): {
         if (name && name.length >= 3) {
           groupRiders.push(name);
           groupPcsSlugs.push(slug);
+
+          // Extract bib: look for previous sibling text or parent text before the link
+          const parentEl = link.parentElement;
+          let bib = "";
+          let gcGap = "";
+          if (parentEl) {
+            const parentText = parentEl.textContent || "";
+            // Bib is typically a number before the rider name
+            const bibMatch = parentText.match(/^\s*(\d{1,3})\s/);
+            if (bibMatch) bib = bibMatch[1];
+            // GC gap is typically after the rider name, format +H:MM:SS or +MM:SS
+            const gcMatch = parentText.match(/(\+\d+:\d{2}(?::\d{2})?)\s*$/);
+            if (gcMatch) gcGap = gcMatch[1];
+          }
+          groupBibs.push(bib);
+          groupGcGaps.push(gcGap);
+
           riders.push({ name, team: "", position: undefined, gap });
         }
       }
@@ -182,6 +201,8 @@ function parsePCSLive(doc: any, html: string): {
         riderIds: [],
         riderCount,
         isPeloton,
+        riderBibs: isPeloton ? [] : groupBibs.slice(0, 15),
+        riderGcGaps: isPeloton ? [] : groupGcGaps.slice(0, 15),
       });
 
       console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);

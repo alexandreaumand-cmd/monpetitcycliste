@@ -138,10 +138,13 @@ function GroupRow({
   );
 }
 
-function RiderRow({ rank, name, ownerName }: { rank: number; name: string; ownerName?: string }) {
+function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: string; ownerName?: string; bib?: string; gcGap?: string }) {
   return (
     <div className="flex items-center gap-1.5 text-[11px] leading-relaxed">
       <span className="w-3 text-right text-[10px] text-muted-foreground flex-shrink-0">{rank}</span>
+      {bib && (
+        <span className="w-5 text-right text-[9px] text-muted-foreground/60 flex-shrink-0">{bib}</span>
+      )}
       <span className={cn(
         "truncate",
         ownerName ? "font-medium text-primary" : "text-foreground"
@@ -151,6 +154,11 @@ function RiderRow({ rank, name, ownerName }: { rank: number; name: string; owner
       {ownerName && (
         <span className="text-[9px] text-muted-foreground flex-shrink-0">
           ({ownerName})
+        </span>
+      )}
+      {gcGap && (
+        <span className="text-[9px] font-mono text-muted-foreground flex-shrink-0 ml-auto">
+          {gcGap}
         </span>
       )}
     </div>
