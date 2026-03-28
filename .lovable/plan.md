@@ -1,52 +1,45 @@
 
 
-## Fix : le dialog "Coureurs bonusés" affiche des points hors scope de la ligue
+## Fix : erreur générique lors de la jonction par code d'invitation
 
 ### Cause racine
 
-Dans `LeagueBonusRidersDialog.tsx`, les requêtes `points_ledger` (ligne 114) et `bonus_points` (ligne 130) filtrent uniquement par `phase_id` — elles ignorent complètement le scope de la ligue (courses autorisées + date plancher `started_at_effective`).
+Dans `JoinLeagueDialog.tsx`, ligne 106 : `if (error) throw error;`. Quand l'edge function retourne un code non-2xx (404, 410, etc.), le SDK Supabase met le message serveur dans `data.error` mais `error` contient seulement "Edge Function returned a non-2xx status code". Le `throw` perd donc le vrai message d'erreur, et le catch ne peut pas matcher les strings ("Invalid token", "revoked", etc.).
 
-Résultat : Noa Isidore affiche 250 points et +62.5 bonus alors qu'il n'a aucun point **dans cette ligue**.
+C'est le même problème documenté dans la mémoire projet : le client Supabase ne lève pas d'exception avec le message du body JSON.
 
 ### Solution
 
-Ajouter le filtrage par scope de ligue dans les deux requêtes :
-
-1. **Récupérer les course_ids autorisées** via `get_league_course_ids(leagueId)` + la date `started_at_effective` de la ligue
-2. **Filtrer `points_ledger`** avec `.in('course_id', leagueCourseIds)` et exclure les courses avant la date plancher
-3. **Filtrer `bonus_points`** de la même façon (les bonus avec `course_id` doivent être dans le scope)
-
-### Détails techniques
-
-Dans `LeagueBonusRidersDialog.tsx`, avant les requêtes de points :
+Remplacer la gestion d'erreur dans `handleJoinByCode` pour vérifier `data?.error` en priorité (comme c'est déjà fait dans `JoinLeaguePage.tsx`) :
 
 ```typescript
-// Get league scope
-const { data: leagueCourseIds } = await supabase.rpc('get_league_course_ids', { p_league_id: leagueId });
-const validCourseIds = leagueCourseIds?.map((r: any) => r.course_id) || [];
+const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
+  body: { token: inviteCode.trim() },
+});
 
-const { data: leagueData } = await supabase
-  .from('leagues')
-  .select('started_at_effective')
-  .eq('id', leagueId)
-  .single();
-
-// If date floor, filter courses by date
-let scopedCourseIds = validCourseIds;
-if (leagueData?.started_at_effective && validCourseIds.length > 0) {
-  const dateFloor = leagueData.started_at_effective.substring(0, 10);
-  const { data: coursesData } = await supabase
-    .from('courses')
-    .select('id, date_debut')
-    .in('id', validCourseIds);
-  scopedCourseIds = (coursesData || [])
-    .filter(c => c.date_debut && c.date_debut > dateFloor)
-    .map(c => c.id);
+if (error || data?.error) {
+  const serverMsg = data?.error || error?.message || '';
+  if (serverMsg.includes('Invalid token')) {
+    toast.error(t('errors.invalidCode'));
+  } else if (serverMsg.includes('revoked')) {
+    toast.error(t('errors.revokedInvite'));
+  } else if (serverMsg.includes('expired')) {
+    toast.error(t('errors.expiredInvite'));
+  } else if (serverMsg.includes('limit reached')) {
+    toast.error(t('errors.limitReached'));
+  } else if (serverMsg.includes('MANAGER_NOT_FOUND')) {
+    toast.error(t('errors.managerNotFound'));
+  } else {
+    toast.error(serverMsg || t('errors.joinError'));
+  }
+  return;
 }
+
+toast.success(t('join.successWithName', { name: data.league_name }));
 ```
 
-Puis filtrer les deux requêtes avec `.in('course_id', scopedCourseIds)`.
+Supprimer le `throw error` et le bloc `catch` pour les erreurs métier — les traiter directement via `data?.error`.
 
 ### Fichier impacté
-- `src/components/team/LeagueBonusRidersDialog.tsx` — ajout filtrage scope ligue sur points_ledger et bonus_points
+- `src/components/leagues/JoinLeagueDialog.tsx` — réécriture de la gestion d'erreur dans `handleJoinByCode`
 
