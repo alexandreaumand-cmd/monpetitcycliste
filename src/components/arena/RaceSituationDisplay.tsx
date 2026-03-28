@@ -115,14 +115,14 @@ function GroupRow({
         {showRiders && (
           <div className="space-y-0">
             {visibleRiders.map((item, ri) => (
-              <RiderRow key={ri} rank={ri + 1} name={item.name} ownerName={item.ownerName} />
+              <RiderRow key={ri} rank={ri + 1} name={item.name} ownerName={item.ownerName} bib={item.bib} gcGap={item.gcGap} />
             ))}
 
             {showCollapsible && (
               <Collapsible open={open} onOpenChange={setOpen}>
                 <CollapsibleContent className="space-y-0">
                   {hiddenRiders.map((item, ri) => (
-                    <RiderRow key={ri} rank={visibleRiders.length + ri + 1} name={item.name} ownerName={item.ownerName} />
+                    <RiderRow key={ri} rank={visibleRiders.length + ri + 1} name={item.name} ownerName={item.ownerName} bib={item.bib} gcGap={item.gcGap} />
                   ))}
                 </CollapsibleContent>
                 <CollapsibleTrigger className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
