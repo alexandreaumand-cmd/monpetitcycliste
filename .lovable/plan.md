@@ -1,55 +1,17 @@
 
 
-## Fix : le filtrage `.sit-grp` exclut tous les groupes — 0 top-level trouvé
+## Fix : masquer le sélecteur de phase sur la page Résultats pour les ligues "à la course"
 
-### Problème racine
+### Problème
 
-Les logs montrent clairement :
-```
-Found 5 .sit-grp elements
-After filtering nested: 0 top-level groups
-No .sit-grp found, trying text-based parsing
-```
-
-La structure HTML PCS est un conteneur `.sit-grp` qui contient des `.sit-grp` enfants (les vrais groupes). Le filtre actuel cherche des `.sit-grp` **sans aucun ancêtre** `.sit-grp` → seul le conteneur externe passerait, mais il est lui-même le parent, donc les groupes réels (qui ont un parent `.sit-grp`) sont tous exclus.
-
-Le fallback text-based ne capture que les headers de groupe (nom + gap + count) via regex, mais **aucun coureur individuel** — d'où des groupes vides ou mal formés.
+La page Résultats (desktop) affiche un sélecteur de phase même pour les ligues en mode `per_course`, où la notion de phase est redondante — comme déjà corrigé sur les pages Mon Équipe et Classement.
 
 ### Solution
 
-Remplacer la logique de filtrage par une approche à **deux niveaux** :
+Ajouter la même vérification `isPerCourse` déjà utilisée dans les autres pages : importer `useUserLeagues`, détecter le `game_mode`, et conditionner l'affichage du sélecteur de phase avec `{!isPerCourse && ...}`.
 
-1. **Trouver le conteneur racine** : le `.sit-grp` qui n'a **pas** de parent `.sit-grp` (il n'y en a qu'un)
-2. **Sélectionner ses enfants directs** `.sit-grp` : ce sont les vrais groupes de course, chacun contenant les riders
+### Fichiers impactés
 
-```typescript
-// Find the root .sit-grp container (the one with no .sit-grp ancestor)
-const rootSitGrp = Array.from(allSitGrps).find(el => {
-  let parent = el.parentElement;
-  while (parent) {
-    if (parent.classList?.contains("sit-grp")) return false;
-    parent = parent.parentElement;
-  }
-  return true;
-});
-
-// The real groups are the direct .sit-grp children of the root
-const sitGroups = rootSitGrp 
-  ? Array.from(rootSitGrp.querySelectorAll(":scope > .sit-grp"))
-  : [];
-```
-
-Si `:scope` n'est pas supporté par le parser HTML (deno-dom), utiliser un fallback :
-```typescript
-const sitGroups = rootSitGrp
-  ? Array.from(rootSitGrp.children).filter(
-      (el: any) => el.classList?.contains("sit-grp")
-    )
-  : [];
-```
-
-Cela donnera les vrais groupes (5 dans l'exemple) avec leurs coureurs correctement imbriqués. Le reste du parsing (extraction riders, bibs, GC gaps) reste identique.
-
-### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — lignes 130-139, remplacer le filtrage top-level par la sélection des enfants directs du conteneur racine
+1. **`src/pages/ResultsPage.desktop.tsx`** (lignes 182-198) — entourer le bloc `<Select>` de phase avec `{!isPerCourse && (...)}`, ajouter les imports `useUserLeagues` et la détection du mode
+2. **`src/pages/ResultsPage.mobile.tsx`** — vérifier si un sélecteur de phase existe (il semble que non d'après le code, `phase_id: null` est hardcodé), mais ajouter la même garde par cohérence si nécessaire
 
