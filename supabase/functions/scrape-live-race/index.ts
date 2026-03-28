@@ -895,14 +895,14 @@ serve(async (req) => {
       });
     }
 
-    // Use L'Équipe situation if available (it has structured groups already), otherwise use gap-based groups
-    const finalSituation = lequipeSituation && lequipeSituation.groups.length > 0
+    // Use live situation (L'Équipe or PCS live) if available, otherwise use gap-based groups
+    const finalSituation = liveSituation && liveSituation.groups.length > 0
       ? {
-          groups: enrichGroupsWithIds(lequipeSituation.groups),
-          kmRemaining: lequipeSituation.kmRemaining,
-          kmCovered: lequipeSituation.kmCovered,
-          totalKm: lequipeSituation.totalKm,
-          speed: lequipeSituation.speed,
+          groups: enrichGroupsWithIds(liveSituation.groups),
+          kmRemaining: liveSituation.kmRemaining,
+          kmCovered: liveSituation.kmCovered,
+          totalKm: liveSituation.totalKm,
+          speed: liveSituation.speed,
         }
       : { groups: enrichGroupsWithIds(groups), kmRemaining: 0 };
 
