@@ -383,23 +383,6 @@ function parsePCSLive(doc: any, html: string): {
     }
   }
 
-  // ── Extract PCS slugs for matching ──
-  // Collect all rider links with their PCS slugs for enhanced matching
-  const allRiderLinks = doc.querySelectorAll("a[href*='rider/']");
-  const pcsSlugs: { slug: string; name: string }[] = [];
-  for (const link of allRiderLinks) {
-    const href = link.getAttribute("href") || "";
-    const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
-    if (!slug) continue;
-    const uppercaseSpan = link.querySelector("span");
-    const lastName = uppercaseSpan?.textContent?.trim() || "";
-    const fullText = link.textContent?.trim() || "";
-    const firstName = fullText.replace(lastName, "").trim();
-    const name = firstName ? `${firstName} ${lastName}` : fullText;
-    if (name && name.length >= 3) {
-      pcsSlugs.push({ slug, name });
-    }
-  }
 
   console.log(`[PCS Live] Total: ${situationGroups.length} groups, ${riders.length} riders, ${pcsSlugs.length} PCS slugs`);
 
