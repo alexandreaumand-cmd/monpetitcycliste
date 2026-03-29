@@ -442,10 +442,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
   // Header content - shared between Dialog and Drawer
   const headerContent = meta ? (
-    <div className="flex flex-col items-start gap-1 flex-1">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xl font-bold">{meta.course_nom}</span>
-        <Badge variant="outline">{meta.categorie}</Badge>
+    <div className="flex flex-col items-start gap-0.5 flex-1">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-base font-bold leading-tight">{meta.course_nom}</span>
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{meta.categorie}</Badge>
         {selectedType === 'Etape' && results.some((r: any) => r.position_decimal !== null && !r.isTeamHeader) && (
           <Badge variant="secondary" className="bg-blue-500 text-white">
             TTT
