@@ -367,7 +367,7 @@ function parsePCSLive(doc: any, html: string): {
         }
 
         const riderCountFinal = isPeloton ? 150 : groupRiders.length;
-        const riderCount = groupRiders.length > 0 ? groupRiders.length : (isPeloton ? 150 : 0);
+        const riderCount = groupRiders.length > 0 ? groupRiders.length : riderCountFinal;
         
         situationGroups.push({
           name: fg.name,
