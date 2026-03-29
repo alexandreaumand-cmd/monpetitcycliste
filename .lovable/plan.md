@@ -1,41 +1,48 @@
 
 
-## Optimisation mobile du drawer Résultats de course
+## Fix : le scraper PCS ne détecte pas les coureurs dans les groupes
 
-### Problemes identifies (images)
+### Cause racine
 
-1. **Header trop volumineux** : titre en `text-xl` + badge catégorie + date prennent ~30% de l'ecran
-2. **Onglet Managers** : le chevron est dans un `Button ghost` avec padding excessif, la colonne "Rang" affiche medaille + `#N` de facon espacee, les points sont en `text-lg` trop gros
-3. **Section contributeurs expandee** : padding `p-4` et cartes avec `p-2 rounded border` gaspillent de l'espace vertical
-4. **Colonnes inutilement larges** : la colonne chevron (`w-12`) et la colonne rang (`w-16`) sont surdimensionnees
+Les logs montrent clairement :
+```
+Found 0 .sit-grp elements
+Root container found: false, direct .sit-grp children: 0
+No .sit-grp found, trying text-based parsing
+Total: 2 groups, 0 riders, 113 PCS slugs
+```
 
-### Changements
+Le parser DOM cherche des éléments `.sit-grp` mais `deno-dom` (parser HTML léger côté serveur) ne les trouve pas — probablement parce que PCS charge la section "Situation" dynamiquement via JavaScript, ou que le HTML statique utilise une structure différente de celle attendue.
 
-Dans `src/components/courses/CourseResultsDrawer.tsx` :
+**Cependant**, les 113 liens de coureurs (`a[href*='rider/']`) SONT bien dans le HTML statique. Le fallback texte (lignes 260-296) trouve bien 2 groupes ("The Breakaway" + "Peloton") mais crée des groupes avec `riders: []` — il ne rattache **aucun coureur** aux groupes.
 
-**1. Header compact mobile**
-- Titre : `text-xl` → `text-base font-bold` (mobile seulement via classe conditionnelle ou `isMobile`)
-- Badge categorie : plus petit `text-[10px]`
-- Date : `text-xs` au lieu de `text-sm`
+### Solution
 
-**2. Leaderboard (onglet Managers) — lignes 1040-1128**
-- Supprimer la colonne chevron separee — integrer le chevron directement dans la cellule rang
-- Fusionner rang + medaille en une seule cellule compacte : `🥇 #1` sans le `text-lg` sur la medaille
-- Points : `text-lg font-bold` → `text-base font-bold`
-- Ligne du tableau : reduire le padding vertical
+Réécrire le fallback texte pour qu'il extraie aussi les coureurs de chaque groupe en exploitant les liens rider déjà présents dans le HTML.
 
-**3. Section contributeurs expandee — lignes 1095-1121**
-- `p-4` → `p-2`
-- Cartes contributeurs : `p-2` → `p-1.5`, police plus petite
-- Nom coureur : `font-medium` → `text-sm font-medium`
-- Badge classement : deja `text-xs`, garder
-- Points : `font-bold` → `text-sm font-bold`
+### Approche technique
 
-**4. Header du tableau Managers**
-- Supprimer la colonne vide `<TableHead className="w-12">` (chevron)
-- `w-16` rang → `w-10`
-- 3 colonnes au lieu de 4
+Dans `parsePCSLive()`, quand `sitGroups.length === 0` (pas de `.sit-grp` DOM), le fallback doit :
 
-### Fichier impacte
-- `src/components/courses/CourseResultsDrawer.tsx` — header compact + leaderboard densite mobile
+1. **Trouver la section "Situation"** dans le texte brut (déjà fait)
+2. **Identifier les groupes** par le pattern texte (déjà fait, regex `groupRx`)
+3. **NOUVEAU : Rattacher les coureurs aux groupes** en utilisant les liens `a[href*='rider/']` qui sont dans la zone "Situation" du DOM
+
+Concrètement :
+- Chercher un conteneur DOM parent de la section Situation (ex: `h3` ou `div` contenant "Situation")
+- Depuis ce conteneur, extraire les liens rider dans l'ordre du DOM
+- Les répartir entre les groupes trouvés en se basant sur la position dans le texte (les riders entre le groupe N et le groupe N+1 appartiennent au groupe N)
+- Pour chaque rider : extraire le nom depuis le lien, le bib depuis le texte parent, le slug PCS depuis le href
+
+4. **Fallback ultime** : si même le DOM parent n'est pas trouvable, parser le texte plat avec une regex pour trouver les lignes `N  BIB  NOM Prénom` entre les marqueurs de groupe
+
+### Changement concret
+
+Dans `supabase/functions/scrape-live-race/index.ts`, remplacer le bloc fallback (lignes 260-296) par une version enrichie qui :
+- Localise le nœud DOM contenant "Situation" (ex: `h3`, `.w68`, ou le parent commun des rider links dans la zone)
+- Itère sur les `<li>` ou éléments structurés sous chaque groupe pour extraire rank, bib, rider link
+- Peuple `riders`, `riderBibs`, `riderGcGaps` dans chaque groupe
+
+### Fichier impacté
+- `supabase/functions/scrape-live-race/index.ts` — réécriture du fallback texte dans `parsePCSLive()` pour extraire les coureurs
 
