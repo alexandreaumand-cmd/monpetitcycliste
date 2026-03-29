@@ -1041,10 +1041,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead className="w-16">Rang</TableHead>
-                        <TableHead>Manager</TableHead>
-                        <TableHead className="text-right">Points</TableHead>
+                        <TableHead className="w-10 px-2">Rang</TableHead>
+                        <TableHead className="px-2">Manager</TableHead>
+                        <TableHead className="text-right px-2">Points</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1062,56 +1061,46 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                             <>
                               <CollapsibleTrigger asChild>
                                 <TableRow className="cursor-pointer hover:bg-muted/50 touch-manipulation">
-                                  <TableCell>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="pointer-events-none"
-                                    >
+                                  <TableCell className="px-2 py-1.5">
+                                    <div className="flex items-center gap-1">
                                       {isExpanded ? (
-                                        <ChevronDown className="h-4 w-4" />
+                                        <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                       ) : (
-                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                       )}
-                                    </Button>
+                                      {entry.rank <= 3 ? (
+                                        <span className="text-sm">
+                                          {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : "🥉"}
+                                        </span>
+                                      ) : (
+                                        <span className="text-sm font-bold text-muted-foreground">#{entry.rank}</span>
+                                      )}
+                                    </div>
                                   </TableCell>
-                                  <TableCell className="font-bold">
-                                    {entry.rank <= 3 && (
-                                      <span className={`text-lg mr-1 ${
-                                        entry.rank === 1 ? "text-bordure-gold" :
-                                        entry.rank === 2 ? "text-muted-foreground" :
-                                        "text-amber-600"
-                                      }`}>
-                                        {entry.rank === 1 ? "🥇" : 
-                                         entry.rank === 2 ? "🥈" : "🥉"}
-                                      </span>
-                                    )}
-                                    #{entry.rank}
-                                  </TableCell>
-                                  <TableCell className="font-medium">{entry.manager_nom}</TableCell>
-                                  <TableCell className="text-right font-bold text-lg">{Math.round(entry.points)}</TableCell>
+                                  <TableCell className="font-medium text-sm px-2 py-1.5">{entry.manager_nom}</TableCell>
+                                  <TableCell className="text-right font-bold text-base px-2 py-1.5 tabular-nums">{Math.round(entry.points)}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
                               <CollapsibleContent asChild>
                                 <TableRow>
-                                  <TableCell colSpan={4} className="bg-muted/30 p-4">
-                                    <div className="space-y-2">
-                                      <div className="text-sm font-medium text-muted-foreground mb-2">
-                                        Coureurs contributeurs
+                                  <TableCell colSpan={3} className="bg-muted/30 p-2">
+                                    <div className="space-y-1">
+                                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                                        Contributeurs
                                       </div>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                                         {contributors.map((contributor, idx) => (
                                           <div
                                             key={`${contributor.rider_id}-${contributor.type_classement}-${contributor.etape_numero}-${idx}`}
-                                            className="flex items-center justify-between p-2 rounded border bg-background"
+                                            className="flex items-center justify-between p-1.5 rounded border bg-background"
                                           >
-                                            <div className="flex-1">
-                                              <div className="font-medium">{contributor.rider_nom}</div>
-                                              <Badge variant="outline" className="mt-1 text-xs">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-sm font-medium truncate">{contributor.rider_nom}</div>
+                                              <Badge variant="outline" className="mt-0.5 text-[10px] px-1 py-0">
                                                 {formatClassementLabel(contributor.type_classement, contributor.etape_numero)}
                                               </Badge>
                                             </div>
-                                            <div className="font-bold">{Math.round(contributor.points)} pts</div>
+                                            <div className="text-sm font-bold flex-shrink-0 ml-2">{Math.round(contributor.points)} pts</div>
                                           </div>
                                         ))}
                                       </div>
