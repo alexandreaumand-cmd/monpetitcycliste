@@ -265,7 +265,13 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       <div className="flex-1 flex flex-col border rounded-xl overflow-hidden bg-background min-w-0">
         {courseSelector}
         {stageFilter}
-        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+        <div className="px-4 py-3 border-b bg-muted/20">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Timeline</h3>
+          </div>
+        </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {messagesContent}
         </div>
       </div>
