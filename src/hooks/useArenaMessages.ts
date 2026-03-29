@@ -94,6 +94,7 @@ export function useArenaMessages(
     getNextPageParam: (lastPage) => lastPage.nextOffset,
     enabled: !!channelId && !!leagueId,
     initialPageParam: 0,
+    refetchInterval: 30_000,
   });
 }
 
