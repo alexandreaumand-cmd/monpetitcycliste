@@ -304,62 +304,64 @@ function parsePCSLive(doc: any, html: string): {
       // For each group, extract riders from the text between this group marker and the next
       for (let i = 0; i < foundGroups.length; i++) {
         const fg = foundGroups[i];
-        const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : sitText.length;
-        const groupText = sitText.substring(fg.endIndex, nextGroupStart);
-        
-        // Extract riders: pattern "RANK BIB LASTNAME Firstname" or "RANK BIB LASTNAME1 LASTNAME2 Firstname"
-        // Rider names on PCS: "DE BONDT Dries", "BIESTERBOS Frits", "VAN DER POEL Mathieu"
-        // In text: "1 123 DE BONDT Dries 2 132 BIESTERBOS Frits"
-        const riderRx = /(\d+)\s+(\d+)\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ\s'-]+?)(?=\s+\d+\s+\d+\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|$)/g;
+        const isPeloton = fg.name.toLowerCase().includes("peloton");
+        const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : Math.min(fg.endIndex + 3000, sitText.length);
+        const groupText = sitText.substring(fg.endIndex, nextGroupStart).trim();
         
         const groupRiders: string[] = [];
         const groupBibs: string[] = [];
         const groupGcGaps: string[] = [];
         const groupPcsSlugs: string[] = [];
-        let rm;
         
-        while ((rm = riderRx.exec(groupText)) !== null) {
-          const rank = rm[1];
-          const bib = rm[2];
-          const name = rm[3].trim();
+        // Only extract riders for non-peloton groups
+        if (!isPeloton && groupText.length > 3) {
+          // Pattern: "RANK BIB LASTNAME Firstname" repeated
+          // Use lookahead that stops at next "rank bib UPPERCASE" pattern OR end of string
+          const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+?[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|\s*$)/g;
+          let rm;
           
-          // Validate: rank should be reasonable (1-999), bib should be reasonable (1-999)
-          const rankNum = parseInt(rank, 10);
-          const bibNum = parseInt(bib, 10);
-          if (rankNum > 0 && rankNum < 500 && bibNum > 0 && bibNum < 999 && name.length >= 3) {
-            groupRiders.push(name);
-            groupBibs.push(bib);
-            groupGcGaps.push("");
-            // Try to find matching PCS slug from allRiderLinks
-            const slugMatch = pcsSlugs.find(s => {
-              const normalizedSlugName = s.name.toLowerCase().replace(/[^a-z]/g, '');
-              const normalizedName = name.toLowerCase().replace(/[^a-z]/g, '');
-              return normalizedSlugName === normalizedName || 
-                     normalizedSlugName.includes(normalizedName) || 
-                     normalizedName.includes(normalizedSlugName);
-            });
-            groupPcsSlugs.push(slugMatch?.slug || "");
+          while ((rm = riderRx.exec(groupText)) !== null) {
+            const rank = rm[1];
+            const bib = rm[2];
+            let name = rm[3].trim();
             
-            riders.push({ name, team: "", position: undefined, gap: fg.gap });
-          }
-        }
-        
-        // If regex didn't match (greedy lookahead issue), try simpler approach:
-        // Split text by consecutive "rank bib" patterns
-        if (groupRiders.length === 0 && groupText.trim().length > 5) {
-          // Simpler: find all "N BIB NAME" where N is sequential rank, BIB is dossard
-          const simpleRx = /\b(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ\s'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)/g;
-          let sm;
-          while ((sm = simpleRx.exec(groupText)) !== null) {
-            const bib = sm[2];
-            const name = sm[3].trim();
+            // Clean trailing single uppercase letters (next group marker like "P")
+            name = name.replace(/\s+[A-Z]$/, '').trim();
+            
+            const rankNum = parseInt(rank, 10);
             const bibNum = parseInt(bib, 10);
-            if (bibNum > 0 && bibNum < 999 && name.length >= 3) {
+            if (rankNum > 0 && rankNum < 500 && bibNum > 0 && bibNum < 999 && name.length >= 3) {
               groupRiders.push(name);
               groupBibs.push(bib);
               groupGcGaps.push("");
-              groupPcsSlugs.push("");
+              const slugMatch = pcsSlugs.find(s => {
+                const normalizedSlugName = s.name.toLowerCase().replace(/[^a-z]/g, '');
+                const normalizedName = name.toLowerCase().replace(/[^a-z]/g, '');
+                return normalizedSlugName === normalizedName || 
+                       normalizedSlugName.includes(normalizedName) || 
+                       normalizedName.includes(normalizedSlugName);
+              });
+              groupPcsSlugs.push(slugMatch?.slug || "");
               riders.push({ name, team: "", position: undefined, gap: fg.gap });
+            }
+          }
+          
+          // Simpler fallback if primary regex didn't match
+          if (groupRiders.length === 0) {
+            const simpleRx = /\b(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ\s \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)/g;
+            let sm;
+            while ((sm = simpleRx.exec(groupText)) !== null) {
+              const bib = sm[2];
+              let name = sm[3].trim();
+              name = name.replace(/\s+[A-Z]$/, '').trim();
+              const bibNum = parseInt(bib, 10);
+              if (bibNum > 0 && bibNum < 999 && name.length >= 3) {
+                groupRiders.push(name);
+                groupBibs.push(bib);
+                groupGcGaps.push("");
+                groupPcsSlugs.push("");
+                riders.push({ name, team: "", position: undefined, gap: fg.gap });
+              }
             }
           }
         }
