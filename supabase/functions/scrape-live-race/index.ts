@@ -328,7 +328,7 @@ function parsePCSLive(doc: any, html: string): {
         if (!isPeloton && groupText.length > 3) {
           // Pattern: "RANK BIB LASTNAME Firstname" repeated
           // Use lookahead that stops at next "rank bib UPPERCASE" pattern OR end of string
-          const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|\s*$)/g;
+          const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|[^A-Za-z0-9]*$)/g;
           let rm;
           
           while ((rm = riderRx.exec(groupText)) !== null) {
