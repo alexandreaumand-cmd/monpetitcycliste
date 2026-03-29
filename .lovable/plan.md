@@ -1,64 +1,41 @@
 
 
-## Fix : les statistiques ignorent le scope de la ligue (phases hors périmètre)
+## Optimisation mobile du drawer Résultats de course
 
-### Problème
+### Problemes identifies (images)
 
-**6 edge functions** de statistiques récupèrent **toutes les phases de la saison** sans consulter `league_scopes.phases` ni `starting_phase_index`. Pour une ligue P3, elles incluent donc les données des phases 1 et 2.
+1. **Header trop volumineux** : titre en `text-xl` + badge catégorie + date prennent ~30% de l'ecran
+2. **Onglet Managers** : le chevron est dans un `Button ghost` avec padding excessif, la colonne "Rang" affiche medaille + `#N` de facon espacee, les points sont en `text-lg` trop gros
+3. **Section contributeurs expandee** : padding `p-4` et cartes avec `p-2 rounded border` gaspillent de l'espace vertical
+4. **Colonnes inutilement larges** : la colonne chevron (`w-12`) et la colonne rang (`w-16`) sont surdimensionnees
 
-Fonctions impactées :
-1. `get-luck-ranking` — points réels, gros coups, top courses
-2. `get-knowledge-ranking` — score, pépites, ratio
-3. `get-consistency-scores` — régularité par phase
-4. `get-performance-matrix` — heatmap par phase
-5. `get-points-distribution` — distribution par phase
-6. `get-predictions` — prédictions par phase
+### Changements
 
-La fonction `get-team-category-stats` ne reçoit même pas de `league_id` et utilise toutes les phases actives de la saison.
+Dans `src/components/courses/CourseResultsDrawer.tsx` :
 
-### Solution
+**1. Header compact mobile**
+- Titre : `text-xl` → `text-base font-bold` (mobile seulement via classe conditionnelle ou `isMobile`)
+- Badge categorie : plus petit `text-[10px]`
+- Date : `text-xs` au lieu de `text-sm`
 
-Ajouter dans chaque fonction un appel à `league_scopes` pour filtrer les phases :
+**2. Leaderboard (onglet Managers) — lignes 1040-1128**
+- Supprimer la colonne chevron separee — integrer le chevron directement dans la cellule rang
+- Fusionner rang + medaille en une seule cellule compacte : `🥇 #1` sans le `text-lg` sur la medaille
+- Points : `text-lg font-bold` → `text-base font-bold`
+- Ligne du tableau : reduire le padding vertical
 
-```typescript
-// Récupérer les phases scopées de la ligue
-const { data: scopeData } = await supabase
-  .from('league_scopes')
-  .select('phases')
-  .eq('league_id', league_id)
-  .single();
+**3. Section contributeurs expandee — lignes 1095-1121**
+- `p-4` → `p-2`
+- Cartes contributeurs : `p-2` → `p-1.5`, police plus petite
+- Nom coureur : `font-medium` → `text-sm font-medium`
+- Badge classement : deja `text-xs`, garder
+- Points : `font-bold` → `text-sm font-bold`
 
-const scopedPhaseIds = scopeData?.phases || [];
+**4. Header du tableau Managers**
+- Supprimer la colonne vide `<TableHead className="w-12">` (chevron)
+- `w-16` rang → `w-10`
+- 3 colonnes au lieu de 4
 
-// Filtrer les phases récupérées
-const filteredPhases = phases.filter(p => scopedPhaseIds.includes(p.id));
-const phaseIds = filteredPhases.map(p => p.id);
-```
-
-### Détail par fonction
-
-1. **`get-luck-ranking`** (lignes 49-53) : Après le fetch des phases, filtrer par `league_scopes.phases`. Les `points_ledger` et `rosters` utilisent déjà `phaseIds` — il suffit de restreindre ce tableau.
-
-2. **`get-knowledge-ranking`** (lignes 60-69) : Même approche — filtrer `phaseIds` et `phaseLabels` par le scope.
-
-3. **`get-consistency-scores`** (lignes 67-74) : Filtrer les phases par scope avant de calculer les scores.
-
-4. **`get-performance-matrix`** (lignes 67-74) : Filtrer les phases par scope.
-
-5. **`get-points-distribution`** (lignes 136-142) : Filtrer les phases par scope.
-
-6. **`get-predictions`** (lignes 129-136) : Filtrer les phases par scope.
-
-7. **`get-team-category-stats`** (lignes 14-26) : Ajouter le paramètre `league_id` dans le body, et filtrer les `activePhaseIds` par `league_scopes.phases`. Côté frontend (`CategoryWeight.tsx` et `TeamPointsBreakdown.tsx`), passer `league_id` dans l'appel.
-
-### Fichiers impactés
-- `supabase/functions/get-luck-ranking/index.ts`
-- `supabase/functions/get-knowledge-ranking/index.ts`
-- `supabase/functions/get-consistency-scores/index.ts`
-- `supabase/functions/get-performance-matrix/index.ts`
-- `supabase/functions/get-points-distribution/index.ts`
-- `supabase/functions/get-predictions/index.ts`
-- `supabase/functions/get-team-category-stats/index.ts`
-- `src/components/rankings/CategoryWeight.tsx` — passer `league_id`
-- `src/components/rankings/TeamPointsBreakdown.tsx` — passer `league_id`
+### Fichier impacte
+- `src/components/courses/CourseResultsDrawer.tsx` — header compact + leaderboard densite mobile
 
