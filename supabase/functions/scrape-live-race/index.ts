@@ -257,46 +257,7 @@ function parsePCSLive(doc: any, html: string): {
     // Each top-level .sit-grp is a legitimate group — no merging needed
   }
 
-  // Fallback: parse from text if no DOM groups found
-  if (situationGroups.length === 0) {
-    console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
-
-    // Look for "Situation" section in text
-    const sitIdx = textContent.indexOf("Situation");
-    if (sitIdx >= 0) {
-      const sitText = textContent.substring(sitIdx, sitIdx + 5000);
-      
-      // Parse groups: pattern is "COUNT GroupName +M:SS" followed by rider entries
-      const groupRx = /(\d+)\s+((?:The\s+)?[A-Z][a-zA-Zé\s]+?)\s+\+(\d+:\d+)/g;
-      let gm;
-      const foundGroups: { name: string; gap: string; count: number; index: number }[] = [];
-      
-      while ((gm = groupRx.exec(sitText)) !== null) {
-        foundGroups.push({
-          count: parseInt(gm[1], 10),
-          name: gm[2].trim(),
-          gap: `+${gm[3]}`,
-          index: gm.index,
-        });
-      }
-
-      for (let i = 0; i < foundGroups.length; i++) {
-        const fg = foundGroups[i];
-        const isPeloton = fg.name.toLowerCase().includes("peloton") || fg.count > 50;
-        situationGroups.push({
-          name: fg.name,
-          gap: fg.gap,
-          riders: [],
-          riderIds: [],
-          riderCount: fg.count,
-          isPeloton,
-        });
-      }
-    }
-  }
-
-  // ── Extract PCS slugs for matching ──
-  // Collect all rider links with their PCS slugs for enhanced matching
+  // ── Extract PCS slugs for matching (needed by fallback too) ──
   const allRiderLinks = doc.querySelectorAll("a[href*='rider/']");
   const pcsSlugs: { slug: string; name: string }[] = [];
   for (const link of allRiderLinks) {
@@ -312,6 +273,119 @@ function parsePCSLive(doc: any, html: string): {
       pcsSlugs.push({ slug, name });
     }
   }
+
+  // Fallback: parse from text if no DOM groups found
+  if (situationGroups.length === 0) {
+    console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
+
+    // Look for "Situation" section in text
+    const sitIdx = textContent.indexOf("Situation");
+    if (sitIdx >= 0) {
+      const sitText = textContent.substring(sitIdx, sitIdx + 8000);
+      console.log(`[PCS Live] Situation text (first 500): ${sitText.substring(0, 500)}`);
+      
+      // Parse groups: pattern is "NUMBER_OR_P GroupName +M:SS"
+      // Examples: "1 THE BREAKAWAY +0:00", "P PELOTON +4:50", "2 CHASERS +1:30"
+      const groupRx = /(?:^|\s)(\d+|P)\s+((?:THE\s+)?[A-Z][A-Za-zÀ-ÿé\s]+?)\s+\+(\d+:\d+)/g;
+      let gm;
+      const foundGroups: { name: string; gap: string; index: number; endIndex: number }[] = [];
+      
+      while ((gm = groupRx.exec(sitText)) !== null) {
+        foundGroups.push({
+          name: gm[2].trim(),
+          gap: `+${gm[3]}`,
+          index: gm.index,
+          endIndex: gm.index + gm[0].length,
+        });
+      }
+
+      console.log(`[PCS Live] Found ${foundGroups.length} group markers in text`);
+
+      // For each group, extract riders from the text between this group marker and the next
+      for (let i = 0; i < foundGroups.length; i++) {
+        const fg = foundGroups[i];
+        const isPeloton = fg.name.toLowerCase().includes("peloton");
+        const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : Math.min(fg.endIndex + 3000, sitText.length);
+        // Clean trailing single uppercase letters (e.g. "P" from next group marker like "P PELOTON")
+        const groupText = sitText.substring(fg.endIndex, nextGroupStart).trim().replace(/\s+[A-Z]\s*$/, '');
+        
+        const groupRiders: string[] = [];
+        const groupBibs: string[] = [];
+        const groupGcGaps: string[] = [];
+        const groupPcsSlugs: string[] = [];
+        
+        // Only extract riders for non-peloton groups
+        if (!isPeloton && groupText.length > 3) {
+          // Pattern: "RANK BIB LASTNAME Firstname" repeated
+          // Use lookahead that stops at next "rank bib UPPERCASE" pattern OR end of string
+          const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|\s*$)/g;
+          let rm;
+          
+          while ((rm = riderRx.exec(groupText)) !== null) {
+            const rank = rm[1];
+            const bib = rm[2];
+            let name = rm[3].trim();
+            
+            // Clean trailing single uppercase letters (next group marker like "P")
+            name = name.replace(/\s+[A-Z]$/, '').trim();
+            
+            const rankNum = parseInt(rank, 10);
+            const bibNum = parseInt(bib, 10);
+            if (rankNum > 0 && rankNum < 500 && bibNum > 0 && bibNum < 999 && name.length >= 3) {
+              groupRiders.push(name);
+              groupBibs.push(bib);
+              groupGcGaps.push("");
+              const slugMatch = pcsSlugs.find(s => {
+                const normalizedSlugName = s.name.toLowerCase().replace(/[^a-z]/g, '');
+                const normalizedName = name.toLowerCase().replace(/[^a-z]/g, '');
+                return normalizedSlugName === normalizedName || 
+                       normalizedSlugName.includes(normalizedName) || 
+                       normalizedName.includes(normalizedSlugName);
+              });
+              groupPcsSlugs.push(slugMatch?.slug || "");
+              riders.push({ name, team: "", position: undefined, gap: fg.gap });
+            }
+          }
+          
+          // Simpler fallback if primary regex didn't match
+          if (groupRiders.length === 0) {
+            const simpleRx = /\b(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ\s \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)/g;
+            let sm;
+            while ((sm = simpleRx.exec(groupText)) !== null) {
+              const bib = sm[2];
+              let name = sm[3].trim();
+              name = name.replace(/\s+[A-Z]$/, '').trim();
+              const bibNum = parseInt(bib, 10);
+              if (bibNum > 0 && bibNum < 999 && name.length >= 3) {
+                groupRiders.push(name);
+                groupBibs.push(bib);
+                groupGcGaps.push("");
+                groupPcsSlugs.push("");
+                riders.push({ name, team: "", position: undefined, gap: fg.gap });
+              }
+            }
+          }
+        }
+
+        const riderCountFinal = isPeloton ? 150 : groupRiders.length;
+        const riderCount = groupRiders.length > 0 ? groupRiders.length : riderCountFinal;
+        
+        situationGroups.push({
+          name: fg.name,
+          gap: fg.gap,
+          riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
+          riderIds: [],
+          riderCount,
+          isPeloton,
+          riderBibs: isPeloton ? [] : groupBibs.slice(0, 15),
+          riderGcGaps: isPeloton ? [] : groupGcGaps.slice(0, 15),
+        });
+        
+        console.log(`[PCS Live] Fallback group "${fg.name}": ${groupRiders.length} riders parsed, gap=${fg.gap}, peloton=${isPeloton}`);
+      }
+    }
+  }
+
 
   console.log(`[PCS Live] Total: ${situationGroups.length} groups, ${riders.length} riders, ${pcsSlugs.length} PCS slugs`);
 
