@@ -30,7 +30,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
+  
 
   const { data: managerId } = useCurrentManagerId();
   const { data: channels } = useArenaChannels(leagueId);
@@ -78,9 +78,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   }, [allMessages, selectedEtape]);
 
   // On mobile, show newest first; on desktop keep chronological
-  const displayMessages = useMemo(() => {
-    return isMobile ? filteredMessages : [...filteredMessages].reverse();
-  }, [filteredMessages, isMobile]);
+  const displayMessages = useMemo(() => filteredMessages, [filteredMessages]);
 
   const latestSituation = useMemo(() => {
     for (const msg of filteredMessages) {
@@ -94,18 +92,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
-  // Auto-scroll only on desktop
-  useEffect(() => {
-    if (!isMobile && autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [filteredMessages.length, autoScroll, isMobile]);
-
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    setAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
-  }, []);
 
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
@@ -279,7 +265,13 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       <div className="flex-1 flex flex-col border rounded-xl overflow-hidden bg-background min-w-0">
         {courseSelector}
         {stageFilter}
-        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+        <div className="px-4 py-3 border-b bg-muted/20">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Timeline</h3>
+          </div>
+        </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {messagesContent}
         </div>
       </div>
