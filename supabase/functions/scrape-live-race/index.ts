@@ -177,7 +177,17 @@ function parsePCSLive(doc: any, html: string): {
       }
 
       // Extract riders from links with bib + GC gap
-      const riderLinks = grp.querySelectorAll("a[href*='rider/']");
+      // Filter out links that belong to nested .sit-grp children to avoid duplication
+      const allRiderLinksInGroup = grp.querySelectorAll("a[href*='rider/']");
+      const nestedSitGrps = new Set(Array.from(grp.querySelectorAll(".sit-grp")));
+      const riderLinks = Array.from(allRiderLinksInGroup).filter((link: any) => {
+        let parent = link.parentElement;
+        while (parent && parent !== grp) {
+          if (nestedSitGrps.has(parent)) return false;
+          parent = parent.parentElement;
+        }
+        return true;
+      });
       const groupBibs: string[] = [];
       const groupGcGaps: string[] = [];
       for (const link of riderLinks) {
