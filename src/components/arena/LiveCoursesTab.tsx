@@ -266,10 +266,10 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const hasMultipleCourses = activeCourseIds.length > 1;
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-260px)] min-h-[400px]">
+    <div className="flex flex-col gap-2 h-[calc(100vh-160px)] min-h-[400px]">
       {/* Course selector — multi-select on desktop */}
       <div className="border rounded-xl overflow-hidden bg-background shrink-0">
-        <div className="px-4 py-3 bg-muted/20">
+        <div className="px-3 py-2 bg-muted/20">
           <LiveCourseSelector
             activeCourseId={activeCourseIds[0] || null}
             onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
