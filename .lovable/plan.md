@@ -1,29 +1,32 @@
 
 
-## Fix : ordre des messages inversé sur mobile
+## Fix desktop : titre "Timeline" + messages récents en haut
 
 ### Problème
 
-La requête Supabase retourne les messages triés par `created_at DESC` (le plus récent en premier). Ensuite dans `LiveCoursesTab.tsx` ligne 82 :
+Sur desktop, la colonne messages n'a pas de titre "Timeline", et les messages sont affichés du plus ancien au plus récent avec auto-scroll vers le bas — l'utilisateur doit scroller pour voir les derniers messages.
 
-```typescript
-return isMobile ? [...filteredMessages].reverse() : filteredMessages;
+### Changements dans `src/components/arena/LiveCoursesTab.tsx`
+
+**1. Ajouter un header "Timeline"** entre le stage filter et le feed de messages (ligne ~282) :
+```tsx
+<div className="px-4 py-3 border-b bg-muted/20">
+  <div className="flex items-center gap-2">
+    <MessageCircle className="h-4 w-4 text-primary" />
+    <h3 className="text-sm font-semibold">Timeline</h3>
+  </div>
+</div>
 ```
 
-Le `.reverse()` remet les messages dans l'ordre chronologique (ancien en haut) — l'inverse de ce qui est voulu.
-
-### Solution
-
-Supprimer le `.reverse()` sur mobile. Les messages sont déjà dans le bon ordre (newest first) grâce à la requête DB. Sur desktop, il faut garder le `.reverse()` pour l'ordre chronologique (ancien en haut, scroll vers le bas).
-
-### Changement
-
-**`src/components/arena/LiveCoursesTab.tsx`** ligne 81-83 — inverser la logique :
-
+**2. Afficher les messages récents en haut** : ligne 82, supprimer le `.reverse()` pour desktop — garder l'ordre DB (newest first) pour les deux layouts :
 ```typescript
-// On desktop, reverse to chronological (oldest first, scroll down); on mobile, keep DB order (newest first)
 const displayMessages = useMemo(() => {
-  return isMobile ? filteredMessages : [...filteredMessages].reverse();
-}, [filteredMessages, isMobile]);
+  return filteredMessages;
+}, [filteredMessages]);
 ```
+
+**3. Supprimer l'auto-scroll desktop** : supprimer le `useEffect` lignes 98-102 qui scroll vers le bas, et le handler `handleScroll` / `autoScroll` state devenus inutiles.
+
+### Fichier impacté
+- `src/components/arena/LiveCoursesTab.tsx`
 
