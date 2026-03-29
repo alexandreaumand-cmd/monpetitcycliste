@@ -452,8 +452,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
           </Badge>
         )}
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
-        <Calendar className="h-4 w-4" />
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+        <Calendar className="h-3.5 w-3.5" />
         {meta.date_debut && format(new Date(meta.date_debut), 'dd MMM', { locale: fr })}
         {meta.date_fin && meta.date_fin !== meta.date_debut && (
           <> - {format(new Date(meta.date_fin), 'dd MMM yyyy', { locale: fr })}</>
