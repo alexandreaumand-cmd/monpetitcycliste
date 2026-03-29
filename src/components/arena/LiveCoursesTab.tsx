@@ -30,7 +30,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
+  
 
   const { data: managerId } = useCurrentManagerId();
   const { data: channels } = useArenaChannels(leagueId);
