@@ -78,9 +78,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   }, [allMessages, selectedEtape]);
 
   // On mobile, show newest first; on desktop keep chronological
-  const displayMessages = useMemo(() => {
-    return isMobile ? filteredMessages : [...filteredMessages].reverse();
-  }, [filteredMessages, isMobile]);
+  const displayMessages = useMemo(() => filteredMessages, [filteredMessages]);
 
   const latestSituation = useMemo(() => {
     for (const msg of filteredMessages) {
