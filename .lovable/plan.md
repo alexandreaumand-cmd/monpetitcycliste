@@ -1,27 +1,50 @@
 
 
-## Auto-refresh de la page Live toutes les 30 secondes
+## Cartes de visite La Bordure — PPTX élégant minimaliste
 
-### Problème
+### Concept
 
-Le hook `useArenaMessages` (ligne 63) utilise `useInfiniteQuery` sans `refetchInterval`. Les messages ne sont chargés qu'au montage — aucun rafraîchissement automatique.
+Un fichier PPTX avec **10 slides** (une par membre), chaque slide contenant une carte de visite au format paysage. Style épuré reprenant l'identité La Bordure : fond crème (#F6F3ED), texte vert (#1B5E3B), accents dorés (#C8963A), typographie fine.
 
-### Changement
+### Layout de chaque carte (sur un slide 16:9)
 
-**`src/hooks/useArenaMessages.ts`** — ajouter `refetchInterval: 30_000` à la query `useArenaMessages` (ligne 63-97) :
-
-```typescript
-return useInfiniteQuery({
-  queryKey: ["arena-messages", channelId, leagueId, courseId ?? "all"],
-  // ... queryFn inchangé
-  enabled: !!channelId && !!leagueId,
-  initialPageParam: 0,
-  refetchInterval: 30_000, // ← auto-refresh toutes les 30s
-});
+```text
+┌─────────────────────────────────────────────────┐
+│  fond crème #F6F3ED                             │
+│                                                 │
+│     ┌──────┐                                    │
+│     │avatar│   L'AYATOLLAH                      │
+│     │circle│   ─── ligne dorée ───              │
+│     └──────┘   Description en italique          │
+│                                                 │
+│         ── LA BORDURE ──    labordure.fr         │
+│                                                 │
+└─────────────────────────────────────────────────┘
 ```
 
-Cela rafraîchira automatiquement la première page de messages (la plus récente) toutes les 30 secondes, ce qui fera apparaître les nouveaux messages de timeline et situations de course sans action de l'utilisateur.
+- Avatar du membre (image ronde, ~1.5" de diamètre)
+- Surnom en Montserrat bold, vert foncé, grande taille
+- Ligne de séparation dorée fine
+- Description en italique, vert/60%
+- Logo/nom "LA BORDURE" en bas avec un filet doré
+- Le tout centré verticalement
 
-### Fichier impacté
-- `src/hooks/useArenaMessages.ts`
+### Implémentation
+
+**Script Node.js** utilisant `pptxgenjs` :
+
+1. Créer une présentation 16:9
+2. Pour chaque membre du tableau `members` (10 membres) :
+   - Ajouter un slide avec fond crème
+   - Intégrer l'avatar en base64 avec `rounding: true`
+   - Ajouter le surnom, la ligne dorée, la description
+   - Ajouter le pied "LA BORDURE"
+3. Exporter en `.pptx` dans `/mnt/documents/`
+
+### Fichiers utilisés
+- `src/assets/team/*.png` — avatars des 10 membres
+- Données des membres depuis `TeamPage.tsx`
+
+### Sortie
+- `/mnt/documents/cartes-visite-la-bordure.pptx`
 
