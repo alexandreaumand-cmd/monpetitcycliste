@@ -1,34 +1,29 @@
 
 
-## Réorganisation mobile de la page Live : Situation en haut + Timeline en accordéon
+## Fix : ordre des messages inversé sur mobile
 
-### Changements dans `src/components/arena/LiveCoursesTab.tsx`
+### Problème
 
-**1. Réorganiser l'ordre mobile** : sur mobile (`lg:hidden`), afficher la section "Situation de course" **avant** la timeline des messages. Utiliser `order-first lg:order-none` sur le bloc situation mobile, ou restructurer le JSX avec un wrapper conditionnel.
+La requête Supabase retourne les messages triés par `created_at DESC` (le plus récent en premier). Ensuite dans `LiveCoursesTab.tsx` ligne 82 :
 
-**2. Situation de course ouverte par défaut** : le `Collapsible` mobile doit avoir `defaultOpen={true}`.
-
-**3. Envelopper la timeline dans un accordéon mobile** : ajouter un second `Collapsible` autour du bloc messages sur mobile, avec :
-- Titre "Timeline" + icône `MessageCircle`
-- `defaultOpen={true}`
-- Le contenu reste le feed de messages existant
-
-**4. Inverser l'ordre des messages** : afficher le dernier message posté **en haut** (reverse chronologique). Appliquer `.slice().reverse()` sur `filteredMessages` dans le rendu mobile, et supprimer l'auto-scroll vers le bas.
-
-### Structure mobile résultante
-
-```text
-┌─ Course Selector ──────────────┐
-├─ Stage filter chips (si >1)    │
-├─ ▼ SITUATION DE COURSE (ouvert)│
-│   [RaceSituationDisplay]       │
-├─ ▼ TIMELINE (ouvert)           │
-│   Message le plus récent       │
-│   Message précédent            │
-│   ...                          │
-└────────────────────────────────┘
+```typescript
+return isMobile ? [...filteredMessages].reverse() : filteredMessages;
 ```
 
-### Fichier impacté
-- `src/components/arena/LiveCoursesTab.tsx`
+Le `.reverse()` remet les messages dans l'ordre chronologique (ancien en haut) — l'inverse de ce qui est voulu.
+
+### Solution
+
+Supprimer le `.reverse()` sur mobile. Les messages sont déjà dans le bon ordre (newest first) grâce à la requête DB. Sur desktop, il faut garder le `.reverse()` pour l'ordre chronologique (ancien en haut, scroll vers le bas).
+
+### Changement
+
+**`src/components/arena/LiveCoursesTab.tsx`** ligne 81-83 — inverser la logique :
+
+```typescript
+// On desktop, reverse to chronological (oldest first, scroll down); on mobile, keep DB order (newest first)
+const displayMessages = useMemo(() => {
+  return isMobile ? filteredMessages : [...filteredMessages].reverse();
+}, [filteredMessages, isMobile]);
+```
 
