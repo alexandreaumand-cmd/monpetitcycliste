@@ -122,11 +122,6 @@ function GroupRow({
         )}
 
         {/* Peloton: show label + count */}
-        {group.isPeloton && (
-          <div className="text-xs text-muted-foreground">
-            {group.riderCount} coureurs
-          </div>
-        )}
 
         {/* Rider list */}
         {showRiders && (
