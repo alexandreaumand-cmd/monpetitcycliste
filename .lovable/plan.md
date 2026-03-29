@@ -1,23 +1,24 @@
 
 
-## Optimiser l'utilisation de l'espace sur la page Live desktop
+## Supprimer le nombre de coureurs du Peloton
 
 ### Problème
 
-Le conteneur desktop utilise `h-[calc(100vh-260px)]` — l'offset de 260px est trop conservateur, ce qui laisse un grand espace blanc en bas. De plus, le gap entre le sélecteur de course et le panneau ajoute de l'espace inutile.
+Le groupe Peloton affiche un chiffre de coureurs (ex: "150") qui est incorrect et absent de PCS.
 
-### Changements
+### Changements dans `src/components/arena/RaceSituationDisplay.tsx`
 
-**`src/components/arena/LiveCoursesTab.tsx`** (layout desktop, ligne 269) :
-- Réduire l'offset : `h-[calc(100vh-260px)]` → `h-[calc(100vh-160px)]` pour occuper plus d'espace vertical
-- Réduire le gap : `gap-3` → `gap-2`
-- Réduire le padding du sélecteur : `px-4 py-3` → `px-3 py-2`
+**1. Badge gauche (ligne 108-110)** : ne pas afficher le count `(N)` sous le badge quand `isPeloton` est true :
+```typescript
+{!group.isPeloton && (
+  <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+    ({group.riderCount || group.riders.length})
+  </span>
+)}
+```
 
-**`src/components/arena/LiveCoursePanel.tsx`** :
-- Réduire les paddings internes des headers (timeline/situation) : `px-3 py-2` → `px-3 py-1.5`
-- Réduire le padding du contenu situation : `p-3` → `p-2`
+**2. Label "N coureurs" (lignes 122-126)** : supprimer le bloc qui affiche `{group.riderCount} coureurs` pour le peloton. Garder juste le label "PELOTON" via le group name.
 
-### Fichiers impactés
-- `src/components/arena/LiveCoursesTab.tsx`
-- `src/components/arena/LiveCoursePanel.tsx`
+### Fichier impacté
+- `src/components/arena/RaceSituationDisplay.tsx`
 
