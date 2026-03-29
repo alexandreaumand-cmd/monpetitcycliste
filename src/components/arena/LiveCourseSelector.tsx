@@ -9,6 +9,9 @@ import { Loader2, Radio } from "lucide-react";
 interface LiveCourseSelectorProps {
   activeCourseId: string | null;
   onSelect: (courseId: string | null) => void;
+  multiSelect?: boolean;
+  activeCourseIds?: string[];
+  onSelectMulti?: (courseIds: string[]) => void;
 }
 
 interface LiveCourse {
@@ -74,16 +77,41 @@ export function useDeactivateLiveCourse() {
 export const LiveCourseSelector = ({
   activeCourseId,
   onSelect,
+  multiSelect = false,
+  activeCourseIds = [],
+  onSelectMulti,
 }: LiveCourseSelectorProps) => {
   const { t } = useTranslation("arena");
   const { data: liveCourses, isLoading } = useLiveCourses();
 
-  // Auto-select if only one course
+  // Auto-select if only one course (single-select mode only)
   useEffect(() => {
-    if (liveCourses?.length === 1 && !activeCourseId) {
+    if (!multiSelect && liveCourses?.length === 1 && !activeCourseId) {
       onSelect(liveCourses[0].course_id);
     }
-  }, [liveCourses, activeCourseId, onSelect]);
+  }, [liveCourses, activeCourseId, onSelect, multiSelect]);
+
+  const handleClick = (courseId: string) => {
+    if (multiSelect && onSelectMulti) {
+      if (activeCourseIds.includes(courseId)) {
+        onSelectMulti(activeCourseIds.filter((id) => id !== courseId));
+      } else if (activeCourseIds.length < 2) {
+        onSelectMulti([...activeCourseIds, courseId]);
+      } else {
+        onSelectMulti([activeCourseIds[1], courseId]);
+      }
+    } else {
+      onSelect(activeCourseId === courseId ? null : courseId);
+    }
+  };
+
+  const isSelected = (courseId: string) =>
+    multiSelect ? activeCourseIds.includes(courseId) : activeCourseId === courseId;
+
+  const getSelectionIndex = (courseId: string) => {
+    if (!multiSelect) return -1;
+    return activeCourseIds.indexOf(courseId);
+  };
 
   if (isLoading) {
     return (
@@ -104,34 +132,47 @@ export const LiveCourseSelector = ({
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {t("trashTalk.liveCourses.selectCourse")}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {t("trashTalk.liveCourses.selectCourse")}
+        </span>
+        {multiSelect && (
+          <span className="text-[10px] text-muted-foreground/70">(max 2)</span>
+        )}
+      </div>
       <div className="flex flex-wrap gap-1.5">
-        {liveCourses.map((lc) => (
-          <button
-            key={lc.course_id}
-            onClick={() =>
-              onSelect(activeCourseId === lc.course_id ? null : lc.course_id)
-            }
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-              activeCourseId === lc.course_id
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "bg-background text-foreground border-border hover:border-primary/50"
-            )}
-          >
-            <Radio className="h-3 w-3" />
-            <span className="truncate max-w-[150px]">
-              {lc.courses?.nom || lc.course_id}
-            </span>
-            {lc.courses?.categorie && (
-              <Badge variant="outline" className="text-[10px] py-0 px-1 ml-0.5">
-                {lc.courses.categorie}
-              </Badge>
-            )}
-          </button>
-        ))}
+        {liveCourses.map((lc) => {
+          const selected = isSelected(lc.course_id);
+          const selIdx = getSelectionIndex(lc.course_id);
+          return (
+            <button
+              key={lc.course_id}
+              onClick={() => handleClick(lc.course_id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                selected
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background text-foreground border-border hover:border-primary/50"
+              )}
+            >
+              {multiSelect && selected ? (
+                <span className="w-4 h-4 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px] font-bold">
+                  {selIdx + 1}
+                </span>
+              ) : (
+                <Radio className="h-3 w-3" />
+              )}
+              <span className="truncate max-w-[150px]">
+                {lc.courses?.nom || lc.course_id}
+              </span>
+              {lc.courses?.categorie && (
+                <Badge variant="outline" className="text-[10px] py-0 px-1 ml-0.5">
+                  {lc.courses.categorie}
+                </Badge>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

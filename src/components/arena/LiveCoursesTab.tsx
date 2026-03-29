@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { LiveCourseSelector } from "./LiveCourseSelector";
+import { LiveCourseSelector, useLiveCourses } from "./LiveCourseSelector";
+import { LiveCoursePanel } from "./LiveCoursePanel";
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
@@ -27,19 +28,23 @@ interface LiveCoursesTabProps {
 export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const { t } = useTranslation("arena");
   const isMobile = useIsMobile();
+  // Single-select for mobile
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  // Multi-select for desktop (max 2)
+  const [activeCourseIds, setActiveCourseIds] = useState<string[]>([]);
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
 
   const { data: managerId } = useCurrentManagerId();
   const { data: channels } = useArenaChannels(leagueId);
   const { data: managers = [] } = useLeagueManagers(leagueId);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, activeCourseId);
+  const { data: liveCourses } = useLiveCourses();
 
   const liveChannel = channels?.find((c) => c.slug === "live-courses");
   const channelId = liveChannel?.id || null;
 
+  // Mobile: keep existing hooks for single course
   const {
     data: messagesData,
     fetchNextPage,
@@ -66,10 +71,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     return Array.from(stages).sort((a, b) => a - b);
   }, [allMessages]);
 
-  useEffect(() => {
-    setSelectedEtape(null);
-  }, [activeCourseId]);
-
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
     return allMessages.filter(
@@ -77,7 +78,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     );
   }, [allMessages, selectedEtape]);
 
-  // On mobile, show newest first; on desktop keep chronological
   const displayMessages = useMemo(() => filteredMessages, [filteredMessages]);
 
   const latestSituation = useMemo(() => {
@@ -92,13 +92,21 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
-
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
       if (!managerId) return;
       toggleReaction.mutate({ messageId, managerId, emoji });
     },
     [managerId, toggleReaction]
+  );
+
+  // Get course name by id
+  const getCourseNameById = useCallback(
+    (courseId: string) => {
+      const lc = liveCourses?.find((c) => c.course_id === courseId);
+      return lc?.courses?.nom || courseId;
+    },
+    [liveCourses]
   );
 
   if (!managerId) {
@@ -109,104 +117,103 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     );
   }
 
-  const courseSelector = (
-    <div className="px-4 py-3 border-b bg-muted/20">
-      <LiveCourseSelector
-        activeCourseId={activeCourseId}
-        onSelect={setActiveCourseId}
-      />
-    </div>
-  );
+  // ── MOBILE LAYOUT ── (unchanged, single-select)
+  if (isMobile) {
+    const courseSelector = (
+      <div className="px-4 py-3 border-b bg-muted/20">
+        <LiveCourseSelector
+          activeCourseId={activeCourseId}
+          onSelect={setActiveCourseId}
+        />
+      </div>
+    );
 
-  const stageFilter = activeCourseId && availableStages.length > 1 && (
-    <div className="px-4 py-2.5 border-b flex items-center gap-2 overflow-x-auto bg-muted/10">
-      <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
-      <Badge
-        variant={selectedEtape == null ? "default" : "outline"}
-        className={cn(
-          "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
-          "active:scale-95 transition-all"
-        )}
-        onClick={() => setSelectedEtape(null)}
-      >
-        Toutes
-      </Badge>
-      {availableStages.map((stage) => (
+    const stageFilter = activeCourseId && availableStages.length > 1 && (
+      <div className="px-4 py-2.5 border-b flex items-center gap-2 overflow-x-auto bg-muted/10">
+        <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
         <Badge
-          key={stage}
-          variant={selectedEtape === stage ? "default" : "outline"}
+          variant={selectedEtape == null ? "default" : "outline"}
           className={cn(
             "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
             "active:scale-95 transition-all"
           )}
-          onClick={() => setSelectedEtape(stage)}
+          onClick={() => setSelectedEtape(null)}
         >
-          É{stage}
+          Toutes
         </Badge>
-      ))}
-    </div>
-  );
+        {availableStages.map((stage) => (
+          <Badge
+            key={stage}
+            variant={selectedEtape === stage ? "default" : "outline"}
+            className={cn(
+              "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
+              "active:scale-95 transition-all"
+            )}
+            onClick={() => setSelectedEtape(stage)}
+          >
+            É{stage}
+          </Badge>
+        ))}
+      </div>
+    );
 
-  const messagesContent = !activeCourseId ? (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-      <Radio className="h-10 w-10 mb-3 opacity-20" />
-      <p className="font-medium text-sm">{t("trashTalk.liveCourses.selectPrompt")}</p>
-    </div>
-  ) : messagesLoading ? (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-    </div>
-  ) : displayMessages.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-      <MessageCircle className="h-10 w-10 mb-3 opacity-20" />
-      <p className="font-medium text-sm">{t("trashTalk.empty")}</p>
-      <p className="text-xs mt-1">{t("trashTalk.emptyDesc")}</p>
-    </div>
-  ) : (
-    <div className="py-3 space-y-0.5">
-      {displayMessages.map((msg, idx) => {
-        const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
-        const showAuthor =
-          !prevMsg ||
-          prevMsg.author_manager_id !== msg.author_manager_id ||
-          msg.message_type !== prevMsg.message_type ||
-          Math.abs(new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) > 5 * 60 * 1000;
+    const messagesContent = !activeCourseId ? (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <Radio className="h-10 w-10 mb-3 opacity-20" />
+        <p className="font-medium text-sm">{t("trashTalk.liveCourses.selectPrompt")}</p>
+      </div>
+    ) : messagesLoading ? (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    ) : displayMessages.length === 0 ? (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <MessageCircle className="h-10 w-10 mb-3 opacity-20" />
+        <p className="font-medium text-sm">{t("trashTalk.empty")}</p>
+        <p className="text-xs mt-1">{t("trashTalk.emptyDesc")}</p>
+      </div>
+    ) : (
+      <div className="py-3 space-y-0.5">
+        {displayMessages.map((msg, idx) => {
+          const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
+          const showAuthor =
+            !prevMsg ||
+            prevMsg.author_manager_id !== msg.author_manager_id ||
+            msg.message_type !== prevMsg.message_type ||
+            Math.abs(new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) > 5 * 60 * 1000;
 
-        return (
-          <MessageBubble
-            key={msg.id}
-            message={msg}
-            reactions={reactionsMap[msg.id] || []}
-            onToggleReaction={(emoji) => handleToggleReaction(msg.id, emoji)}
-            isOwnMessage={msg.author_manager_id === managerId}
-            showAuthor={showAuthor}
-            disabled={!managerId}
-            rosterOwners={rosterOwners}
-          />
-        );
-      })}
-    </div>
-  );
+          return (
+            <MessageBubble
+              key={msg.id}
+              message={msg}
+              reactions={reactionsMap[msg.id] || []}
+              onToggleReaction={(emoji) => handleToggleReaction(msg.id, emoji)}
+              isOwnMessage={msg.author_manager_id === managerId}
+              showAuthor={showAuthor}
+              disabled={!managerId}
+              rosterOwners={rosterOwners}
+            />
+          );
+        })}
+      </div>
+    );
 
-  const raceSituationContent = latestSituation ? (
-    <RaceSituationDisplay
-      groups={latestSituation.groups}
-      kmRemaining={latestSituation.kmRemaining}
-      rosterOwners={rosterOwners}
-    />
-  ) : (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <MapPin className="h-8 w-8 mb-2 opacity-20" />
-      <p className="text-xs text-center">Aucune situation de course disponible</p>
-      <p className="text-[11px] mt-1 text-center opacity-70">La situation apparaîtra quand l'admin diffusera les données de course</p>
-    </div>
-  );
+    const raceSituationContent = latestSituation ? (
+      <RaceSituationDisplay
+        groups={latestSituation.groups}
+        kmRemaining={latestSituation.kmRemaining}
+        rosterOwners={rosterOwners}
+      />
+    ) : (
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <MapPin className="h-8 w-8 mb-2 opacity-20" />
+        <p className="text-xs text-center">Aucune situation de course disponible</p>
+        <p className="text-[11px] mt-1 text-center opacity-70">La situation apparaîtra quand l'admin diffusera les données de course</p>
+      </div>
+    );
 
-  // ── MOBILE LAYOUT ──
-  if (isMobile) {
     return (
       <div className="flex flex-col gap-3 min-h-[400px]">
-        {/* Course selector + stage filter */}
         <div className="border rounded-xl overflow-hidden bg-background">
           {courseSelector}
           {stageFilter}
@@ -214,7 +221,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
         {activeCourseId && (
           <>
-            {/* Situation de course — open by default, on top */}
             <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background">
               <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
                 <div className="flex items-center gap-2">
@@ -231,7 +237,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Timeline — open by default, newest first */}
             <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background flex-1">
               <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
                 <div className="flex items-center gap-2">
@@ -252,42 +257,51 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           </>
         )}
 
-        {/* No course selected — show prompt */}
         {!activeCourseId && messagesContent}
       </div>
     );
   }
 
-  // ── DESKTOP LAYOUT ──
+  // ── DESKTOP LAYOUT ── (multi-select, side-by-side panels)
+  const hasMultipleCourses = activeCourseIds.length > 1;
+
   return (
-    <div className="flex flex-row gap-4 h-[calc(100vh-260px)] min-h-[400px]">
-      {/* Left: Messages feed */}
-      <div className="flex-1 flex flex-col border rounded-xl overflow-hidden bg-background min-w-0">
-        {courseSelector}
-        {stageFilter}
-        <div className="px-4 py-3 border-b bg-muted/20">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Timeline</h3>
-          </div>
-        </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          {messagesContent}
+    <div className="flex flex-col gap-3 h-[calc(100vh-260px)] min-h-[400px]">
+      {/* Course selector — multi-select on desktop */}
+      <div className="border rounded-xl overflow-hidden bg-background shrink-0">
+        <div className="px-4 py-3 bg-muted/20">
+          <LiveCourseSelector
+            activeCourseId={activeCourseIds[0] || null}
+            onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
+            multiSelect
+            activeCourseIds={activeCourseIds}
+            onSelectMulti={setActiveCourseIds}
+          />
         </div>
       </div>
 
-      {/* Right: Race situation panel */}
-      {activeCourseId && (
-        <div className="flex flex-col w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background">
-          <div className="px-4 py-3 border-b bg-muted/20">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Situation de course</h3>
-            </div>
+      {/* Panels */}
+      {activeCourseIds.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center border rounded-xl bg-background">
+          <div className="text-center text-muted-foreground">
+            <Radio className="h-10 w-10 mb-3 opacity-20 mx-auto" />
+            <p className="font-medium text-sm">{t("trashTalk.liveCourses.selectPrompt")}</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {raceSituationContent}
-          </div>
+        </div>
+      ) : (
+        <div className={cn("flex gap-3 flex-1 overflow-hidden min-h-0", hasMultipleCourses && "")}>
+          {activeCourseIds.map((courseId) => (
+            <LiveCoursePanel
+              key={courseId}
+              leagueId={leagueId}
+              courseId={courseId}
+              channelId={channelId || ""}
+              managerId={managerId}
+              courseName={hasMultipleCourses ? getCourseNameById(courseId) : undefined}
+              onToggleReaction={handleToggleReaction}
+              compact={hasMultipleCourses}
+            />
+          ))}
         </div>
       )}
     </div>
