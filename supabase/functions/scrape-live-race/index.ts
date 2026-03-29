@@ -257,6 +257,23 @@ function parsePCSLive(doc: any, html: string): {
     // Each top-level .sit-grp is a legitimate group — no merging needed
   }
 
+  // ── Extract PCS slugs for matching (needed by fallback too) ──
+  const allRiderLinks = doc.querySelectorAll("a[href*='rider/']");
+  const pcsSlugs: { slug: string; name: string }[] = [];
+  for (const link of allRiderLinks) {
+    const href = link.getAttribute("href") || "";
+    const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
+    if (!slug) continue;
+    const uppercaseSpan = link.querySelector("span");
+    const lastName = uppercaseSpan?.textContent?.trim() || "";
+    const fullText = link.textContent?.trim() || "";
+    const firstName = fullText.replace(lastName, "").trim();
+    const name = firstName ? `${firstName} ${lastName}` : fullText;
+    if (name && name.length >= 3) {
+      pcsSlugs.push({ slug, name });
+    }
+  }
+
   // Fallback: parse from text if no DOM groups found
   if (situationGroups.length === 0) {
     console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
