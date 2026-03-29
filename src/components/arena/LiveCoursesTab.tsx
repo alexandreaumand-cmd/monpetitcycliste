@@ -92,18 +92,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
-  // Auto-scroll only on desktop
-  useEffect(() => {
-    if (!isMobile && autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [filteredMessages.length, autoScroll, isMobile]);
-
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    setAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
-  }, []);
 
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
