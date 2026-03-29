@@ -1084,26 +1084,50 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                               <CollapsibleContent asChild>
                                 <TableRow>
                                   <TableCell colSpan={3} className="bg-muted/30 p-2">
-                                    <div className="space-y-1">
+                                    <div className="space-y-1.5">
                                       <div className="text-xs font-medium text-muted-foreground mb-1">
-                                        Contributeurs
+                                        Coureurs contributeurs
                                       </div>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                                        {contributors.map((contributor, idx) => (
-                                          <div
-                                            key={`${contributor.rider_id}-${contributor.type_classement}-${contributor.etape_numero}-${idx}`}
-                                            className="flex items-center justify-between p-1.5 rounded border bg-background"
-                                          >
-                                            <div className="flex-1 min-w-0">
-                                              <div className="text-sm font-medium truncate">{contributor.rider_nom}</div>
-                                              <Badge variant="outline" className="mt-0.5 text-[10px] px-1 py-0">
-                                                {formatClassementLabel(contributor.type_classement, contributor.etape_numero)}
-                                              </Badge>
-                                            </div>
-                                            <div className="text-sm font-bold flex-shrink-0 ml-2">{Math.round(contributor.points)} pts</div>
+                                      {(() => {
+                                        // Group contributors by rider
+                                        const byRider = new Map<string, { nom: string; total: number; details: typeof contributors }>();
+                                        contributors.forEach((c) => {
+                                          const key = c.rider_id || c.rider_nom;
+                                          if (!byRider.has(key)) {
+                                            byRider.set(key, { nom: c.rider_nom, total: 0, details: [] });
+                                          }
+                                          const entry = byRider.get(key)!;
+                                          entry.total += c.points;
+                                          entry.details.push(c);
+                                        });
+                                        // Sort riders by total points descending
+                                        const sortedRiders = Array.from(byRider.entries()).sort((a, b) => b[1].total - a[1].total);
+
+                                        return (
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {sortedRiders.map(([riderId, rider]) => (
+                                              <div key={riderId} className="rounded border bg-background p-2">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                  <span className="text-sm font-semibold truncate">{rider.nom}</span>
+                                                  <span className="text-sm font-bold flex-shrink-0 ml-2 tabular-nums">{Math.round(rider.total)} pts</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                  {rider.details
+                                                    .sort((a, b) => b.points - a.points)
+                                                    .map((d, idx) => (
+                                                    <div key={`${d.type_classement}-${d.etape_numero}-${idx}`} className="flex items-center justify-between text-xs text-muted-foreground pl-1">
+                                                      <Badge variant="outline" className="text-[10px] px-1 py-0 font-normal">
+                                                        {formatClassementLabel(d.type_classement, d.etape_numero)}
+                                                      </Badge>
+                                                      <span className="tabular-nums">{Math.round(d.points)} pts</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
-                                        ))}
-                                      </div>
+                                        );
+                                      })()}
                                     </div>
                                   </TableCell>
                                 </TableRow>
