@@ -366,7 +366,7 @@ function parsePCSLive(doc: any, html: string): {
           }
         }
 
-        const isPeloton = fg.name.toLowerCase().includes("peloton") || groupRiders.length > 50;
+        const riderCountFinal = isPeloton ? 150 : groupRiders.length;
         const riderCount = groupRiders.length > 0 ? groupRiders.length : (isPeloton ? 150 : 0);
         
         situationGroups.push({
