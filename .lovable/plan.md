@@ -1,50 +1,64 @@
 
 
-## Cartes de visite La Bordure — PPTX élégant minimaliste
+## Cartes de visite professionnelles La Bordure — PPTX
 
 ### Concept
 
-Un fichier PPTX avec **10 slides** (une par membre), chaque slide contenant une carte de visite au format paysage. Style épuré reprenant l'identité La Bordure : fond crème (#F6F3ED), texte vert (#1B5E3B), accents dorés (#C8963A), typographie fine.
+10 slides PPTX, une carte par slide au format standard 85x55mm (ratio 1.545:1). Design élégant minimaliste reprenant la charte La Bordure.
 
-### Layout de chaque carte (sur un slide 16:9)
+### Layout de chaque carte
 
 ```text
-┌─────────────────────────────────────────────────┐
-│  fond crème #F6F3ED                             │
-│                                                 │
-│     ┌──────┐                                    │
-│     │avatar│   L'AYATOLLAH                      │
-│     │circle│   ─── ligne dorée ───              │
-│     └──────┘   Description en italique          │
-│                                                 │
-│         ── LA BORDURE ──    labordure.fr         │
-│                                                 │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│  fond crème #F6F3ED                                 │
+│                                                     │
+│   ┌────┐                                            │
+│   │logo│  LA BORDURE                                │
+│   └────┘  Fantasy Cycling League                    │
+│                                                     │
+│   ─────── fine ligne dorée ───────────────────────   │
+│                                                     │
+│   ┌──────┐   L'AYATOLLAH                            │
+│   │avatar│   Celui qui a créé un fichier...          │
+│   │round │                                          │
+│   └──────┘   ✉ contact@labordure.fr                 │
+│              ☎ 06 XX XX XX XX                       │
+│              🌐 labordure.fr                         │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
-- Avatar du membre (image ronde, ~1.5" de diamètre)
-- Surnom en Montserrat bold, vert foncé, grande taille
-- Ligne de séparation dorée fine
-- Description en italique, vert/60%
-- Logo/nom "LA BORDURE" en bas avec un filet doré
-- Le tout centré verticalement
+- **En-tête** : Logo La Bordure (`logo-bordure.png`) + nom "LA BORDURE" en vert foncé
+- **Séparateur** : fine ligne dorée #C8963A
+- **Corps** : avatar rond à gauche, surnom en gras + description en italique à droite
+- **Contact** : email commun, téléphone (placeholder), site web — avec petites icônes
+- **Palette** : fond crème #F6F3ED, texte vert #1B5E3B, accents dorés #C8963A, rose #E8A0B4 en touches
+
+### Informations affichées
+
+- Logo La Bordure (image `src/assets/logo-bordure.png`)
+- Surnom du membre
+- Description / rôle
+- Avatar du membre
+- contact@labordure.fr
+- Téléphone (placeholder à modifier dans le PPTX)
+- labordure.fr
 
 ### Implémentation
 
-**Script Node.js** utilisant `pptxgenjs` :
+Script Node.js avec `pptxgenjs` :
+1. Slide 16:9 avec contenu centré dans un cadre 85x55mm proportionnel
+2. Logo en base64 en haut à gauche
+3. Avatar en base64 rond
+4. Texte de contact avec icônes Unicode
+5. Ligne dorée séparatrice
+6. QA visuelle via conversion PDF + images
 
-1. Créer une présentation 16:9
-2. Pour chaque membre du tableau `members` (10 membres) :
-   - Ajouter un slide avec fond crème
-   - Intégrer l'avatar en base64 avec `rounding: true`
-   - Ajouter le surnom, la ligne dorée, la description
-   - Ajouter le pied "LA BORDURE"
-3. Exporter en `.pptx` dans `/mnt/documents/`
-
-### Fichiers utilisés
-- `src/assets/team/*.png` — avatars des 10 membres
-- Données des membres depuis `TeamPage.tsx`
+### Fichiers sources
+- `src/assets/logo-bordure.png` — logo
+- `src/assets/team/*.png` — 10 avatars
+- Données membres depuis `TeamPage.tsx`
 
 ### Sortie
-- `/mnt/documents/cartes-visite-la-bordure.pptx`
+- `/mnt/documents/cartes-visite-la-bordure-v2.pptx`
 
