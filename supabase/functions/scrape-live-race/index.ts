@@ -306,7 +306,8 @@ function parsePCSLive(doc: any, html: string): {
         const fg = foundGroups[i];
         const isPeloton = fg.name.toLowerCase().includes("peloton");
         const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : Math.min(fg.endIndex + 3000, sitText.length);
-        const groupText = sitText.substring(fg.endIndex, nextGroupStart).trim();
+        // Clean trailing single uppercase letters (e.g. "P" from next group marker like "P PELOTON")
+        const groupText = sitText.substring(fg.endIndex, nextGroupStart).trim().replace(/\s+[A-Z]\s*$/, '');
         
         const groupRiders: string[] = [];
         const groupBibs: string[] = [];
