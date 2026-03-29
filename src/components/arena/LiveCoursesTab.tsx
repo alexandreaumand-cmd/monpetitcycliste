@@ -79,7 +79,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
   // On mobile, show newest first; on desktop keep chronological
   const displayMessages = useMemo(() => {
-    return isMobile ? [...filteredMessages].reverse() : filteredMessages;
+    return isMobile ? filteredMessages : [...filteredMessages].reverse();
   }, [filteredMessages, isMobile]);
 
   const latestSituation = useMemo(() => {
