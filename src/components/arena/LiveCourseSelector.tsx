@@ -9,6 +9,9 @@ import { Loader2, Radio } from "lucide-react";
 interface LiveCourseSelectorProps {
   activeCourseId: string | null;
   onSelect: (courseId: string | null) => void;
+  multiSelect?: boolean;
+  activeCourseIds?: string[];
+  onSelectMulti?: (courseIds: string[]) => void;
 }
 
 interface LiveCourse {
