@@ -1,24 +1,28 @@
 
 
-## Supprimer le nombre de coureurs du Peloton
+## Fix : le dernier coureur de chaque groupe n'est pas détecté par le parser fallback
 
-### Problème
+### Cause racine
 
-Le groupe Peloton affiche un chiffre de coureurs (ex: "150") qui est incorrect et absent de PCS.
-
-### Changements dans `src/components/arena/RaceSituationDisplay.tsx`
-
-**1. Badge gauche (ligne 108-110)** : ne pas afficher le count `(N)` sous le badge quand `isPeloton` est true :
-```typescript
-{!group.isPeloton && (
-  <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-    ({group.riderCount || group.riders.length})
-  </span>
-)}
+Dans le parser texte fallback (ligne 331), la regex d'extraction des coureurs utilise un lookahead strict :
+```
+(?=\s+\d{1,2}\s+\d{1,3}\s+[A-Z...]|\s*$)
 ```
 
-**2. Label "N coureurs" (lignes 122-126)** : supprimer le bloc qui affiche `{group.riderCount} coureurs` pour le peloton. Garder juste le label "PELOTON" via le group name.
+Le `\s*$` exige que le texte se termine proprement après le dernier coureur. Or le texte PCS contient des caractères Unicode (drapeaux emoji rendus en `??`) après chaque nom. Résultat : le lookahead échoue pour le **dernier coureur de chaque groupe**, d'où "Head of the race: 1 rider" au lieu de 2 (VAN AERT Wout est ignoré).
+
+Les logs confirment : `Fallback group "Head of the race": 1 riders parsed` alors que le texte contient bien `1 21 VAN DER POEL Mathieu 2 141 VAN AERT Wout`.
+
+### Changement dans `supabase/functions/scrape-live-race/index.ts`
+
+**Ligne 331** — Remplacer le lookahead trop strict par une version permissive qui accepte aussi des caractères non-alphanumériques en fin de chaîne :
+
+```typescript
+const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|[^A-Za-z0-9]*$)/g;
+```
+
+Seul changement : `\s*$` → `[^A-Za-z0-9]*$` pour tolérer les `??` et autres caractères non-alphanumériques en fin de groupe.
 
 ### Fichier impacté
-- `src/components/arena/RaceSituationDisplay.tsx`
+- `supabase/functions/scrape-live-race/index.ts`
 
