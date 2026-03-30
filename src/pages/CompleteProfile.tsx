@@ -22,6 +22,14 @@ const CompleteProfile = () => {
   const nextUrl = searchParams.get('next') || '/dashboard/home';
 
   useEffect(() => {
+    // Restore language after OAuth redirect
+    const savedLang = localStorage.getItem('i18nextLng');
+    if (savedLang && i18n.language !== savedLang) {
+      i18n.changeLanguage(savedLang);
+    }
+  }, [i18n]);
+
+  useEffect(() => {
     // Redirect if not authenticated or already has a manager profile
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession();
