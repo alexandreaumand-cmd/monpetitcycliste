@@ -83,6 +83,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       if (error) throw error;
       toast.success(t('join.success'));
       await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
       setLeagueId(leagueId);
       navigate(`/dashboard/home?leagueId=${leagueId}`);
       onOpenChange(false);
