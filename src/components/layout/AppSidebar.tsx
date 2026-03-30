@@ -1,5 +1,5 @@
 import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database, Swords, Radio } from "lucide-react";
-import { NavLink, useSearchParams } from "react-router-dom";
+import { NavLink, useSearchParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Sidebar,
@@ -44,6 +44,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const isCollapsed = state === "collapsed";
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
+  const location = useLocation();
   const { leagueId } = useLeague();
   const { roles, isLoading: rolesLoading } = useUserLeagues();
 
@@ -95,13 +96,12 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem key={item.href}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                          <NavLink
-                            to={buildNavUrl(item.href)}
-                            className={({ isActive }) =>
-                              isActive ? "bg-white/15 text-white" : ""
-                            }
-                          >
+                        <SidebarMenuButton asChild className={
+                          location.pathname === item.href
+                            ? "bg-white/20 text-white font-semibold border-l-2 border-white"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }>
+                          <NavLink to={buildNavUrl(item.href)}>
                             <item.icon className="h-4 w-4" />
                             {!isCollapsed && <span>{item.label}</span>}
                           </NavLink>
@@ -123,13 +123,12 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                          <NavLink
-                            to={buildNavUrl("/dashboard/super-admin")}
-                            className={({ isActive }) =>
-                              isActive ? "bg-white/15 text-white" : ""
-                            }
-                          >
+                        <SidebarMenuButton asChild className={
+                          location.pathname.startsWith("/dashboard/super-admin")
+                            ? "bg-white/20 text-white font-semibold border-l-2 border-white"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }>
+                          <NavLink to={buildNavUrl("/dashboard/super-admin")}>
                             <Shield className="h-4 w-4" />
                             {!isCollapsed && <span>{t('navigation.superAdmin')}</span>}
                           </NavLink>
