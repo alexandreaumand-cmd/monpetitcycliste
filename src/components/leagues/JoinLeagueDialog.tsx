@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -28,6 +28,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   const { t: tDash } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
+  const queryClient = useQueryClient();
   const { leagues: myLeagues, refetch } = useUserLeagues();
   const [joiningLeagueId, setJoiningLeagueId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState('');
@@ -82,6 +83,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       if (error) throw error;
       toast.success(t('join.success'));
       await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
       setLeagueId(leagueId);
       navigate(`/dashboard/home?leagueId=${leagueId}`);
       onOpenChange(false);
@@ -124,6 +126,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
 
       toast.success(t('join.successWithName', { name: data.league_name }));
       await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
       setLeagueId(data.league_id);
       navigate(`/dashboard/home?leagueId=${data.league_id}`);
       setInviteCode('');

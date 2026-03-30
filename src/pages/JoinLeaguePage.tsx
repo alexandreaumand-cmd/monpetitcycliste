@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,6 +11,7 @@ export function JoinLeaguePage() {
   const { t } = useTranslation('leagues');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const token = searchParams.get("token");
   
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -64,6 +66,10 @@ export function JoinLeaguePage() {
 
         setStatus("success");
         setMessage(t('join.success'));
+
+        // Invalidate league caches so dashboard shows the new league
+        await queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
+        await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
 
         // Redirect to auctions page with league selected
         setTimeout(() => {
