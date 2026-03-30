@@ -5,14 +5,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Generate a secure random token
+// Cycling-themed invite code generator 🚴
 function makeToken(): string {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+  const nouns = [
+    'MAILLOT', 'PELOTON', 'BIDON', 'PEDALE', 'SELLE', 'GUIDON',
+    'ROUE', 'SOMMET', 'SPRINT', 'BRAQUET', 'CUISSARD', 'CASQUE',
+    'BOYAU', 'CADRE', 'POTENCE', 'DERAILLEUR', 'SACOCHE', 'MUSETTE',
+    'BICLOU', 'PLATEAU', 'RELAIS', 'VIRAGE', 'GRAVEL', 'VELODROME',
+  ];
+  const adjectives = [
+    'JAUNE', 'RAPIDE', 'FILANT', 'GRIMPEUR', 'MALIN', 'MAGIQUE',
+    'FONCE', 'TURBO', 'ROYAL', 'DORE', 'VOLANT', 'COSTAUD',
+    'AGILE', 'FUTÉ', 'SOLIDE', 'LEGER', 'VERT', 'ROSE',
+    'BLANC', 'POIS', 'ARC', 'FLASH', 'VELO', 'CHRONO',
+  ];
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  const num = Math.floor(Math.random() * 900) + 100; // 100–999
+  return `${pick(nouns)}-${pick(adjectives)}-${num}`;
 }
 
 Deno.serve(async (req) => {
@@ -53,23 +62,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = makeToken();
-    const { data, error } = await supabase
-      .from('league_invites')
-      .insert({
-        league_id,
-        token,
-        created_by: user.id,
-        expires_at: expires_at || null,
-        max_uses: max_uses ? Number(max_uses) : null,
-        note: note || null,
-      })
-      .select('*')
-      .single();
+    // Retry loop to handle unlikely collisions
+    let data = null;
+    let error = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const token = makeToken();
+      const result = await supabase
+        .from('league_invites')
+        .insert({
+          league_id,
+          token,
+          created_by: user.id,
+          expires_at: expires_at || null,
+          max_uses: max_uses ? Number(max_uses) : null,
+          note: note || null,
+        })
+        .select('*')
+        .single();
 
-    if (error) {
+      if (!result.error) {
+        data = result.data;
+        break;
+      }
+      // If unique constraint violation, retry with new token
+      if (result.error.code === '23505') {
+        console.log(`Token collision, retrying (attempt ${attempt + 1})...`);
+        continue;
+      }
+      error = result.error;
+      break;
+    }
+
+    if (error || !data) {
       console.error('Error creating invite:', error);
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : (error as any)?.message ?? 'Unknown error';
       return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -77,7 +103,7 @@ Deno.serve(async (req) => {
     }
 
     // Return only the invite and token; the UI will construct the full URL
-    return new Response(JSON.stringify({ invite: data, token }), {
+    return new Response(JSON.stringify({ invite: data, token: data.token }), {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
