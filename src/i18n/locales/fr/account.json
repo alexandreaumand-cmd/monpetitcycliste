@@ -88,11 +88,5 @@
   "buttons": {
     "updateProfile": "Mettre à jour le profil",
     "uploadPhoto": "Changer la photo"
-  },
-  "onboarding": {
-    "title": "Tutoriel",
-    "description": "Revoir le guide de présentation des onglets",
-    "replayButton": "Revoir le tuto",
-    "resetSuccess": "Le tutoriel se relancera à la prochaine visite"
   }
 }
