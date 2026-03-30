@@ -126,6 +126,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
 
       toast.success(t('join.successWithName', { name: data.league_name }));
       await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
       setLeagueId(data.league_id);
       navigate(`/dashboard/home?leagueId=${data.league_id}`);
       setInviteCode('');

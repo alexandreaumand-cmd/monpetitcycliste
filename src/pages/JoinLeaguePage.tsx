@@ -67,6 +67,10 @@ export function JoinLeaguePage() {
         setStatus("success");
         setMessage(t('join.success'));
 
+        // Invalidate league caches so dashboard shows the new league
+        await queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
+        await queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+
         // Redirect to auctions page with league selected
         setTimeout(() => {
           navigate(`/dashboard/encheres?leagueId=${data.league_id}`);
