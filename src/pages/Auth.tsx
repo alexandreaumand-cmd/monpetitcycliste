@@ -40,8 +40,19 @@ const Auth = () => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
+        // Show confirmation toast when email is verified
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          const isEmailConfirmation = window.location.hash.includes('access_token');
+          if (isEmailConfirmation) {
+            toast({
+              title: t('messages.emailConfirmed', 'Email confirmé !'),
+              description: t('messages.emailConfirmedDesc', 'Votre compte est maintenant actif.'),
+            });
+          }
+        }
+
         // Check if manager profile exists
         const { data: manager } = await supabase
           .from('managers')
