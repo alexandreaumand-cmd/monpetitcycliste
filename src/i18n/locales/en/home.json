@@ -12,7 +12,8 @@
       "createLeague": "Create my league",
       "myLeagues": "My Leagues",
       "discover": "Discover",
-      "install": "Install the app"
+      "install": "Install the app",
+      "joinLeague": "Join a league"
     }
   },
   "overview": {
