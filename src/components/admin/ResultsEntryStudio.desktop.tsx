@@ -14,6 +14,9 @@ import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, 
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
 import { usePcsImport } from "@/hooks/usePcsImport";
+import { useScoringRules } from "@/hooks/useScoringRules";
+import { useResultRows } from "@/hooks/useResultRows";
+import type { ResultRow, ResultStatut } from "@/hooks/useResultRows";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
