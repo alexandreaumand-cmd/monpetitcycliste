@@ -92,8 +92,10 @@ Deno.serve(async (req) => {
       error = result.error;
       break;
     }
+
+    if (error || !data) {
       console.error('Error creating invite:', error);
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : (error as any)?.message ?? 'Unknown error';
       return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,7 +103,7 @@ Deno.serve(async (req) => {
     }
 
     // Return only the invite and token; the UI will construct the full URL
-    return new Response(JSON.stringify({ invite: data, token }), {
+    return new Response(JSON.stringify({ invite: data, token: data.token }), {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
