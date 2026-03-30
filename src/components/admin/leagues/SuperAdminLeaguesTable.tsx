@@ -256,12 +256,12 @@ export function SuperAdminLeaguesTable() {
                           />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge variant={league.visibility === "public" ? "default" : "secondary"}>
                           {league.visibility === "public" ? "Publique" : "Privée"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(league.created_at), {
                           addSuffix: true,
                           locale: fr,

@@ -7,11 +7,11 @@ import { SeasonManager } from "./SeasonManager";
 export const DataManagementTabs = () => {
   return (
     <Tabs defaultValue="import" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
         <TabsTrigger value="import">📥 Import</TabsTrigger>
         <TabsTrigger value="export">📤 Export</TabsTrigger>
         <TabsTrigger value="seasons">📅 Saisons</TabsTrigger>
-        <TabsTrigger value="maintenance">🔧 Maintenance</TabsTrigger>
+        <TabsTrigger value="maintenance">🔧 <span className="hidden sm:inline">Maintenance</span><span className="sm:hidden">Maint.</span></TabsTrigger>
       </TabsList>
 
       <TabsContent value="import" className="space-y-6">

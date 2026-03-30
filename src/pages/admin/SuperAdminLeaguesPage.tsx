@@ -9,7 +9,7 @@ import { Shield } from "lucide-react";
 export function SuperAdminLeaguesPage() {
   return (
     <SuperAdminGuard>
-      <div className="space-y-6 p-3 sm:p-0">
+      <div className="space-y-4 p-2 sm:p-0">
         <PageHeader
           icon={Shield}
           title="Gestion des ligues"

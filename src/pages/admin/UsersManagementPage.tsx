@@ -357,10 +357,10 @@ export default function UsersManagementPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Gestion des utilisateurs</h1>
-          <p className="text-muted-foreground">Gérez les rôles, permissions et accès des utilisateurs</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestion des utilisateurs</h1>
+          <p className="text-sm text-muted-foreground">Gérez les rôles, permissions et accès des utilisateurs</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>

@@ -166,7 +166,7 @@ export function SuperAdminBonusPage() {
         {/* Tabs */}
         {selectedSaisonId && selectedPhaseId ? (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Récapitulatif</span>

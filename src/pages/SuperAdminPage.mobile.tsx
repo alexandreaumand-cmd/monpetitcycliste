@@ -222,7 +222,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
 
       {/* Main Content */}
       <main className="pb-safe">
-        <div className="p-4">
+        <div className="p-2 sm:p-4">
           <Routes>
             <Route index element={<Navigate to="/dashboard/super-admin/results" replace />} />
             <Route path="results" element={<CourseManagementTabs />} />
