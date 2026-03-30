@@ -62,21 +62,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = makeToken();
-    const { data, error } = await supabase
-      .from('league_invites')
-      .insert({
-        league_id,
-        token,
-        created_by: user.id,
-        expires_at: expires_at || null,
-        max_uses: max_uses ? Number(max_uses) : null,
-        note: note || null,
-      })
-      .select('*')
-      .single();
+    // Retry loop to handle unlikely collisions
+    let data = null;
+    let error = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const token = makeToken();
+      const result = await supabase
+        .from('league_invites')
+        .insert({
+          league_id,
+          token,
+          created_by: user.id,
+          expires_at: expires_at || null,
+          max_uses: max_uses ? Number(max_uses) : null,
+          note: note || null,
+        })
+        .select('*')
+        .single();
 
-    if (error) {
+      if (!result.error) {
+        data = result.data;
+        break;
+      }
+      // If unique constraint violation, retry with new token
+      if (result.error.code === '23505') {
+        console.log(`Token collision, retrying (attempt ${attempt + 1})...`);
+        continue;
+      }
+      error = result.error;
+      break;
+    }
       console.error('Error creating invite:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
       return new Response(JSON.stringify({ error: message }), {
