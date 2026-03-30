@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Lock, Palette, Sun, Moon, Monitor, Trophy } from "lucide-react";
+import { Loader2, User, Lock, Palette, Sun, Moon, Monitor, Trophy, BookOpen } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
