@@ -142,19 +142,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
         {/* EN ATTENTE DE JOUEURS */}
         {isWaitingForPlayers && (
           <>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {t('leagueCard.registeredPlayers')}
-                </h4>
-                <LeagueParticipantsHover
-                  ownerName={owner?.nom || null}
-                  members={members}
-                  currentPlayerCount={league.current_player_count}
-                  isLoading={loadingMembersList || loadingOwner}
-                />
-              </div>
+            <div>
               {loadingMembersList ? (
                 <Skeleton className="h-20 w-full" />
               ) : (
