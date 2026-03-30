@@ -116,31 +116,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   </SidebarMenuItem>
                 ))}
 
-                {/* Admin Ligue - Pour les admins/owners de la ligue */}
-                {isAdminOfCurrentLeague && (
-                  <SidebarMenuItem>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                          <NavLink
-                            to={buildNavUrl("/dashboard/admin")}
-                            className={({ isActive }) =>
-                              isActive ? "bg-white/15 text-white" : ""
-                            }
-                          >
-                            <Settings className="h-4 w-4" />
-                            {!isCollapsed && <span>{t('navigation.adminLeague')}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </TooltipTrigger>
-                      {isCollapsed && (
-                        <TooltipContent side="right">
-                          {t('navigation.adminLeague')}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </SidebarMenuItem>
-                )}
+
 
                 {/* Super Admin - UNIQUEMENT pour les super admins */}
                 {isSuperAdmin && (
