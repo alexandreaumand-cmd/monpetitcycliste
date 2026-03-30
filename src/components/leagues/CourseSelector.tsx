@@ -249,7 +249,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 <Calendar className="h-3 w-3" /> Date
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.sortTooltipDate')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.sortTooltipDate')}</p></TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
