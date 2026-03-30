@@ -1,14 +1,9 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useLeague } from "@/contexts/LeagueContext";
-import { Loader2, Zap, CheckCircle2, Clock, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, Zap, AlertCircle, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,264 +18,33 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatAmount } from "@/lib/utils";
+import { useAuctionOperations } from "@/hooks/useAuctionOperations";
+import { useManagerStatus } from "@/hooks/useManagerStatus";
 
 export const AuctionManager = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { leagueId } = useLeague();
-  const [selectedPhase, setSelectedPhase] = useState("");
-  const [roundNumber, setRoundNumber] = useState("1");
-  const [deadlineHours, setDeadlineHours] = useState("24");
-  const [resetPhrase, setResetPhrase] = useState("");
+  const {
+    phases,
+    loadingPhases,
+    activeAuctions,
+    closedAuctions,
+    activePhase,
+    nextRoundNumber,
+    selectedPhase,
+    setSelectedPhase,
+    roundNumber,
+    setRoundNumber,
+    deadlineHours,
+    setDeadlineHours,
+    resetPhrase,
+    setResetPhrase,
+    quickLaunchAuction,
+    createAuction,
+    closeAuction,
+    reprocessRound,
+    resetPhase,
+  } = useAuctionOperations();
 
-  const { data: phases, isLoading: loadingPhases } = useQuery({
-    queryKey: ['phases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('*, saisons(annee)')
-        .eq('statut', 'active')
-        .order('date_debut', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: activeAuctions } = useQuery({
-    queryKey: ['active-auctions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('auctions')
-        .select(`
-          *,
-          phases(index_dans_saison, saisons(annee))
-        `)
-        .eq('statut', 'open')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: closedAuctions } = useQuery({
-    queryKey: ['closed-auctions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('auctions')
-        .select(`
-          *,
-          phases(index_dans_saison, saisons(annee))
-        `)
-        .eq('statut', 'closed')
-        .order('closed_at', { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Get the active phase and next round number
-  const activePhase = phases?.[0];
-  const nextRoundNumber = (activeAuctions?.filter(a => a.phase_id === activePhase?.id).length || 0) + 1;
-
-  // Get manager status for active phase
-  const { data: managersStatus = [] } = useQuery({
-    queryKey: ['managers-rosters-status', activePhase?.id],
-    queryFn: async () => {
-      if (!activePhase) return [];
-
-      const { data, error } = await supabase
-        .from('managers_rosters_status')
-        .select('*')
-        .eq('phase_id', activePhase.id)
-        .order('manager_nom');
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!activePhase
-  });
-
-  const quickLaunchAuction = useMutation({
-    mutationFn: async () => {
-      if (!activePhase) {
-        throw new Error("Aucune phase active. Veuillez d'abord activer une phase.");
-      }
-
-      const deadlineAt = new Date();
-      deadlineAt.setHours(deadlineAt.getHours() + 24);
-
-      const { error } = await supabase
-        .from('auctions')
-        .insert({
-          phase_id: activePhase.id,
-          round_number: nextRoundNumber,
-          deadline_at: deadlineAt.toISOString(),
-          statut: 'open',
-          league_id: leagueId
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
-      toast({
-        title: "Enchère lancée ! 🚀",
-        description: `Tour ${nextRoundNumber} ouvert avec 24h de deadline`
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const createAuction = useMutation({
-    mutationFn: async () => {
-      if (!selectedPhase) {
-        throw new Error("Veuillez sélectionner une phase");
-      }
-
-      const deadlineAt = new Date();
-      deadlineAt.setHours(deadlineAt.getHours() + parseInt(deadlineHours));
-
-      const { error } = await supabase
-        .from('auctions')
-        .insert({
-          phase_id: selectedPhase,
-          round_number: parseInt(roundNumber),
-          deadline_at: deadlineAt.toISOString(),
-          statut: 'open',
-          league_id: leagueId
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
-      toast({
-        title: "Enchère créée",
-        description: "L'enchère a été lancée avec succès"
-      });
-      setRoundNumber((prev) => (parseInt(prev) + 1).toString());
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const closeAuction = useMutation({
-    mutationFn: async (auctionId: string) => {
-      // First, update the auction status
-      const { error: updateError } = await supabase
-        .from('auctions')
-        .update({ 
-          statut: 'closed',
-          closed_at: new Date().toISOString()
-        })
-        .eq('id', auctionId);
-
-      if (updateError) throw updateError;
-
-      // Then, invoke the clore-round function to process bids
-      const { data, error: functionError } = await supabase.functions.invoke('clore-round', {
-        body: { 
-          auction_id: auctionId,
-          league_id: leagueId
-        }
-      });
-
-      if (functionError) throw functionError;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
-      queryClient.invalidateQueries({ queryKey: ['closed-auctions'] });
-      toast({
-        title: "Enchère clôturée ✅",
-        description: `${data?.annonces_count || 0} annonces créées`
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur lors de la clôture",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const reprocessRound = useMutation({
-    mutationFn: async (auctionId: string) => {
-      const { data, error } = await supabase.functions.invoke('clore-round', {
-        body: { 
-          auction_id: auctionId,
-          league_id: leagueId
-        }
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['closed-auctions'] });
-      toast({
-        title: "Round retraité ✅",
-        description: `${data?.annonces_count || 0} annonces créées`
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur lors du retraitement",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const resetPhase = useMutation({
-    mutationFn: async () => {
-      if (!activePhase) {
-        throw new Error("Aucune phase active");
-      }
-
-      const { data, error } = await supabase.functions.invoke('admin-reset-phase', {
-        body: {
-          phase_id: activePhase.id,
-          confirmation_phrase: resetPhrase
-        }
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
-      queryClient.invalidateQueries({ queryKey: ['managers-rosters-status'] });
-      toast({
-        title: "Phase réinitialisée ✅",
-        description: `Supprimés : ${data.deleted.rosters} rosters, ${data.deleted.bids} enchères, ${data.deleted.annonces} annonces, ${data.deleted.auctions} auctions`
-      });
-      setResetPhrase("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
+  const { managersStatus, getManagerStatus } = useManagerStatus(activePhase?.id);
 
   if (loadingPhases) {
     return (
@@ -289,34 +53,6 @@ export const AuctionManager = () => {
       </div>
     );
   }
-
-  // Helper function to determine manager status
-  const getManagerStatus = (manager: any) => {
-    const slotsMatch = manager.pending_count === manager.slots_restants;
-    const budgetMatch = Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) < 1;
-    
-    if (manager.slots_restants === 0) {
-      return {
-        label: "Complet",
-        variant: "default" as const,
-        icon: <CheckCircle2 className="h-3 w-3" />
-      };
-    }
-    
-    if (slotsMatch && budgetMatch) {
-      return {
-        label: "Prêt",
-        variant: "default" as const,
-        icon: <CheckCircle2 className="h-3 w-3" />
-      };
-    }
-    
-    return {
-      label: "En attente",
-      variant: "secondary" as const,
-      icon: <Clock className="h-3 w-3" />
-    };
-  };
 
   return (
     <div className="space-y-6">
@@ -413,7 +149,6 @@ export const AuctionManager = () => {
               <TableBody>
                 {managersStatus
                   .sort((a, b) => {
-                    // Sort: "En attente" first, then by manager name
                     const statusA = getManagerStatus(a);
                     const statusB = getManagerStatus(b);
                     if (statusA.label === "En attente" && statusB.label !== "En attente") return -1;
@@ -439,7 +174,7 @@ export const AuctionManager = () => {
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge 
+                          <Badge
                             variant={status.variant}
                             className="flex items-center gap-1 justify-center"
                           >
@@ -533,7 +268,6 @@ export const AuctionManager = () => {
                 onChange={(e) => setRoundNumber(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Deadline (heures)</Label>
               <Input
@@ -559,7 +293,6 @@ export const AuctionManager = () => {
       {/* Reset Phase */}
       {activePhase && (() => {
         const expectedPhrase = `RESET PHASE ${activePhase.index_dans_saison} ${activePhase.saisons?.annee || ''}`.trim();
-        
         return (
           <Card className="border-destructive/20 bg-destructive/5">
             <CardHeader>
@@ -594,7 +327,6 @@ export const AuctionManager = () => {
                           Du {new Date(activePhase.date_debut).toLocaleDateString()} au {new Date(activePhase.date_fin).toLocaleDateString()}
                         </p>
                       </div>
-                      
                       <p className="text-foreground">Cette action va <strong>supprimer définitivement</strong> :</p>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Tous les rosters des managers</li>
@@ -602,9 +334,7 @@ export const AuctionManager = () => {
                         <li>Toutes les annonces publiées</li>
                         <li>Toutes les auctions créées</li>
                       </ul>
-                      <p className="text-destructive font-semibold">
-                        Cette action est IRRÉVERSIBLE.
-                      </p>
+                      <p className="text-destructive font-semibold">Cette action est IRRÉVERSIBLE.</p>
                       <div className="mt-4">
                         <Label htmlFor="reset-phrase">
                           Tapez <code className="bg-muted px-2 py-1 rounded text-xs">{expectedPhrase}</code> pour confirmer :
@@ -620,9 +350,7 @@ export const AuctionManager = () => {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setResetPhrase("")}>
-                      Annuler
-                    </AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setResetPhrase("")}>Annuler</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => resetPhase.mutate()}
                       disabled={resetPhrase !== expectedPhrase || resetPhase.isPending}
