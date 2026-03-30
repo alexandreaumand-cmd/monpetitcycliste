@@ -93,7 +93,6 @@ function usePrevious<T>(value: T): T | undefined {
 export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
-  const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
   const [activeTab, setActiveTab] = useState<"stages" | "finals">("stages");
   const [currentStage, setCurrentStage] = useState(1);
   const [currentFinalClassement, setCurrentFinalClassement] = useState<ClassementType>("General");
@@ -120,8 +119,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [pcsSlugDialogOpen, setPcsSlugDialogOpen] = useState(false);
-  const [pcsSlugError, setPcsSlugError] = useState<{ message: string; slugUsed: string }>({ message: '', slugUsed: '' });
   const [isTTT, setIsTTT] = useState(false);
   const [tttRidersCount, setTttRidersCount] = useState(7);
   const [saisonId, setSaisonId] = useState<string | null>(null);
