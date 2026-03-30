@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, X, Calendar, Trophy } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { computePerCourseSettings } from "@/lib/leagues/templates";
 
 type Course = {
