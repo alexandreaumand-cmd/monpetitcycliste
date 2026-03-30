@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 import logoCarreTexte from "@/assets/logo-carre-texte.png";
 
 const CompleteProfile = () => {
-  const { t } = useTranslation('auth');
+  const { t, i18n } = useTranslation('auth');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -20,6 +20,14 @@ const CompleteProfile = () => {
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get('next') || '/dashboard/home';
+
+  useEffect(() => {
+    // Restore language after OAuth redirect
+    const savedLang = localStorage.getItem('i18nextLng');
+    if (savedLang && i18n.language !== savedLang) {
+      i18n.changeLanguage(savedLang);
+    }
+  }, [i18n]);
 
   useEffect(() => {
     // Redirect if not authenticated or already has a manager profile
