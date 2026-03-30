@@ -1,29 +1,19 @@
 
 
-## Fix: League not visible after joining
+## Problème
 
-### Root cause
-In `JoinLeagueDialog.tsx`, after a successful join (both by code and by clicking), only `refetch()` on the `user-leagues` query key is called. The `LeagueContext` uses a separate query key (`user-leagues-for-context`) with a 5-minute stale time that is never invalidated. This means the context may still think the user has no leagues, and the dashboard may render stale data.
+Le `NavLink` applique `bg-white/15 text-white` quand la route est active, mais ces styles sont sur le `<a>` intérieur et sont écrasés par les styles du `SidebarMenuButton` parent. La surbrillance n'est donc pas visible.
 
-### Fix — `src/components/leagues/JoinLeagueDialog.tsx`
+## Solution
 
-1. Import `useQueryClient` from `@tanstack/react-query`
-2. After `await refetch()`, also invalidate `user-leagues-for-context`:
-   ```ts
-   await refetch();
-   queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-   ```
-3. Apply this in both `handleJoinLeague` (public league join) and `handleJoinByCode` (invite code join)
+Utiliser `useLocation` pour détecter manuellement la route active et appliquer des styles de surbrillance directement sur le `SidebarMenuButton`, avec un contraste plus fort.
 
-### Also fix — `src/pages/JoinLeaguePage.tsx`
+### Changements dans `src/components/layout/AppSidebar.tsx`
 
-The `/join?token=...` page flow does NOT invalidate any queries at all before redirecting. Add query invalidation for both keys before the redirect timeout:
-```ts
-queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
-queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-```
-
-### Summary
-- 2 files modified
-- Both join paths (dialog + URL) will now properly refresh the leagues cache so the dashboard shows the newly joined league immediately
+1. Importer `useLocation` depuis `react-router-dom`
+2. Récupérer `location.pathname` pour comparer avec chaque `item.href`
+3. Appliquer conditionnellement sur le `SidebarMenuButton` un style plus visible quand l'item est actif :
+   - Actif : `bg-white/20 text-white font-semibold border-l-2 border-white`
+   - Inactif : `text-white/80 hover:bg-white/10 hover:text-white` (inchangé)
+4. Même logique pour le lien Super Admin
 
