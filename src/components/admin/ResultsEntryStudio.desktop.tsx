@@ -14,6 +14,9 @@ import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, 
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
 import { usePcsImport } from "@/hooks/usePcsImport";
+import { useScoringRules } from "@/hooks/useScoringRules";
+import { useResultRows } from "@/hooks/useResultRows";
+import type { ResultStatut } from "@/hooks/useResultRows";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
@@ -44,7 +47,7 @@ type CourseData = {
 };
 
 type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif" | "Porteur Leader" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
-type ResultStatut = "finished" | "dnf" | "dns" | "dsq";
+type ResultStatut_Local = "finished" | "dnf" | "dns" | "dsq";
 type JerseyType = 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif';
 
 type JerseyHolders = {
@@ -60,10 +63,9 @@ type ResultRow = {
   coureur_id: string | null;
   coureur_nom: string | null;
   coureur_equipe?: string | null;
-  statut: ResultStatut;
+  statut: ResultStatut_Local;
   points: number;
   grid_version?: string;
-  // TTT specific fields
   equipe_id?: string | null;
   is_expanded?: boolean;
   team_riders?: Array<{
@@ -178,52 +180,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
   const allStagesCompleted = !isOneDay && (stageCompletion?.etapes_saisies ?? 0) >= course.nb_etapes;
 
-  // Scoring rules query using normalized views
-  const { data: scoringRules } = useQuery({
-    queryKey: ["scoring-rules-studio", course.course_id, classementType],
-    queryFn: async () => {
-      // 1. Récupérer la saison de la course
-      const { data: phaseData, error: phaseError } = await supabase
-        .from('phases')
-        .select('saison_id')
-        .eq('id', course.phase_id)
-        .single();
-
-      if (phaseError || !phaseData) {
-        console.error('Error fetching phase:', phaseError);
-        return [];
-      }
-
-      // 2. Mapper le type de classement
-      const typeMap: Record<string, string> = {
-        Etape: "Etape",
-        General: "General",
-        Points: "Points",
-        Montagne: "Montagne",
-        Jeune: "Jeune",
-        Combatif: "Combatif",
-      };
-      const typeClassementValue = typeMap[classementType] || classementType;
-
-      // 3. Récupérer les barèmes directement depuis scoring_rules_saisons
-      const { data: rulesData, error: rulesError } = await supabase
-        .from("scoring_rules_saisons")
-        .select("place, points")
-        .eq("saison_id", phaseData.saison_id)
-        .eq("categorie", course.categorie)
-        .eq("type_classement", typeClassementValue as any)
-        .order("place");
-
-      if (rulesError) {
-        console.error('Error fetching scoring rules:', rulesError);
-        return [];
-      }
-
-      return rulesData || [];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes - scoring rules rarely change
-    gcTime: 10 * 60 * 1000,   // 10 minutes in cache
-  });
+  // Scoring rules - extracted to hook
+  const { scoringRules } = useScoringRules(course.course_id, course.phase_id, course.categorie, classementType);
 
   // Load saison_id on mount
   useEffect(() => {
