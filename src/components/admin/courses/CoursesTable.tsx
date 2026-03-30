@@ -160,8 +160,8 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
         </div>
       )}
 
-      <Card>
-        <Table>
+      <Card className="overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <TableHead 

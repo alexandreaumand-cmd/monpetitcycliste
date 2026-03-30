@@ -407,7 +407,7 @@ export const PointsLedgerTable = () => {
   // Mobile view
   if (isMobile) {
     return (
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-0">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <Card>

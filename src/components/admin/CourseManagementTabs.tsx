@@ -7,11 +7,11 @@ import { RaceResultsTable } from "./RaceResultsTable";
 export const CourseManagementTabs = () => {
   return (
     <Tabs defaultValue="results" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="results">📝 Résultats</TabsTrigger>
-        <TabsTrigger value="points">🧮 Recalcul Points</TabsTrigger>
-        <TabsTrigger value="reset">🗑️ Reset Résultats</TabsTrigger>
-        <TabsTrigger value="database">🗄️ Base de données</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsTrigger value="results">📝 <span className="hidden sm:inline">Résultats</span><span className="sm:hidden">Résult.</span></TabsTrigger>
+        <TabsTrigger value="points">🧮 <span className="hidden sm:inline">Recalcul Points</span><span className="sm:hidden">Points</span></TabsTrigger>
+        <TabsTrigger value="reset">🗑️ <span className="hidden sm:inline">Reset Résultats</span><span className="sm:hidden">Reset</span></TabsTrigger>
+        <TabsTrigger value="database">🗄️ <span className="hidden sm:inline">Base de données</span><span className="sm:hidden">BDD</span></TabsTrigger>
       </TabsList>
 
       <TabsContent value="results" className="space-y-6">

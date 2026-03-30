@@ -357,10 +357,10 @@ export default function UsersManagementPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Gestion des utilisateurs</h1>
-          <p className="text-muted-foreground">Gérez les rôles, permissions et accès des utilisateurs</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestion des utilisateurs</h1>
+          <p className="text-sm text-muted-foreground">Gérez les rôles, permissions et accès des utilisateurs</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -449,7 +449,7 @@ export default function UsersManagementPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid gap-3 grid-cols-3 md:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -513,7 +513,7 @@ export default function UsersManagementPage() {
           <CardDescription>Filtrez et gérez les comptes utilisateurs</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="flex-1">
               <Input
                 placeholder="Rechercher par email ou nom..."
@@ -522,7 +522,7 @@ export default function UsersManagementPage() {
               />
             </div>
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -544,16 +544,16 @@ export default function UsersManagementPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <table className="w-full">
+            <div className="rounded-md border overflow-x-auto">
+              <table className="w-full min-w-[600px]">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Manager</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Activité</th>
+                    <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Ligues</th>
+                    <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
                       onClick={handleSortByLastConnection}
@@ -595,7 +595,7 @@ export default function UsersManagementPage() {
                             <Badge variant="outline">Utilisateur</Badge>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="hidden sm:table-cell px-4 py-3 text-sm">
                           <HoverCard>
                             <HoverCardTrigger asChild>
                               <div className="flex flex-col gap-1 cursor-pointer">
@@ -630,7 +630,7 @@ export default function UsersManagementPage() {
                             </HoverCardContent>
                           </HoverCard>
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="hidden sm:table-cell px-4 py-3 text-sm">
                           <HoverCard>
                             <HoverCardTrigger asChild>
                               <div className="flex flex-col gap-1 cursor-pointer">
