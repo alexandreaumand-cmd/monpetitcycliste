@@ -30,11 +30,14 @@ const CompleteProfile = () => {
   }, [i18n]);
 
   useEffect(() => {
-    // Redirect if not authenticated or already has a manager profile
+    // Check session and redirect accordingly
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        navigate("/auth");
+        // Don't redirect if URL has token hash (email confirmation landing)
+        if (!window.location.hash.includes('access_token')) {
+          navigate("/auth");
+        }
         return;
       }
       const { data: manager } = await supabase
@@ -46,7 +49,25 @@ const CompleteProfile = () => {
         navigate(nextUrl);
       }
     };
+
+    // Listen for auth state changes (handles email confirmation token in hash)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: manager } = await supabase
+          .from('managers')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (manager) {
+          navigate(nextUrl);
+        }
+        // Otherwise stay on page to complete profile
+      }
+    });
+
     check();
+
+    return () => subscription.unsubscribe();
   }, [navigate, nextUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
