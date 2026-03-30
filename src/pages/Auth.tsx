@@ -137,6 +137,9 @@ const Auth = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}${nextUrl}`,
+          data: {
+            preferred_language: i18n.language?.startsWith('fr') ? 'fr' : 'en',
+          },
         },
       });
 
