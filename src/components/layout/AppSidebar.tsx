@@ -125,7 +125,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                           <NavLink
                             to={buildNavUrl("/dashboard/admin")}
                             className={({ isActive }) =>
-                              isActive ? "bg-white/15 text-white" : ""
+                              isActive ? "!bg-bordure-gold !text-secondary font-bold" : ""
                             }
                           >
                             <Settings className="h-4 w-4" />
