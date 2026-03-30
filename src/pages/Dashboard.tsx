@@ -101,6 +101,10 @@ const Dashboard = () => {
     return <LoadingSpinner />;
   }
 
+  const onboardingOverlay = showOnboarding ? (
+    <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+  ) : null;
+
   // SuperAdmin layout (isolé)
   if (isSuperAdminRoute && isSuperAdmin) {
     return (
