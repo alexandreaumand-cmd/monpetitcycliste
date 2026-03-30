@@ -155,7 +155,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Shield className="h-4 w-4" />
-                            {!isCollapsed && <span>{t('navigation.superAdmin')}</span>}
+                            {!isCollapsed && <span>{t('navigation:superAdmin')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
