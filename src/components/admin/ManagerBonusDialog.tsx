@@ -145,7 +145,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
       if (error) throw error;
 
       // Refresh materialized standings views
-      await supabase.rpc("refresh_standings_views").then(({ error: refreshErr }) => {
+      await supabase.rpc("refresh_standings_views" as any).then(({ error: refreshErr }) => {
         if (refreshErr) console.error('Failed to refresh standings views:', refreshErr);
       });
 
