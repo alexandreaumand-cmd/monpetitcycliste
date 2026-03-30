@@ -1,66 +1,36 @@
 
 
-## Optimisation mobile des pages Super Admin
+## Diagnostic : le classement chronologie ne fonctionne plus en Phase 2
 
-### Probleme
+### Cause racine identifiee
 
-Les pages Super Admin utilisent des composants desktop (tables HTML, TabsList en `grid-cols-4`, grids `md:grid-cols-3`) qui debordent ou sont illisibles sur un ecran de 393px. Le padding `p-4` du wrapper mobile s'ajoute au padding interne des composants, gaspillant de l'espace.
+Le graphique chronologique appelle l'edge function `get-cumulative-points-series` qui charge les donnees de `race_results` et `points_ledger` pour construire la courbe cumulative. 
 
-### Changements
+**Le probleme est un depassement de la limite de 1000 lignes par requete :**
 
-**1. `src/pages/SuperAdminPage.mobile.tsx`** — Reduire le padding du wrapper
-- `p-4` → `p-2` pour le conteneur principal des routes
-- Reduire `pb-20` → `pb-16`
+- **Phase 1 seule** : ~1759 points_ledger + ~1500 race_results → certaines queries tenaient dans la limite
+- **Phase 1 + Phase 2 (mode saison/global)** : ~2101 points_ledger + ~2100 race_results → **les queries sont tronquees a 1000 lignes**
 
-**2. `src/components/admin/CourseManagementTabs.tsx`** — Tabs responsives
-- `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
-- Raccourcir les labels mobile : masquer le texte avec `hidden sm:inline` et garder uniquement les emojis sur mobile
+La version deployee en production (avant le blocage de publication) n'utilise probablement pas la pagination sur toutes les queries. Resultat : le `dateIndex` est incomplet, la plupart des points sont "skipped" car ils n'ont pas de date de classement correspondante, et le graphique affiche des donnees vides ou incorrectes.
 
-**3. `src/components/admin/DataManagementTabs.tsx`** — Meme traitement
-- `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
-- Labels courts sur mobile (emojis seuls)
+**De plus**, dans le code actuel du repo, il y a un **bug critique a la ligne 227** : `pointsData` est reference mais jamais defini — la query `points_ledger` est construite (lignes 206-224) mais jamais executee avec `fetchAllRows`. Il manque :
 
-**4. `src/pages/admin/SuperAdminBonusPage.tsx`** — Filtres et tabs responsifs
-- Les 3 filtres `grid-cols-1 md:grid-cols-3` sont deja OK
-- TabsList `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
-- Le `CardContent pt-6` → `pt-4` pour reduire l'espace
+```typescript
+const pointsData = await fetchAllRows<any>(query);
+```
 
-**5. `src/pages/admin/SuperAdminLeaguesPage.tsx`** — Reduire padding et espacement
-- `space-y-6` → `space-y-4` globalement
-- Le PageHeader est deja OK avec `p-3 sm:p-0`
+entre les lignes 225 et 227.
 
-**6. `src/components/admin/leagues/SuperAdminLeaguesTable.tsx`** — Table scrollable
-- Ajouter `overflow-x-auto` autour de la table
-- Sur mobile, masquer les colonnes moins essentielles (owner email, invite count) avec `hidden sm:table-cell`
+### Plan de correction
 
-**7. `src/pages/admin/UsersManagementPage.tsx`** — Table scrollable + colonnes cachees
-- Ajouter `overflow-x-auto` autour de la table
-- Masquer les colonnes secondaires (date inscription, dernier login) avec `hidden sm:table-cell` sur mobile
-- Reduire la taille des badges et boutons d'action
+**Fichier : `supabase/functions/get-cumulative-points-series/index.ts`**
 
-**8. `src/components/admin/PointsLedgerTable.tsx`** — Table scrollable
-- Ajouter `overflow-x-auto` autour de la table
-- Masquer colonnes secondaires sur mobile
+1. **Ajouter l'execution de la query points_ledger** — inserer `const pointsData = await fetchAllRows<any>(query);` avant la ligne 227
+2. **Verifier que toutes les queries utilisent `fetchAllRows`** pour bypasser la limite de 1000 lignes (points_ledger, race_results, rosters, bonus — la plupart sont deja paginee, mais confirmer)
+3. **Ajouter un log** du nombre de points_ledger charges pour faciliter le debug futur
 
-**9. `src/components/admin/BaremesManager.tsx`** — Meme pattern de table scrollable
+Ce fix sera deploye automatiquement sur l'environnement de test. Pour la production, il faudra que le probleme de publication (restore point bloque) soit resolu par le support Lovable.
 
-**10. `src/components/admin/CoureursManager.tsx`** et `CoursesManager.tsx`** — Tables scrollables
-- Ajouter `overflow-x-auto`
-- Masquer colonnes non essentielles sur mobile
-
-### Approche technique
-
-Le pattern est repetitif : pour chaque composant contenant une `<Table>`, on enveloppe dans `<div className="overflow-x-auto -mx-2 px-2">` et on ajoute `hidden sm:table-cell` aux colonnes secondaires. Pour les `TabsList`, on passe en `grid-cols-2 sm:grid-cols-4` avec labels raccourcis.
-
-### Fichiers impactes (10)
-- `src/pages/SuperAdminPage.mobile.tsx`
-- `src/components/admin/CourseManagementTabs.tsx`
-- `src/components/admin/DataManagementTabs.tsx`
-- `src/pages/admin/SuperAdminBonusPage.tsx`
-- `src/pages/admin/SuperAdminLeaguesPage.tsx`
-- `src/components/admin/leagues/SuperAdminLeaguesTable.tsx`
-- `src/pages/admin/UsersManagementPage.tsx`
-- `src/components/admin/PointsLedgerTable.tsx`
-- `src/components/admin/CoureursManager.tsx`
-- `src/components/admin/CoursesManager.tsx`
+### Fichier impacte
+- `supabase/functions/get-cumulative-points-series/index.ts`
 
