@@ -1,32 +1,32 @@
 
 
-## Améliorer la visibilité de l'onglet actif dans la sidebar
+## Fix: Sidebar navigation labels are invisible
 
-### Problème
-L'état actif utilise `bg-white/15 text-white` — un fond blanc à 15% d'opacité sur fond vert foncé, quasi invisible.
+### Root cause
+The `navItemsConfig` uses keys like `home`, `standings`, `teams` with `t('navigation.${key}')`, but the translation files only have these under `navigation.header.*` (e.g. `header.rankings`, `header.teams`). The `t()` calls return empty strings, so no text appears.
 
 ### Solution
-Remplacer le style actif par un contraste fort : fond doré (`bg-bordure-gold`) avec texte foncé (`text-secondary font-bold`), plus un bord gauche accentué. Cela crée une surbrillance immédiatement identifiable.
+Add the missing top-level keys to both `fr/navigation.json` and `en/navigation.json` to match the sidebar config keys:
 
-### Changement — `src/components/layout/AppSidebar.tsx`
+**Keys to add** (at root level of the navigation namespace):
+| Config key | FR label | EN label |
+|---|---|---|
+| home | Accueil | Home |
+| standings | Classement | Rankings |
+| teams | Mon Équipe | My Team |
+| results | Résultats | Results |
+| races | Courses | Races |
+| startlist | Startlist | Startlist |
+| statistics | Statistiques | Statistics |
+| auctions | Enchères | Auctions |
+| live | Live | Live |
+| arena | Arène | Arena |
+| adminLeague | Admin Ligue | League Admin |
+| superAdmin | Super Admin | Super Admin |
 
-**Ligne 98-102** : Modifier les classes du `SidebarMenuButton` et du `NavLink` :
+### Files modified
+- `src/i18n/locales/fr/navigation.json` — add 12 keys
+- `src/i18n/locales/en/navigation.json` — add 12 keys
 
-```tsx
-<SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-  <NavLink
-    to={buildNavUrl(item.href)}
-    className={({ isActive }) =>
-      isActive 
-        ? "bg-bordure-gold text-secondary font-bold rounded-md shadow-sm" 
-        : ""
-    }
-  >
-```
-
-Appliquer le même changement aux liens Admin Ligue (ligne ~130) et Super Admin (ligne ~152).
-
-### Résultat
-- Onglet inactif : texte blanc semi-transparent sur fond vert (inchangé)
-- Onglet actif : fond doré avec texte foncé — contraste fort et immédiat
+No code changes needed in `AppSidebar.tsx` itself — the active styling with gold background is already correct, it just needs the labels to resolve.
 
