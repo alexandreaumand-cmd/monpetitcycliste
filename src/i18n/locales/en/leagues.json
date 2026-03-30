@@ -125,7 +125,16 @@
     "noCourses": "No races found",
     "all": "All",
     "stageRace": "Stage races",
-    "oneDay": "One-day"
+    "oneDay": "One-day",
+    "filterTooltipAll": "Show all races",
+    "filterTooltipStageRace": "Stage races (e.g. Tour de France)",
+    "filterTooltipOneDay": "One-day races (e.g. classics)",
+    "filterTooltipWT": "World Tour — highest level UCI races",
+    "filterTooltipPro": ".Pro category races",
+    "filterTooltip1": ".1 category races",
+    "filterTooltipOthers": "Other race categories",
+    "sortTooltipDate": "Sort by start date",
+    "sortTooltipPoints": "Sort by theoretical points (descending)"
   },
   "visibility": {
     "public": "Public",
