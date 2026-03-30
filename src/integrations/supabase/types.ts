@@ -3558,21 +3558,6 @@ export type Database = {
           },
         ]
       }
-      onboarding_progress: {
-        Row: {
-          completed_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       phase_auction_schedule: {
         Row: {
           auction_opens_at: string
