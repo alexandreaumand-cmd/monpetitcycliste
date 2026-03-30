@@ -123,13 +123,12 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                          <NavLink
-                            to={buildNavUrl("/dashboard/super-admin")}
-                            className={({ isActive }) =>
-                              isActive ? "bg-white/15 text-white" : ""
-                            }
-                          >
+                        <SidebarMenuButton asChild className={
+                          location.pathname.startsWith("/dashboard/super-admin")
+                            ? "bg-white/20 text-white font-semibold border-l-2 border-white"
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }>
+                          <NavLink to={buildNavUrl("/dashboard/super-admin")}>
                             <Shield className="h-4 w-4" />
                             {!isCollapsed && <span>{t('navigation.superAdmin')}</span>}
                           </NavLink>
