@@ -28,6 +28,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   const { t: tDash } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
+  const queryClient = useQueryClient();
   const { leagues: myLeagues, refetch } = useUserLeagues();
   const [joiningLeagueId, setJoiningLeagueId] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState('');
