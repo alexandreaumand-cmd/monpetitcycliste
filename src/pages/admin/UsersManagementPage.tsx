@@ -513,7 +513,7 @@ export default function UsersManagementPage() {
           <CardDescription>Filtrez et gérez les comptes utilisateurs</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="flex-1">
               <Input
                 placeholder="Rechercher par email ou nom..."
