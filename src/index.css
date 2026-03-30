@@ -54,9 +54,9 @@
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 38 58% 50%;
     --sidebar-primary-foreground: 150 55% 24%;
-    --sidebar-accent: 0 0% 100% / 0.15;
+    --sidebar-accent: 150 55% 30%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100% / 0.1;
+    --sidebar-border: 150 40% 32%;
     --sidebar-ring: 38 58% 50%;
 
     /* Gradients La Bordure */
