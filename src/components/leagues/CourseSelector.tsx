@@ -213,7 +213,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                     {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent><p>{t(`settings.${tooltipKey}`)}</p></TooltipContent>
+                <TooltipContent className="z-[100]"><p>{t(`settings.${tooltipKey}`)}</p></TooltipContent>
               </Tooltip>
             );
           })}
