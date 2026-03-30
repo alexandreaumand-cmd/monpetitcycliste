@@ -217,6 +217,19 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Detect user language from metadata
+  let lang = 'fr' // default to French
+  try {
+    const { data: userData } = await supabase.auth.admin.getUserById(
+      payload.data.user_id || ''
+    )
+    if (userData?.user?.user_metadata?.preferred_language) {
+      lang = userData.user.user_metadata.preferred_language === 'en' ? 'en' : 'fr'
+    }
+  } catch (e) {
+    console.log('Could not fetch user language, defaulting to fr', e)
+  }
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
@@ -226,6 +239,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
+    lang,
   }
 
   // Render React Email to HTML and plain text
