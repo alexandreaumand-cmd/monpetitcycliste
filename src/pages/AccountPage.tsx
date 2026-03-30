@@ -420,6 +420,35 @@ export default function AccountPage() {
         </CardContent>
       </Card>
 
+      {/* Section Tutoriel */}
+      <Card className="mb-4 md:mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            {t('onboarding.title')}
+          </CardTitle>
+          <CardDescription>
+            {t('onboarding.description')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const { data: { user: u } } = await supabase.auth.getUser();
+              if (u) {
+                await supabase.from('onboarding_progress').delete().eq('user_id', u.id);
+                queryClient.invalidateQueries({ queryKey: ['onboarding-progress'] });
+                toast.success(t('onboarding.resetSuccess'));
+              }
+            }}
+          >
+            <BookOpen className="mr-2 h-4 w-4" />
+            {t('onboarding.replayButton')}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Section Notifications Push */}
       <NotificationSettings />
       
