@@ -148,11 +148,11 @@ Deno.serve(async (req) => {
         run_type: "unknown", target_date: new Date().toISOString().split("T")[0],
         project_ref: supabaseUrl.replace("https://", "").split(".")[0],
         leagues_processed: 0, leagues_sent: 0, status: "error",
-        error_message: error.message, auth_method: "unknown",
+        error_message: (error as Error).message, auth_method: "unknown",
       });
     } catch { /* ignore audit error */ }
 
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
