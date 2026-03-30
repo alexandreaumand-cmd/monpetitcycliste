@@ -15,8 +15,8 @@ const CompleteProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [nom, setNom] = useState("");
-  const [sponsor, setSponsor] = useState("");
+  const [nom, setNom] = useState(() => localStorage.getItem('pendingManagerNom') || "");
+  const [sponsor, setSponsor] = useState(() => localStorage.getItem('pendingManagerSponsor') || "");
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get('next') || '/dashboard/home';
