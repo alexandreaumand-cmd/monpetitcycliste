@@ -11,6 +11,7 @@ export function JoinLeaguePage() {
   const { t } = useTranslation('leagues');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const token = searchParams.get("token");
   
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
