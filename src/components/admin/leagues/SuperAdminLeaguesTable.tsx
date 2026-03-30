@@ -241,7 +241,7 @@ export function SuperAdminLeaguesTable() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge variant="outline">{gameModeLabel(league.game_mode)}</Badge>
                       </TableCell>
                       <TableCell>
