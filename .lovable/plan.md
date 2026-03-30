@@ -1,29 +1,26 @@
 
 
-## Fix: League not visible after joining
+## Surbrillance de l'onglet actif dans la sidebar
 
-### Root cause
-In `JoinLeagueDialog.tsx`, after a successful join (both by code and by clicking), only `refetch()` on the `user-leagues` query key is called. The `LeagueContext` uses a separate query key (`user-leagues-for-context`) with a 5-minute stale time that is never invalidated. This means the context may still think the user has no leagues, and the dashboard may render stale data.
+### Probleme
+L'onglet actif utilise `bg-white/15` (15% d'opacite blanc) ce qui est tres subtil sur le fond vert fonce (`bg-secondary`). La surbrillance est quasi invisible.
 
-### Fix — `src/components/leagues/JoinLeagueDialog.tsx`
+### Solution
+Renforcer le style actif dans `src/components/layout/AppSidebar.tsx` pour rendre l'onglet selectionne clairement visible :
 
-1. Import `useQueryClient` from `@tanstack/react-query`
-2. After `await refetch()`, also invalidate `user-leagues-for-context`:
-   ```ts
-   await refetch();
-   queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-   ```
-3. Apply this in both `handleJoinLeague` (public league join) and `handleJoinByCode` (invite code join)
+- Remplacer `bg-white/15 text-white` par un style plus marque : `bg-white/20 text-white font-semibold` avec une bordure gauche doree (`border-l-2 border-bordure-gold`) pour un repere visuel fort
+- Appliquer ce changement aux 3 endroits ou `NavLink` est utilise (nav items, admin ligue, super admin)
+- Ajouter `rounded-md` pour un rendu propre
 
-### Also fix — `src/pages/JoinLeaguePage.tsx`
+### Changement — 1 fichier
 
-The `/join?token=...` page flow does NOT invalidate any queries at all before redirecting. Add query invalidation for both keys before the redirect timeout:
-```ts
-queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
-queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+**`src/components/layout/AppSidebar.tsx`** — modifier les className des `NavLink` (lignes 101-103, 127-129, 153-155) :
+
+```tsx
+// Avant
+isActive ? "bg-white/15 text-white" : ""
+
+// Apres  
+isActive ? "bg-white/20 text-white font-semibold border-l-2 border-bordure-gold rounded-md" : ""
 ```
-
-### Summary
-- 2 files modified
-- Both join paths (dialog + URL) will now properly refresh the leagues cache so the dashboard shows the newly joined league immediately
 
