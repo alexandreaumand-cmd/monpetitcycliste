@@ -1,46 +1,30 @@
 
 
-## Amélioration de la landing page — Modes de jeu et barèmes
+## Ajouter les barèmes 2.Pro et 1.1 à la section preview de la landing page
 
-### Constat
+### Contexte
 
-La landing page (`LandingPage.tsx`) n'utilise pas les composants `LeagueTypesSection` et `ScoringSection` qui existent déjà mais ne sont pas intégrés. De plus, `LeagueTypesSection` affiche des modes obsolètes (Sprint/Grand Tour/Season) au lieu des vrais modes du jeu (5 Phases / À la course). Il n'y a aucun exemple de barème de points.
+Actuellement, `BaremePreviewSection` ne montre que le barème Grand Tour (CG, Étapes, Maillots). L'utilisateur veut illustrer les différences avec des catégories inférieures.
 
-### Plan
+### Données à ajouter
 
-**1. Refondre `LeagueTypesSection.tsx`** — Remplacer les 3 modes fictifs par les 2 vrais modes de jeu :
-- **Mode 5 Phases** : budget 2200, 30 coureurs, enchères par phase, variante WT
-- **Mode À la course** : budget dynamique (650/800/1100), 8/10/15 coureurs, enchère unique
-- Design en 2 colonnes avec les specs clés (budget, effectif, enchères)
-- Reprendre le style épuré de la page Rules (cartes crème avec bordure dorée/pink)
+**2.Pro (Tour par étapes)** — top 5 :
+- CG : 250, 200, 150, 120, 100
+- Étape : 150, 125, 100, 75, 60
 
-**2. Créer un nouveau composant `BaremePreviewSection.tsx`** — Exemple de barème GT :
-- Titre "Comment ça marque ?" avec sous-titre
-- Un bloc visuel montrant le barème Grand Tour en exemple :
-  - **Classement général** : top 5 (1600, 1280, 1040, 800, 600)
-  - **Étape** : top 5 (300, 240, 195, 150, 120)
-  - **Maillots** : Leader 20pts/j, Vert/GPM 12pts/j, Jeune 6pts/j
-- Fond vert foncé (comme ScoringSection) pour contraster avec le reste
-- Lien "Voir tous les barèmes" vers `/rules`
+**1.1 (Course d'un jour)** — top 5 :
+- Classement : 100, 80, 65, 50, 40
 
-**3. Intégrer dans `LandingPage.tsx`** — Ajouter les 2 sections après `HowItWorksSection` :
-```
-HeroSection
-GameOverviewSection
-HowItWorksSection
-→ LeagueTypesSection (modes de jeu)
-→ BaremePreviewSection (exemple GT)
-AuctionShowcase
-SocialProofSection
-...
-```
+### Design
 
-**4. Traductions** — Ajouter les clés FR/EN dans `home.json` pour les 2 nouvelles sections (titres, descriptions des modes, labels barème).
+Transformer la section en un système d'onglets (Tabs) avec 3 catégories : **Grand Tour**, **2.Pro**, **1.1**. Chaque onglet affiche ses propres données dans le même layout de cartes existant. La catégorie 1.1 étant une course d'un jour, elle n'aura que la carte "Classement" (pas d'étapes ni de maillots).
 
-### Fichiers impactés
-- `src/components/landing/LeagueTypesSection.tsx` — refonte complète
-- `src/components/landing/BaremePreviewSection.tsx` — nouveau
-- `src/pages/LandingPage.tsx` — ajout des 2 sections
-- `src/i18n/locales/fr/home.json` — nouvelles clés
-- `src/i18n/locales/en/home.json` — nouvelles clés
+Cela permet de visualiser immédiatement la différence d'échelle entre les catégories UCI.
 
+### Changements
+
+**`src/components/landing/BaremePreviewSection.tsx`** :
+- Ajouter un état `activeTab` avec 3 options (GT / 2.Pro / 1.1)
+- Créer les données pour chaque catégorie
+- Afficher des boutons de sélection (pills/tabs) au-dessus de la grille
+- Adapter le nombre de cartes selon la catégorie (3 cartes pour GT/
