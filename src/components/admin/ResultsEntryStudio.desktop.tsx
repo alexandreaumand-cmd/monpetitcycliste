@@ -63,10 +63,9 @@ type ResultRow = {
   coureur_id: string | null;
   coureur_nom: string | null;
   coureur_equipe?: string | null;
-  statut: ResultStatut;
+  statut: ResultStatut_Local;
   points: number;
   grid_version?: string;
-  // TTT specific fields
   equipe_id?: string | null;
   is_expanded?: boolean;
   team_riders?: Array<{
