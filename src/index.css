@@ -102,6 +102,15 @@
     --input: 150 25% 22%;
     --ring: 38 58% 50%;
 
+    --sidebar-background: 150 40% 18%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 38 58% 50%;
+    --sidebar-primary-foreground: 150 40% 18%;
+    --sidebar-accent: 0 0% 100% / 0.15;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 100% / 0.1;
+    --sidebar-ring: 38 58% 50%;
+
     --gradient-primary: linear-gradient(135deg, hsl(38 58% 42%), hsl(38 58% 52%));
     --gradient-hero: linear-gradient(135deg, hsl(150 40% 5%) 0%, hsl(150 35% 12%) 50%, hsl(38 58% 50%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(38 58% 42%), hsl(343 52% 70%));
