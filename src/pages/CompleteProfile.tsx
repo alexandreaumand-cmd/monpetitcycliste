@@ -71,6 +71,10 @@ const CompleteProfile = () => {
 
       if (error) throw error;
 
+      // Clean up pending data
+      localStorage.removeItem('pendingManagerNom');
+      localStorage.removeItem('pendingManagerSponsor');
+
       toast({
         title: t('completeProfile.success', 'Profil créé !'),
       });
