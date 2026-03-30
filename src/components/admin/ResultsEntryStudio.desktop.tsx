@@ -47,7 +47,7 @@ type CourseData = {
 };
 
 type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif" | "Porteur Leader" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
-type ResultStatut = "finished" | "dnf" | "dns" | "dsq";
+type ResultStatut_Local = "finished" | "dnf" | "dns" | "dsq";
 type JerseyType = 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif';
 
 type JerseyHolders = {
