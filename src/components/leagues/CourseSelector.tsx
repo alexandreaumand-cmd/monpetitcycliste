@@ -198,7 +198,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 {t('settings.all', 'Tous')}
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.filterTooltipAll')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.filterTooltipAll')}</p></TooltipContent>
           </Tooltip>
           {types.map(type => {
             const tooltipKey = type === 'stage_race' ? 'filterTooltipStageRace' : 'filterTooltipOneDay';
@@ -213,7 +213,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                     {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent><p>{t(`settings.${tooltipKey}`)}</p></TooltipContent>
+                <TooltipContent className="z-[100]"><p>{t(`settings.${tooltipKey}`)}</p></TooltipContent>
               </Tooltip>
             );
           })}
@@ -231,7 +231,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                     {cat}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent><p>{t(`settings.${tooltipKeyMap[cat]}`)}</p></TooltipContent>
+                <TooltipContent className="z-[100]"><p>{t(`settings.${tooltipKeyMap[cat]}`)}</p></TooltipContent>
               </Tooltip>
             );
           })}
@@ -249,7 +249,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 <Calendar className="h-3 w-3" /> Date
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.sortTooltipDate')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.sortTooltipDate')}</p></TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -261,7 +261,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 <Trophy className="h-3 w-3" /> Points
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.sortTooltipPoints')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.sortTooltipPoints')}</p></TooltipContent>
           </Tooltip>
         </div>
       </TooltipProvider>
