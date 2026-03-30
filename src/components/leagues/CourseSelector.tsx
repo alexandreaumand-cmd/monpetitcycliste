@@ -261,7 +261,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 <Trophy className="h-3 w-3" /> Points
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.sortTooltipPoints')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.sortTooltipPoints')}</p></TooltipContent>
           </Tooltip>
         </div>
       </TooltipProvider>
