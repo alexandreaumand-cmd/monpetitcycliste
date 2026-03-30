@@ -630,7 +630,7 @@ export default function UsersManagementPage() {
                             </HoverCardContent>
                           </HoverCard>
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="hidden sm:table-cell px-4 py-3 text-sm">
                           <HoverCard>
                             <HoverCardTrigger asChild>
                               <div className="flex flex-col gap-1 cursor-pointer">
