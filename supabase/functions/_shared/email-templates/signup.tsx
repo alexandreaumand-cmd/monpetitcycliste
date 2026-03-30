@@ -20,42 +20,66 @@ interface SignupEmailProps {
   siteUrl: string
   recipient: string
   confirmationUrl: string
+  lang?: string
 }
 
 const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
+
+const i18n = {
+  fr: {
+    preview: 'Confirmez votre inscription — La Bordure',
+    heading: 'Bienvenue dans le peloton !',
+    thanks: 'Merci de vous être inscrit sur',
+    confirm: 'Confirmez votre adresse email ({email}) en cliquant sur le bouton ci-dessous :',
+    button: 'Confirmer mon email',
+    footer: "Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.",
+  },
+  en: {
+    preview: 'Confirm your signup — La Bordure',
+    heading: 'Welcome to the peloton!',
+    thanks: 'Thanks for signing up on',
+    confirm: 'Confirm your email address ({email}) by clicking the button below:',
+    button: 'Confirm my email',
+    footer: "If you didn't create an account, you can safely ignore this email.",
+  },
+}
 
 export const SignupEmail = ({
   siteName,
   siteUrl,
   recipient,
   confirmationUrl,
-}: SignupEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Confirmez votre inscription — La Bordure</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <div style={header}>
-          <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
-        </div>
-        <Heading style={h1}>Bienvenue dans le peloton !</Heading>
-        <Text style={text}>
-          Merci de vous être inscrit sur{' '}
-          <Link href={siteUrl} style={link}><strong>La Bordure</strong></Link> !
-        </Text>
-        <Text style={text}>
-          Confirmez votre adresse email ({recipient}) en cliquant sur le bouton ci-dessous :
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirmer mon email
-        </Button>
-        <Text style={footer}>
-          Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  lang = 'fr',
+}: SignupEmailProps) => {
+  const t = lang === 'en' ? i18n.en : i18n.fr
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <div style={header}>
+            <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
+          </div>
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text}>
+            {t.thanks}{' '}
+            <Link href={siteUrl} style={link}><strong>La Bordure</strong></Link> !
+          </Text>
+          <Text style={text}>
+            {t.confirm.replace('{email}', recipient)}
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            {t.button}
+          </Button>
+          <Text style={footer}>
+            {t.footer}
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default SignupEmail
 

@@ -17,38 +17,54 @@ import {
 interface RecoveryEmailProps {
   siteName: string
   confirmationUrl: string
+  lang?: string
 }
 
 const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
 
+const i18n = {
+  fr: {
+    preview: 'Réinitialisez votre mot de passe — La Bordure',
+    heading: 'Réinitialiser votre mot de passe',
+    body: 'Vous avez demandé à réinitialiser votre mot de passe sur La Bordure. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.',
+    button: 'Réinitialiser le mot de passe',
+    footer: "Si vous n'avez pas fait cette demande, ignorez simplement cet email. Votre mot de passe ne sera pas modifié.",
+  },
+  en: {
+    preview: 'Reset your password — La Bordure',
+    heading: 'Reset your password',
+    body: 'You requested a password reset on La Bordure. Click the button below to choose a new password.',
+    button: 'Reset password',
+    footer: "If you didn't make this request, simply ignore this email. Your password will not be changed.",
+  },
+}
+
 export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
-}: RecoveryEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Réinitialisez votre mot de passe — La Bordure</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <div style={header}>
-          <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
-        </div>
-        <Heading style={h1}>Réinitialiser votre mot de passe</Heading>
-        <Text style={text}>
-          Vous avez demandé à réinitialiser votre mot de passe sur La Bordure.
-          Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Réinitialiser le mot de passe
-        </Button>
-        <Text style={footer}>
-          Si vous n'avez pas fait cette demande, ignorez simplement cet email.
-          Votre mot de passe ne sera pas modifié.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  lang = 'fr',
+}: RecoveryEmailProps) => {
+  const t = lang === 'en' ? i18n.en : i18n.fr
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <div style={header}>
+            <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
+          </div>
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text}>{t.body}</Text>
+          <Button style={button} href={confirmationUrl}>
+            {t.button}
+          </Button>
+          <Text style={footer}>{t.footer}</Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default RecoveryEmail
 

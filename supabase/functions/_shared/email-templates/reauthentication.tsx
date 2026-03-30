@@ -15,30 +15,46 @@ import {
 
 interface ReauthenticationEmailProps {
   token: string
+  lang?: string
 }
 
 const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
 
-export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Votre code de vérification — La Bordure</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <div style={header}>
-          <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
-        </div>
-        <Heading style={h1}>Code de vérification</Heading>
-        <Text style={text}>Utilisez le code ci-dessous pour confirmer votre identité :</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          Ce code expire dans quelques minutes. Si vous n'avez pas fait cette demande,
-          vous pouvez ignorer cet email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+const i18n = {
+  fr: {
+    preview: 'Votre code de vérification — La Bordure',
+    heading: 'Code de vérification',
+    body: 'Utilisez le code ci-dessous pour confirmer votre identité :',
+    footer: "Ce code expire dans quelques minutes. Si vous n'avez pas fait cette demande, vous pouvez ignorer cet email.",
+  },
+  en: {
+    preview: 'Your verification code — La Bordure',
+    heading: 'Verification code',
+    body: 'Use the code below to confirm your identity:',
+    footer: "This code expires in a few minutes. If you didn't make this request, you can safely ignore this email.",
+  },
+}
+
+export const ReauthenticationEmail = ({ token, lang = 'fr' }: ReauthenticationEmailProps) => {
+  const t = lang === 'en' ? i18n.en : i18n.fr
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <div style={header}>
+            <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
+          </div>
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text}>{t.body}</Text>
+          <Text style={codeStyle}>{token}</Text>
+          <Text style={footer}>{t.footer}</Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default ReauthenticationEmail
 
