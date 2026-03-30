@@ -1056,11 +1056,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       
       await query3;
 
-      // Refresh materialized standings views
-      await supabase.rpc("refresh_standings_views").then(({ error }) => {
-        if (error) console.error('Failed to refresh standings views:', error);
-      });
-
       return { success: true };
     },
     onSuccess: () => {
