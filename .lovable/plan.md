@@ -1,29 +1,21 @@
 
 
-## Fix: League not visible after joining
+## Sidebar: onglet actif en surbrillance dorée
 
-### Root cause
-In `JoinLeagueDialog.tsx`, after a successful join (both by code and by clicking), only `refetch()` on the `user-leagues` query key is called. The `LeagueContext` uses a separate query key (`user-leagues-for-context`) with a 5-minute stale time that is never invalidated. This means the context may still think the user has no leagues, and the dashboard may render stale data.
+### Probleme
+L'onglet actif utilise `bg-white/15 text-white` — un fond blanc semi-transparent peu visible. Conformement au memory "desktop-sidebar-design", l'actif doit utiliser un fond doré avec texte sombre.
 
-### Fix — `src/components/leagues/JoinLeagueDialog.tsx`
+### Changement — `src/components/layout/AppSidebar.tsx`
 
-1. Import `useQueryClient` from `@tanstack/react-query`
-2. After `await refetch()`, also invalidate `user-leagues-for-context`:
-   ```ts
-   await refetch();
-   queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-   ```
-3. Apply this in both `handleJoinLeague` (public league join) and `handleJoinByCode` (invite code join)
+Remplacer le style actif sur les 3 `NavLink` (nav items, admin ligue, super admin) :
 
-### Also fix — `src/pages/JoinLeaguePage.tsx`
+**Avant :** `isActive ? "bg-white/15 text-white" : ""`
 
-The `/join?token=...` page flow does NOT invalidate any queries at all before redirecting. Add query invalidation for both keys before the redirect timeout:
-```ts
-queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
-queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-```
+**Après :** `isActive ? "!bg-bordure-gold !text-secondary font-bold" : ""`
 
-### Summary
-- 2 files modified
-- Both join paths (dialog + URL) will now properly refresh the leagues cache so the dashboard shows the newly joined league immediately
+Le `!` (important) est nécessaire pour surcharger les classes de `SidebarMenuButton`. Cela donne un fond doré (#C8963A) avec texte vert foncé, cohérent avec l'identité La Bordure.
+
+### Résultat
+- Onglet actif : fond doré, texte vert foncé, gras
+- Onglets inactifs : inchangés (texte blanc/80, hover blanc/10)
 
