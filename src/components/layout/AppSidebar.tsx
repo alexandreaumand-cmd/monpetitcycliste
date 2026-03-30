@@ -26,16 +26,16 @@ interface AppSidebarProps {
 }
 
 const navItemsConfig = [
-  { key: 'home', href: '/dashboard/home', icon: Home },
-  { key: 'standings', href: '/dashboard/classement', icon: BarChart3 },
-  { key: 'teams', href: '/dashboard/mon-equipe', icon: Users },
-  { key: 'results', href: '/dashboard/resultats', icon: BarChart3 },
-  { key: 'races', href: '/dashboard/courses', icon: Calendar },
-  { key: 'startlist', href: '/dashboard/startlist', icon: ListChecks },
-  { key: 'statistics', href: '/dashboard/statistiques', icon: LineChart },
-  { key: 'auctions', href: '/dashboard/encheres', icon: Trophy },
-  { key: 'live', href: '/dashboard/live', icon: Radio },
-  { key: 'arena', href: '/dashboard/arene', icon: Swords },
+  { key: 'home', href: '/dashboard/home', icon: Home, labelKey: 'navigation:home' },
+  { key: 'standings', href: '/dashboard/classement', icon: BarChart3, labelKey: 'navigation:standings' },
+  { key: 'teams', href: '/dashboard/mon-equipe', icon: Users, labelKey: 'navigation:teams' },
+  { key: 'results', href: '/dashboard/resultats', icon: BarChart3, labelKey: 'navigation:results' },
+  { key: 'races', href: '/dashboard/courses', icon: Calendar, labelKey: 'navigation:races' },
+  { key: 'startlist', href: '/dashboard/startlist', icon: ListChecks, labelKey: 'navigation:startlist' },
+  { key: 'statistics', href: '/dashboard/statistiques', icon: LineChart, labelKey: 'navigation:statistics' },
+  { key: 'auctions', href: '/dashboard/encheres', icon: Trophy, labelKey: 'navigation:auctions' },
+  { key: 'live', href: '/dashboard/live', icon: Radio, labelKey: 'navigation:live' },
+  { key: 'arena', href: '/dashboard/arene', icon: Swords, labelKey: 'navigation:arena' },
 ];
 
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {
@@ -57,7 +57,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
 
   const navItems = navItemsConfig.map(item => ({
     ...item,
-    label: t(`navigation.${item.key}`)
+    label: t(item.labelKey)
   }));
 
   return (
@@ -129,13 +129,13 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Settings className="h-4 w-4" />
-                            {!isCollapsed && <span>{t('navigation.adminLeague')}</span>}
+                            {!isCollapsed && <span>{t('navigation:adminLeague')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          {t('navigation.adminLeague')}
+                          {t('navigation:adminLeague')}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -155,13 +155,13 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Shield className="h-4 w-4" />
-                            {!isCollapsed && <span>{t('navigation.superAdmin')}</span>}
+                            {!isCollapsed && <span>{t('navigation:superAdmin')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          {t('navigation.superAdmin')}
+                          {t('navigation:superAdmin')}
                         </TooltipContent>
                       )}
                     </Tooltip>
