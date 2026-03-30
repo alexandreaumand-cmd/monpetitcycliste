@@ -44,6 +44,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const isCollapsed = state === "collapsed";
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
+  const location = useLocation();
   const { leagueId } = useLeague();
   const { roles, isLoading: rolesLoading } = useUserLeagues();
 
