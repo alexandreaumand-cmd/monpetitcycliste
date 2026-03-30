@@ -552,8 +552,8 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Manager</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Activité</th>
+                    <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Ligues</th>
+                    <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
                       onClick={handleSortByLastConnection}
