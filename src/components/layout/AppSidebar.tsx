@@ -1,5 +1,5 @@
 import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database, Swords, Radio } from "lucide-react";
-import { NavLink, useSearchParams } from "react-router-dom";
+import { NavLink, useSearchParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Sidebar,
