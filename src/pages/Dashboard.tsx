@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCurrentManager } from "@/hooks/useCurrentManager";
@@ -30,6 +31,7 @@ import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
 import LivePage from "./LivePage";
 import TeamStartlistMovements from "./TeamStartlistMovements";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -43,6 +45,29 @@ const Dashboard = () => {
   
   // Track user activity on all dashboard pages
   useActivityTracker();
+
+  // Onboarding wizard
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['onboarding-progress'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase
+        .from('onboarding_progress')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (!onboardingLoading && onboardingDone === false && manager) {
+      setShowOnboarding(true);
+    }
+  }, [onboardingLoading, onboardingDone, manager]);
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
   const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');
@@ -76,6 +101,10 @@ const Dashboard = () => {
     return <LoadingSpinner />;
   }
 
+  const onboardingOverlay = showOnboarding ? (
+    <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+  ) : null;
+
   // SuperAdmin layout (isolé)
   if (isSuperAdminRoute && isSuperAdmin) {
     return (
@@ -102,6 +131,7 @@ const Dashboard = () => {
   if (isMobile) {
     return (
       <>
+        {onboardingOverlay}
         <AnnouncementBanner />
         <MobileLayout
           manager={manager}
@@ -144,6 +174,8 @@ const Dashboard = () => {
 
   // Desktop layout with sidebar
   return (
+    <>
+    {onboardingOverlay}
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
         {!isHomePage && !isSuperAdminRoute && !isDataRoute && !isCalendarRoute && (
@@ -199,6 +231,7 @@ const Dashboard = () => {
         </SidebarInset>
       </div>
     </SidebarProvider>
+    </>
   );
 };
 
