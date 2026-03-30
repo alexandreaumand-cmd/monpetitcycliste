@@ -242,9 +242,17 @@
   "bareme": {
     "surtitle": "Scoring",
     "title": "How does scoring work?",
-    "subtitle": "Example of Grand Tour scoring — the most complete in the game.",
+    "subtitle": "Compare scoring scales by UCI race category.",
+    "tabs": {
+      "gt": "Grand Tour",
+      "2pro": "2.Pro",
+      "1_1": "1.1"
+    },
     "gc": {
       "title": "General Classification"
+    },
+    "classification": {
+      "title": "Classification"
     },
     "stage": {
       "title": "Stages"
@@ -255,7 +263,8 @@
       "green": "Green Jersey",
       "gpm": "GPM Jersey",
       "young": "Young Jersey",
-      "note": "Points awarded per day wearing the jersey"
+      "note": "Points awarded per day wearing the jersey",
+      "noteFinal": "Points awarded to the final jersey holder"
     },
     "cta": "See all scoring tables"
   }
