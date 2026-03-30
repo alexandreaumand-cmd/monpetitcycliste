@@ -1,10 +1,17 @@
--- Drop existing regular views
-DROP VIEW IF EXISTS v_manager_standings_by_phase_v2;
-DROP VIEW IF EXISTS v_manager_standings_by_season_v2;
-DROP VIEW IF EXISTS v_manager_standings_total;
+-- Recreate standings views as regular views (not materialized — too heavy for deploy)
+-- Original migration attempted MATERIALIZED VIEWs but timed out on Tiny instance.
 
--- Recreate v_manager_standings_by_phase_v2 as MATERIALIZED VIEW
-CREATE MATERIALIZED VIEW v_manager_standings_by_phase_v2 AS
+DROP VIEW IF EXISTS v_manager_standings_by_phase_v2 CASCADE;
+DROP VIEW IF EXISTS v_manager_standings_by_season_v2 CASCADE;
+DROP VIEW IF EXISTS v_manager_standings_total CASCADE;
+
+-- Also drop materialized versions in case they were partially created
+DROP MATERIALIZED VIEW IF EXISTS v_manager_standings_by_phase_v2 CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS v_manager_standings_by_season_v2 CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS v_manager_standings_total CASCADE;
+
+-- Recreate v_manager_standings_by_phase_v2 as regular VIEW
+CREATE OR REPLACE VIEW v_manager_standings_by_phase_v2 AS
 WITH race_pts AS (
   SELECT r.manager_id, r.league_id, r.phase_id, sum(pl.points) AS total_race_pts
   FROM points_ledger pl
@@ -83,11 +90,10 @@ FULL JOIN manager_bonus_pts mbp ON mbp.manager_id = rp.manager_id AND mbp.league
 FULL JOIN rider_bonus_pts rbp ON rbp.manager_id = COALESCE(rp.manager_id, mbp.manager_id) AND rbp.league_id = COALESCE(rp.league_id, mbp.league_id) AND rbp.phase_id = COALESCE(rp.phase_id, mbp.phase_id)
 FULL JOIN scoreurs sc ON sc.manager_id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id) AND sc.league_id = COALESCE(rp.league_id, mbp.league_id, rbp.league_id) AND sc.phase_id = COALESCE(rp.phase_id, mbp.phase_id, rbp.phase_id)
 FULL JOIN victories v ON v.manager_id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id) AND v.league_id = COALESCE(rp.league_id, mbp.league_id, rbp.league_id, sc.league_id) AND v.phase_id = COALESCE(rp.phase_id, mbp.phase_id, rbp.phase_id, sc.phase_id)
-LEFT JOIN managers m ON m.id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id, v.manager_id)
-WITH DATA;
+LEFT JOIN managers m ON m.id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id, v.manager_id);
 
--- Recreate v_manager_standings_by_season_v2 as MATERIALIZED VIEW
-CREATE MATERIALIZED VIEW v_manager_standings_by_season_v2 AS
+-- Recreate v_manager_standings_by_season_v2 as regular VIEW
+CREATE OR REPLACE VIEW v_manager_standings_by_season_v2 AS
 WITH race_pts AS (
   SELECT r.manager_id, r.league_id, p.saison_id, sum(pl.points) AS total_race_pts
   FROM points_ledger pl
@@ -170,11 +176,10 @@ FULL JOIN manager_bonus_pts mbp ON mbp.manager_id = rp.manager_id AND mbp.league
 FULL JOIN rider_bonus_pts rbp ON rbp.manager_id = COALESCE(rp.manager_id, mbp.manager_id) AND rbp.league_id = COALESCE(rp.league_id, mbp.league_id) AND rbp.saison_id = COALESCE(rp.saison_id, mbp.saison_id)
 FULL JOIN scoreurs sc ON sc.manager_id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id) AND sc.league_id = COALESCE(rp.league_id, mbp.league_id, rbp.league_id) AND sc.saison_id = COALESCE(rp.saison_id, mbp.saison_id, rbp.saison_id)
 FULL JOIN victories v ON v.manager_id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id) AND v.league_id = COALESCE(rp.league_id, mbp.league_id, rbp.league_id, sc.league_id) AND v.saison_id = COALESCE(rp.saison_id, mbp.saison_id, rbp.saison_id, sc.saison_id)
-LEFT JOIN managers m ON m.id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id, v.manager_id)
-WITH DATA;
+LEFT JOIN managers m ON m.id = COALESCE(rp.manager_id, mbp.manager_id, rbp.manager_id, sc.manager_id, v.manager_id);
 
--- Recreate v_manager_standings_total as MATERIALIZED VIEW
-CREATE MATERIALIZED VIEW v_manager_standings_total AS
+-- Recreate v_manager_standings_total as regular VIEW
+CREATE OR REPLACE VIEW v_manager_standings_total AS
 SELECT r.manager_id, r.league_id,
   COALESCE(sum(pl.points), 0::numeric) AS race_points,
   COALESCE(sum(mbp.bonus_itt + mbp.bonus_ttt + mbp.bonus_first_win + mbp.bonus_coureurs + mbp.bonus_scoreurs), 0::numeric) AS bonus_points,
@@ -187,25 +192,7 @@ LEFT JOIN points_ledger pl ON pl.coureur_id = r.coureur_id AND pl.phase_id = r.p
 LEFT JOIN v_manager_bonus_aggregated mbp ON mbp.manager_id = r.manager_id AND mbp.phase_id = r.phase_id AND mbp.league_id = r.league_id
 LEFT JOIN race_results rr ON rr.coureur_id = r.coureur_id AND rr.course_id = pl.course_id
   AND rr.type_classement = pl.type_classement AND COALESCE(rr.etape_numero, -1) = COALESCE(pl.etape_numero, -1)
-GROUP BY r.manager_id, r.league_id
-WITH DATA;
+GROUP BY r.manager_id, r.league_id;
 
--- Unique indexes required for REFRESH CONCURRENTLY
-CREATE UNIQUE INDEX idx_standings_phase_pk ON v_manager_standings_by_phase_v2(manager_id, league_id, phase_id);
-CREATE UNIQUE INDEX idx_standings_season_pk ON v_manager_standings_by_season_v2(manager_id, league_id, saison_id);
-CREATE UNIQUE INDEX idx_standings_total_pk ON v_manager_standings_total(manager_id, league_id);
-
--- Performance indexes
-CREATE INDEX idx_standings_phase_league ON v_manager_standings_by_phase_v2(league_id, phase_id);
-CREATE INDEX idx_standings_season_league ON v_manager_standings_by_season_v2(league_id, saison_id);
-CREATE INDEX idx_standings_total_league ON v_manager_standings_total(league_id);
-
--- Refresh function
-CREATE OR REPLACE FUNCTION refresh_standings_views()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY v_manager_standings_by_phase_v2;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY v_manager_standings_by_season_v2;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY v_manager_standings_total;
-END;
-$$;
+-- No materialized view indexes needed for regular views.
+-- No refresh function needed for regular views.
