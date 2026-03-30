@@ -136,6 +136,27 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
   const sel_key = `${course.course_id}|${classementType}|${etapeNumero ?? 0}`;
 
+  // PCS Import - extracted to hook
+  const {
+    handlePcsImport,
+    isPcsImporting,
+    pcsSlugDialogOpen,
+    setPcsSlugDialogOpen,
+    pcsSlugError,
+  } = usePcsResultsImport({
+    courseId: course.course_id,
+    dateDebut: course.date_debut,
+    classementType,
+    etapeNumero,
+    currentStage,
+    isOneDay,
+    activeTab,
+    setResultRows,
+    setIsDirty,
+    setGridPrepared,
+    setJerseyHolders,
+  });
+
   // Stage completion tracking
   const { data: stageCompletion } = useQuery({
     queryKey: ["stage-completion", course.course_id],
