@@ -1,15 +1,29 @@
 
 
-## Remplacer le bouton "Installer" par "Rejoindre une ligue" dans le Hero
+## Ajouter des tooltips explicatifs sur les filtres du CourseSelector
 
 ### Modification
 
-**`src/components/landing/HeroSection.tsx`** :
-- Remplacer le bouton "Install" (lien vers `/install`, icone `Download`) par un bouton "Rejoindre une ligue" avec l'icone `Users` (lucide-react), lien vers `/auth`
-- Ajouter les clés de traduction `hero.cta.joinLeague` dans les fichiers FR et EN
+**`src/components/leagues/CourseSelector.tsx`** :
+- Importer `Tooltip, TooltipTrigger, TooltipContent, TooltipProvider` depuis `@/components/ui/tooltip`
+- Envelopper chaque Badge de filtre (Tous, Étapes, 1 jour, WT, .Pro, .1, Autres) ainsi que les badges de tri (Date, Points) dans un `<Tooltip>` avec un `<TooltipContent>` explicatif
+- Envelopper le tout dans un `<TooltipProvider>`
+
+**`src/i18n/locales/fr/leagues.json`** — ajouter sous `settings` :
+- `filterTooltipAll`: "Afficher toutes les courses"
+- `filterTooltipStageRace`: "Courses à étapes (ex: Tour de France)"
+- `filterTooltipOneDay`: "Courses d'un jour (ex: classiques)"
+- `filterTooltipWT`: "World Tour — courses du plus haut niveau UCI"
+- `filterTooltipPro`: "Courses de catégorie .Pro"
+- `filterTooltip1`: "Courses de catégorie .1"
+- `filterTooltipOthers`: "Autres catégories de courses"
+- `sortTooltipDate`: "Trier par date de départ"
+- `sortTooltipPoints`: "Trier par points théoriques décroissants"
+
+**`src/i18n/locales/en/leagues.json`** — mêmes clés en anglais
 
 ### Fichiers impactés (3)
-- `src/components/landing/HeroSection.tsx`
-- `src/i18n/locales/fr/home.json` — ajouter `hero.cta.joinLeague: "Rejoindre une ligue"`
-- `src/i18n/locales/en/home.json` — ajouter `hero.cta.joinLeague: "Join a league"`
+- `src/components/leagues/CourseSelector.tsx`
+- `src/i18n/locales/fr/leagues.json`
+- `src/i18n/locales/en/leagues.json`
 
