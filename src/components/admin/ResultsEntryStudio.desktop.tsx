@@ -13,9 +13,8 @@ import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
-import { usePcsImport } from "@/hooks/usePcsImport";
 import { useScoringRules } from "@/hooks/useScoringRules";
-import { useResultRows } from "@/hooks/useResultRows";
+import { usePcsResultsImport } from "@/hooks/usePcsResultsImport";
 import type { ResultStatut } from "@/hooks/useResultRows";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -94,7 +93,6 @@ function usePrevious<T>(value: T): T | undefined {
 export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
-  const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
   const [activeTab, setActiveTab] = useState<"stages" | "finals">("stages");
   const [currentStage, setCurrentStage] = useState(1);
   const [currentFinalClassement, setCurrentFinalClassement] = useState<ClassementType>("General");
@@ -121,8 +119,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [pcsSlugDialogOpen, setPcsSlugDialogOpen] = useState(false);
-  const [pcsSlugError, setPcsSlugError] = useState<{ message: string; slugUsed: string }>({ message: '', slugUsed: '' });
   const [isTTT, setIsTTT] = useState(false);
   const [tttRidersCount, setTttRidersCount] = useState(7);
   const [saisonId, setSaisonId] = useState<string | null>(null);
@@ -139,6 +135,27 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const etapeNumero = activeTab === "stages" && !isOneDay ? currentStage : null;
 
   const sel_key = `${course.course_id}|${classementType}|${etapeNumero ?? 0}`;
+
+  // PCS Import - extracted to hook
+  const {
+    handlePcsImport,
+    isPcsImporting,
+    pcsSlugDialogOpen,
+    setPcsSlugDialogOpen,
+    pcsSlugError,
+  } = usePcsResultsImport({
+    courseId: course.course_id,
+    dateDebut: course.date_debut,
+    classementType,
+    etapeNumero,
+    currentStage,
+    isOneDay,
+    activeTab,
+    setResultRows,
+    setIsDirty,
+    setGridPrepared,
+    setJerseyHolders,
+  });
 
   // Stage completion tracking
   const { data: stageCompletion } = useQuery({
