@@ -1,13 +1,23 @@
 
 
-## Fix: Tooltips invisibles dans le CourseSelector (Dialog)
+## Optimisation : suppression du doublon "joueurs" sur la LeagueCard
 
 ### Probleme
-Le `CourseSelector` est affiché dans un `Dialog` (z-index ~50). Les `TooltipContent` utilisent un portal qui se rend derrière le dialog, donc les tooltips sont cachés.
+Sur les cartes en statut "En attente", le nombre de joueurs apparait deux fois :
+1. Dans le header (ligne 131-138) via `LeagueParticipantsHover`
+2. Dans le contenu, section "Joueurs inscrits" (ligne 146-157) avec un second `LeagueParticipantsHover`
 
-### Solution
-Ajouter `className="z-[100]"` sur chaque `<TooltipContent>` dans `CourseSelector.tsx` pour que les tooltips s'affichent au-dessus du dialog.
+### Proposition
+Garder **un seul endroit** pour le compteur de joueurs : le header (ligne 2 des badges). Supprimer la ligne "Joueurs inscrits" + le second `LeagueParticipantsHover` dans les sections `isWaitingForPlayers` et `isReadyToLaunch`. La liste des membres reste visible directement dans la carte sans le titre redondant.
 
-### Fichier impacte (1)
-- `src/components/leagues/CourseSelector.tsx` — ajouter `className="z-[100]"` à tous les `<TooltipContent>`
+### Changements — `src/components/dashboard/LeagueCard.tsx`
+
+1. **Section `isWaitingForPlayers`** (lignes 145-157) : supprimer le bloc `<div className="flex items-center justify-between">` contenant le titre "Joueurs inscrits" et le second `LeagueParticipantsHover`. Garder uniquement la liste des membres et le bloc "Places restantes".
+
+2. **Section `isReadyToLaunch`** (lignes 212-224) : idem, supprimer le titre "Joueurs inscrits" + le second `LeagueParticipantsHover`.
+
+### Resultat attendu
+- Header : badges (mode, saison, bonus) + `👥 1 joueur` cliquable/hoverable (une seule fois)
+- Contenu : liste des noms directement, places restantes, bouton invitation
+- Zero redondance
 
