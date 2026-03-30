@@ -57,7 +57,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
 
   const navItems = navItemsConfig.map(item => ({
     ...item,
-    label: t(`navigation.${item.key}`)
+    label: t(item.labelKey)
   }));
 
   return (
