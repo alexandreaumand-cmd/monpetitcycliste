@@ -129,7 +129,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Settings className="h-4 w-4" />
-                            {!isCollapsed && <span>{t('navigation.adminLeague')}</span>}
+                            {!isCollapsed && <span>{t('navigation:adminLeague')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
