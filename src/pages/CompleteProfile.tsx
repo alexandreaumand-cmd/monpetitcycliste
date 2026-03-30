@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 import logoCarreTexte from "@/assets/logo-carre-texte.png";
 
 const CompleteProfile = () => {
-  const { t } = useTranslation('auth');
+  const { t, i18n } = useTranslation('auth');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
