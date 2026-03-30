@@ -16,13 +16,13 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+const EMAIL_SUBJECTS: Record<string, Record<string, string>> = {
+  signup: { fr: 'Confirmez votre email — La Bordure', en: 'Confirm your email — La Bordure' },
+  invite: { fr: 'Vous êtes invité sur La Bordure', en: "You've been invited to La Bordure" },
+  magiclink: { fr: 'Votre lien de connexion — La Bordure', en: 'Your login link — La Bordure' },
+  recovery: { fr: 'Réinitialisez votre mot de passe — La Bordure', en: 'Reset your password — La Bordure' },
+  email_change: { fr: 'Confirmez votre nouvel email — La Bordure', en: 'Confirm your new email — La Bordure' },
+  reauthentication: { fr: 'Votre code de vérification — La Bordure', en: 'Your verification code — La Bordure' },
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "monpetitcycliste"
+const SITE_NAME = "La Bordure"
 const SENDER_DOMAIN = "notify.labordure.app"
 const ROOT_DOMAIN = "labordure.app"
 const FROM_DOMAIN = "labordure.app" // Domain shown in From address (may be root or sender subdomain)
@@ -217,6 +217,19 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Detect user language from metadata
+  let lang = 'fr' // default to French
+  try {
+    const { data: userData } = await supabase.auth.admin.getUserById(
+      payload.data.user_id || ''
+    )
+    if (userData?.user?.user_metadata?.preferred_language) {
+      lang = userData.user.user_metadata.preferred_language === 'en' ? 'en' : 'fr'
+    }
+  } catch (e) {
+    console.log('Could not fetch user language, defaulting to fr', e)
+  }
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
@@ -226,6 +239,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
+    lang,
   }
 
   // Render React Email to HTML and plain text
@@ -258,7 +272,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       to: payload.data.email,
       from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
+      subject: (EMAIL_SUBJECTS[emailType] || { fr: 'Notification', en: 'Notification' })[lang] || 'Notification',
       html,
       text,
       purpose: 'transactional',

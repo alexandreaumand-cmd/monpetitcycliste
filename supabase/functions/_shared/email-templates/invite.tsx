@@ -18,38 +18,55 @@ interface InviteEmailProps {
   siteName: string
   siteUrl: string
   confirmationUrl: string
+  lang?: string
 }
 
 const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
+
+const i18n = {
+  fr: {
+    preview: 'Vous êtes invité à rejoindre La Bordure !',
+    heading: 'Rejoignez le peloton !',
+    body: 'Vous avez été invité à rejoindre La Bordure, le jeu de fantasy cyclisme. Cliquez sur le bouton ci-dessous pour accepter l\'invitation et créer votre compte.',
+    button: "Accepter l'invitation",
+    footer: "Si vous ne vous attendiez pas à cette invitation, vous pouvez ignorer cet email.",
+  },
+  en: {
+    preview: "You've been invited to join La Bordure!",
+    heading: 'Join the peloton!',
+    body: "You've been invited to join La Bordure, the fantasy cycling game. Click the button below to accept the invitation and create your account.",
+    button: 'Accept invitation',
+    footer: "If you weren't expecting this invitation, you can safely ignore this email.",
+  },
+}
 
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Vous êtes invité à rejoindre La Bordure !</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <div style={header}>
-          <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
-        </div>
-        <Heading style={h1}>Rejoignez le peloton !</Heading>
-        <Text style={text}>
-          Vous avez été invité à rejoindre La Bordure, le jeu de fantasy cyclisme.
-          Cliquez sur le bouton ci-dessous pour accepter l'invitation et créer votre compte.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accepter l'invitation
-        </Button>
-        <Text style={footer}>
-          Si vous ne vous attendiez pas à cette invitation, vous pouvez ignorer cet email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  lang = 'fr',
+}: InviteEmailProps) => {
+  const t = lang === 'en' ? i18n.en : i18n.fr
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <div style={header}>
+            <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
+          </div>
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text}>{t.body}</Text>
+          <Button style={button} href={confirmationUrl}>
+            {t.button}
+          </Button>
+          <Text style={footer}>{t.footer}</Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default InviteEmail
 

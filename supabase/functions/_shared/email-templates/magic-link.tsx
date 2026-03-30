@@ -17,37 +17,54 @@ import {
 interface MagicLinkEmailProps {
   siteName: string
   confirmationUrl: string
+  lang?: string
 }
 
 const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
 
+const i18n = {
+  fr: {
+    preview: 'Votre lien de connexion — La Bordure',
+    heading: 'Votre lien de connexion',
+    body: 'Cliquez sur le bouton ci-dessous pour vous connecter à La Bordure. Ce lien expire dans quelques minutes.',
+    button: 'Se connecter',
+    footer: "Si vous n'avez pas demandé ce lien, vous pouvez ignorer cet email.",
+  },
+  en: {
+    preview: 'Your login link — La Bordure',
+    heading: 'Your login link',
+    body: 'Click the button below to sign in to La Bordure. This link expires in a few minutes.',
+    button: 'Sign in',
+    footer: "If you didn't request this link, you can safely ignore this email.",
+  },
+}
+
 export const MagicLinkEmail = ({
   siteName,
   confirmationUrl,
-}: MagicLinkEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Votre lien de connexion — La Bordure</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <div style={header}>
-          <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
-        </div>
-        <Heading style={h1}>Votre lien de connexion</Heading>
-        <Text style={text}>
-          Cliquez sur le bouton ci-dessous pour vous connecter à La Bordure.
-          Ce lien expire dans quelques minutes.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Se connecter
-        </Button>
-        <Text style={footer}>
-          Si vous n'avez pas demandé ce lien, vous pouvez ignorer cet email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+  lang = 'fr',
+}: MagicLinkEmailProps) => {
+  const t = lang === 'en' ? i18n.en : i18n.fr
+  return (
+    <Html lang={lang} dir="ltr">
+      <Head />
+      <Preview>{t.preview}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <div style={header}>
+            <Img src={logoUrl} alt="La Bordure" width="120" height="auto" style={logo} />
+          </div>
+          <Heading style={h1}>{t.heading}</Heading>
+          <Text style={text}>{t.body}</Text>
+          <Button style={button} href={confirmationUrl}>
+            {t.button}
+          </Button>
+          <Text style={footer}>{t.footer}</Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default MagicLinkEmail
 
