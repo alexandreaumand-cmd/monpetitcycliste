@@ -242,9 +242,17 @@
   "bareme": {
     "surtitle": "Barème",
     "title": "Comment ça marque ?",
-    "subtitle": "Exemple du barème Grand Tour — le plus complet du jeu.",
+    "subtitle": "Compare les barèmes selon la catégorie UCI de la course.",
+    "tabs": {
+      "gt": "Grand Tour",
+      "2pro": "2.Pro",
+      "1_1": "1.1"
+    },
     "gc": {
       "title": "Classement général"
+    },
+    "classification": {
+      "title": "Classement"
     },
     "stage": {
       "title": "Étapes"
@@ -255,7 +263,8 @@
       "green": "Maillot Vert",
       "gpm": "Maillot Montagne",
       "young": "Maillot Jeune",
-      "note": "Points attribués par jour de port du maillot"
+      "note": "Points attribués par jour de port du maillot",
+      "noteFinal": "Points attribués au porteur final du maillot"
     },
     "cta": "Voir tous les barèmes"
   }
