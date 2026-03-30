@@ -231,7 +231,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                     {cat}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent><p>{t(`settings.${tooltipKeyMap[cat]}`)}</p></TooltipContent>
+                <TooltipContent className="z-[100]"><p>{t(`settings.${tooltipKeyMap[cat]}`)}</p></TooltipContent>
               </Tooltip>
             );
           })}
