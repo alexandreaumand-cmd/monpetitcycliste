@@ -31,6 +31,7 @@ import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
 import LivePage from "./LivePage";
 import TeamStartlistMovements from "./TeamStartlistMovements";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
