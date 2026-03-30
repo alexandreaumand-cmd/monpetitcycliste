@@ -132,11 +132,16 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Save manager info for after email confirmation
+      localStorage.setItem('pendingManagerNom', nom);
+      localStorage.setItem('pendingManagerSponsor', sponsor || '');
+      localStorage.setItem('i18nextLng', i18n.language);
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}${nextUrl}`,
+          emailRedirectTo: `${window.location.origin}/complete-profile?next=${encodeURIComponent(nextUrl)}`,
           data: {
             preferred_language: i18n.language?.startsWith('fr') ? 'fr' : 'en',
           },
@@ -145,21 +150,27 @@ const Auth = () => {
 
       if (authError) throw authError;
 
-      if (authData.user) {
+      if (authData.user && !authData.session) {
+        // Email confirmation required
+        toast({
+          title: t('messages.registerSuccess'),
+          description: t('messages.checkEmail', 'Vérifiez votre boîte mail pour confirmer votre inscription.'),
+        });
+      } else if (authData.session) {
+        // Auto-confirm enabled, create manager immediately
         const { error: managerError } = await supabase
           .from("managers")
           .insert({
-            user_id: authData.user.id,
+            user_id: authData.user!.id,
             nom,
-            sponsor,
+            sponsor: sponsor || null,
             email,
           });
 
         if (managerError) throw managerError;
-        
+
         toast({
           title: t('messages.registerSuccess'),
-          description: t('messages.registerSuccess'),
         });
       }
     } catch (error: any) {

@@ -15,8 +15,8 @@ const CompleteProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [nom, setNom] = useState("");
-  const [sponsor, setSponsor] = useState("");
+  const [nom, setNom] = useState(() => localStorage.getItem('pendingManagerNom') || "");
+  const [sponsor, setSponsor] = useState(() => localStorage.getItem('pendingManagerSponsor') || "");
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get('next') || '/dashboard/home';
@@ -70,6 +70,10 @@ const CompleteProfile = () => {
         });
 
       if (error) throw error;
+
+      // Clean up pending data
+      localStorage.removeItem('pendingManagerNom');
+      localStorage.removeItem('pendingManagerSponsor');
 
       toast({
         title: t('completeProfile.success', 'Profil créé !'),
