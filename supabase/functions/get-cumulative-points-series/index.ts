@@ -224,6 +224,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    const pointsData = await fetchAllRows<any>(query);
+    console.log(`Fetched ${pointsData.length} points_ledger rows`);
+
     let filteredPointsData = pointsData || [];
 
     // Filter points by league scope (allowed courses + date floor)
