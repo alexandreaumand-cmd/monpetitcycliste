@@ -165,8 +165,8 @@ export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete, on
         </div>
       )}
 
-      <Card>
-        <Table>
+      <Card className="overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">
