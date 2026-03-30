@@ -161,7 +161,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          {t('navigation.superAdmin')}
+                          {t('navigation:superAdmin')}
                         </TooltipContent>
                       )}
                     </Tooltip>
