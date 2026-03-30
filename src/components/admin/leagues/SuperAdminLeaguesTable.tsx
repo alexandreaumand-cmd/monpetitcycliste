@@ -213,10 +213,10 @@ export function SuperAdminLeaguesTable() {
                   <TableRow>
                     <TableHead>Nom</TableHead>
                     <TableHead>Propriétaire</TableHead>
-                    <TableHead>Mode</TableHead>
+                    <TableHead className="hidden sm:table-cell">Mode</TableHead>
                     <TableHead>Membres</TableHead>
-                    <TableHead>Visibilité</TableHead>
-                    <TableHead>Créée</TableHead>
+                    <TableHead className="hidden sm:table-cell">Visibilité</TableHead>
+                    <TableHead className="hidden sm:table-cell">Créée</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
