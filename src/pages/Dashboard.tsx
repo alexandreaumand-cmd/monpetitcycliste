@@ -45,6 +45,29 @@ const Dashboard = () => {
   
   // Track user activity on all dashboard pages
   useActivityTracker();
+
+  // Onboarding wizard
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const { data: onboardingDone, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['onboarding-progress'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return true;
+      const { data } = await supabase
+        .from('onboarding_progress')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (!onboardingLoading && onboardingDone === false && manager) {
+      setShowOnboarding(true);
+    }
+  }, [onboardingLoading, onboardingDone, manager]);
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
   const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');

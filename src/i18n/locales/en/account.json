@@ -88,5 +88,11 @@
   "buttons": {
     "updateProfile": "Update Profile",
     "uploadPhoto": "Change Photo"
+  },
+  "onboarding": {
+    "title": "Tutorial",
+    "description": "Review the tab guide walkthrough",
+    "replayButton": "Replay tutorial",
+    "resetSuccess": "The tutorial will restart on your next visit"
   }
 }
