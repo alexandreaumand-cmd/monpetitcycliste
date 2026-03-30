@@ -174,6 +174,8 @@ const Dashboard = () => {
 
   // Desktop layout with sidebar
   return (
+    <>
+    {onboardingOverlay}
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
         {!isHomePage && !isSuperAdminRoute && !isDataRoute && !isCalendarRoute && (
