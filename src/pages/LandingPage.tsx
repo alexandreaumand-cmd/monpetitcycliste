@@ -9,6 +9,8 @@ import {
   LandingFooter,
 } from "@/components/landing";
 import InstallBanner from "@/components/landing/InstallBanner";
+import LeagueTypesSection from "@/components/landing/LeagueTypesSection";
+import BaremePreviewSection from "@/components/landing/BaremePreviewSection";
 
 const LandingPage = () => {
   return (
@@ -18,6 +20,8 @@ const LandingPage = () => {
         <HeroSection />
         <GameOverviewSection />
         <HowItWorksSection />
+        <LeagueTypesSection />
+        <BaremePreviewSection />
         <AuctionShowcase />
         <SocialProofSection />
         <InstallBanner />

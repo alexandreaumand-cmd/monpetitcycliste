@@ -212,5 +212,51 @@
     "errorMessage": "Une erreur est survenue. Veuillez réessayer.",
     "thankYouTitle": "Merci !",
     "thankYouMessage": "Votre message a bien été envoyé. Nous reviendrons vers vous rapidement."
+  },
+  "gameModes": {
+    "surtitle": "Modes de jeu",
+    "title": "Deux façons de jouer",
+    "subtitle": "Choisis le format qui te correspond : saison complète ou course par course.",
+    "phases": {
+      "title": "Mode 5 Phases",
+      "subtitle": "La saison complète",
+      "description": "Recrute 30 coureurs en 5 phases d'enchères réparties sur la saison. Gère ton budget de 2 200 M€ et adapte ton effectif au fil des mois. Variante WorldTour disponible.",
+      "specs": {
+        "roster": "30 coureurs par équipe",
+        "budget": "2 200 M€ de budget total",
+        "auctions": "5 phases d'enchères sur la saison"
+      }
+    },
+    "alaCourse": {
+      "title": "Mode À la course",
+      "subtitle": "Le format express",
+      "description": "Une seule enchère pour une course donnée. Budget dynamique selon la catégorie (650 à 1 100 M€) et effectifs réduits (8 à 15 coureurs). Idéal pour les Classiques ou les GT.",
+      "specs": {
+        "roster": "8 à 15 coureurs selon la catégorie",
+        "budget": "650 à 1 100 M€ selon la course",
+        "auctions": "1 enchère unique avant la course"
+      }
+    },
+    "cta": "Voir toutes les règles"
+  },
+  "bareme": {
+    "surtitle": "Barème",
+    "title": "Comment ça marque ?",
+    "subtitle": "Exemple du barème Grand Tour — le plus complet du jeu.",
+    "gc": {
+      "title": "Classement général"
+    },
+    "stage": {
+      "title": "Étapes"
+    },
+    "jerseys": {
+      "title": "Maillots",
+      "leader": "Maillot Leader",
+      "green": "Maillot Vert",
+      "gpm": "Maillot Montagne",
+      "young": "Maillot Jeune",
+      "note": "Points attribués par jour de port du maillot"
+    },
+    "cta": "Voir tous les barèmes"
   }
 }

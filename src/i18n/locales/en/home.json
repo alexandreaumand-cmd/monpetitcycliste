@@ -212,5 +212,51 @@
     "errorMessage": "An error occurred. Please try again.",
     "thankYouTitle": "Thank you!",
     "thankYouMessage": "Your message has been sent. We'll get back to you shortly."
+  },
+  "gameModes": {
+    "surtitle": "Game modes",
+    "title": "Two ways to play",
+    "subtitle": "Choose the format that suits you: full season or race by race.",
+    "phases": {
+      "title": "5 Phases Mode",
+      "subtitle": "The full season",
+      "description": "Draft 30 riders across 5 auction phases spread over the season. Manage your 2,200 M€ budget and adapt your roster month by month. WorldTour variant available.",
+      "specs": {
+        "roster": "30 riders per team",
+        "budget": "2,200 M€ total budget",
+        "auctions": "5 auction phases over the season"
+      }
+    },
+    "alaCourse": {
+      "title": "Per-Race Mode",
+      "subtitle": "The express format",
+      "description": "A single auction for a given race. Dynamic budget based on category (650 to 1,100 M€) and reduced squads (8 to 15 riders). Perfect for Classics or Grand Tours.",
+      "specs": {
+        "roster": "8 to 15 riders depending on category",
+        "budget": "650 to 1,100 M€ depending on race",
+        "auctions": "1 single auction before the race"
+      }
+    },
+    "cta": "See all the rules"
+  },
+  "bareme": {
+    "surtitle": "Scoring",
+    "title": "How does scoring work?",
+    "subtitle": "Example of Grand Tour scoring — the most complete in the game.",
+    "gc": {
+      "title": "General Classification"
+    },
+    "stage": {
+      "title": "Stages"
+    },
+    "jerseys": {
+      "title": "Jerseys",
+      "leader": "Leader Jersey",
+      "green": "Green Jersey",
+      "gpm": "GPM Jersey",
+      "young": "Young Jersey",
+      "note": "Points awarded per day wearing the jersey"
+    },
+    "cta": "See all scoring tables"
   }
 }
