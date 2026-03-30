@@ -1,22 +1,28 @@
 
 
-## Diagnostic : Pas d'email de confirmation à l'inscription
+## Corriger la langue après connexion Google/Apple
 
-### Cause
+### Problème
 
-L'auto-confirmation des emails est activée dans les paramètres d'authentification. Cela signifie que les utilisateurs sont confirmés instantanément à l'inscription, **sans qu'aucun email de confirmation ne soit envoyé**. Le hook `auth-email-hook` n'est jamais déclenché pour le type `signup`.
+Quand un utilisateur est sur la page d'auth en français et clique "Continuer avec Google", il est redirigé vers Google puis revient sur `/complete-profile`. La page peut s'afficher en anglais car :
 
-Preuve : la table `email_send_log` ne contient que des emails de type `recovery` (qui fonctionnent parfaitement) — zéro entrée `signup`.
+1. **Clés de traduction manquantes** : `buttons.googleSignIn` et `buttons.appleSignIn` n'existent pas dans les fichiers de traduction — seuls des fallbacks hardcodés sont utilisés
+2. **Langue non préservée après le redirect OAuth** : si le détecteur i18next recalcule la langue depuis le navigateur après le retour du redirect, il peut choisir anglais
 
 ### Correction
 
-**Désactiver l'auto-confirmation email** dans les paramètres d'authentification Cloud. Cela forcera l'envoi d'un email de confirmation à chaque nouvelle inscription.
+**`src/i18n/locales/fr/auth.json`** et **`en/auth.json`** :
+- Ajouter les clés `buttons.googleSignIn` et `buttons.appleSignIn`
 
-Un seul changement de configuration, aucun fichier de code à modifier.
+**`src/pages/Auth.tsx`** :
+- Avant chaque appel `lovable.auth.signInWithOAuth`, sauvegarder explicitement la langue courante dans `localStorage` via `i18n.language` pour s'assurer que `i18nextLng` est bien défini avant le redirect
 
-### Impact
+**`src/pages/CompleteProfile.tsx`** :
+- Au montage, lire `i18nextLng` depuis localStorage et forcer `i18n.changeLanguage()` si la langue courante ne correspond pas — pour garantir que la page s'affiche dans la bonne langue après le retour du redirect OAuth
 
-- Les nouveaux utilisateurs recevront un email de confirmation avec le template `signup` (déjà configuré et branded "La Bordure")
-- Ils devront cliquer sur le lien de confirmation avant de pouvoir se connecter
-- Les utilisateurs existants ne sont pas affectés
+### Fichiers impactés (4)
+- `src/i18n/locales/fr/auth.json`
+- `src/i18n/locales/en/auth.json`
+- `src/pages/Auth.tsx`
+- `src/pages/CompleteProfile.tsx`
 
