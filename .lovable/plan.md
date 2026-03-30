@@ -1,29 +1,32 @@
 
 
-## Fix: League not visible after joining
+## Améliorer la visibilité de l'onglet actif dans la sidebar
 
-### Root cause
-In `JoinLeagueDialog.tsx`, after a successful join (both by code and by clicking), only `refetch()` on the `user-leagues` query key is called. The `LeagueContext` uses a separate query key (`user-leagues-for-context`) with a 5-minute stale time that is never invalidated. This means the context may still think the user has no leagues, and the dashboard may render stale data.
+### Problème
+L'état actif utilise `bg-white/15 text-white` — un fond blanc à 15% d'opacité sur fond vert foncé, quasi invisible.
 
-### Fix — `src/components/leagues/JoinLeagueDialog.tsx`
+### Solution
+Remplacer le style actif par un contraste fort : fond doré (`bg-bordure-gold`) avec texte foncé (`text-secondary font-bold`), plus un bord gauche accentué. Cela crée une surbrillance immédiatement identifiable.
 
-1. Import `useQueryClient` from `@tanstack/react-query`
-2. After `await refetch()`, also invalidate `user-leagues-for-context`:
-   ```ts
-   await refetch();
-   queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-   ```
-3. Apply this in both `handleJoinLeague` (public league join) and `handleJoinByCode` (invite code join)
+### Changement — `src/components/layout/AppSidebar.tsx`
 
-### Also fix — `src/pages/JoinLeaguePage.tsx`
+**Ligne 98-102** : Modifier les classes du `SidebarMenuButton` et du `NavLink` :
 
-The `/join?token=...` page flow does NOT invalidate any queries at all before redirecting. Add query invalidation for both keys before the redirect timeout:
-```ts
-queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
-queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+```tsx
+<SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+  <NavLink
+    to={buildNavUrl(item.href)}
+    className={({ isActive }) =>
+      isActive 
+        ? "bg-bordure-gold text-secondary font-bold rounded-md shadow-sm" 
+        : ""
+    }
+  >
 ```
 
-### Summary
-- 2 files modified
-- Both join paths (dialog + URL) will now properly refresh the leagues cache so the dashboard shows the newly joined league immediately
+Appliquer le même changement aux liens Admin Ligue (ligne ~130) et Super Admin (ligne ~152).
+
+### Résultat
+- Onglet inactif : texte blanc semi-transparent sur fond vert (inchangé)
+- Onglet actif : fond doré avec texte foncé — contraste fort et immédiat
 
