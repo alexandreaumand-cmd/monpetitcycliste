@@ -16,13 +16,13 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+const EMAIL_SUBJECTS: Record<string, Record<string, string>> = {
+  signup: { fr: 'Confirmez votre email — La Bordure', en: 'Confirm your email — La Bordure' },
+  invite: { fr: 'Vous êtes invité sur La Bordure', en: "You've been invited to La Bordure" },
+  magiclink: { fr: 'Votre lien de connexion — La Bordure', en: 'Your login link — La Bordure' },
+  recovery: { fr: 'Réinitialisez votre mot de passe — La Bordure', en: 'Reset your password — La Bordure' },
+  email_change: { fr: 'Confirmez votre nouvel email — La Bordure', en: 'Confirm your new email — La Bordure' },
+  reauthentication: { fr: 'Votre code de vérification — La Bordure', en: 'Your verification code — La Bordure' },
 }
 
 // Template mapping
