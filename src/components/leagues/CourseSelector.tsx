@@ -198,7 +198,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                 {t('settings.all', 'Tous')}
               </Badge>
             </TooltipTrigger>
-            <TooltipContent><p>{t('settings.filterTooltipAll')}</p></TooltipContent>
+            <TooltipContent className="z-[100]"><p>{t('settings.filterTooltipAll')}</p></TooltipContent>
           </Tooltip>
           {types.map(type => {
             const tooltipKey = type === 'stage_race' ? 'filterTooltipStageRace' : 'filterTooltipOneDay';
