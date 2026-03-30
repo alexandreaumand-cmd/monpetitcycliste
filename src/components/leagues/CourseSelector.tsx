@@ -186,54 +186,85 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
       </div>
 
       {/* Filters row 1: Type */}
-      <div className="flex flex-wrap gap-1.5">
-        <Badge
-          variant={typeFilter === null ? "default" : "outline"}
-          className="cursor-pointer text-[11px]"
-          onClick={() => setTypeFilter(null)}
-        >
-          {t('settings.all', 'Tous')}
-        </Badge>
-        {types.map(type => (
-          <Badge
-            key={type}
-            variant={typeFilter === type ? "default" : "outline"}
-            className="cursor-pointer text-[11px]"
-            onClick={() => setTypeFilter(typeFilter === type ? null : type)}
-          >
-            {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
-          </Badge>
-        ))}
-        <span className="w-px bg-border mx-0.5" />
-        {categories.map(cat => (
-          <Badge
-            key={cat}
-            variant={categoryFilter === cat ? "default" : "outline"}
-            className="cursor-pointer text-[11px]"
-            onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-          >
-            {cat}
-          </Badge>
-        ))}
-      </div>
+      <TooltipProvider delayDuration={300}>
+        <div className="flex flex-wrap gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant={typeFilter === null ? "default" : "outline"}
+                className="cursor-pointer text-[11px]"
+                onClick={() => setTypeFilter(null)}
+              >
+                {t('settings.all', 'Tous')}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent><p>{t('settings.filterTooltipAll')}</p></TooltipContent>
+          </Tooltip>
+          {types.map(type => {
+            const tooltipKey = type === 'stage_race' ? 'filterTooltipStageRace' : 'filterTooltipOneDay';
+            return (
+              <Tooltip key={type}>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={typeFilter === type ? "default" : "outline"}
+                    className="cursor-pointer text-[11px]"
+                    onClick={() => setTypeFilter(typeFilter === type ? null : type)}
+                  >
+                    {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent><p>{t(`settings.${tooltipKey}`)}</p></TooltipContent>
+              </Tooltip>
+            );
+          })}
+          <span className="w-px bg-border mx-0.5" />
+          {categories.map(cat => {
+            const tooltipKeyMap: Record<string, string> = { 'WT': 'filterTooltipWT', '.Pro': 'filterTooltipPro', '.1': 'filterTooltip1', 'Autres': 'filterTooltipOthers' };
+            return (
+              <Tooltip key={cat}>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={categoryFilter === cat ? "default" : "outline"}
+                    className="cursor-pointer text-[11px]"
+                    onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                  >
+                    {cat}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent><p>{t(`settings.${tooltipKeyMap[cat]}`)}</p></TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
 
-      {/* Sort row */}
-      <div className="flex gap-1.5">
-        <Badge
-          variant={sortMode === 'date' ? "default" : "outline"}
-          className="cursor-pointer text-[11px] gap-1"
-          onClick={() => setSortMode('date')}
-        >
-          <Calendar className="h-3 w-3" /> Date
-        </Badge>
-        <Badge
-          variant={sortMode === 'points' ? "default" : "outline"}
-          className="cursor-pointer text-[11px] gap-1"
-          onClick={() => setSortMode('points')}
-        >
-          <Trophy className="h-3 w-3" /> Points
-        </Badge>
-      </div>
+        {/* Sort row */}
+        <div className="flex gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant={sortMode === 'date' ? "default" : "outline"}
+                className="cursor-pointer text-[11px] gap-1"
+                onClick={() => setSortMode('date')}
+              >
+                <Calendar className="h-3 w-3" /> Date
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent><p>{t('settings.sortTooltipDate')}</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant={sortMode === 'points' ? "default" : "outline"}
+                className="cursor-pointer text-[11px] gap-1"
+                onClick={() => setSortMode('points')}
+              >
+                <Trophy className="h-3 w-3" /> Points
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent><p>{t('settings.sortTooltipPoints')}</p></TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
 
       {/* Course list */}
       <ScrollArea className="h-[300px] border rounded-md">

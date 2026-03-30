@@ -125,7 +125,16 @@
     "noCourses": "Aucune course trouvée",
     "all": "Tous",
     "stageRace": "Étapes",
-    "oneDay": "1 jour"
+    "oneDay": "1 jour",
+    "filterTooltipAll": "Afficher toutes les courses",
+    "filterTooltipStageRace": "Courses à étapes (ex : Tour de France)",
+    "filterTooltipOneDay": "Courses d'un jour (ex : classiques)",
+    "filterTooltipWT": "World Tour — courses du plus haut niveau UCI",
+    "filterTooltipPro": "Courses de catégorie .Pro",
+    "filterTooltip1": "Courses de catégorie .1",
+    "filterTooltipOthers": "Autres catégories de courses",
+    "sortTooltipDate": "Trier par date de départ",
+    "sortTooltipPoints": "Trier par points théoriques décroissants"
   },
   "visibility": {
     "public": "Publique",
