@@ -231,6 +231,7 @@ const Dashboard = () => {
         </SidebarInset>
       </div>
     </SidebarProvider>
+    </>
   );
 };
 
