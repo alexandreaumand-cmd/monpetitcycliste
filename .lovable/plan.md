@@ -1,32 +1,29 @@
 
 
-## Fix: Sidebar navigation labels are invisible
+## Fix: League not visible after joining
 
 ### Root cause
-The `navItemsConfig` uses keys like `home`, `standings`, `teams` with `t('navigation.${key}')`, but the translation files only have these under `navigation.header.*` (e.g. `header.rankings`, `header.teams`). The `t()` calls return empty strings, so no text appears.
+In `JoinLeagueDialog.tsx`, after a successful join (both by code and by clicking), only `refetch()` on the `user-leagues` query key is called. The `LeagueContext` uses a separate query key (`user-leagues-for-context`) with a 5-minute stale time that is never invalidated. This means the context may still think the user has no leagues, and the dashboard may render stale data.
 
-### Solution
-Add the missing top-level keys to both `fr/navigation.json` and `en/navigation.json` to match the sidebar config keys:
+### Fix — `src/components/leagues/JoinLeagueDialog.tsx`
 
-**Keys to add** (at root level of the navigation namespace):
-| Config key | FR label | EN label |
-|---|---|---|
-| home | Accueil | Home |
-| standings | Classement | Rankings |
-| teams | Mon Équipe | My Team |
-| results | Résultats | Results |
-| races | Courses | Races |
-| startlist | Startlist | Startlist |
-| statistics | Statistiques | Statistics |
-| auctions | Enchères | Auctions |
-| live | Live | Live |
-| arena | Arène | Arena |
-| adminLeague | Admin Ligue | League Admin |
-| superAdmin | Super Admin | Super Admin |
+1. Import `useQueryClient` from `@tanstack/react-query`
+2. After `await refetch()`, also invalidate `user-leagues-for-context`:
+   ```ts
+   await refetch();
+   queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+   ```
+3. Apply this in both `handleJoinLeague` (public league join) and `handleJoinByCode` (invite code join)
 
-### Files modified
-- `src/i18n/locales/fr/navigation.json` — add 12 keys
-- `src/i18n/locales/en/navigation.json` — add 12 keys
+### Also fix — `src/pages/JoinLeaguePage.tsx`
 
-No code changes needed in `AppSidebar.tsx` itself — the active styling with gold background is already correct, it just needs the labels to resolve.
+The `/join?token=...` page flow does NOT invalidate any queries at all before redirecting. Add query invalidation for both keys before the redirect timeout:
+```ts
+queryClient.invalidateQueries({ queryKey: ['user-leagues'] });
+queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+```
+
+### Summary
+- 2 files modified
+- Both join paths (dialog + URL) will now properly refresh the leagues cache so the dashboard shows the newly joined league immediately
 

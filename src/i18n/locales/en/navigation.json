@@ -1,16 +1,4 @@
 {
-  "home": "Home",
-  "standings": "Rankings",
-  "teams": "My Team",
-  "results": "Results",
-  "races": "Races",
-  "startlist": "Startlist",
-  "statistics": "Statistics",
-  "auctions": "Auctions",
-  "live": "Live",
-  "arena": "Arena",
-  "adminLeague": "League Admin",
-  "superAdmin": "Super Admin",
   "bottomBar": {
     "rankings": "Rankings",
     "teams": "Teams",

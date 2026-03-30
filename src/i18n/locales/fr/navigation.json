@@ -1,16 +1,4 @@
 {
-  "home": "Accueil",
-  "standings": "Classement",
-  "teams": "Mon Équipe",
-  "results": "Résultats",
-  "races": "Courses",
-  "startlist": "Startlist",
-  "statistics": "Statistiques",
-  "auctions": "Enchères",
-  "live": "Live",
-  "arena": "Arène",
-  "adminLeague": "Admin Ligue",
-  "superAdmin": "Super Admin",
   "bottomBar": {
     "rankings": "Classement",
     "teams": "Équipes",
