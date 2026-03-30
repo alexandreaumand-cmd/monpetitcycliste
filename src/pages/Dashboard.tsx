@@ -131,6 +131,7 @@ const Dashboard = () => {
   if (isMobile) {
     return (
       <>
+        {onboardingOverlay}
         <AnnouncementBanner />
         <MobileLayout
           manager={manager}
