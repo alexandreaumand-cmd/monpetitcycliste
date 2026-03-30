@@ -99,7 +99,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                           <NavLink
                             to={buildNavUrl(item.href)}
                             className={({ isActive }) =>
-                              isActive ? "bg-[hsl(var(--bordure-gold))] text-secondary font-bold rounded-md shadow-sm" : ""
+                              isActive ? "!bg-[hsl(var(--bordure-gold))] !text-[hsl(var(--secondary))] font-bold rounded-md shadow-sm" : ""
                             }
                           >
                             <item.icon className="h-4 w-4" />
