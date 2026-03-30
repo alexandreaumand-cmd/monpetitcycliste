@@ -1,29 +1,13 @@
 
 
-## Ajouter des tooltips explicatifs sur les filtres du CourseSelector
+## Fix: Tooltips invisibles dans le CourseSelector (Dialog)
 
-### Modification
+### Probleme
+Le `CourseSelector` est affiché dans un `Dialog` (z-index ~50). Les `TooltipContent` utilisent un portal qui se rend derrière le dialog, donc les tooltips sont cachés.
 
-**`src/components/leagues/CourseSelector.tsx`** :
-- Importer `Tooltip, TooltipTrigger, TooltipContent, TooltipProvider` depuis `@/components/ui/tooltip`
-- Envelopper chaque Badge de filtre (Tous, Étapes, 1 jour, WT, .Pro, .1, Autres) ainsi que les badges de tri (Date, Points) dans un `<Tooltip>` avec un `<TooltipContent>` explicatif
-- Envelopper le tout dans un `<TooltipProvider>`
+### Solution
+Ajouter `className="z-[100]"` sur chaque `<TooltipContent>` dans `CourseSelector.tsx` pour que les tooltips s'affichent au-dessus du dialog.
 
-**`src/i18n/locales/fr/leagues.json`** — ajouter sous `settings` :
-- `filterTooltipAll`: "Afficher toutes les courses"
-- `filterTooltipStageRace`: "Courses à étapes (ex: Tour de France)"
-- `filterTooltipOneDay`: "Courses d'un jour (ex: classiques)"
-- `filterTooltipWT`: "World Tour — courses du plus haut niveau UCI"
-- `filterTooltipPro`: "Courses de catégorie .Pro"
-- `filterTooltip1`: "Courses de catégorie .1"
-- `filterTooltipOthers`: "Autres catégories de courses"
-- `sortTooltipDate`: "Trier par date de départ"
-- `sortTooltipPoints`: "Trier par points théoriques décroissants"
-
-**`src/i18n/locales/en/leagues.json`** — mêmes clés en anglais
-
-### Fichiers impactés (3)
-- `src/components/leagues/CourseSelector.tsx`
-- `src/i18n/locales/fr/leagues.json`
-- `src/i18n/locales/en/leagues.json`
+### Fichier impacte (1)
+- `src/components/leagues/CourseSelector.tsx` — ajouter `className="z-[100]"` à tous les `<TooltipContent>`
 
