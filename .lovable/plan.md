@@ -1,36 +1,46 @@
 
 
-## Diagnostic : le classement chronologie ne fonctionne plus en Phase 2
+## Amélioration de la landing page — Modes de jeu et barèmes
 
-### Cause racine identifiee
+### Constat
 
-Le graphique chronologique appelle l'edge function `get-cumulative-points-series` qui charge les donnees de `race_results` et `points_ledger` pour construire la courbe cumulative. 
+La landing page (`LandingPage.tsx`) n'utilise pas les composants `LeagueTypesSection` et `ScoringSection` qui existent déjà mais ne sont pas intégrés. De plus, `LeagueTypesSection` affiche des modes obsolètes (Sprint/Grand Tour/Season) au lieu des vrais modes du jeu (5 Phases / À la course). Il n'y a aucun exemple de barème de points.
 
-**Le probleme est un depassement de la limite de 1000 lignes par requete :**
+### Plan
 
-- **Phase 1 seule** : ~1759 points_ledger + ~1500 race_results → certaines queries tenaient dans la limite
-- **Phase 1 + Phase 2 (mode saison/global)** : ~2101 points_ledger + ~2100 race_results → **les queries sont tronquees a 1000 lignes**
+**1. Refondre `LeagueTypesSection.tsx`** — Remplacer les 3 modes fictifs par les 2 vrais modes de jeu :
+- **Mode 5 Phases** : budget 2200, 30 coureurs, enchères par phase, variante WT
+- **Mode À la course** : budget dynamique (650/800/1100), 8/10/15 coureurs, enchère unique
+- Design en 2 colonnes avec les specs clés (budget, effectif, enchères)
+- Reprendre le style épuré de la page Rules (cartes crème avec bordure dorée/pink)
 
-La version deployee en production (avant le blocage de publication) n'utilise probablement pas la pagination sur toutes les queries. Resultat : le `dateIndex` est incomplet, la plupart des points sont "skipped" car ils n'ont pas de date de classement correspondante, et le graphique affiche des donnees vides ou incorrectes.
+**2. Créer un nouveau composant `BaremePreviewSection.tsx`** — Exemple de barème GT :
+- Titre "Comment ça marque ?" avec sous-titre
+- Un bloc visuel montrant le barème Grand Tour en exemple :
+  - **Classement général** : top 5 (1600, 1280, 1040, 800, 600)
+  - **Étape** : top 5 (300, 240, 195, 150, 120)
+  - **Maillots** : Leader 20pts/j, Vert/GPM 12pts/j, Jeune 6pts/j
+- Fond vert foncé (comme ScoringSection) pour contraster avec le reste
+- Lien "Voir tous les barèmes" vers `/rules`
 
-**De plus**, dans le code actuel du repo, il y a un **bug critique a la ligne 227** : `pointsData` est reference mais jamais defini — la query `points_ledger` est construite (lignes 206-224) mais jamais executee avec `fetchAllRows`. Il manque :
-
-```typescript
-const pointsData = await fetchAllRows<any>(query);
+**3. Intégrer dans `LandingPage.tsx`** — Ajouter les 2 sections après `HowItWorksSection` :
+```
+HeroSection
+GameOverviewSection
+HowItWorksSection
+→ LeagueTypesSection (modes de jeu)
+→ BaremePreviewSection (exemple GT)
+AuctionShowcase
+SocialProofSection
+...
 ```
 
-entre les lignes 225 et 227.
+**4. Traductions** — Ajouter les clés FR/EN dans `home.json` pour les 2 nouvelles sections (titres, descriptions des modes, labels barème).
 
-### Plan de correction
-
-**Fichier : `supabase/functions/get-cumulative-points-series/index.ts`**
-
-1. **Ajouter l'execution de la query points_ledger** — inserer `const pointsData = await fetchAllRows<any>(query);` avant la ligne 227
-2. **Verifier que toutes les queries utilisent `fetchAllRows`** pour bypasser la limite de 1000 lignes (points_ledger, race_results, rosters, bonus — la plupart sont deja paginee, mais confirmer)
-3. **Ajouter un log** du nombre de points_ledger charges pour faciliter le debug futur
-
-Ce fix sera deploye automatiquement sur l'environnement de test. Pour la production, il faudra que le probleme de publication (restore point bloque) soit resolu par le support Lovable.
-
-### Fichier impacte
-- `supabase/functions/get-cumulative-points-series/index.ts`
+### Fichiers impactés
+- `src/components/landing/LeagueTypesSection.tsx` — refonte complète
+- `src/components/landing/BaremePreviewSection.tsx` — nouveau
+- `src/pages/LandingPage.tsx` — ajout des 2 sections
+- `src/i18n/locales/fr/home.json` — nouvelles clés
+- `src/i18n/locales/en/home.json` — nouvelles clés
 
