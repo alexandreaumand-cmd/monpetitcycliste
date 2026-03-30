@@ -194,7 +194,25 @@ const Auth = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle "Email not confirmed" specifically
+        if (error.message?.includes('Email not confirmed')) {
+          // Resend confirmation email
+          await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: {
+              emailRedirectTo: `${window.location.origin}/complete-profile?next=${encodeURIComponent(nextUrl)}`,
+            },
+          });
+          toast({
+            title: t('errors.emailNotConfirmed'),
+            description: t('errors.emailNotConfirmedResent'),
+          });
+          return;
+        }
+        throw error;
+      }
     } catch (error: any) {
       toast({
         title: t('errors.invalidCredentials'),
