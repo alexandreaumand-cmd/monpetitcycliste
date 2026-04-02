@@ -96,7 +96,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       const { data: allOwners } = ownerManagerIds.length > 0
         ? await supabase
             .from('managers')
-            .select('id, nom, email')
+            .select('id, nom')
             .in('id', ownerManagerIds)
         : { data: [] };
 
