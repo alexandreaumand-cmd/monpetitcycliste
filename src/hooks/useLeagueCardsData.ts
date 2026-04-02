@@ -37,7 +37,7 @@ interface LeagueStats {
 export interface LeagueCardData {
   members: LeagueMember[];
   memberCount: number;
-  owner: { id: string; nom: string; email: string } | null;
+  owner: { id: string; nom: string } | null;
   season: LeagueSeason | null;
   stats: LeagueStats | null;
   auctionStatus: AuctionStatus | null;
@@ -96,7 +96,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       const { data: allOwners } = ownerManagerIds.length > 0
         ? await supabase
             .from('managers')
-            .select('id, nom, email')
+            .select('id, nom')
             .in('id', ownerManagerIds)
         : { data: [] };
 

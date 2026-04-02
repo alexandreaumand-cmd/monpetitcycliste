@@ -9,7 +9,7 @@ export function useLeagueOwner(ownerManagerId: string | null) {
 
       const { data, error } = await supabase
         .from('managers')
-        .select('id, nom, email')
+        .select('id, nom')
         .eq('id', ownerManagerId)
         .single();
 
