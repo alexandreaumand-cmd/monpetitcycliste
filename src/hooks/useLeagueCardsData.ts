@@ -37,7 +37,7 @@ interface LeagueStats {
 export interface LeagueCardData {
   members: LeagueMember[];
   memberCount: number;
-  owner: { id: string; nom: string; email: string } | null;
+  owner: { id: string; nom: string } | null;
   season: LeagueSeason | null;
   stats: LeagueStats | null;
   auctionStatus: AuctionStatus | null;
