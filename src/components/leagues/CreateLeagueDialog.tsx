@@ -340,7 +340,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
             <div className="space-y-2">
               <Label>{t('settings.startingPhase')}</Label>
               <Select
-                value={startingPhaseIndex.toString()}
+                value={startingPhaseIndex !== null ? startingPhaseIndex.toString() : undefined}
                 onValueChange={(v) => setStartingPhaseIndex(parseInt(v))}
               >
                 <SelectTrigger>
