@@ -75,7 +75,30 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(0);
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number | null>(null);
+
+  // Fetch phases with their statut to filter out completed ones
+  const { data: availablePhases = [] } = useQuery({
+    queryKey: ['phases-for-league-creation', seasonId],
+    queryFn: async () => {
+      if (!seasonId) return [];
+      const { data, error } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, statut, date_debut')
+        .eq('saison_id', seasonId)
+        .order('index_dans_saison');
+      if (error) throw error;
+      // Only show phases that are not completed
+      return (data || []).filter(p => p.statut !== 'completed');
+    },
+    enabled: !!seasonId,
+  });
+
+  // Auto-select the first available (active) phase as default
+  const activePhase = availablePhases.find(p => p.statut === 'active');
+  if (availablePhases.length > 0 && startingPhaseIndex === null) {
+    setStartingPhaseIndex(activePhase?.index_dans_saison ?? availablePhases[0].index_dans_saison);
+  }
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
@@ -132,7 +155,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setFirstAuctionDate(null);
     setVariant('full_season');
     setSelectedCourseIds([]);
-    setStartingPhaseIndex(0);
+    setStartingPhaseIndex(null);
     onOpenChange(false);
   };
 
@@ -317,16 +340,19 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
             <div className="space-y-2">
               <Label>{t('settings.startingPhase')}</Label>
               <Select
-                value={startingPhaseIndex.toString()}
+                value={startingPhaseIndex !== null ? startingPhaseIndex.toString() : undefined}
                 onValueChange={(v) => setStartingPhaseIndex(parseInt(v))}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[0, 1, 2, 3, 4].map((idx) => (
-                    <SelectItem key={idx} value={idx.toString()}>
-                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
+                  {availablePhases.map((phase) => (
+                    <SelectItem key={phase.index_dans_saison} value={phase.index_dans_saison.toString()}>
+                      {phase.index_dans_saison === 0
+                        ? t('settings.startingPhaseDefault')
+                        : t('settings.startingPhaseOption', { num: phase.index_dans_saison + 1 })}
+                      {phase.statut === 'active' ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

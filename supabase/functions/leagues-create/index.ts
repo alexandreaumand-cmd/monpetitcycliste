@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       // Get all phases
       const { data: phases } = await supabase
         .from('phases')
-        .select('id, index_dans_saison')
+        .select('id, index_dans_saison, statut')
         .eq('saison_id', season.id)
         .order('index_dans_saison');
 
@@ -107,13 +107,22 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Filter phases based on startingPhaseIndex
+      // Validate that the selected starting phase is not completed
       if (typeof startingPhaseIndex === 'number') {
+        const selectedPhase = phases.find(p => p.index_dans_saison === startingPhaseIndex);
+        if (selectedPhase?.statut === 'completed') {
+          return new Response(JSON.stringify({ error: 'La phase sélectionnée est terminée. Choisissez une phase en cours ou future.' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
         phaseUuids = phases
-          .filter(p => p.index_dans_saison >= startingPhaseIndex)
+          .filter(p => p.index_dans_saison >= startingPhaseIndex && p.statut !== 'completed')
           .map(p => p.id);
       } else {
-        phaseUuids = phases.map(p => p.id);
+        // Default: exclude completed phases
+        phaseUuids = phases
+          .filter(p => p.statut !== 'completed')
+          .map(p => p.id);
       }
 
     } else if (gameMode === 'per_course') {
