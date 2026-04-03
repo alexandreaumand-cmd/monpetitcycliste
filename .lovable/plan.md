@@ -1,44 +1,21 @@
 
 
-# Fix : Ligues bloquées sur Phase 1 (complétée) + Prévention
+# Fix : Sélecteur de phase de départ
 
-## Diagnostic
+## Problème
+Le filtre actuel (`statut !== 'completed'`) se base sur le champ `statut` des phases, qui est incorrect dans l'environnement de test (P3-P5 de 2026 marquées `completed` alors que leurs dates sont futures). En production aussi, seul le statut `active` de P2 est correct — les phases futures n'ont pas de statut fiable.
 
-**Phase 1** (P1) est terminée depuis le 21/03/2026 (`statut: completed`). La **Phase 2** (P2) est actuellement `active` (22/03 → 08/05).
+## Solution
+Remplacer le filtre par statut par un **filtre par date** : afficher toutes les phases dont `date_fin >= aujourd'hui`. C'est plus robuste car indépendant du cron qui met à jour les statuts.
 
-**5 ligues** ont leurs enchères Round 1 pointant vers P1 alors qu'elle est fermée :
+## Changement
 
-| Ligue | Statut ligue | Enchère opens_at | Action |
-|---|---|---|---|
-| La compétition | active | 10/04 | → P2 |
-| Real estate porn | pending | 04/04 | → P2 |
-| SuceurDeRoux | pending | 10/04 | → P2 |
-| Testets | pending | 11/04 | → P2 |
-| Tête dans le guidon | pending | 22/03 (passé) | → P2 |
+**Fichier** : `src/components/leagues/CreateLeagueDialog.tsx` (lignes 80-101)
 
-## Corrections à apporter
+- Remplacer le filtre `(data || []).filter(p => p.statut !== 'completed')` par `(data || []).filter(p => new Date(p.date_fin) >= new Date(new Date().toDateString()))`
+- Ajouter `date_fin` dans le SELECT (déjà présent via `date_debut`, ajouter `date_fin`)
+- Pour le label "(en cours)", garder la vérification `statut === 'active'` ou calculer : `date_debut <= today && date_fin >= today`
+- Filtrer aussi par `saison_id` correspondant à la saison 2026 (déjà fait via `seasonId`)
 
-### 1. Corriger les données LIVE (5 auctions)
-Mettre à jour `phase_id` et `effective_phase_id` des 5 auctions de P1 vers P2 (`8b939cb8-7079-4938-ba00-920603813092`).
-
-Également mettre à jour les `league_scopes` pour retirer P1 du tableau `phases` de ces ligues (puisqu'elles démarrent en P2, il ne faut pas compter les courses de P1).
-
-### 2. Empêcher la sélection de phases terminées (code)
-Dans `CreateLeagueDialog.tsx`, le sélecteur de phase de départ affiche les 5 phases en dur (`[0,1,2,3,4]`) sans vérifier leur statut. Il faut :
-- Charger les phases depuis la DB avec leur statut
-- Filtrer pour n'afficher que les phases `active` ou futures (pas `completed`)
-- Pré-sélectionner la phase active comme valeur par défaut
-
-### 3. Validation côté serveur (leagues-create)
-Dans `supabase/functions/leagues-create/index.ts`, ajouter une vérification que la phase sélectionnée n'est pas `completed` :
-- Charger le `statut` de chaque phase en plus de `id, index_dans_saison`
-- Si `startingPhaseIndex` pointe vers une phase `completed`, retourner une erreur 400
-
-### 4. Affichage dashboard (déjà OK)
-La carte de ligue affiche déjà correctement "Enchères programmées" avec le countdown vers `opens_at`. Le problème actuel ("Aucune donnée disponible") vient du fait que la phase pointée est `completed` et qu'il n'y a pas encore de données de classement — une fois les auctions basculées en P2, l'affichage sera cohérent.
-
-## Fichiers impactés
-- **Données LIVE** : `auctions` (5 lignes), `league_scopes` (5 lignes) — via outil insert/update
-- `src/components/leagues/CreateLeagueDialog.tsx` — filtrer les phases terminées
-- `supabase/functions/leagues-create/index.ts` — validation serveur
+Résultat : les phases 2, 3, 4, 5 seront affichées, avec Phase 2 marquée "(en cours)".
 
