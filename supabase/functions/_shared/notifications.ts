@@ -33,6 +33,59 @@ async function sendPushNotifications(
   }
 }
 
+// Send auction-opened emails to league members
+async function sendAuctionEmails(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  supabase: any,
+  userIds: string[],
+  metadata: any
+) {
+  // Get emails from auth.users for all member user_ids
+  const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+  
+  if (authError) {
+    console.error('Error fetching auth users for emails:', authError);
+    return;
+  }
+
+  const userEmails = authUsers?.users
+    ?.filter((u: any) => userIds.includes(u.id) && u.email)
+    ?.map((u: any) => u.email) || [];
+
+  if (userEmails.length === 0) {
+    console.log('No emails found for league members');
+    return;
+  }
+
+  console.log(`📧 Sending auction-opened emails to ${userEmails.length} members`);
+
+  // Send email to each member via send-transactional-email
+  const sendPromises = userEmails.map((email: string) =>
+    fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
+        template_name: 'auction-opened',
+        recipient_email: email,
+        templateData: {
+          leagueName: metadata.league_name || 'Ma Ligue',
+          roundNumber: metadata.round_number || 1,
+          deadlineAt: metadata.deadline_at || '',
+          leagueId: metadata.league_id || '',
+          lang: 'fr',
+        },
+      }),
+    }).catch((err: any) => console.error(`Email send failed for ${email}:`, err))
+  );
+
+  await Promise.allSettled(sendPromises);
+  console.log(`📧 Auction email batch complete`);
+}
+
 export async function notifyLeagueMembers(
   supabase: any,
   leagueId: string,
@@ -114,6 +167,21 @@ export async function notifyLeagueMembers(
         userIds,
         notification
       );
+
+      // Send auction-opened emails when an auction opens
+      if (notification.type === 'auction_opened' && notification.metadata) {
+        try {
+          await sendAuctionEmails(
+            supabaseUrl,
+            supabaseServiceKey,
+            supabase,
+            userIds,
+            notification.metadata
+          );
+        } catch (emailError) {
+          console.error('Error sending auction emails (non-blocking):', emailError);
+        }
+      }
     }
   } catch (error) {
     console.error('Error in notifyLeagueMembers:', error);

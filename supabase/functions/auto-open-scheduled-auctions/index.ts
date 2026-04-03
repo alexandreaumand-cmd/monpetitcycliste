@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
             league_name: leagueNames[auction.league_id] || 'votre ligue',
             auction_id: auction.id,
             round_number: auction.round_number,
+            deadline_at: newDeadline,
           },
         });
       } catch (notifErr) {
