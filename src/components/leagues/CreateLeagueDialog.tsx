@@ -352,9 +352,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                 <SelectContent>
                   {availablePhases.map((phase) => (
                     <SelectItem key={phase.index_dans_saison} value={phase.index_dans_saison.toString()}>
-                      {phase.index_dans_saison === 0
-                        ? t('settings.startingPhaseDefault')
-                        : t('settings.startingPhaseOption', { num: phase.index_dans_saison + 1 })}
+                      {t('settings.startingPhaseOption', { num: phase.index_dans_saison })}
                       {activePhase && phase.index_dans_saison === activePhase.index_dans_saison ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
                     </SelectItem>
                   ))}
