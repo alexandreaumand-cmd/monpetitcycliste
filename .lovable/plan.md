@@ -1,42 +1,44 @@
 
 
-# Email transactionnel : Enchères ouvertes
+# Fix : Ligues bloquées sur Phase 1 (complétée) + Prévention
 
-## Contexte
-Le système envoie déjà des **notifications in-app + push** quand un round d'enchères s'ouvre (via `notifyLeagueMembers` dans `_shared/notifications.ts`). Il faut ajouter un **email** en complément.
+## Diagnostic
 
-Le projet a déjà un domaine email configuré (`notify.labordure.app`) et des templates auth (signup, recovery, etc.) avec le branding La Bordure. On va utiliser le système d'email transactionnel intégré de Lovable.
+**Phase 1** (P1) est terminée depuis le 21/03/2026 (`statut: completed`). La **Phase 2** (P2) est actuellement `active` (22/03 → 08/05).
 
-## Plan
+**5 ligues** ont leurs enchères Round 1 pointant vers P1 alors qu'elle est fermée :
 
-### 1. Scaffolder l'infrastructure email transactionnel
-- Appeler `email_domain--scaffold_transactional_email` pour créer la fonction d'envoi d'emails transactionnels (`send-transactional-email`)
-- Cela met en place le pipeline d'envoi hors auth
+| Ligue | Statut ligue | Enchère opens_at | Action |
+|---|---|---|---|
+| La compétition | active | 10/04 | → P2 |
+| Real estate porn | pending | 04/04 | → P2 |
+| SuceurDeRoux | pending | 10/04 | → P2 |
+| Testets | pending | 11/04 | → P2 |
+| Tête dans le guidon | pending | 22/03 (passé) | → P2 |
 
-### 2. Créer le template email "Auction Opened"
-- Fichier : `supabase/functions/_shared/email-templates/auction-opened.tsx`
-- Reprendre le style exact des templates existants (header vert forêt `#1B5E3B`, logo, bouton or `#C8963A`, fond crème `#F6F3ED`)
-- Contenu bilingue FR/EN :
-  - Objet : "Tour {round_number} ouvert — {league_name}"
-  - Titre : "Les enchères sont ouvertes !"
-  - Corps : nom de la ligue, numéro du round, deadline
-  - CTA : "Placer mes mises" → lien vers `/dashboard/encheres?leagueId={league_id}`
-  - Footer discret
+## Corrections à apporter
 
-### 3. Créer la edge function d'envoi
-- Fichier : `supabase/functions/send-auction-email/index.ts`
-- Accepte `{ league_id, auction_id, round_number, league_name, deadline_at }`
-- Récupère les `user_id` des membres de la ligue → récupère leurs emails depuis `auth.users` (via service role)
-- Rend le template React Email en HTML
-- Envoie via `send-transactional-email` ou directement via l'API email Lovable
+### 1. Corriger les données LIVE (5 auctions)
+Mettre à jour `phase_id` et `effective_phase_id` des 5 auctions de P1 vers P2 (`8b939cb8-7079-4938-ba00-920603813092`).
 
-### 4. Intégrer dans le flux d'ouverture d'enchères
-- Modifier `_shared/notifications.ts` : ajouter un appel à la nouvelle edge function après l'envoi des push notifications
-- Cela impactera automatiquement tous les points d'appel existants (`auto-open-scheduled-auctions`, `ouvrir-nouveau-round`, `leagues-join`, etc.)
+Également mettre à jour les `league_scopes` pour retirer P1 du tableau `phases` de ces ligues (puisqu'elles démarrent en P2, il ne faut pas compter les courses de P1).
 
-### Détails techniques
-- Template React Email avec `@react-email/components@0.0.22`
-- Styles identiques aux templates auth existants (même palette, même structure)
-- L'email inclura le nom de la ligue, le numéro du round, et la deadline
-- Envoi asynchrone (non-bloquant) pour ne pas ralentir l'ouverture
+### 2. Empêcher la sélection de phases terminées (code)
+Dans `CreateLeagueDialog.tsx`, le sélecteur de phase de départ affiche les 5 phases en dur (`[0,1,2,3,4]`) sans vérifier leur statut. Il faut :
+- Charger les phases depuis la DB avec leur statut
+- Filtrer pour n'afficher que les phases `active` ou futures (pas `completed`)
+- Pré-sélectionner la phase active comme valeur par défaut
+
+### 3. Validation côté serveur (leagues-create)
+Dans `supabase/functions/leagues-create/index.ts`, ajouter une vérification que la phase sélectionnée n'est pas `completed` :
+- Charger le `statut` de chaque phase en plus de `id, index_dans_saison`
+- Si `startingPhaseIndex` pointe vers une phase `completed`, retourner une erreur 400
+
+### 4. Affichage dashboard (déjà OK)
+La carte de ligue affiche déjà correctement "Enchères programmées" avec le countdown vers `opens_at`. Le problème actuel ("Aucune donnée disponible") vient du fait que la phase pointée est `completed` et qu'il n'y a pas encore de données de classement — une fois les auctions basculées en P2, l'affichage sera cohérent.
+
+## Fichiers impactés
+- **Données LIVE** : `auctions` (5 lignes), `league_scopes` (5 lignes) — via outil insert/update
+- `src/components/leagues/CreateLeagueDialog.tsx` — filtrer les phases terminées
+- `supabase/functions/leagues-create/index.ts` — validation serveur
 
