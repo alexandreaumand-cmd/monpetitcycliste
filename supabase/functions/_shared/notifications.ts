@@ -114,6 +114,21 @@ export async function notifyLeagueMembers(
         userIds,
         notification
       );
+
+      // Send auction-opened emails when an auction opens
+      if (notification.type === 'auction_opened' && notification.metadata) {
+        try {
+          await sendAuctionEmails(
+            supabaseUrl,
+            supabaseServiceKey,
+            supabase,
+            userIds,
+            notification.metadata
+          );
+        } catch (emailError) {
+          console.error('Error sending auction emails (non-blocking):', emailError);
+        }
+      }
     }
   } catch (error) {
     console.error('Error in notifyLeagueMembers:', error);
