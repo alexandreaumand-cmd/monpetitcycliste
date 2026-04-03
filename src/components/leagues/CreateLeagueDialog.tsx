@@ -77,25 +77,28 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [startingPhaseIndex, setStartingPhaseIndex] = useState<number | null>(null);
 
-  // Fetch phases with their statut to filter out completed ones
+  // Fetch phases filtered by date (more robust than statut which depends on cron)
   const { data: availablePhases = [] } = useQuery({
     queryKey: ['phases-for-league-creation', seasonId],
     queryFn: async () => {
       if (!seasonId) return [];
       const { data, error } = await supabase
         .from('phases')
-        .select('id, index_dans_saison, statut, date_debut')
+        .select('id, index_dans_saison, statut, date_debut, date_fin')
         .eq('saison_id', seasonId)
         .order('index_dans_saison');
       if (error) throw error;
-      // Only show phases that are not completed
-      return (data || []).filter(p => p.statut !== 'completed');
+      const today = new Date(new Date().toDateString());
+      return (data || []).filter(p => new Date(p.date_fin) >= today);
     },
     enabled: !!seasonId,
   });
 
-  // Auto-select the first available (active) phase as default
-  const activePhase = availablePhases.find(p => p.statut === 'active');
+  // Auto-select the active phase (by date) as default
+  const today = new Date(new Date().toDateString());
+  const activePhase = availablePhases.find(p => 
+    new Date(p.date_debut) <= today && new Date(p.date_fin) >= today
+  );
   if (availablePhases.length > 0 && startingPhaseIndex === null) {
     setStartingPhaseIndex(activePhase?.index_dans_saison ?? availablePhases[0].index_dans_saison);
   }
@@ -352,7 +355,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                       {phase.index_dans_saison === 0
                         ? t('settings.startingPhaseDefault')
                         : t('settings.startingPhaseOption', { num: phase.index_dans_saison + 1 })}
-                      {phase.statut === 'active' ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
+                      {activePhase && phase.index_dans_saison === activePhase.index_dans_saison ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
