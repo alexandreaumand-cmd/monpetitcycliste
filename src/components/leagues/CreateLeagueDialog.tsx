@@ -355,7 +355,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                       {phase.index_dans_saison === 0
                         ? t('settings.startingPhaseDefault')
                         : t('settings.startingPhaseOption', { num: phase.index_dans_saison + 1 })}
-                      {phase.statut === 'active' ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
+                      {activePhase && phase.index_dans_saison === activePhase.index_dans_saison ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
