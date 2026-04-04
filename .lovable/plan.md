@@ -1,44 +1,23 @@
 
 
-# Business Card Design for La Bordure
+# Corriger l'indexation des phases : 1-5 au lieu de 0-4
 
-## Overview
-Create print-ready business cards (front + back) as PDF files using Python/reportlab, following the brand identity strictly.
+## Problème
+Le sélecteur de phase de départ dans `CreateLeagueDialog` utilise des indices 0-4, alors que les phases en base (`index_dans_saison`) sont numérotées de 1 à 5. Cela crée un décalage : sélectionner "Phase 2" envoie `startingPhaseIndex=1` au backend, qui filtre ensuite avec `p.index_dans_saison >= 1` (ce qui inclut la phase 1 au lieu de commencer à la phase 2).
 
-## Assets
-- Logo (dark): `src/assets/logo-bordure.png`
-- Logo (light): `src/assets/logo-bordure-light.png`
-- Square logo: `src/assets/logo-carre-sans-marque.png` (likely the clean square version)
+## Modifications
 
-## Design Specs
+### 1. Frontend — `src/components/leagues/CreateLeagueDialog.tsx`
+- Changer l'état initial de `startingPhaseIndex` de `0` à `1`
+- Remplacer la liste `[0, 1, 2, 3, 4]` par `[1, 2, 3, 4, 5]` (ou dynamiquement depuis la base, comme prévu dans le plan précédent)
+- Adapter l'affichage : la valeur `1` = "Depuis la Phase 1 (défaut)", `2` = "Phase 2", etc.
+- Corriger la ligne recap (l.547) qui fait `startingPhaseIndex + 1` → afficher directement `startingPhaseIndex`
+- Corriger le reset (`resetForm`) pour remettre à `1` au lieu de `0`
 
-### Front Face
-- **Background**: Crème #F6F3ED
-- **Layout** (centered, top to bottom):
-  1. Square logo (~15mm)
-  2. Thin decorative line in forest green #1B5E3B
-  3. "LA BORDURE" — dark green #2D3D32, bold, uppercase, large
-  4. "Fantasy Cycling Game" — muted gray #8A9188, small caps
-  5. "labordure.app" — gold #C8963A
+### 2. Backend — `supabase/functions/leagues-create/index.ts`
+- Le filtre `p.index_dans_saison >= startingPhaseIndex` fonctionne déjà correctement si le frontend envoie 1-5 (car `index_dans_saison` est aussi 1-5)
+- Corriger la sélection de `auctionPhaseId` (l.229-230) : actuellement `phaseUuids[startingPhaseIndex]` utilise l'index comme position dans le tableau filtré, ce qui est faux. Il faut prendre `phaseUuids[0]` (le premier élément du tableau déjà filtré) dans tous les cas
 
-### Back Face
-- **Background**: Solid forest green #1B5E3B
-- **Layout** (centered):
-  1. Light logo in crème/white
-  2. Tagline: "Build your dream team. Race to glory." — crème #F6F3ED
-  3. "labordure.app" — gold #C8963A
-
-### Dimensions
-- 91 × 61 mm (85×55 + 3mm bleed on each side)
-- Safe zone: 5mm from trim edge
-
-## Technical Approach
-1. Use reportlab to generate a single PDF with two pages (front + back)
-2. Embed logos as images from `src/assets/`
-3. Use Inter font (copy from skill fonts if available, else fallback to Helvetica)
-4. Export to `/mnt/documents/la-bordure-business-card.pdf`
-5. QA: convert to images and inspect
-
-## Deliverable
-- `la-bordure-business-card.pdf` — 2-page PDF (page 1 = front, page 2 = back)
+### 3. Vérification des données existantes
+- Les 2 ligues existantes ont `starting_phase_index` stocké en base — vérifier si elles utilisent 0-based et si une correction de données est nécessaire
 
