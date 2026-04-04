@@ -75,7 +75,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(0);
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(1);
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
@@ -92,6 +92,34 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
 
   if (seasons.length > 0 && !seasonId) {
     setSeasonId(seasons[0].id);
+  }
+
+  // Fetch phases for the selected season (five_phases mode)
+  const { data: seasonPhases = [] } = useQuery({
+    queryKey: ['season-phases-create', seasonId],
+    queryFn: async () => {
+      if (!seasonId) return [];
+      const { data } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, date_debut, date_fin')
+        .eq('saison_id', seasonId)
+        .order('index_dans_saison');
+      return data || [];
+    },
+    enabled: !!seasonId,
+  });
+
+  // Determine which phases are available (not completed based on date)
+  const today = new Date().toISOString().split('T')[0];
+  const availablePhases = seasonPhases.filter(p => p.date_fin >= today);
+  const activePhase = seasonPhases.find(p => p.date_debut <= today && today <= p.date_fin);
+  const defaultPhaseIndex = activePhase?.index_dans_saison ?? availablePhases[0]?.index_dans_saison ?? 1;
+
+  // Auto-set starting phase to active phase when phases load
+  const [phaseAutoSet, setPhaseAutoSet] = useState(false);
+  if (seasonPhases.length > 0 && !phaseAutoSet && selectedMode === 'five_phases') {
+    setStartingPhaseIndex(defaultPhaseIndex);
+    setPhaseAutoSet(true);
   }
 
   // Fetch courses for recap (per_course mode)
@@ -132,7 +160,8 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setFirstAuctionDate(null);
     setVariant('full_season');
     setSelectedCourseIds([]);
-    setStartingPhaseIndex(0);
+    setStartingPhaseIndex(1);
+    setPhaseAutoSet(false);
     onOpenChange(false);
   };
 
@@ -324,11 +353,21 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[0, 1, 2, 3, 4].map((idx) => (
-                    <SelectItem key={idx} value={idx.toString()}>
-                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
-                    </SelectItem>
-                  ))}
+                  {seasonPhases.map((phase) => {
+                    const isCompleted = phase.date_fin < today;
+                    const isActive = phase.date_debut <= today && today <= phase.date_fin;
+                    return (
+                      <SelectItem 
+                        key={phase.index_dans_saison} 
+                        value={phase.index_dans_saison.toString()}
+                        disabled={isCompleted}
+                      >
+                        {`Phase ${phase.index_dans_saison}`}
+                        {isActive ? ` (${t('settings.startingPhaseActive', { defaultValue: 'en cours' })})` : ''}
+                        {isCompleted ? ` (${t('settings.startingPhaseClosed', { defaultValue: 'clôturée' })})` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -544,7 +583,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                 <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapVariant')}
                   value={variant === 'full_season' ? t('settings.variantFull') : t('settings.variantWT')} />
                 <RecapRow icon={<Flag className="h-4 w-4" />} label={t('wizard.recapStartingPhase')}
-                  value={startingPhaseIndex === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex + 1 })} />
+                  value={startingPhaseIndex === 1 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex })} />
               </>
             )}
             {selectedMode === 'per_course' && selectedCoursesData.length > 0 && (
