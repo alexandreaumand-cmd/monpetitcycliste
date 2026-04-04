@@ -161,6 +161,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setVariant('full_season');
     setSelectedCourseIds([]);
     setStartingPhaseIndex(1);
+    setPhaseAutoSet(false);
     onOpenChange(false);
   };
 
