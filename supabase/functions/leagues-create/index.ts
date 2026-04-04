@@ -225,12 +225,8 @@ Deno.serve(async (req) => {
     const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);
     
     // For five_phases with startingPhaseIndex, use the selected phase
-    let auctionPhaseId: string;
-    if (gameMode === 'five_phases' && typeof startingPhaseIndex === 'number' && startingPhaseIndex >= 0 && startingPhaseIndex < phaseUuids.length) {
-      auctionPhaseId = phaseUuids[startingPhaseIndex];
-    } else {
-      auctionPhaseId = phaseUuids[0];
-    }
+    // phaseUuids is already filtered by startingPhaseIndex, so always use the first element
+    let auctionPhaseId: string = phaseUuids[0];
 
     if (!auctionPhaseId) {
       await supabase.from('league_members').delete().eq('league_id', league.id);

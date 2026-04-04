@@ -544,7 +544,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                 <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapVariant')}
                   value={variant === 'full_season' ? t('settings.variantFull') : t('settings.variantWT')} />
                 <RecapRow icon={<Flag className="h-4 w-4" />} label={t('wizard.recapStartingPhase')}
-                  value={startingPhaseIndex === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex + 1 })} />
+                  value={startingPhaseIndex === 1 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex })} />
               </>
             )}
             {selectedMode === 'per_course' && selectedCoursesData.length > 0 && (
