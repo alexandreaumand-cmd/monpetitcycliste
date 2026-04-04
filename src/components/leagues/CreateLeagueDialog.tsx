@@ -353,11 +353,21 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4, 5].map((idx) => (
-                    <SelectItem key={idx} value={idx.toString()}>
-                      {idx === 1 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx })}
-                    </SelectItem>
-                  ))}
+                  {seasonPhases.map((phase) => {
+                    const isCompleted = phase.date_fin < today;
+                    const isActive = phase.date_debut <= today && today <= phase.date_fin;
+                    return (
+                      <SelectItem 
+                        key={phase.index_dans_saison} 
+                        value={phase.index_dans_saison.toString()}
+                        disabled={isCompleted}
+                      >
+                        {`Phase ${phase.index_dans_saison}`}
+                        {isActive ? ` (${t('settings.startingPhaseActive', { defaultValue: 'en cours' })})` : ''}
+                        {isCompleted ? ` (${t('settings.startingPhaseClosed', { defaultValue: 'clôturée' })})` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
