@@ -94,6 +94,34 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setSeasonId(seasons[0].id);
   }
 
+  // Fetch phases for the selected season (five_phases mode)
+  const { data: seasonPhases = [] } = useQuery({
+    queryKey: ['season-phases-create', seasonId],
+    queryFn: async () => {
+      if (!seasonId) return [];
+      const { data } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, date_debut, date_fin')
+        .eq('saison_id', seasonId)
+        .order('index_dans_saison');
+      return data || [];
+    },
+    enabled: !!seasonId,
+  });
+
+  // Determine which phases are available (not completed based on date)
+  const today = new Date().toISOString().split('T')[0];
+  const availablePhases = seasonPhases.filter(p => p.date_fin >= today);
+  const activePhase = seasonPhases.find(p => p.date_debut <= today && today <= p.date_fin);
+  const defaultPhaseIndex = activePhase?.index_dans_saison ?? availablePhases[0]?.index_dans_saison ?? 1;
+
+  // Auto-set starting phase to active phase when phases load
+  const [phaseAutoSet, setPhaseAutoSet] = useState(false);
+  if (seasonPhases.length > 0 && !phaseAutoSet && selectedMode === 'five_phases') {
+    setStartingPhaseIndex(defaultPhaseIndex);
+    setPhaseAutoSet(true);
+  }
+
   // Fetch courses for recap (per_course mode)
   const { data: selectedCoursesData = [] } = useQuery({
     queryKey: ['selected-courses-recap', selectedCourseIds.join(',')],
