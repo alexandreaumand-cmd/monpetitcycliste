@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       // Get all phases
       const { data: phases } = await supabase
         .from('phases')
-        .select('id, index_dans_saison')
+        .select('id, index_dans_saison, date_fin')
         .eq('saison_id', season.id)
         .order('index_dans_saison');
 
@@ -105,6 +105,16 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Aucune phase disponible' }), {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      // Validate that starting phase is not completed
+      if (typeof startingPhaseIndex === 'number') {
+        const startPhase = phases.find(p => p.index_dans_saison === startingPhaseIndex);
+        if (startPhase && startPhase.date_fin < new Date().toISOString().split('T')[0]) {
+          return new Response(JSON.stringify({ error: 'La phase sélectionnée est déjà clôturée' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // Filter phases based on startingPhaseIndex
