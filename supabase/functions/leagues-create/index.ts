@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       // Get all phases
       const { data: phases } = await supabase
         .from('phases')
-        .select('id, index_dans_saison, statut')
+        .select('id, index_dans_saison')
         .eq('saison_id', season.id)
         .order('index_dans_saison');
 
@@ -107,22 +107,13 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Validate that the selected starting phase is not completed
+      // Filter phases based on startingPhaseIndex
       if (typeof startingPhaseIndex === 'number') {
-        const selectedPhase = phases.find(p => p.index_dans_saison === startingPhaseIndex);
-        if (selectedPhase?.statut === 'completed') {
-          return new Response(JSON.stringify({ error: 'La phase sélectionnée est terminée. Choisissez une phase en cours ou future.' }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
         phaseUuids = phases
-          .filter(p => p.index_dans_saison >= startingPhaseIndex && p.statut !== 'completed')
+          .filter(p => p.index_dans_saison >= startingPhaseIndex)
           .map(p => p.id);
       } else {
-        // Default: exclude completed phases
-        phaseUuids = phases
-          .filter(p => p.statut !== 'completed')
-          .map(p => p.id);
+        phaseUuids = phases.map(p => p.id);
       }
 
     } else if (gameMode === 'per_course') {

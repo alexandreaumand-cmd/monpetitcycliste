@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 const corsHeaders = {
@@ -102,7 +102,6 @@ Deno.serve(async (req) => {
             league_name: leagueNames[auction.league_id] || 'votre ligue',
             auction_id: auction.id,
             round_number: auction.round_number,
-            deadline_at: newDeadline,
           },
         });
       } catch (notifErr) {

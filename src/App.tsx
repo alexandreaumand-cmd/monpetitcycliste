@@ -32,7 +32,6 @@ const TermsPage = React.lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
 const TeamPage = React.lazy(() => import("./pages/TeamPage"));
 const ContactPage = React.lazy(() => import("./pages/ContactPage"));
-const UnsubscribePage = React.lazy(() => import("./pages/UnsubscribePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,7 +74,6 @@ const App = () => {
                       <Route path="/privacy" element={<PrivacyPage />} />
                       <Route path="/team" element={<TeamPage />} />
                       <Route path="/contact" element={<ContactPage />} />
-                      <Route path="/unsubscribe" element={<UnsubscribePage />} />
                       <Route path="/dashboard/*" element={<Dashboard />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />

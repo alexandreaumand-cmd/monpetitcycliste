@@ -109,11 +109,15 @@ export const useAuctionOperations = () => {
 
   const closeAuction = useMutation({
     mutationFn: async (auctionId: string) => {
+      const { error: updateError } = await supabase
+        .from('auctions')
+        .update({ statut: 'closed', closed_at: new Date().toISOString() })
+        .eq('id', auctionId);
+      if (updateError) throw updateError;
       const { data, error: functionError } = await supabase.functions.invoke('clore-round', {
         body: { auction_id: auctionId, league_id: leagueId }
       });
       if (functionError) throw functionError;
-      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {

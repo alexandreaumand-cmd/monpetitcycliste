@@ -75,33 +75,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number | null>(null);
-
-  // Fetch phases filtered by date (more robust than statut which depends on cron)
-  const { data: availablePhases = [] } = useQuery({
-    queryKey: ['phases-for-league-creation', seasonId],
-    queryFn: async () => {
-      if (!seasonId) return [];
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, statut, date_debut, date_fin')
-        .eq('saison_id', seasonId)
-        .order('index_dans_saison');
-      if (error) throw error;
-      const today = new Date(new Date().toDateString());
-      return (data || []).filter(p => new Date(p.date_fin) >= today);
-    },
-    enabled: !!seasonId,
-  });
-
-  // Auto-select the active phase (by date) as default
-  const today = new Date(new Date().toDateString());
-  const activePhase = availablePhases.find(p => 
-    new Date(p.date_debut) <= today && new Date(p.date_fin) >= today
-  );
-  if (availablePhases.length > 0 && startingPhaseIndex === null) {
-    setStartingPhaseIndex(activePhase?.index_dans_saison ?? availablePhases[0].index_dans_saison);
-  }
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(0);
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
@@ -158,7 +132,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setFirstAuctionDate(null);
     setVariant('full_season');
     setSelectedCourseIds([]);
-    setStartingPhaseIndex(null);
+    setStartingPhaseIndex(0);
     onOpenChange(false);
   };
 
@@ -343,17 +317,16 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
             <div className="space-y-2">
               <Label>{t('settings.startingPhase')}</Label>
               <Select
-                value={startingPhaseIndex !== null ? startingPhaseIndex.toString() : undefined}
+                value={startingPhaseIndex.toString()}
                 onValueChange={(v) => setStartingPhaseIndex(parseInt(v))}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {availablePhases.map((phase) => (
-                    <SelectItem key={phase.index_dans_saison} value={phase.index_dans_saison.toString()}>
-                      {t('settings.startingPhaseOption', { num: phase.index_dans_saison })}
-                      {activePhase && phase.index_dans_saison === activePhase.index_dans_saison ? ` (${t('settings.startingPhaseCurrent', { defaultValue: 'en cours' })})` : ''}
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <SelectItem key={idx} value={idx.toString()}>
+                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
                     </SelectItem>
                   ))}
                 </SelectContent>
