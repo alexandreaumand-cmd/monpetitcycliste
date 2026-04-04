@@ -324,9 +324,9 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[0, 1, 2, 3, 4].map((idx) => (
+                  {[1, 2, 3, 4, 5].map((idx) => (
                     <SelectItem key={idx} value={idx.toString()}>
-                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
+                      {idx === 1 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx })}
                     </SelectItem>
                   ))}
                 </SelectContent>
