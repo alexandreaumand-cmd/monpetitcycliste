@@ -132,7 +132,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setFirstAuctionDate(null);
     setVariant('full_season');
     setSelectedCourseIds([]);
-    setStartingPhaseIndex(0);
+    setStartingPhaseIndex(1);
     onOpenChange(false);
   };
 
