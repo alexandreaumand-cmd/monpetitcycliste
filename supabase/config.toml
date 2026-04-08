@@ -13,3 +13,9 @@ project_id = "khahpetvqjoyrwambaqn"
     verify_jwt = false
   [functions.arena-recap-watchdog]
     verify_jwt = false
+  [functions.clore-round]
+    verify_jwt = false
+  [functions.auction-submit-all-bids]
+    verify_jwt = false
+  [functions.publier-annonce]
+    verify_jwt = false
