@@ -1,23 +1,48 @@
 
 
-# Corriger l'indexation des phases : 1-5 au lieu de 0-4
+# Diagnostiquer et corriger la clôture automatique en LIVE
 
-## Problème
-Le sélecteur de phase de départ dans `CreateLeagueDialog` utilise des indices 0-4, alors que les phases en base (`index_dans_saison`) sont numérotées de 1 à 5. Cela crée un décalage : sélectionner "Phase 2" envoie `startingPhaseIndex=1` au backend, qui filtre ensuite avec `p.index_dans_saison >= 1` (ce qui inclut la phase 1 au lieu de commencer à la phase 2).
+## Diagnostic (avant toute correction)
 
-## Modifications
+### Etape 1 : Vérifier que `clore-round` est déployé en LIVE
+Appeler la fonction via `curl_edge_functions` en LIVE avec les paramètres de la ligue "Test DL" :
+- auction_id: `5c909f0c-227e-4a43-b7c6-def6ac220781`
+- league_id: `4e4930c7-5cf9-49e6-8633-ff88155c7087`
+- auto_mode: true
 
-### 1. Frontend — `src/components/leagues/CreateLeagueDialog.tsx`
-- Changer l'état initial de `startingPhaseIndex` de `0` à `1`
-- Remplacer la liste `[0, 1, 2, 3, 4]` par `[1, 2, 3, 4, 5]` (ou dynamiquement depuis la base, comme prévu dans le plan précédent)
-- Adapter l'affichage : la valeur `1` = "Depuis la Phase 1 (défaut)", `2` = "Phase 2", etc.
-- Corriger la ligne recap (l.547) qui fait `startingPhaseIndex + 1` → afficher directement `startingPhaseIndex`
-- Corriger le reset (`resetForm`) pour remettre à `1` au lieu de `0`
+Si 404 → la fonction n'est pas déployée en LIVE → il suffit de publier le projet.
+Si erreur 400/500 → on aura le message exact pour corriger.
+Si succès → le round sera clôturé et les annonces créées.
 
-### 2. Backend — `supabase/functions/leagues-create/index.ts`
-- Le filtre `p.index_dans_saison >= startingPhaseIndex` fonctionne déjà correctement si le frontend envoie 1-5 (car `index_dans_saison` est aussi 1-5)
-- Corriger la sélection de `auctionPhaseId` (l.229-230) : actuellement `phaseUuids[startingPhaseIndex]` utilise l'index comme position dans le tableau filtré, ce qui est faux. Il faut prendre `phaseUuids[0]` (le premier élément du tableau déjà filtré) dans tous les cas
+### Etape 2 : Ajouter du logging visible dans l'auto-close
+Dans `auction-submit-all-bids/index.ts`, le `catch` ligne 439 avale silencieusement les erreurs. Améliorer le logging pour capturer :
+- Le status code de l'appel `functions.invoke('clore-round')`
+- Le body de la réponse en cas d'erreur
 
-### 3. Vérification des données existantes
-- Les 2 ligues existantes ont `starting_phase_index` stocké en base — vérifier si elles utilisent 0-based et si une correction de données est nécessaire
+**Fichier modifié :** `supabase/functions/auction-submit-all-bids/index.ts` (lignes 393-405)
+
+```typescript
+const response = await supabase.functions.invoke('clore-round', {
+  body: {
+    auction_id: auction.id,
+    league_id: league_id,
+    auto_mode: true,
+  }
+});
+
+if (response.error) {
+  console.error('❌ Error auto-closing round:', JSON.stringify(response.error));
+  console.error('❌ Response data:', JSON.stringify(response.data));
+} else {
+  console.log('✅ Round automatically closed:', JSON.stringify(response.data));
+}
+```
+
+### Etape 3 (si nécessaire) : Ajouter les fonctions manquantes au config.toml
+Si le diagnostic confirme un problème JWT, ajouter `clore-round`, `auction-submit-all-bids`, et `publier-annonce` au `config.toml` avec `verify_jwt = false`.
+
+## Impact
+- Aucun changement de schema
+- Correction ciblée sur le logging et potentiellement le config
+- Le round bloqué en LIVE sera traité manuellement lors du diagnostic
 
