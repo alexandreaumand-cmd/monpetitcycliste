@@ -390,7 +390,8 @@ Deno.serve(async (req) => {
         console.log('🎉 All eligible managers have validated! Auto-closing round...');
         
         // Auto-close: call clore-round with auto_mode (service role, bypasses admin check)
-        const { error: closeError } = await supabase.functions.invoke('clore-round', {
+        console.log('🔄 Invoking clore-round with service role...');
+        const { data: closeData, error: closeError } = await supabase.functions.invoke('clore-round', {
           body: {
             auction_id: auction.id,
             league_id: league_id,
@@ -399,9 +400,10 @@ Deno.serve(async (req) => {
         });
         
         if (closeError) {
-          console.error('❌ Error auto-closing round:', closeError);
+          console.error('❌ Error auto-closing round:', JSON.stringify(closeError));
+          console.error('❌ Close response data:', JSON.stringify(closeData));
         } else {
-          console.log('✅ Round automatically closed and annonces publishing triggered');
+          console.log('✅ Round automatically closed:', JSON.stringify(closeData));
         }
       } else {
         const waitingNames = allManagers
