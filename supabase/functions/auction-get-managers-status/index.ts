@@ -207,14 +207,14 @@ Deno.serve(async (req) => {
         // Calculer la dernière activité depuis les bids uniquement
         const { data: lastBid } = await supabaseAdmin
           .from('bids')
-          .select('updated_at')
+          .select('created_at')
           .eq('manager_id', manager.id)
           .eq('league_id', auction.league_id)
-          .order('updated_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        const lastActivity = lastBid?.updated_at || null;
+        const lastActivity = lastBid?.created_at || null;
 
         return {
           manager_id: manager.id,
