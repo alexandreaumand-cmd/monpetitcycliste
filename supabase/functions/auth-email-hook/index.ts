@@ -217,6 +217,12 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Create Supabase client for DB operations (declared before first use)
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
   // Detect user language from metadata
   let lang = 'fr' // default to French
   try {
@@ -249,10 +255,6 @@ async function handleWebhook(req: Request): Promise<Response> {
   })
 
   // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
 
   const messageId = crypto.randomUUID()
 
