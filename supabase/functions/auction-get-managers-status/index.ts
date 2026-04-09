@@ -1,5 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface ManagerStatus {
   manager_id: string;
@@ -16,63 +16,62 @@ interface ManagerStatus {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Client service role pour bypasser RLS
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
         auth: {
           persistSession: false,
           autoRefreshToken: false,
         },
-      }
+      },
     );
 
     // Client anon pour vérifier l'authentification utilisateur
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      auth: {
+        persistSession: false,
+      },
+    });
 
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error('Authorization header required');
+      throw new Error("Authorization header required");
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-    
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser(token);
+
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      throw new Error("Unauthorized");
     }
 
     const { auction_id, phase_id } = await req.json();
 
     if (!auction_id || !phase_id) {
-      throw new Error('Missing auction_id or phase_id');
+      throw new Error("Missing auction_id or phase_id");
     }
 
     console.log(`Fetching manager statuses for auction ${auction_id}, phase ${phase_id}`);
 
     // Récupérer le league_id depuis l'auction (via admin pour bypasser RLS)
     const { data: auction, error: auctionError } = await supabaseAdmin
-      .from('auctions')
-      .select('league_id')
-      .eq('id', auction_id)
+      .from("auctions")
+      .select("league_id")
+      .eq("id", auction_id)
       .single();
 
     if (auctionError) {
-      console.error('Error fetching auction:', auctionError);
+      console.error("Error fetching auction:", auctionError);
       throw auctionError;
     }
 
@@ -80,32 +79,29 @@ Deno.serve(async (req) => {
 
     // Vérifier que l'utilisateur est membre de cette ligue
     const { data: userMembership, error: membershipError } = await supabaseAdmin
-      .from('league_members')
-      .select('id')
-      .eq('league_id', auction.league_id)
-      .eq('user_id', user.id)
+      .from("league_members")
+      .select("id")
+      .eq("league_id", auction.league_id)
+      .eq("user_id", user.id)
       .single();
 
     if (membershipError || !userMembership) {
-      console.error('User is not a member of this league');
-      return new Response(
-        JSON.stringify({ error: 'Access denied - not a member of this league' }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      console.error("User is not a member of this league");
+      return new Response(JSON.stringify({ error: "Access denied - not a member of this league" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Récupérer les informations de la ligue (settings)
     const { data: league, error: leagueError } = await supabaseAdmin
-      .from('leagues')
-      .select('settings')
-      .eq('id', auction.league_id)
+      .from("leagues")
+      .select("settings")
+      .eq("id", auction.league_id)
       .single();
 
     if (leagueError) {
-      console.error('Error fetching league:', leagueError);
+      console.error("Error fetching league:", leagueError);
       throw leagueError;
     }
 
@@ -116,15 +112,15 @@ Deno.serve(async (req) => {
     // Fallback sur phases.max_coureurs si maxRidersPerManager est null
     if (!maxRidersPerManager) {
       const { data: phase, error: phaseError } = await supabaseAdmin
-        .from('phases')
-        .select('max_coureurs')
-        .eq('id', phase_id)
+        .from("phases")
+        .select("max_coureurs")
+        .eq("id", phase_id)
         .single();
-      
+
       if (phaseError) {
-        console.error('Error fetching phase:', phaseError);
+        console.error("Error fetching phase:", phaseError);
       }
-      
+
       maxRidersPerManager = Number(phase?.max_coureurs ?? 30);
     }
 
@@ -132,12 +128,12 @@ Deno.serve(async (req) => {
 
     // Récupérer uniquement les managers membres de cette ligue
     const { data: leagueMembers, error: membersError } = await supabaseAdmin
-      .from('league_members')
-      .select('user_id')
-      .eq('league_id', auction.league_id);
+      .from("league_members")
+      .select("user_id")
+      .eq("league_id", auction.league_id);
 
     if (membersError) {
-      console.error('Error fetching league members:', membersError);
+      console.error("Error fetching league members:", membersError);
       throw membersError;
     }
 
@@ -145,25 +141,22 @@ Deno.serve(async (req) => {
 
     // Si aucun membre, retourner un tableau vide
     if (!leagueMembers || leagueMembers.length === 0) {
-      console.log('No members found for this league');
-      return new Response(
-        JSON.stringify({ managers: [] }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      console.log("No members found for this league");
+      return new Response(JSON.stringify({ managers: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const userIds = leagueMembers.map(m => m.user_id);
+    const userIds = leagueMembers.map((m) => m.user_id);
 
     const { data: managers, error: managersError } = await supabaseAdmin
-      .from('managers')
-      .select('id, nom, user_id')
-      .in('user_id', userIds)
-      .order('nom');
+      .from("managers")
+      .select("id, nom, user_id")
+      .in("user_id", userIds)
+      .order("nom");
 
     if (managersError) {
-      console.error('Error fetching managers:', managersError);
+      console.error("Error fetching managers:", managersError);
       throw managersError;
     }
 
@@ -173,12 +166,16 @@ Deno.serve(async (req) => {
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
         // Récupérer tous les rosters (sans auction_id car colonne inexistante)
-        const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
-          .from('rosters')
-          .select('prix_signature', { count: 'exact' })
-          .eq('manager_id', manager.id)
-          .eq('phase_id', phase_id)
-          .eq('league_id', auction.league_id);
+        const {
+          count: rosterCount,
+          data: rosterWithDates,
+          error: rosterError,
+        } = await supabaseAdmin
+          .from("rosters")
+          .select("prix_signature", { count: "exact" })
+          .eq("manager_id", manager.id)
+          .eq("phase_id", phase_id)
+          .eq("league_id", auction.league_id);
 
         if (rosterError) {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
@@ -189,7 +186,7 @@ Deno.serve(async (req) => {
         const totalRiderCount = rosterCount || 0;
         const totalBudgetSpent = (rosterWithDates || []).reduce(
           (sum, roster) => sum + Number(roster.prix_signature || 0),
-          0
+          0,
         );
 
         // Sans auction_id, on ne peut pas séparer tour actuel vs précédents
@@ -206,11 +203,11 @@ Deno.serve(async (req) => {
 
         // Calculer la dernière activité depuis les bids uniquement
         const { data: lastBid } = await supabaseAdmin
-          .from('bids')
-          .select('created_at')
-          .eq('manager_id', manager.id)
-          .eq('league_id', auction.league_id)
-          .order('created_at', { ascending: false })
+          .from("bids")
+          .select("created_at")
+          .eq("manager_id", manager.id)
+          .eq("league_id", auction.league_id)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -229,7 +226,7 @@ Deno.serve(async (req) => {
           last_activity: lastActivity,
           riders_per_round,
         };
-      })
+      }),
     );
 
     // Trier par slots_missing DESC (plus incomplet en premier), puis par nom
@@ -242,21 +239,15 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${sortedStatuses.length} managers with statuses`);
 
-    return new Response(
-      JSON.stringify({ managers: sortedStatuses }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ managers: sortedStatuses }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error('Error in auction-get-managers-status:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    console.error("Error in auction-get-managers-status:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
