@@ -120,6 +120,22 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
 
       const seasonsMap = new Map((allSeasons || []).map(s => [s.id, s]));
 
+      // BATCH 4b: Fetch course names for per_course leagues
+      const allSelectedCourseIds = [...new Set(
+        (allScopes || [])
+          .flatMap(s => (s.selected_course_ids as string[]) || [])
+          .filter(Boolean)
+      )];
+      
+      const { data: allSelectedCourses } = allSelectedCourseIds.length > 0
+        ? await supabase
+            .from('courses')
+            .select('id, nom')
+            .in('id', allSelectedCourseIds)
+        : { data: [] };
+
+      const courseNameMap = new Map((allSelectedCourses || []).map(c => [c.id, c.nom]));
+
       // BATCH 5: Fetch all standings (always, regardless of currentManagerId)
       const { data: allStandings } = await supabase
         .from('v_manager_standings_by_season_v2')
