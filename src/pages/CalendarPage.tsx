@@ -283,7 +283,7 @@ export default function CalendarPage() {
     setHidePassed(true);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = sortedCourses.map(course => ({
       [t('export.columns.name')]: course.nom,
       [t('export.columns.category')]: course.categorie || "",

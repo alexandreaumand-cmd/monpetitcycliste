@@ -547,7 +547,7 @@ export default function RidersData() {
   }, [filteredRiders, primarySort, secondarySort]);
 
   // Excel export function
-  const handleExportExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     if (!sortedRiders || sortedRiders.length === 0) {
       toast.error(t('export.noData'));
       return;

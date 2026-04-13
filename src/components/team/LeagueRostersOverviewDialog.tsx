@@ -260,7 +260,7 @@ export const LeagueRostersOverviewDialog = ({
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     setExportingExcel(true);
     try {
       // Build data for Excel: each manager as a column
