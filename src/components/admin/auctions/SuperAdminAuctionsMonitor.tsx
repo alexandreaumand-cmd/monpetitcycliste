@@ -3,10 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, Lock, Megaphone, Clock, Users, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, Lock, Megaphone, Clock, Users, AlertTriangle, Trophy, Bike } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+
+const GAME_MODE_LABELS: Record<string, string> = {
+  five_phases: "5 Phases",
+  per_course: "À la course",
+  full_season: "Saison complète",
+  short_gt: "GT Court",
+  short_wt: "WT Court",
+  short_classics: "Classiques",
+};
 
 interface AuctionWithLeague {
   id: string;
@@ -18,6 +27,10 @@ interface AuctionWithLeague {
   closed_at: string | null;
   phase_id: string;
   created_at: string | null;
+  game_mode?: string;
+  budget?: number;
+  max_riders?: number;
+  courses?: string[];
   validation?: {
     validated_count: number;
     total_managers: number;
@@ -51,10 +64,40 @@ export const SuperAdminAuctionsMonitor = () => {
       const leagueIds = [...new Set(auctionRows.map((a) => a.league_id))];
       const { data: leagues } = await supabase
         .from("leagues")
-        .select("id, name")
+        .select("id, name, game_mode, settings")
         .in("id", leagueIds);
 
-      const leagueMap = new Map(leagues?.map((l) => [l.id, l.name]) || []);
+      const leagueMap = new Map(leagues?.map((l) => [l.id, { name: l.name, game_mode: l.game_mode, settings: l.settings as Record<string, any> | null }]) || []);
+
+      // Fetch league scopes for selected_course_ids
+      const { data: scopes } = await supabase
+        .from("league_scopes")
+        .select("league_id, selected_course_ids")
+        .in("league_id", leagueIds);
+
+      const scopeMap = new Map<string, string[]>();
+      if (scopes) {
+        for (const s of scopes) {
+          if (s.selected_course_ids && s.selected_course_ids.length > 0) {
+            scopeMap.set(s.league_id, s.selected_course_ids);
+          }
+        }
+      }
+
+      // Fetch course names for all selected_course_ids
+      const allCourseIds = [...new Set([...scopeMap.values()].flat())];
+      let courseNameMap = new Map<string, string>();
+      if (allCourseIds.length > 0) {
+        const { data: courses } = await supabase
+          .from("courses")
+          .select("id, nom")
+          .in("id", allCourseIds);
+        if (courses) {
+          for (const c of courses) {
+            courseNameMap.set(c.id, c.nom);
+          }
+        }
+      }
 
       // Fetch unpublished annonces counts for closed auctions
       const closedIds = auctionRows.filter((a) => a.statut === "closed").map((a) => a.id);
@@ -74,18 +117,27 @@ export const SuperAdminAuctionsMonitor = () => {
       }
 
       // Build auction list
-      const enriched: AuctionWithLeague[] = auctionRows.map((a) => ({
-        id: a.id,
-        league_id: a.league_id,
-        league_name: leagueMap.get(a.league_id) || "Ligue inconnue",
-        round_number: a.round_number,
-        statut: a.statut || "open",
-        deadline_at: a.deadline_at,
-        closed_at: a.closed_at,
-        phase_id: a.phase_id,
-        created_at: a.created_at,
-        unpublished_annonces_count: annoncesCounts.get(a.id) || 0,
-      }));
+      const enriched: AuctionWithLeague[] = auctionRows.map((a) => {
+        const league = leagueMap.get(a.league_id);
+        const settings = league?.settings || {};
+        const courseIds = scopeMap.get(a.league_id) || [];
+        return {
+          id: a.id,
+          league_id: a.league_id,
+          league_name: league?.name || "Ligue inconnue",
+          round_number: a.round_number,
+          statut: a.statut || "open",
+          deadline_at: a.deadline_at,
+          closed_at: a.closed_at,
+          phase_id: a.phase_id,
+          created_at: a.created_at,
+          game_mode: league?.game_mode,
+          budget: settings.budget,
+          max_riders: settings.max_riders,
+          courses: courseIds.map((id) => courseNameMap.get(id) || id),
+          unpublished_annonces_count: annoncesCounts.get(a.id) || 0,
+        };
+      });
 
       // Fetch validation status for open auctions
       const openAuctions = enriched.filter((a) => a.statut === "open");
@@ -208,6 +260,35 @@ export const SuperAdminAuctionsMonitor = () => {
                       Round {auction.round_number}
                     </Badge>
                   </div>
+                  {/* League details */}
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {auction.game_mode && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        {GAME_MODE_LABELS[auction.game_mode] || auction.game_mode}
+                      </Badge>
+                    )}
+                    {auction.budget && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        {auction.budget}M€
+                      </Badge>
+                    )}
+                    {auction.max_riders && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Bike className="h-3 w-3 mr-1" />
+                        {auction.max_riders}
+                      </Badge>
+                    )}
+                  </div>
+                  {auction.courses && auction.courses.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {auction.courses.map((c, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] h-5 font-normal">
+                          {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="text-sm text-muted-foreground">
@@ -290,6 +371,34 @@ export const SuperAdminAuctionsMonitor = () => {
                       Round {auction.round_number}
                     </Badge>
                   </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {auction.game_mode && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        {GAME_MODE_LABELS[auction.game_mode] || auction.game_mode}
+                      </Badge>
+                    )}
+                    {auction.budget && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        {auction.budget}M€
+                      </Badge>
+                    )}
+                    {auction.max_riders && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Bike className="h-3 w-3 mr-1" />
+                        {auction.max_riders}
+                      </Badge>
+                    )}
+                  </div>
+                  {auction.courses && auction.courses.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {auction.courses.map((c, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] h-5 font-normal">
+                          {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="text-sm text-muted-foreground">
