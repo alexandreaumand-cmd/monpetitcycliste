@@ -260,6 +260,35 @@ export const SuperAdminAuctionsMonitor = () => {
                       Round {auction.round_number}
                     </Badge>
                   </div>
+                  {/* League details */}
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {auction.game_mode && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        {GAME_MODE_LABELS[auction.game_mode] || auction.game_mode}
+                      </Badge>
+                    )}
+                    {auction.budget && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        {auction.budget}M€
+                      </Badge>
+                    )}
+                    {auction.max_riders && (
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        <Bike className="h-3 w-3 mr-1" />
+                        {auction.max_riders}
+                      </Badge>
+                    )}
+                  </div>
+                  {auction.courses && auction.courses.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {auction.courses.map((c, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] h-5 font-normal">
+                          {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="text-sm text-muted-foreground">
