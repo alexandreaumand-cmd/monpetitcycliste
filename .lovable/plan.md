@@ -1,39 +1,28 @@
 
 
-# Écran Super-Admin : Suivi des enchères de toutes les ligues
+# Plan : Ajouter le détail de la ligue dans le SuperAdminAuctionsMonitor
 
-## Problème
-En tant que super-admin, vous ne pouvez pas suivre ni clôturer les rounds d'enchères des ligues dont vous n'êtes pas membre, car l'interface admin actuelle (`RoundControlCenter`) dépend d'un contexte de ligue (`useLeague()`) qui n'est pas disponible dans la section super-admin.
+## Contexte
+Actuellement, chaque carte d'enchère affiche uniquement le nom de la ligue, le round, la deadline et le statut de validation. L'utilisateur souhaite voir aussi le **mode de jeu** et les **courses sélectionnées** (pour les ligues "à la course").
 
-Le backend supporte déjà le bypass super-admin dans `clore-round` (ligne 66 : "Superadmin bypass"), donc seul le front-end manque.
+## Modifications
 
-## Plan
+### Fichier unique : `src/components/admin/auctions/SuperAdminAuctionsMonitor.tsx`
 
-### 1. Créer le composant `SuperAdminAuctionsMonitor`
-**Fichier** : `src/components/admin/auctions/SuperAdminAuctionsMonitor.tsx`
+1. **Enrichir la requête leagues** : au lieu de `select("id, name")`, récupérer `select("id, name, game_mode, settings, league_scopes(selected_course_ids)")` pour obtenir le mode et les IDs des courses sélectionnées.
 
-- Requête toutes les auctions avec `statut = 'open'` ou `statut = 'closed'` (annonces non publiées), jointes aux `leagues` (nom) et `phases` (index)
-- Affiche une carte par ligue avec enchère active :
-  - Nom de la ligue, round number, deadline, statut
-  - Nombre de managers ayant validé vs total (appel `auction-get-validation-status` par auction)
-  - Bouton **Clôturer le round** (appel direct à `clore-round` avec `auction_id` + `league_id`)
-  - Bouton **Publier les annonces** pour les rounds fermés avec annonces en attente
-- Auto-refresh toutes les 10s
+2. **Récupérer les noms des courses** : collecter tous les `selected_course_ids` de toutes les ligues, puis faire une requête sur la table `courses` pour obtenir les noms correspondants.
 
-### 2. Créer la page `SuperAdminAuctionsPage`
-**Fichier** : `src/pages/admin/SuperAdminAuctionsPage.tsx`
+3. **Enrichir l'interface `AuctionWithLeague`** : ajouter `game_mode`, `courses` (tableau de noms de courses), `budget`, `max_riders`.
 
-- Wrapper avec `SuperAdminGuard`
-- Contient `SuperAdminAuctionsMonitor`
+4. **Afficher dans chaque carte** :
+   - Badge du mode de jeu (ex: "À la course", "5 Phases") sous le nom de la ligue
+   - Budget et max coureurs (depuis `settings`)
+   - Pour les ligues "per_course" : liste des courses sélectionnées (noms) en badges compacts ou liste à puces
 
-### 3. Ajouter la route et le lien dans la navigation super-admin
-**Fichiers** : `SuperAdminPage.desktop.tsx` et `SuperAdminPage.mobile.tsx`
-
-- Ajouter l'entrée `{ label: "Enchères", path: "auctions", icon: Gavel }` dans le groupe "Ligues & Arène"
-- Ajouter la route `<Route path="auctions" element={<SuperAdminAuctionsPage />} />`
-
-### Détails techniques
-- Les données des auctions sont lues via `supabase.from('auctions').select('*').in('statut', ['open', 'closed'])` puis enrichies avec les noms de ligues via une requête séparée sur `leagues`
-- La clôture appelle `supabase.functions.invoke('clore-round', { body: { auction_id, league_id } })` — le backend détecte le super-admin et switche en service role automatiquement
-- Pas de nouveau composant de contexte nécessaire : chaque carte opère avec son propre `league_id`/`auction_id`
+## Rendu visuel attendu
+Sous le nom de la ligue, une ligne de badges :
+- `À la course` ou `5 Phases` (mode)
+- `Budget: 650M€` / `Max: 8 coureurs`
+- Liste des courses (si per_course) en texte compact
 
