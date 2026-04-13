@@ -8,6 +8,15 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+const GAME_MODE_LABELS: Record<string, string> = {
+  five_phases: "5 Phases",
+  per_course: "À la course",
+  full_season: "Saison complète",
+  short_gt: "GT Court",
+  short_wt: "WT Court",
+  short_classics: "Classiques",
+};
+
 interface AuctionWithLeague {
   id: string;
   league_id: string;
@@ -18,6 +27,10 @@ interface AuctionWithLeague {
   closed_at: string | null;
   phase_id: string;
   created_at: string | null;
+  game_mode?: string;
+  budget?: number;
+  max_riders?: number;
+  courses?: string[];
   validation?: {
     validated_count: number;
     total_managers: number;
