@@ -64,10 +64,40 @@ export const SuperAdminAuctionsMonitor = () => {
       const leagueIds = [...new Set(auctionRows.map((a) => a.league_id))];
       const { data: leagues } = await supabase
         .from("leagues")
-        .select("id, name")
+        .select("id, name, game_mode, settings")
         .in("id", leagueIds);
 
-      const leagueMap = new Map(leagues?.map((l) => [l.id, l.name]) || []);
+      const leagueMap = new Map(leagues?.map((l) => [l.id, { name: l.name, game_mode: l.game_mode, settings: l.settings as Record<string, any> | null }]) || []);
+
+      // Fetch league scopes for selected_course_ids
+      const { data: scopes } = await supabase
+        .from("league_scopes")
+        .select("league_id, selected_course_ids")
+        .in("league_id", leagueIds);
+
+      const scopeMap = new Map<string, string[]>();
+      if (scopes) {
+        for (const s of scopes) {
+          if (s.selected_course_ids && s.selected_course_ids.length > 0) {
+            scopeMap.set(s.league_id, s.selected_course_ids);
+          }
+        }
+      }
+
+      // Fetch course names for all selected_course_ids
+      const allCourseIds = [...new Set([...scopeMap.values()].flat())];
+      let courseNameMap = new Map<string, string>();
+      if (allCourseIds.length > 0) {
+        const { data: courses } = await supabase
+          .from("courses")
+          .select("id, nom")
+          .in("id", allCourseIds);
+        if (courses) {
+          for (const c of courses) {
+            courseNameMap.set(c.id, c.nom);
+          }
+        }
+      }
 
       // Fetch unpublished annonces counts for closed auctions
       const closedIds = auctionRows.filter((a) => a.statut === "closed").map((a) => a.id);
