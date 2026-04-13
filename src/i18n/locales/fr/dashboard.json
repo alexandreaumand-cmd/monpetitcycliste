@@ -62,6 +62,8 @@
     "launchLeague": "Lancer la ligue",
     "participants": "Participants",
     "noDataAvailable": "Aucune donnée disponible",
+    "noStatsYet": "La saison vient de commencer !",
+    "noStatsYetDesc": "Les classements apparaîtront après le premier round d'enchères.",
     "viewMyLeague": "Voir ma ligue",
     "goToAuction": "Accéder aux enchères",
     "leagueEnded": "Ligue terminée",
@@ -82,7 +84,9 @@
       "openingIn": "Ouverture dans",
       "days": "jours",
       "closingInProgress": "Clôture en cours...",
-      "openingInProgress": "Ouverture en cours..."
+      "openingInProgress": "Ouverture en cours...",
+      "awaitingOpening": "En attente d'ouverture",
+      "awaitingOpeningDesc": "L'enchère devrait bientôt être ouverte par l'administrateur"
     },
     "status": {
       "waiting": "En attente",

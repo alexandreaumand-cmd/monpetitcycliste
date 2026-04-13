@@ -9,6 +9,7 @@ interface AuctionStatus {
   totalManagers: number;
   deadlineAt: string;
   isScheduled?: boolean;
+  isPastScheduled?: boolean;
   isAnnouncementsPending?: boolean;
 }
 
@@ -135,29 +136,27 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
       // 3. Si aucune enchère fermée avec annonces, chercher une enchère SCHEDULED (phase active uniquement)
       if (!activePhaseId) return null;
 
-      const scheduledAuctionQuery = supabase
+      const { data: scheduledAuction } = await supabase
         .from('auctions')
         .select('id, round_number, opens_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'scheduled')
         .eq('phase_id', activePhaseId)
-        .gt('opens_at', new Date().toISOString());
-
-      const { data: scheduledAuction } = await scheduledAuctionQuery
         .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
       if (scheduledAuction) {
-        // Pour une enchère scheduled, on retourne opensAt dans deadlineAt pour le countdown
+        const isPast = scheduledAuction.opens_at ? new Date(scheduledAuction.opens_at) <= new Date() : false;
         return {
           auctionId: scheduledAuction.id,
           phaseId: scheduledAuction.phase_id,
           roundNumber: scheduledAuction.round_number,
           validatedCount: 0,
           totalManagers: 0,
-          deadlineAt: scheduledAuction.opens_at, // Utilisé pour le countdown
+          deadlineAt: scheduledAuction.opens_at || new Date().toISOString(),
           isScheduled: true,
+          isPastScheduled: isPast,
         };
       }
 
