@@ -80,7 +80,9 @@
       "day": "d",
       "startsIn": "Starts in",
       "openingIn": "Opening in",
-      "days": "days"
+      "days": "days",
+      "closingInProgress": "Closing in progress...",
+      "openingInProgress": "Opening in progress..."
     },
     "status": {
       "waiting": "Waiting",
