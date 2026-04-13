@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, Sparkles, RefreshCw, FileSpreadsheet } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { toPng } from "html-to-image";
@@ -259,7 +260,7 @@ export const LeagueRostersOverviewDialog = ({
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     setExportingExcel(true);
     try {
       // Build data for Excel: each manager as a column
@@ -284,11 +285,12 @@ export const LeagueRostersOverviewDialog = ({
         return `${count} coureurs • ${total}M`;
       }));
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Effectifs");
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Effectifs");
+      wsData.forEach(row => ws.addRow(row));
       
-      XLSX.writeFile(wb, `effectifs_ligue_${new Date().toISOString().split("T")[0]}.xlsx`);
+      const buffer = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `effectifs_ligue_${new Date().toISOString().split("T")[0]}.xlsx`);
 
       toast({
         title: "Export réussi",

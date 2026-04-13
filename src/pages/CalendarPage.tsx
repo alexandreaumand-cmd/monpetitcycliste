@@ -20,7 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -282,7 +283,7 @@ export default function CalendarPage() {
     setHidePassed(true);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = sortedCourses.map(course => ({
       [t('export.columns.name')]: course.nom,
       [t('export.columns.category')]: course.categorie || "",
@@ -293,11 +294,15 @@ export default function CalendarPage() {
       [t('export.columns.points')]: course.total_points,
       [t('export.columns.startlist')]: course.startlist_count,
     }));
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, t('title'));
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(t('title'));
+    if (exportData.length > 0) {
+      worksheet.columns = Object.keys(exportData[0]).map(key => ({ header: key, key }));
+      exportData.forEach(row => worksheet.addRow(row));
+    }
     const filename = `${t('export.filename')}_${localSelectedSeason?.annee || "export"}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
   };
 
   const formatDate = (dateStr: string | null) => {
