@@ -1,28 +1,39 @@
 
 
-# Plan : Corriger la vulnérabilité de sécurité du package `xlsx`
+# Fix : "object is not iterable" dans admin-leagues-list
 
-## Problème
-Le package `xlsx` (SheetJS) v0.18.5 présente des vulnérabilités connues (Prototype Pollution + ReDoS). Il est utilisé dans 3 fichiers pour de l'**export uniquement** (conversion JSON → XLSX et écriture de fichier).
+## Cause
+L'edge function `admin-leagues-list` sélectionne `league_members` deux fois dans la même requête (une fois pour `count`, une fois pour `user_id`). Selon la configuration Supabase, les résultats imbriqués peuvent revenir comme un objet au lieu d'un tableau, ce qui casse les boucles `for...of`.
 
-## Solution
-Remplacer `xlsx` par **`ExcelJS`** (`exceljs`), un package activement maintenu sans ces vulnérabilités, qui offre les mêmes fonctionnalités d'export.
+## Correction : `supabase/functions/admin-leagues-list/index.ts`
 
-## Modifications
+Ajouter des gardes `Array.isArray()` avant chaque itération sur `member_users`, `scopes`, et les sous-champs :
 
-### 1. `package.json`
-- Retirer `xlsx` des dépendances
-- Ajouter `exceljs` et `file-saver` (pour le téléchargement côté client)
+```typescript
+// Ligne 80-91 : remplacer les for...of par des versions défensives
+const memberUsers = Array.isArray(league.member_users) ? league.member_users : [];
+for (const m of memberUsers) { ... }
 
-### 2. `src/pages/CalendarPage.tsx`
-Remplacer l'import et l'appel XLSX par ExcelJS :
-- `new ExcelJS.Workbook()` → `addWorksheet()` → `addRows()` → `writeBuffer()` → télécharger via Blob
+const scopes = Array.isArray(league.scopes) ? league.scopes : [];
+for (const s of scopes) {
+  const courseIds = Array.isArray(s.selected_course_ids) ? s.selected_course_ids : [];
+  for (const id of courseIds) { ... }
+}
+```
 
-### 3. `src/pages/RidersData.tsx`
-Même remplacement — export JSON vers XLSX via ExcelJS
+Même traitement dans le bloc `transformedLeagues` (lignes 117-135) :
+```typescript
+const memberUserIds = Array.isArray(league.member_users)
+  ? league.member_users.map((m: any) => m.user_id)
+  : [];
 
-### 4. `src/components/team/LeagueRostersOverviewDialog.tsx`
-Même remplacement — export array-of-arrays vers XLSX via ExcelJS
+const scopesList = Array.isArray(league.scopes) ? league.scopes : [];
+for (const s of scopesList) {
+  const ids = Array.isArray(s.selected_course_ids) ? s.selected_course_ids : [];
+  scopeCourseIds.push(...ids);
+}
+```
 
-Les 3 fichiers suivent le même pattern simple : créer un workbook, ajouter une feuille avec des données, télécharger le fichier.
+## Fichier modifié
+1. `supabase/functions/admin-leagues-list/index.ts` — ajout de gardes défensives `Array.isArray()` sur toutes les itérations de données imbriquées
 
