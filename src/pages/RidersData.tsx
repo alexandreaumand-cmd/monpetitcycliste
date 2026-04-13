@@ -32,7 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/logo-carre-rose.png";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -561,23 +562,18 @@ export default function RidersData() {
       [t('export.columns.favorite')]: rider.is_favorite ? t('export.columns.yes') : t('export.columns.no'),
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, t('title'));
-
-    // Auto-size columns
-    const colWidths = [
-      { wch: 30 }, // Nom
-      { wch: 15 }, // Équipe
-      { wch: 12 }, // Catégorie
-      { wch: 8 },  // Cote
-      { wch: 10 }, // Points
-      { wch: 8 },  // Favori
-    ];
-    worksheet["!cols"] = colWidths;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(t('title'));
+    if (exportData.length > 0) {
+      const keys = Object.keys(exportData[0]);
+      const widths = [30, 15, 12, 8, 10, 8];
+      worksheet.columns = keys.map((key, i) => ({ header: key, key, width: widths[i] || 12 }));
+      exportData.forEach(row => worksheet.addRow(row));
+    }
 
     const fileName = `coureurs_${localSelectedSeason?.annee || "export"}_${new Date().toISOString().split("T")[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileName);
     toast.success(t('export.success', { filename: fileName }));
   }, [sortedRiders, localSelectedSeason, t]);
 
