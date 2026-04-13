@@ -78,14 +78,15 @@ Deno.serve(async (req) => {
     const allCourseIds = new Set<string>();
 
     for (const league of leagues || []) {
-      for (const m of league.member_users || []) {
+      const memberUsers = Array.isArray(league.member_users) ? league.member_users : [];
+      for (const m of memberUsers) {
         if (m.user_id) allUserIds.add(m.user_id);
       }
-      for (const s of league.scopes || []) {
-        if (s.selected_course_ids) {
-          for (const id of s.selected_course_ids) {
-            allCourseIds.add(id);
-          }
+      const scopes = Array.isArray(league.scopes) ? league.scopes : [];
+      for (const s of scopes) {
+        const courseIds = Array.isArray(s.selected_course_ids) ? s.selected_course_ids : [];
+        for (const id of courseIds) {
+          allCourseIds.add(id);
         }
       }
     }
@@ -115,14 +116,15 @@ Deno.serve(async (req) => {
     }
 
     const transformedLeagues = (leagues || []).map(league => {
-      const memberUserIds: string[] = (league.member_users || []).map((m: any) => m.user_id);
+      const memberUsers = Array.isArray(league.member_users) ? league.member_users : [];
+      const memberUserIds: string[] = memberUsers.map((m: any) => m.user_id);
       const memberNames = memberUserIds.map(uid => managerMap.get(uid) || 'Inconnu');
 
       const scopeCourseIds: string[] = [];
-      for (const s of league.scopes || []) {
-        if (s.selected_course_ids) {
-          scopeCourseIds.push(...s.selected_course_ids);
-        }
+      const scopesList = Array.isArray(league.scopes) ? league.scopes : [];
+      for (const s of scopesList) {
+        const ids = Array.isArray(s.selected_course_ids) ? s.selected_course_ids : [];
+        scopeCourseIds.push(...ids);
       }
       const courseNames = [...new Set(scopeCourseIds)].map(id => courseMap.get(id) || id);
 
