@@ -117,18 +117,27 @@ export const SuperAdminAuctionsMonitor = () => {
       }
 
       // Build auction list
-      const enriched: AuctionWithLeague[] = auctionRows.map((a) => ({
-        id: a.id,
-        league_id: a.league_id,
-        league_name: leagueMap.get(a.league_id) || "Ligue inconnue",
-        round_number: a.round_number,
-        statut: a.statut || "open",
-        deadline_at: a.deadline_at,
-        closed_at: a.closed_at,
-        phase_id: a.phase_id,
-        created_at: a.created_at,
-        unpublished_annonces_count: annoncesCounts.get(a.id) || 0,
-      }));
+      const enriched: AuctionWithLeague[] = auctionRows.map((a) => {
+        const league = leagueMap.get(a.league_id);
+        const settings = league?.settings || {};
+        const courseIds = scopeMap.get(a.league_id) || [];
+        return {
+          id: a.id,
+          league_id: a.league_id,
+          league_name: league?.name || "Ligue inconnue",
+          round_number: a.round_number,
+          statut: a.statut || "open",
+          deadline_at: a.deadline_at,
+          closed_at: a.closed_at,
+          phase_id: a.phase_id,
+          created_at: a.created_at,
+          game_mode: league?.game_mode,
+          budget: settings.budget,
+          max_riders: settings.max_riders,
+          courses: courseIds.map((id) => courseNameMap.get(id) || id),
+          unpublished_annonces_count: annoncesCounts.get(a.id) || 0,
+        };
+      });
 
       // Fetch validation status for open auctions
       const openAuctions = enriched.filter((a) => a.statut === "open");
