@@ -23,6 +23,7 @@ interface AuctionStatus {
   totalManagers: number;
   deadlineAt: string;
   isScheduled?: boolean;
+  isPastScheduled?: boolean;
   isAnnouncementsPending?: boolean;
 }
 
