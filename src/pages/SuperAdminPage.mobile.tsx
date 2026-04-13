@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radio } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radio, Gavel } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -21,6 +21,7 @@ import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDea
 import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
+import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -57,6 +58,7 @@ const navSections: NavSection[] = [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
       { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
+      { label: "Enchères Live", path: "auctions", icon: Gavel },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
@@ -236,6 +238,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
               <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
+              <Route path="auctions" element={<SuperAdminAuctionsPage />} />
             <Route path="arena" element={<PronosticDeadlinesManager />} />
             <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
             <Route path="data" element={<DataManagementTabs />} />
