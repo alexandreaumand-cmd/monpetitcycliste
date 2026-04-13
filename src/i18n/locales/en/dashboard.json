@@ -62,6 +62,8 @@
     "launchLeague": "Launch league",
     "participants": "Participants",
     "noDataAvailable": "No data available",
+    "noStatsYet": "Season just started!",
+    "noStatsYetDesc": "Rankings will appear after the first auction round.",
     "viewMyLeague": "View my league",
     "goToAuction": "Go to auction",
     "leagueEnded": "League ended",
@@ -82,7 +84,9 @@
       "openingIn": "Opening in",
       "days": "days",
       "closingInProgress": "Closing in progress...",
-      "openingInProgress": "Opening in progress..."
+      "openingInProgress": "Opening in progress...",
+      "awaitingOpening": "Awaiting opening",
+      "awaitingOpeningDesc": "The auction should be opened soon by the administrator"
     },
     "status": {
       "waiting": "Waiting",

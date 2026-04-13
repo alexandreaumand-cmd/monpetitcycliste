@@ -297,7 +297,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">{t('leagueCard.noDataAvailable')}</p>
+              <div className="text-center py-6 space-y-2">
+                <Trophy className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-sm font-semibold text-muted-foreground">{t('leagueCard.noStatsYet')}</p>
+                <p className="text-xs text-muted-foreground">{t('leagueCard.noStatsYetDesc')}</p>
+              </div>
             )}
 
             {/* Section enchères (en cours, résultats OU programmées) */}
@@ -307,9 +311,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 className={
                   auctionStatus.isAnnouncementsPending 
                     ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
-                    : auctionStatus.isScheduled 
-                      ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
-                      : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                    : auctionStatus.isPastScheduled
+                      ? "bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                      : auctionStatus.isScheduled 
+                        ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                        : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
                 }
               >
                 <div className="flex items-center gap-2">
@@ -318,6 +324,13 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                       <PartyPopper className="h-5 w-5 text-orange-600" />
                       <h3 className="font-montserrat font-bold text-orange-900">
                         {t('leagueCard.auction.resultsInProgress')}
+                      </h3>
+                    </>
+                  ) : auctionStatus.isPastScheduled ? (
+                    <>
+                      <Clock className="h-5 w-5 text-gray-600" />
+                      <h3 className="font-montserrat font-bold text-gray-800">
+                        {t('leagueCard.auction.awaitingOpening')}
                       </h3>
                     </>
                   ) : auctionStatus.isScheduled ? (
@@ -393,8 +406,17 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                     </>
                   )}
 
-                  {/* Countdown - seulement pour open et scheduled */}
-                  {!auctionStatus.isAnnouncementsPending && (
+                  {/* Past scheduled: message d'attente */}
+                  {auctionStatus.isPastScheduled && (
+                    <div className="bg-gray-50/80 rounded-lg p-3 border border-gray-200 mt-3">
+                      <p className="text-sm text-gray-700 text-center">
+                        {t('leagueCard.auction.awaitingOpeningDesc')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Countdown - seulement pour open et scheduled (pas pastScheduled) */}
+                  {!auctionStatus.isAnnouncementsPending && !auctionStatus.isPastScheduled && (
                     <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'bg-white/80 dark:bg-background/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200 dark:border-blue-800' : 'border-border'} mt-3`}>
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`} />
