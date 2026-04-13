@@ -80,7 +80,9 @@
       "day": "j",
       "startsIn": "Début dans",
       "openingIn": "Ouverture dans",
-      "days": "jours"
+      "days": "jours",
+      "closingInProgress": "Clôture en cours...",
+      "openingInProgress": "Ouverture en cours..."
     },
     "status": {
       "waiting": "En attente",
