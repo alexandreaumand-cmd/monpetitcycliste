@@ -41,6 +41,7 @@ export interface LeagueCardData {
   season: LeagueSeason | null;
   stats: LeagueStats | null;
   auctionStatus: AuctionStatus | null;
+  selectedCourseNames: string[];
 }
 
 interface LeagueInfo {
@@ -105,7 +106,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       // BATCH 4: Fetch all league_scopes and seasons separately
       const { data: allScopes } = await supabase
         .from('league_scopes')
-        .select('league_id, season_id')
+        .select('league_id, season_id, selected_course_ids')
         .in('league_id', leagueIds);
 
       const scopeSeasonIds = [...new Set((allScopes || []).map(s => s.season_id).filter(Boolean))];
@@ -118,6 +119,22 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
         : { data: [] };
 
       const seasonsMap = new Map((allSeasons || []).map(s => [s.id, s]));
+
+      // BATCH 4b: Fetch course names for per_course leagues
+      const allSelectedCourseIds = [...new Set(
+        (allScopes || [])
+          .flatMap(s => (s.selected_course_ids as string[]) || [])
+          .filter(Boolean)
+      )];
+      
+      const { data: allSelectedCourses } = allSelectedCourseIds.length > 0
+        ? await supabase
+            .from('courses')
+            .select('id, nom')
+            .in('id', allSelectedCourseIds)
+        : { data: [] };
+
+      const courseNameMap = new Map((allSelectedCourses || []).map(c => [c.id, c.nom]));
 
       // BATCH 5: Fetch all standings (always, regardless of currentManagerId)
       const { data: allStandings } = await supabase
@@ -326,13 +343,20 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
           }
         }
 
+        // Selected course names (for per_course leagues)
+        const scopeData = scopesByLeague.get(league.id);
+        const selectedCourseNames: string[] = ((scopeData as any)?.selected_course_ids as string[] || [])
+          .map(id => courseNameMap.get(id))
+          .filter((n): n is string => !!n);
+
         result[league.id] = {
           members: leagueMembers,
           memberCount: leagueMembers.length,
           owner,
           season,
           stats,
-          auctionStatus
+          auctionStatus,
+          selectedCourseNames,
         };
       }
 

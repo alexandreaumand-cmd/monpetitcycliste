@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper, Megaphone, Star, StarOff } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper, Megaphone, Star, StarOff, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +129,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             </Badge>
           </div>
           <div className="ml-auto shrink-0">
+
             <LeagueParticipantsHover
               ownerName={owner?.nom || null}
               members={members}
@@ -137,6 +138,22 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             />
           </div>
         </div>
+
+        {/* Ligne 3 : Courses sélectionnées (mode per_course) */}
+        {league.game_mode === 'per_course' && cardData?.selectedCourseNames && cardData.selectedCourseNames.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+            {cardData.selectedCourseNames.map((name) => (
+              <Badge 
+                key={name}
+                variant="outline" 
+                className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/20 font-inter"
+              >
+                {name}
+              </Badge>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* EN ATTENTE DE JOUEURS */}
