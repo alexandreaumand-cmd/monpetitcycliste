@@ -155,6 +155,11 @@ export function LeagueSettingsForm({
                   {t('settings.variantWT', 'World Tour uniquement')}
                 </Label>
               </div>
+              {variant === 'wt_only' && (
+                <p className="text-xs text-muted-foreground ml-6 -mt-1">
+                  {t('settings.variantWTInfo')}
+                </p>
+              )}
             </RadioGroup>
           </div>
 

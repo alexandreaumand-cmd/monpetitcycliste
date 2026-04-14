@@ -341,6 +341,11 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
                   {t('settings.variantWT')}
                 </Label>
               </div>
+              {variant === 'wt_only' && (
+                <p className="text-xs text-muted-foreground ml-6 -mt-1">
+                  {t('settings.variantWTInfo')}
+                </p>
+              )}
             </RadioGroup>
 
             <div className="space-y-2">
