@@ -21,6 +21,8 @@ interface AuctionWithLeague {
   id: string;
   league_id: string;
   league_name: string;
+  owner_name?: string;
+  owner_email?: string;
   round_number: number;
   statut: string;
   deadline_at: string;
