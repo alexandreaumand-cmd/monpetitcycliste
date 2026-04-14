@@ -47,7 +47,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       if (error) throw error;
 
       const myLeagueIds = new Set(myLeagues.map(l => l.id));
-      return (data || []).filter((league: any) => !myLeagueIds.has(league.id));
+      return (data || []).filter((league: any) => !myLeagueIds.has(league.id) && league.current_player_count < league.max_players);
     },
     enabled: open,
   });
