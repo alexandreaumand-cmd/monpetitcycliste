@@ -62,14 +62,24 @@ export const SuperAdminAuctionsMonitor = () => {
         return;
       }
 
-      // Fetch league names
+      // Fetch league info via edge function (bypasses RLS)
       const leagueIds = [...new Set(auctionRows.map((a) => a.league_id))];
-      const { data: leagues } = await supabase
-        .from("leagues")
-        .select("id, name, game_mode, settings")
-        .in("id", leagueIds);
+      const { data: leaguesData } = await supabase.functions.invoke("admin-get-leagues-info", {
+        body: { league_ids: leagueIds },
+      });
 
-      const leagueMap = new Map(leagues?.map((l) => [l.id, { name: l.name, game_mode: l.game_mode, settings: l.settings as Record<string, any> | null }]) || []);
+      const leagueMap = new Map<string, { name: string; game_mode?: string; settings?: Record<string, any>; owner_name?: string; owner_email?: string }>();
+      if (leaguesData && !leaguesData.error) {
+        for (const [id, info] of Object.entries(leaguesData as Record<string, any>)) {
+          leagueMap.set(id, {
+            name: info.name,
+            game_mode: info.game_mode,
+            settings: info.settings,
+            owner_name: info.owner_name,
+            owner_email: info.owner_email,
+          });
+        }
+      }
 
       // Fetch league scopes for selected_course_ids
       const { data: scopes } = await supabase
