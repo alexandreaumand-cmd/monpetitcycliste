@@ -137,6 +137,8 @@ export const SuperAdminAuctionsMonitor = () => {
           id: a.id,
           league_id: a.league_id,
           league_name: league?.name || "Ligue inconnue",
+          owner_name: league?.owner_name,
+          owner_email: league?.owner_email,
           round_number: a.round_number,
           statut: a.statut || "open",
           deadline_at: a.deadline_at,
