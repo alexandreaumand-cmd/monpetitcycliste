@@ -1,31 +1,36 @@
 
 
-# Plan : Gérer les enchères scheduled dont la date est passée
+# Fix : "Ligue inconnue" sur la page Enchères Live super-admin
 
-## Situation actuelle
-La ligue "La compétition" a une enchère scheduled avec `opens_at` au 10 avril (passé). Le cron `auto-open-scheduled-auctions` aurait dû l'ouvrir mais ne l'a pas fait. Le hook `useLeagueAuctionStatus` filtre avec `.gt('opens_at', now())`, donc cette enchère est invisible → "Aucune donnée disponible".
+## Cause racine
+La requête `supabase.from("leagues").select(...)` dans `SuperAdminAuctionsMonitor.tsx` est soumise aux politiques RLS. La policy SELECT sur `leagues` exige `visibility = 'public' OR is_league_member(id)`. Quand le super-admin n'est pas membre d'une ligue privée, la requête retourne zéro lignes → "Ligue inconnue".
+
+## Solution
+Créer une **edge function `admin-get-leagues-info`** qui utilise le service role pour récupérer les infos des ligues (nom, owner name, owner email) sans restriction RLS. L'appeler depuis le composant à la place de la requête directe.
 
 ## Modifications
 
-### 1. `src/hooks/useLeagueAuctionStatus.tsx`
-- Retirer le filtre `.gt('opens_at', new Date().toISOString())` sur les enchères scheduled
-- Comparer `opens_at` côté client pour ajouter un flag `isPastScheduled: boolean` quand `opens_at < now()`
-- Ajouter `isPastScheduled` à l'interface `AuctionStatus`
+### 1. Nouvelle edge function `supabase/functions/admin-get-leagues-info/index.ts`
+- Accepte `{ league_ids: string[] }` en POST
+- Vérifie que l'appelant est super-admin (via `user_roles`)
+- Requête avec service role client :
+  - `leagues` : `id, name, owner_manager_id`
+  - `managers` : `id, nom, email` (pour les owners)
+- Retourne un map `{ [league_id]: { name, owner_name, owner_email } }`
 
-### 2. `src/components/dashboard/LeagueCard.tsx`
-- **Cas `isScheduled && !isPastScheduled`** (date future) : garder le countdown actuel "Ouverture dans X jours"
-- **Cas `isPastScheduled`** (date passée) : afficher un bandeau distinct (style gris/neutre) avec le message "Enchère en attente d'ouverture" — indiquant que l'admin doit agir
-- **Cas aucune enchère et aucune stat** : remplacer "Aucune donnée disponible" par un message contextuel "La saison vient de commencer ! Les classements apparaîtront après le premier round d'enchères."
+### 2. `src/components/admin/auctions/SuperAdminAuctionsMonitor.tsx`
+- Remplacer la requête directe `supabase.from("leagues")` (lignes 64-70) par un appel à `supabase.functions.invoke("admin-get-leagues-info", { body: { league_ids } })`
+- Ajouter `owner_name` et `owner_email` à l'interface `AuctionWithLeague`
+- Afficher sous le nom de la ligue : le nom du créateur et son email en texte secondaire
 
-### 3. Traductions (`fr/dashboard.json` et `en/dashboard.json`)
-- `leagueCard.auction.awaitingOpening` : "En attente d'ouverture" / "Awaiting opening"
-- `leagueCard.auction.awaitingOpeningDesc` : "L'enchère devrait bientôt être ouverte par l'administrateur" / "The auction should be opened soon by the administrator"
-- `leagueCard.noStatsYet` : "La saison vient de commencer !" / "Season just started!"
-- `leagueCard.noStatsYetDesc` : "Les classements apparaîtront après le premier round d'enchères." / "Rankings will appear after the first auction round."
+### 3. Affichage dans les cartes
+Sous le `CardTitle` (nom de la ligue), ajouter :
+```
+Créateur : Jean Dupont (jean@example.com)
+```
+en `text-xs text-muted-foreground`, pour les sections open et closed.
 
-## Fichiers modifiés
-1. `src/hooks/useLeagueAuctionStatus.tsx`
-2. `src/components/dashboard/LeagueCard.tsx`
-3. `src/i18n/locales/fr/dashboard.json`
-4. `src/i18n/locales/en/dashboard.json`
+## Fichiers
+1. `supabase/functions/admin-get-leagues-info/index.ts` (nouveau)
+2. `src/components/admin/auctions/SuperAdminAuctionsMonitor.tsx` (modifié)
 
