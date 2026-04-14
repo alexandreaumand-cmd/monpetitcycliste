@@ -274,6 +274,11 @@ export const SuperAdminAuctionsMonitor = () => {
                       Round {auction.round_number}
                     </Badge>
                   </div>
+                  {auction.owner_name && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Créateur : {auction.owner_name}{auction.owner_email ? ` (${auction.owner_email})` : ''}
+                    </p>
+                  )}
                   {/* League details */}
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {auction.game_mode && (
@@ -385,6 +390,11 @@ export const SuperAdminAuctionsMonitor = () => {
                       Round {auction.round_number}
                     </Badge>
                   </div>
+                  {auction.owner_name && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Créateur : {auction.owner_name}{auction.owner_email ? ` (${auction.owner_email})` : ''}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {auction.game_mode && (
                       <Badge variant="secondary" className="text-[10px] h-5">
