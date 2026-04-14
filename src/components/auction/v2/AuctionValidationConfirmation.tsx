@@ -72,6 +72,18 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
     return () => clearInterval(interval);
   }, [status?.deadline_at]);
 
+  const allValidated = !!status && status.total_managers > 0 && status.validated_count === status.total_managers;
+
+  // Auto-redirect to announcements when all managers have validated
+  useEffect(() => {
+    if (allValidated && onViewAnnouncements) {
+      const timer = setTimeout(() => {
+        onViewAnnouncements();
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [allValidated, onViewAnnouncements]);
+
   if (isLoading || !status) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -81,7 +93,6 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
   }
 
   const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
-  const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
   const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
 
   const getEncouragingMessage = () => {
