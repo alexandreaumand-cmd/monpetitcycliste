@@ -84,6 +84,18 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
   const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
   const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
 
+
+
+  // Auto-redirect to announcements when all managers have validated
+  useEffect(() => {
+    if (allValidated && onViewAnnouncements) {
+      const timer = setTimeout(() => {
+        onViewAnnouncements();
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [allValidated, onViewAnnouncements]);
+
   const getEncouragingMessage = () => {
     if (isAutoClosing) {
       return `🤖 ${t('validation.autoClosing', 'Tous les managers ont validé ! Fermeture automatique en cours...')}`;
