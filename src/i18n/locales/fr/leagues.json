@@ -110,6 +110,7 @@
     "variant": "Variante",
     "variantFull": "Saison entière",
     "variantWT": "World Tour uniquement",
+    "variantWTInfo": "Inclut également les Championnats du Monde et d'Europe (CLM et route)",
     "startingPhase": "Phase de départ",
     "startingPhaseAuto": "Par défaut, les coureurs seront attribués à la Phase 1. Si vous rejoignez en cours de saison, choisissez la phase appropriée.",
     "startingPhaseOption": "Phase {{num}}",

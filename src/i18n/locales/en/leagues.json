@@ -110,6 +110,7 @@
     "variant": "Variant",
     "variantFull": "Full season",
     "variantWT": "World Tour only",
+    "variantWTInfo": "Also includes World and European Championships (ITT and road race)",
     "startingPhase": "Starting phase",
     "startingPhaseAuto": "By default, riders will be assigned to Phase 1. If you're joining mid-season, choose the appropriate phase.",
     "startingPhaseOption": "Phase {{num}}",
