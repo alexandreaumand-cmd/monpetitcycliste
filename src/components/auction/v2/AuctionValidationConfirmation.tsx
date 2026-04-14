@@ -72,19 +72,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
     return () => clearInterval(interval);
   }, [status?.deadline_at]);
 
-  if (isLoading || !status) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
-  const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
-  const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
-
-
+  const allValidated = !!status && status.total_managers > 0 && status.validated_count === status.total_managers;
 
   // Auto-redirect to announcements when all managers have validated
   useEffect(() => {
@@ -95,6 +83,17 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
       return () => clearTimeout(timer);
     }
   }, [allValidated, onViewAnnouncements]);
+
+  if (isLoading || !status) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
+  const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
 
   const getEncouragingMessage = () => {
     if (isAutoClosing) {
