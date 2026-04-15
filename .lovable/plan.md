@@ -1,31 +1,52 @@
 
 
-# Fix : Annonces invisibles — Correction du join PostgREST ambigu
+# Fix : Bouton "Annonces" inopérant sur l'écran de validation
 
-## Diagnostic confirmé
+## Diagnostic
 
-Le problème est **identique pour tous les modes de ligue** (5 phases et à la course). Les auctions "à la course" ont aussi un `phase_id` en base (colonne NOT NULL). Le bug est purement technique :
+**Deux problèmes identifiés :**
 
-La ligne 53 de l'Edge Function utilise `phases!inner(saison_id)`, mais la table `auctions` a **deux FK vers `phases`** (`phase_id` et `effective_phase_id`). PostgREST ne peut pas deviner laquelle utiliser et renvoie une erreur, ce qui fait que l'auction n'est pas trouvée → 404 → aucune annonce affichée.
+1. **Guard trop strict côté client** — Le rendu des annonces (ligne 547 mobile / 519 desktop) exige `validatedAuctionId` non-null :
+   ```
+   if (showValidationScreen && showPastAnnouncements && validatedAuctionId)
+   ```
+   Si `context?.auction_id` n'est pas encore chargé au moment de l'entrée dans l'écran de validation, `validatedAuctionId` reste `null`. Cliquer sur "Annonces" met `showPastAnnouncements = true`, mais la condition échoue → le même écran de validation se ré-affiche. Le bouton semble ne rien faire.
 
-## Correction
+2. **Edge Function crash sur auth header null** — `req.headers.get('Authorization')!` (ligne 16) crashe si le header est absent, causant une erreur 500 au lieu d'un 401 propre.
 
-### 1. `supabase/functions/auction-get-live-status/index.ts`
+## Corrections
 
-Ligne 53 — désambiguïser le join :
+### 1. `AuctionPageMobile.tsx` — Supprimer le guard `validatedAuctionId` et utiliser un fallback
+Ligne 547 : remplacer la condition pour utiliser l'`auctionId` du contexte en fallback :
 ```typescript
-// Avant :
-.select('*, phases!inner(saison_id), paused_manager:announcements_paused_by(id, nom)')
+const effectiveAuctionIdForAnnouncements = validatedAuctionId || context?.auction_id;
 
-// Après :
-.select('*, phases!phase_id(saison_id), paused_manager:announcements_paused_by(id, nom)')
+if (showValidationScreen && showPastAnnouncements && effectiveAuctionIdForAnnouncements) {
+  return (
+    <AuctionLiveAnnouncements
+      auctionId={effectiveAuctionIdForAnnouncements}
+      ...
+    />
+  );
+}
 ```
 
-### 2. Audit des autres Edge Functions
+### 2. `AuctionPageDesktop.tsx` — Même correction
+Ligne 519 : appliquer le même pattern de fallback.
 
-Rechercher et corriger toute occurrence de `phases!inner` dans les autres Edge Functions qui interrogent la table `auctions`.
+### 3. `auction-get-live-status/index.ts` — Guard auth header null
+Ligne 16 : vérifier que l'auth header existe avant de l'utiliser :
+```typescript
+const authHeader = req.headers.get('Authorization');
+if (!authHeader) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+```
 
 ## Fichiers modifiés
-1. `supabase/functions/auction-get-live-status/index.ts` — 1 ligne modifiée
-2. Éventuellement d'autres Edge Functions si le même pattern est trouvé
+1. `src/components/auction/v2/AuctionPageMobile.tsx` — fallback auctionId
+2. `src/components/auction/v2/AuctionPageDesktop.tsx` — idem
+3. `supabase/functions/auction-get-live-status/index.ts` — guard auth header
 
