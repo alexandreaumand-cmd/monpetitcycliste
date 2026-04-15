@@ -516,11 +516,13 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     );
   }
 
-  if (showValidationScreen && showPastAnnouncements && validatedAuctionId) {
+  const effectiveAuctionIdForAnnouncements = validatedAuctionId || context?.auction_id;
+
+  if (showValidationScreen && showPastAnnouncements && effectiveAuctionIdForAnnouncements) {
     return (
       <div className="container max-w-6xl mx-auto p-6">
         <AuctionLiveAnnouncements
-          auctionId={validatedAuctionId}
+          auctionId={effectiveAuctionIdForAnnouncements}
           managerId={managerId}
           phaseId={phaseId}
           onBack={() => setShowPastAnnouncements(false)}

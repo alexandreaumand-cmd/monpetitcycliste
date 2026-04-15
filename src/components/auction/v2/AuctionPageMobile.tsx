@@ -544,10 +544,12 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     );
   }
 
-  if (showValidationScreen && showPastAnnouncements && validatedAuctionId) {
+  const effectiveAuctionIdForAnnouncements = validatedAuctionId || context?.auction_id;
+
+  if (showValidationScreen && showPastAnnouncements && effectiveAuctionIdForAnnouncements) {
     return (
       <AuctionLiveAnnouncements
-        auctionId={validatedAuctionId}
+        auctionId={effectiveAuctionIdForAnnouncements}
         managerId={managerId}
         phaseId={phaseId}
         onBack={() => setShowPastAnnouncements(false)}
