@@ -66,7 +66,7 @@ export const RankingsMobile = () => {
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
     queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
-    staleTime: 60000, // Cache 1 minute
+    staleTime: 2 * 60 * 1000, // Cache 2 minutes
     enabled: !!leagueId && (!!selectedSeason?.id || !!selectedPhase),
     queryFn: async () => {
       if (!leagueId) return [];
@@ -120,7 +120,7 @@ export const RankingsMobile = () => {
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
     queryKey: ["previous-global-standings-mobile", selectedSeason?.id, activePhase?.id],
-    staleTime: 60000, // Cache 1 minute
+    staleTime: 2 * 60 * 1000, // Cache 2 minutes
     queryFn: async () => {
       if (selectedPhase || !activePhase) return null;
 
@@ -148,7 +148,7 @@ export const RankingsMobile = () => {
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
     queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
-    staleTime: 60000, // Cache 1 minute
+    staleTime: 2 * 60 * 1000, // Cache 2 minutes
     enabled: !!leagueId && !!selectedSeason?.id,
     queryFn: async () => {
       if (!leagueId) return [];
