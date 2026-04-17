@@ -34,6 +34,15 @@ type League = {
   owner_manager_id: string;
   settings: Record<string, any>;
   created_at: string;
+  game_mode: string;
+};
+
+type SelectedCourse = {
+  id: string;
+  nom: string;
+  categorie: string | null;
+  date_debut: string | null;
+  date_fin: string | null;
 };
 
 type Member = {
