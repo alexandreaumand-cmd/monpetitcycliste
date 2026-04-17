@@ -61,6 +61,7 @@ export function LeagueDetailPage() {
   const { id: leagueId } = useParams<{ id: string }>();
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<SelectedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
 
