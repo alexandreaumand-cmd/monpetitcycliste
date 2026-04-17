@@ -1,52 +1,60 @@
 
 
-# Fix : Bouton "Annonces" inopérant sur l'écran de validation
+# Fix : Super-admin ne peut pas voir le détail d'une ligue dont il n'est pas membre
 
-## Diagnostic
+## Cause racine
 
-**Deux problèmes identifiés :**
+La page `src/pages/admin/LeagueDetailPage.tsx` interroge directement les tables `leagues`, `league_members`, `league_invites`, `league_scopes` via le client Supabase (donc avec RLS appliqué). Or les policies SELECT actuelles n'incluent **aucun bypass super-admin** :
 
-1. **Guard trop strict côté client** — Le rendu des annonces (ligne 547 mobile / 519 desktop) exige `validatedAuctionId` non-null :
-   ```
-   if (showValidationScreen && showPastAnnouncements && validatedAuctionId)
-   ```
-   Si `context?.auction_id` n'est pas encore chargé au moment de l'entrée dans l'écran de validation, `validatedAuctionId` reste `null`. Cliquer sur "Annonces" met `showPastAnnouncements = true`, mais la condition échoue → le même écran de validation se ré-affiche. Le bouton semble ne rien faire.
+| Table | Policy SELECT actuelle |
+|---|---|
+| `leagues` | `visibility='public' OR is_league_member(id)` |
+| `league_members` | `is_league_member(league_id)` |
+| `league_invites` | `is_league_admin(league_id)` |
+| `league_scopes` | `is_league_member(league_id)` |
 
-2. **Edge Function crash sur auth header null** — `req.headers.get('Authorization')!` (ligne 16) crashe si le header est absent, causant une erreur 500 au lieu d'un 401 propre.
+À noter : `league_members` UPDATE/DELETE ont déjà le bypass `is_superadmin() OR ...`. C'est juste le SELECT (et lecture des autres tables) qui a été oublié.
 
-## Corrections
+Résultat : la requête `select * from leagues where id = ...` retourne 0 ligne pour un super-admin non membre → `Ligue introuvable`.
 
-### 1. `AuctionPageMobile.tsx` — Supprimer le guard `validatedAuctionId` et utiliser un fallback
-Ligne 547 : remplacer la condition pour utiliser l'`auctionId` du contexte en fallback :
-```typescript
-const effectiveAuctionIdForAnnouncements = validatedAuctionId || context?.auction_id;
+## Solution
 
-if (showValidationScreen && showPastAnnouncements && effectiveAuctionIdForAnnouncements) {
-  return (
-    <AuctionLiveAnnouncements
-      auctionId={effectiveAuctionIdForAnnouncements}
-      ...
-    />
-  );
-}
+Ajouter une policy PERMISSIVE supplémentaire `is_superadmin()` sur SELECT pour chacune des 4 tables (logique OR avec les policies existantes — pas de régression pour les membres).
+
+### Migration SQL
+
+```sql
+CREATE POLICY "leagues_read_superadmin" ON public.leagues
+  FOR SELECT TO authenticated USING (public.is_superadmin());
+
+CREATE POLICY "league_members_read_superadmin" ON public.league_members
+  FOR SELECT TO authenticated USING (public.is_superadmin());
+
+CREATE POLICY "league_invites_read_superadmin" ON public.league_invites
+  FOR SELECT TO authenticated USING (public.is_superadmin());
+
+CREATE POLICY "league_scopes_read_superadmin" ON public.league_scopes
+  FOR SELECT TO authenticated USING (public.is_superadmin());
 ```
 
-### 2. `AuctionPageDesktop.tsx` — Même correction
-Ligne 519 : appliquer le même pattern de fallback.
+Et étendre les UPDATE manquants (pour que le super-admin puisse aussi modifier nom/visibilité, paramètres et invitations) :
 
-### 3. `auction-get-live-status/index.ts` — Guard auth header null
-Ligne 16 : vérifier que l'auth header existe avant de l'utiliser :
-```typescript
-const authHeader = req.headers.get('Authorization');
-if (!authHeader) {
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
+```sql
+-- leagues UPDATE actuel = is_league_admin(id) → ajouter superadmin
+DROP POLICY "leagues_update" ON public.leagues;
+CREATE POLICY "leagues_update" ON public.leagues
+  FOR UPDATE TO authenticated USING (public.is_superadmin() OR public.is_league_admin(id));
+
+-- league_invites UPDATE
+DROP POLICY "league_invites_update" ON public.league_invites;
+CREATE POLICY "league_invites_update" ON public.league_invites
+  FOR UPDATE TO authenticated USING (public.is_superadmin() OR public.is_league_admin(league_id));
+
+-- league_invites INSERT/DELETE policies (currently restrictive false / null) — laisser les Edge Functions gérer
 ```
+
+Le `LeagueAdminGuard` côté client autorise déjà `isSuperAdmin` → pas de changement frontend nécessaire.
 
 ## Fichiers modifiés
-1. `src/components/auction/v2/AuctionPageMobile.tsx` — fallback auctionId
-2. `src/components/auction/v2/AuctionPageDesktop.tsx` — idem
-3. `supabase/functions/auction-get-live-status/index.ts` — guard auth header
+1. Migration SQL — ajout de 4 policies SELECT super-admin + extension de 2 policies UPDATE existantes
 
