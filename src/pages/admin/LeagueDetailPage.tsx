@@ -34,6 +34,15 @@ type League = {
   owner_manager_id: string;
   settings: Record<string, any>;
   created_at: string;
+  game_mode: string;
+};
+
+type SelectedCourse = {
+  id: string;
+  nom: string;
+  categorie: string | null;
+  date_debut: string | null;
+  date_fin: string | null;
 };
 
 type Member = {
@@ -52,6 +61,7 @@ export function LeagueDetailPage() {
   const { id: leagueId } = useParams<{ id: string }>();
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<SelectedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
 
@@ -105,8 +115,29 @@ export function LeagueDetailPage() {
       }
     }
 
+    // Load selected courses if league is per_course
+    let coursesList: SelectedCourse[] = [];
+    if ((leagueData as any)?.game_mode === "per_course") {
+      const { data: scopeData } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+
+      const ids = (scopeData?.selected_course_ids as string[] | null) ?? [];
+      if (ids.length > 0) {
+        const { data: coursesData } = await supabase
+          .from("courses")
+          .select("id, nom, categorie, date_debut, date_fin")
+          .in("id", ids)
+          .order("date_debut", { ascending: true });
+        coursesList = (coursesData ?? []) as SelectedCourse[];
+      }
+    }
+
     setLeague(leagueData as League);
     setMembers(membersWithManagers);
+    setSelectedCourses(coursesList);
     setLoading(false);
   }
 
@@ -196,6 +227,11 @@ export function LeagueDetailPage() {
 
         {/* League Settings */}
         <LeagueSettingsCard league={league} onSaved={loadLeagueData} />
+
+        {/* Selected Courses (per_course mode) */}
+        {league.game_mode === "per_course" && (
+          <SelectedCoursesCard courses={selectedCourses} />
+        )}
 
         {/* Invitations */}
         <LeagueInvitesManager leagueId={leagueId} />
@@ -339,6 +375,54 @@ function LeagueSettingsCard({
         <Button onClick={saveSettings} disabled={saving}>
           {saving ? "Enregistrement..." : "Enregistrer les modifications"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SelectedCoursesCard({ courses }: { courses: SelectedCourse[] }) {
+  function formatDateRange(start: string | null, end: string | null) {
+    if (!start) return "-";
+    const fmt = (d: string) =>
+      new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+    if (!end || end === start) return fmt(start);
+    return `${fmt(start)} → ${fmt(end)}`;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Courses sélectionnées ({courses.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {courses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Aucune course sélectionnée pour cette ligue.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Course</TableHead>
+                <TableHead>Catégorie</TableHead>
+                <TableHead>Dates</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.nom}</TableCell>
+                  <TableCell>
+                    {c.categorie ? <Badge variant="outline">{c.categorie}</Badge> : "-"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDateRange(c.date_debut, c.date_fin)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
