@@ -115,8 +115,29 @@ export function LeagueDetailPage() {
       }
     }
 
+    // Load selected courses if league is per_course
+    let coursesList: SelectedCourse[] = [];
+    if ((leagueData as any)?.game_mode === "per_course") {
+      const { data: scopeData } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+
+      const ids = (scopeData?.selected_course_ids as string[] | null) ?? [];
+      if (ids.length > 0) {
+        const { data: coursesData } = await supabase
+          .from("courses")
+          .select("id, nom, categorie, date_debut, date_fin")
+          .in("id", ids)
+          .order("date_debut", { ascending: true });
+        coursesList = (coursesData ?? []) as SelectedCourse[];
+      }
+    }
+
     setLeague(leagueData as League);
     setMembers(membersWithManagers);
+    setSelectedCourses(coursesList);
     setLoading(false);
   }
 
