@@ -228,6 +228,11 @@ export function LeagueDetailPage() {
         {/* League Settings */}
         <LeagueSettingsCard league={league} onSaved={loadLeagueData} />
 
+        {/* Selected Courses (per_course mode) */}
+        {league.game_mode === "per_course" && (
+          <SelectedCoursesCard courses={selectedCourses} />
+        )}
+
         {/* Invitations */}
         <LeagueInvitesManager leagueId={leagueId} />
 
