@@ -1,60 +1,27 @@
 
 
-# Fix : Super-admin ne peut pas voir le détail d'une ligue dont il n'est pas membre
+# Ajout du détail des courses sélectionnées (mode "À la course")
 
-## Cause racine
+## Objectif
+Sur la page admin de détail de ligue (`/admin/leagues/:id`), afficher la liste des courses sélectionnées lorsque la ligue est en mode `per_course`.
 
-La page `src/pages/admin/LeagueDetailPage.tsx` interroge directement les tables `leagues`, `league_members`, `league_invites`, `league_scopes` via le client Supabase (donc avec RLS appliqué). Or les policies SELECT actuelles n'incluent **aucun bypass super-admin** :
+## Modifications
 
-| Table | Policy SELECT actuelle |
-|---|---|
-| `leagues` | `visibility='public' OR is_league_member(id)` |
-| `league_members` | `is_league_member(league_id)` |
-| `league_invites` | `is_league_admin(league_id)` |
-| `league_scopes` | `is_league_member(league_id)` |
+### `src/pages/admin/LeagueDetailPage.tsx`
 
-À noter : `league_members` UPDATE/DELETE ont déjà le bypass `is_superadmin() OR ...`. C'est juste le SELECT (et lecture des autres tables) qui a été oublié.
+1. **Étendre le type `League`** avec `game_mode`.
+2. **Charger le scope en parallèle** des autres requêtes : récupérer `selected_course_ids` depuis `league_scopes` pour ce `leagueId`.
+3. **Charger les noms des courses** depuis la table `courses` (sélection : `id, nom, date_debut, date_fin, categorie`) filtrées par les IDs récupérés, triées par `date_debut`.
+4. **Nouvelle carte `<SelectedCoursesCard>`** affichée uniquement si `league.game_mode === 'per_course'` et que des courses existent. Insérée juste après `LeagueSettingsCard`.
 
-Résultat : la requête `select * from leagues where id = ...` retourne 0 ligne pour un super-admin non membre → `Ligue introuvable`.
-
-## Solution
-
-Ajouter une policy PERMISSIVE supplémentaire `is_superadmin()` sur SELECT pour chacune des 4 tables (logique OR avec les policies existantes — pas de régression pour les membres).
-
-### Migration SQL
-
-```sql
-CREATE POLICY "leagues_read_superadmin" ON public.leagues
-  FOR SELECT TO authenticated USING (public.is_superadmin());
-
-CREATE POLICY "league_members_read_superadmin" ON public.league_members
-  FOR SELECT TO authenticated USING (public.is_superadmin());
-
-CREATE POLICY "league_invites_read_superadmin" ON public.league_invites
-  FOR SELECT TO authenticated USING (public.is_superadmin());
-
-CREATE POLICY "league_scopes_read_superadmin" ON public.league_scopes
-  FOR SELECT TO authenticated USING (public.is_superadmin());
-```
-
-Et étendre les UPDATE manquants (pour que le super-admin puisse aussi modifier nom/visibilité, paramètres et invitations) :
-
-```sql
--- leagues UPDATE actuel = is_league_admin(id) → ajouter superadmin
-DROP POLICY "leagues_update" ON public.leagues;
-CREATE POLICY "leagues_update" ON public.leagues
-  FOR UPDATE TO authenticated USING (public.is_superadmin() OR public.is_league_admin(id));
-
--- league_invites UPDATE
-DROP POLICY "league_invites_update" ON public.league_invites;
-CREATE POLICY "league_invites_update" ON public.league_invites
-  FOR UPDATE TO authenticated USING (public.is_superadmin() OR public.is_league_admin(league_id));
-
--- league_invites INSERT/DELETE policies (currently restrictive false / null) — laisser les Edge Functions gérer
-```
-
-Le `LeagueAdminGuard` côté client autorise déjà `isSuperAdmin` → pas de changement frontend nécessaire.
+### Contenu de la carte
+- Titre : "Courses sélectionnées (N)"
+- Tableau (réutilisation de `Table` shadcn) avec colonnes :
+  - Nom de la course
+  - Catégorie (Badge)
+  - Date début → date fin (format court FR)
+- État vide : message "Aucune course sélectionnée pour cette ligue."
 
 ## Fichiers modifiés
-1. Migration SQL — ajout de 4 policies SELECT super-admin + extension de 2 policies UPDATE existantes
+1. `src/pages/admin/LeagueDetailPage.tsx` — ajout du chargement scope + courses, nouveau composant `SelectedCoursesCard`.
 
