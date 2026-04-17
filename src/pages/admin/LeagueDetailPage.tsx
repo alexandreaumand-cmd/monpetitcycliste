@@ -379,3 +379,51 @@ function LeagueSettingsCard({
     </Card>
   );
 }
+
+function SelectedCoursesCard({ courses }: { courses: SelectedCourse[] }) {
+  function formatDateRange(start: string | null, end: string | null) {
+    if (!start) return "-";
+    const fmt = (d: string) =>
+      new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+    if (!end || end === start) return fmt(start);
+    return `${fmt(start)} → ${fmt(end)}`;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Courses sélectionnées ({courses.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {courses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Aucune course sélectionnée pour cette ligue.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Course</TableHead>
+                <TableHead>Catégorie</TableHead>
+                <TableHead>Dates</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.nom}</TableCell>
+                  <TableCell>
+                    {c.categorie ? <Badge variant="outline">{c.categorie}</Badge> : "-"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDateRange(c.date_debut, c.date_fin)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
