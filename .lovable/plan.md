@@ -1,27 +1,48 @@
 
 
-# Ajout du détail des courses sélectionnées (mode "À la course")
+# Fix : Lisibilité du classement Général (Finaux) sur mobile
 
-## Objectif
-Sur la page admin de détail de ligue (`/admin/leagues/:id`), afficher la liste des courses sélectionnées lorsque la ligue est en mode `per_course`.
+## Diagnostic
+Dans `CourseResultsDrawer.tsx` (lignes 619-675), le rendu du tableau "Finaux > Général" utilise une densité extrême :
+- `text-[10px]` sur la table, `text-[8px]` sur l'équipe et le manager
+- `px-1 py-0 leading-none` (aucun padding vertical, aucune respiration)
+- 4 colonnes très étroites (`w-6`, `w-7`, `w-14`)
 
-## Modifications
+Résultat (cf. capture) : texte minuscule, lignes collées, équipe écrasée — illisible sur mobile.
 
-### `src/pages/admin/LeagueDetailPage.tsx`
+À noter : le tableau "Total riders" juste au-dessus (lignes 524-613) et `TTTResultsTable` utilisent une typographie normale. Seul ce tableau "régulier" est sur-condensé.
 
-1. **Étendre le type `League`** avec `game_mode`.
-2. **Charger le scope en parallèle** des autres requêtes : récupérer `selected_course_ids` depuis `league_scopes` pour ce `leagueId`.
-3. **Charger les noms des courses** depuis la table `courses` (sélection : `id, nom, date_debut, date_fin, categorie`) filtrées par les IDs récupérés, triées par `date_debut`.
-4. **Nouvelle carte `<SelectedCoursesCard>`** affichée uniquement si `league.game_mode === 'per_course'` et que des courses existent. Insérée juste après `LeagueSettingsCard`.
+## Correction proposée
 
-### Contenu de la carte
-- Titre : "Courses sélectionnées (N)"
-- Tableau (réutilisation de `Table` shadcn) avec colonnes :
-  - Nom de la course
-  - Catégorie (Badge)
-  - Date début → date fin (format court FR)
-- État vide : message "Aucune course sélectionnée pour cette ligue."
+Aligner le tableau régulier sur les standards mobile du projet (cf. mémoire `style/mobile/data-density-optimizations`) tout en gardant un layout 4 colonnes :
+
+| Élément | Avant | Après |
+|---|---|---|
+| Table | `text-[10px] table-fixed` | `text-xs` |
+| Cellules | `px-1 py-0 leading-none` | `px-2 py-1.5` |
+| Nom coureur | `font-semibold truncate` (text-[10px]) | `text-sm font-semibold truncate` |
+| Équipe | `text-[8px]` inline derrière le nom | `text-[10px] text-muted-foreground` placé sur une **2ème ligne** sous le nom (block, truncate) |
+| Position | `w-6` | `w-8` |
+| Points | `w-7` | `w-10`, `text-sm font-bold` |
+| Manager | `w-14 text-[8px]` | `w-16 text-[10px]` (Badge `secondary` plus lisible) |
+| Statut badge | `text-[7px]` slice(0,3) | `text-[10px]` label complet abrégé (DNF/DNS/DSQ) |
+
+### Structure de la cellule "Coureur" (changement clé)
+```tsx
+<div className="flex flex-col min-w-0">
+  <span className="text-sm font-semibold truncate">{row.coureur_nom}</span>
+  <span className="text-[10px] text-muted-foreground truncate">{row.equipe}</span>
+</div>
+```
+
+### Highlight "mon coureur"
+Conserver le bandeau jaune mais étendre légèrement (`border-l-4` au lieu de `border-l-2`) pour rester visible avec la nouvelle hauteur.
+
+## Portée
+- Modifications limitées au bloc `// Regular results table` (lignes 618-676).
+- Aucun impact sur TTT, Total, Étapes, Maillots — déjà corrects.
+- Visible uniquement sur mobile (le drawer mobile utilise déjà ce composant).
 
 ## Fichiers modifiés
-1. `src/pages/admin/LeagueDetailPage.tsx` — ajout du chargement scope + courses, nouveau composant `SelectedCoursesCard`.
+1. `src/components/courses/CourseResultsDrawer.tsx` — refonte du rendu du tableau régulier (Finaux + Étapes utilisent le même bloc s'il est partagé ; à vérifier puis appliquer aussi).
 
