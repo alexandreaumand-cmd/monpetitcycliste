@@ -314,35 +314,44 @@ export default function UsersManagementPage() {
     }
   });
 
-  // Sort users by last activity
+  // Sort users
   const sortedUsers = filteredUsers ? [...filteredUsers].sort((a, b) => {
-    if (!sortDirection) return 0;
-    
-    const getLastActivityDate = (user: UserData) => {
-      const activityDate = user.activity?.last_activity_at;
-      const signInDate = user.last_sign_in_at;
-      return activityDate || signInDate || null;
-    };
-    
-    const dateA = getLastActivityDate(a);
-    const dateB = getLastActivityDate(b);
-    
-    // Null dates go to the end
+    if (!sortDirection || !sortColumn) return 0;
+
+    let dateA: string | null = null;
+    let dateB: string | null = null;
+
+    if (sortColumn === 'last_connection') {
+      const getLastActivityDate = (user: UserData) =>
+        user.activity?.last_activity_at || user.last_sign_in_at || null;
+      dateA = getLastActivityDate(a);
+      dateB = getLastActivityDate(b);
+    } else if (sortColumn === 'created_at') {
+      dateA = a.created_at || null;
+      dateB = b.created_at || null;
+    }
+
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1;
     if (!dateB) return -1;
-    
+
     const comparison = new Date(dateA).getTime() - new Date(dateB).getTime();
     return sortDirection === 'asc' ? comparison : -comparison;
   }) : [];
 
-  const handleSortByLastConnection = () => {
-    if (!sortDirection) {
+  const handleSort = (column: 'last_connection' | 'created_at') => {
+    if (sortColumn !== column) {
+      setSortColumn(column);
       setSortDirection('desc');
-    } else if (sortDirection === 'desc') {
+      return;
+    }
+    if (sortDirection === 'desc') {
       setSortDirection('asc');
-    } else {
+    } else if (sortDirection === 'asc') {
       setSortDirection(null);
+      setSortColumn(null);
+    } else {
+      setSortDirection('desc');
     }
   };
 
