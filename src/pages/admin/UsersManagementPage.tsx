@@ -566,13 +566,24 @@ export default function UsersManagementPage() {
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
-                      onClick={handleSortByLastConnection}
+                      onClick={() => handleSort('last_connection')}
                     >
                       <div className="flex items-center gap-1">
                         Dernière connexion
-                        {sortDirection === null && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
-                        {sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
-                        {sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                        {sortColumn !== 'last_connection' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'last_connection' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'last_connection' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Date d'inscription
+                        {sortColumn !== 'created_at' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'created_at' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'created_at' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
                       </div>
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
