@@ -82,6 +82,7 @@ export default function UsersManagementPage() {
   const [deleteTargetUser, setDeleteTargetUser] = useState<UserData | null>(null);
   
   // Sorting state
+  const [sortColumn, setSortColumn] = useState<'last_connection' | 'created_at' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   // Fetch users
@@ -313,35 +314,44 @@ export default function UsersManagementPage() {
     }
   });
 
-  // Sort users by last activity
+  // Sort users
   const sortedUsers = filteredUsers ? [...filteredUsers].sort((a, b) => {
-    if (!sortDirection) return 0;
-    
-    const getLastActivityDate = (user: UserData) => {
-      const activityDate = user.activity?.last_activity_at;
-      const signInDate = user.last_sign_in_at;
-      return activityDate || signInDate || null;
-    };
-    
-    const dateA = getLastActivityDate(a);
-    const dateB = getLastActivityDate(b);
-    
-    // Null dates go to the end
+    if (!sortDirection || !sortColumn) return 0;
+
+    let dateA: string | null = null;
+    let dateB: string | null = null;
+
+    if (sortColumn === 'last_connection') {
+      const getLastActivityDate = (user: UserData) =>
+        user.activity?.last_activity_at || user.last_sign_in_at || null;
+      dateA = getLastActivityDate(a);
+      dateB = getLastActivityDate(b);
+    } else if (sortColumn === 'created_at') {
+      dateA = a.created_at || null;
+      dateB = b.created_at || null;
+    }
+
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1;
     if (!dateB) return -1;
-    
+
     const comparison = new Date(dateA).getTime() - new Date(dateB).getTime();
     return sortDirection === 'asc' ? comparison : -comparison;
   }) : [];
 
-  const handleSortByLastConnection = () => {
-    if (!sortDirection) {
+  const handleSort = (column: 'last_connection' | 'created_at') => {
+    if (sortColumn !== column) {
+      setSortColumn(column);
       setSortDirection('desc');
-    } else if (sortDirection === 'desc') {
+      return;
+    }
+    if (sortDirection === 'desc') {
       setSortDirection('asc');
-    } else {
+    } else if (sortDirection === 'asc') {
       setSortDirection(null);
+      setSortColumn(null);
+    } else {
+      setSortDirection('desc');
     }
   };
 
@@ -556,13 +566,24 @@ export default function UsersManagementPage() {
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
-                      onClick={handleSortByLastConnection}
+                      onClick={() => handleSort('last_connection')}
                     >
                       <div className="flex items-center gap-1">
                         Dernière connexion
-                        {sortDirection === null && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
-                        {sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
-                        {sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                        {sortColumn !== 'last_connection' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'last_connection' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'last_connection' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Date d'inscription
+                        {sortColumn !== 'created_at' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'created_at' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'created_at' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
                       </div>
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
@@ -710,6 +731,11 @@ export default function UsersManagementPage() {
                             : user.last_sign_in_at 
                               ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
                               : 'Jamais'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {user.created_at
+                            ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: fr })
+                            : '-'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
