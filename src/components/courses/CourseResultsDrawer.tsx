@@ -617,7 +617,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   ) : (
                     // Regular results table - optimized for mobile with 4 columns
                     <div className="border rounded-lg overflow-hidden">
-                      <Table className="text-[10px] table-fixed w-full">
+                      <Table className="text-xs w-full">
                         <TableBody>
                           {displayedResults.map((row) => {
                             const isFinished = row.statut === 'finished' && row.row_position !== null;
@@ -630,41 +630,43 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                 key={row.race_result_id}
                                 className={
                                   row.is_my_rider 
-                                    ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
+                                    ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-4 border-l-yellow-400" 
                                     : ""
                                 }
                               >
-                                <TableCell className="font-medium px-1 py-0 text-center w-6 leading-none">
+                                <TableCell className="font-medium px-2 py-1.5 text-center w-8 align-middle">
                                   {isFinished ? (
                                     displayPosition <= 3 ? (
-                                      <span className={`font-bold ${displayPosition === 1 ? "text-yellow-500" : displayPosition === 2 ? "text-gray-400" : "text-amber-600"}`}>
+                                      <span className={`font-bold text-sm ${displayPosition === 1 ? "text-yellow-500" : displayPosition === 2 ? "text-gray-400" : "text-amber-600"}`}>
                                         {displayPosition}
                                       </span>
                                     ) : (
                                       <span className="text-muted-foreground">{displayPosition}</span>
                                     )
                                   ) : statutBadge ? (
-                                    <Badge variant={statutBadge.variant} className="text-[7px] px-0.5 py-0">
+                                    <Badge variant={statutBadge.variant} className="text-[10px] px-1 py-0">
                                       {statutBadge.label.slice(0, 3)}
                                     </Badge>
                                   ) : (
                                     "—"
                                   )}
                                 </TableCell>
-                                <TableCell className="px-1 py-0 leading-none">
-                                  <div className="flex items-baseline gap-1 min-w-0">
-                                    <span className="font-semibold truncate">{row.coureur_nom}</span>
-                                    <span className="text-[8px] text-muted-foreground truncate flex-shrink-0">— {row.equipe}</span>
+                                <TableCell className="px-2 py-1.5 align-middle">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-sm font-semibold truncate">{row.coureur_nom}</span>
+                                    {row.equipe && (
+                                      <span className="text-[10px] text-muted-foreground truncate">{row.equipe}</span>
+                                    )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right font-bold px-1 py-0 tabular-nums w-7 leading-none">
+                                <TableCell className="text-right font-bold text-sm px-2 py-1.5 tabular-nums w-10 align-middle">
                                   {points > 0 ? points : "—"}
                                 </TableCell>
-                                <TableCell className="px-1 py-0 text-right w-14 leading-none">
+                                <TableCell className="px-2 py-1.5 text-right w-16 align-middle">
                                   {row.manager_nom && (
-                                    <span className="text-[8px] text-muted-foreground truncate block">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 max-w-full truncate inline-block">
                                       {row.manager_nom}
-                                    </span>
+                                    </Badge>
                                   )}
                                 </TableCell>
                               </TableRow>
