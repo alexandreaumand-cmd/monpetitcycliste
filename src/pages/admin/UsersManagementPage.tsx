@@ -732,7 +732,11 @@ export default function UsersManagementPage() {
                               ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
                               : 'Jamais'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {user.created_at
+                            ? format(new Date(user.created_at), 'dd MMM yyyy', { locale: fr })
+                            : '-'}
+                        </td>
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="ghost"
