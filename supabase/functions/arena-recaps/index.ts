@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,69 +6,89 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// @ts-ignore - EdgeRuntime is available in Supabase Edge runtime
+declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void };
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Lightweight auth gate (full auth check happens inside processRecaps too)
+  const authHeader = req.headers.get("Authorization");
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (!authHeader && !cronSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized - no credentials" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Parse body BEFORE returning (req body cannot be read after response is sent)
+  const body = await req.json().catch(() => ({}));
+
+  // Kick off async processing — do NOT await; respond immediately so pg_net
+  // (5s HTTP timeout) and other invokers don't disconnect mid-run.
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    EdgeRuntime.waitUntil(processRecaps(body, authHeader, cronSecret));
+  } catch {
+    // If EdgeRuntime is unavailable (local dev), fall back to fire-and-forget
+    processRecaps(body, authHeader, cronSecret).catch((e) =>
+      console.error("processRecaps failed:", e)
+    );
+  }
 
-    // Auth: verify_jwt = false in config.toml protects at gateway level.
-    // We do a best-effort superadmin check for manual user calls,
-    // but accept all Bearer token calls (cron jobs use anon key).
-    const cronSecret = req.headers.get("x-cron-secret");
-    const expectedCronSecret = Deno.env.get("CRON_SECRET");
-    const authHeader = req.headers.get("Authorization");
+  return new Response(
+    JSON.stringify({ ok: true, queued: true, type: body?.type || "daily" }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+});
 
-    let authMethod = "gateway";
-    if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
-      authMethod = "cron-secret";
-    } else if (authHeader?.startsWith("Bearer ")) {
-      // Try superadmin check, but don't block if it fails with anon key
-      try {
-        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: authHeader } },
-        });
-        const { data: userData } = await userClient.auth.getUser();
-        if (userData?.user) {
-          const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
-          if (!isSuperAdmin) {
-            return new Response(JSON.stringify({ error: "Unauthorized" }), {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          authMethod = "superadmin";
-        } else {
-          // No valid user session = likely anon key from cron → accept
-          authMethod = "anon-bearer";
-        }
-      } catch {
-        // Auth check failed → accept (gateway already validated)
-        authMethod = "bearer-fallback";
-      }
-    } else if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized - no credentials" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+async function processRecaps(
+  body: any,
+  authHeader: string | null,
+  cronSecret: string | null,
+) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const expectedCronSecret = Deno.env.get("CRON_SECRET");
+
+  let authMethod = "gateway";
+  if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
+    authMethod = "cron-secret";
+  } else if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: userData } = await userClient.auth.getUser();
+      if (userData?.user) {
+        const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
+        if (!isSuperAdmin) {
+          console.warn("⛔ Unauthorized non-superadmin call to arena-recaps");
+          return;
+        }
+        authMethod = "superadmin";
+      } else {
+        authMethod = "anon-bearer";
+      }
+    } catch {
+      authMethod = "bearer-fallback";
     }
-    console.log(`✅ Authenticated via ${authMethod}`);
+  }
+  console.log(`✅ Authenticated via ${authMethod}`);
 
-    const supabase = createClient(supabaseUrl, serviceKey);
-    const projectRef = supabaseUrl.replace("https://", "").split(".")[0];
+  const supabase = createClient(supabaseUrl, serviceKey);
+  const projectRef = supabaseUrl.replace("https://", "").split(".")[0];
 
-    const body = await req.json().catch(() => ({}));
-    const recapType: string = body.type || "daily";
-    const dateOverride: string | undefined = body.date; // optional "YYYY-MM-DD"
+  const recapType: string = body?.type || "daily";
+  const dateOverride: string | undefined = body?.date;
+  const targetDate = dateOverride || new Date().toISOString().split("T")[0];
 
-    const targetDate = dateOverride || new Date().toISOString().split("T")[0];
-    console.log(`🔄 Starting ${recapType} recap for date=${targetDate}, project=${projectRef}, auth=${authMethod}`);
+  console.log(`🔄 Starting ${recapType} recap for date=${targetDate}, project=${projectRef}, auth=${authMethod}`);
 
-    // 1. Get all active leagues
+  try {
     const { data: leagues, error: leaguesErr } = await supabase
       .from("leagues")
       .select("id, name")
@@ -76,22 +96,18 @@ Deno.serve(async (req) => {
 
     if (leaguesErr) throw leaguesErr;
     if (!leagues || leagues.length === 0) {
-      // Log audit: no leagues
       await logRecapRun(supabase, {
         run_type: recapType, target_date: targetDate, project_ref: projectRef,
         leagues_processed: 0, leagues_sent: 0, status: "no_data",
         auth_method: authMethod, error_message: "No active leagues",
       });
-      return new Response(JSON.stringify({ message: "No active leagues", project_ref: projectRef }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return;
     }
 
     const results: { league: string; sent: boolean; type: string }[] = [];
 
     for (const league of leagues) {
       try {
-        // Get the #general channel for this league
         const { data: channel } = await supabase
           .from("arena_channels")
           .select("id")
@@ -121,7 +137,6 @@ Deno.serve(async (req) => {
     const leaguesSent = results.filter((r) => r.sent).length;
     const status = leaguesSent === 0 ? "no_data" : leaguesSent === leagues.length ? "success" : "partial";
 
-    // Log audit
     await logRecapRun(supabase, {
       run_type: recapType, target_date: targetDate, project_ref: projectRef,
       leagues_processed: leagues.length, leagues_sent: leaguesSent, status,
@@ -129,35 +144,17 @@ Deno.serve(async (req) => {
     });
 
     console.log(`✅ Recap complete: ${leaguesSent}/${leagues.length} leagues`, results);
-
-    return new Response(JSON.stringify({
-      results, project_ref: projectRef, target_date: targetDate,
-      auth_method: authMethod, timestamp: new Date().toISOString(),
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
     console.error("Recap error:", error);
-
-    // Try to log audit even on error
     try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, serviceKey);
       await logRecapRun(supabase, {
-        run_type: "unknown", target_date: new Date().toISOString().split("T")[0],
-        project_ref: supabaseUrl.replace("https://", "").split(".")[0],
+        run_type: recapType, target_date: targetDate, project_ref: projectRef,
         leagues_processed: 0, leagues_sent: 0, status: "error",
-        error_message: (error as Error).message, auth_method: "unknown",
+        error_message: (error as Error).message, auth_method: authMethod,
       });
-    } catch { /* ignore audit error */ }
-
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    } catch { /* ignore */ }
   }
-});
+}
 
 // ─── Audit Logger ─────────────────────────────────────────────
 
