@@ -1,105 +1,82 @@
 
-## Meilleure solution recommandée
 
-La meilleure réparation est une correction d’infrastructure, pas une refonte de la fonction :
+## Bugs identifiés
 
-1. créer/valider un secret `CRON_SECRET` en LIVE,
-2. modifier les deux jobs cron existants pour qu’ils appellent l’URL Edge Function de l’environnement LIVE avec le header `x-cron-secret`,
-3. conserver les mêmes `jobid` via `cron.alter_job(...)`,
-4. lancer un rattrapage manuel,
-5. vérifier les écritures dans `arena_recap_runs`.
+### Bug 1 — Points du jour incluent des courses hors scope
+La fonction RPC `get_daily_points_by_manager` (utilisée par `arena-recaps` pour le récap quotidien) joint `points_ledger` + `rosters` filtré par `league_id`, mais **ne filtre pas par `league_scopes.selected_course_ids`**.
 
-## Pourquoi c’est la meilleure option
+Conséquence sur COPArdennaises : la ligue a un scope explicite (Amstel, Flèche Wallonne, Liège-Bastogne-Liège). Les points du Tour des Alpes (et toute autre course hors scope) remontent quand même → Rolfes Reus apparaît avec +125 pts.
 
-- La fonction `arena-recaps` est déjà prête :
-  - elle répond immédiatement avec `EdgeRuntime.waitUntil(...)`,
-  - elle supporte déjà `x-cron-secret`,
-  - elle utilise déjà `npm:@supabase/supabase-js@2`.
-- Donc le problème le plus probable n’est plus le code de la fonction, mais le pointage des jobs cron vers le mauvais environnement ou avec le mauvais mode d’authentification.
-- `CRON_SECRET` est préférable à la clé anon :
-  - plus simple à gérer,
-  - plus sûr,
-  - plus facile à révoquer,
-  - évite de dépendre d’un long JWT copié en dur.
+### Bug 2 — Mouvements startlists attribuent le coureur au mauvais manager
+Dans `supabase/functions/arena-recaps/index.ts` (section "Get roster ownership for these coureurs"), la requête `rosters` est filtrée uniquement par `league_id` + `coureur_id`. La phase n'est pas prise en compte alors que `activePhaseId` est calculé juste au-dessus.
 
-## Ce qui sera fait
+Conséquence sur MPC 2026 : Ciccone est chez Manou en phase 1 (jan→mars) et chez Ludo en phase 2 (mars→mai). On est en phase 2, mais le récap remonte le 1er roster trouvé (Manou).
 
-### Étape 1 — Vérifier le mode d’appel actuel
-Contrôler les jobs quotidiens et hebdo dans `cron.job` pour confirmer :
-- l’URL appelée,
-- les headers utilisés,
-- les `jobid` existants.
+Plus subtil : la phase à utiliser pour croiser les effectifs doit être **la phase de la course** à laquelle le mouvement startlist se rapporte (chaque mouvement a `course_id` → `courses.phase_id`), pas une "phase active" globale calculée depuis la date du jour. Pour les Ardennaises (Flèche, Liège), `course.phase_id` = phase 2 → Ludo, ce qui est correct.
 
-### Étape 2 — Standardiser l’authentification
-Créer ou réutiliser un secret LIVE nommé `CRON_SECRET`.
+## Corrections proposées
 
-Les jobs enverront :
-```text
-Content-Type: application/json
-x-cron-secret: <CRON_SECRET_LIVE>
+### Fix 1 — RPC `get_daily_points_by_manager`
+
+Migration SQL pour ajouter le filtre par `selected_course_ids` :
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_daily_points_by_manager(
+  p_league_id uuid, p_start timestamptz, p_end timestamptz
+) RETURNS TABLE(manager_id uuid, total_points numeric)
+LANGUAGE sql STABLE AS $$
+  WITH scope AS (
+    SELECT selected_course_ids
+    FROM league_scopes
+    WHERE league_id = p_league_id
+  )
+  SELECT r.manager_id, SUM(pl.points) AS total_points
+  FROM points_ledger pl
+  JOIN race_results rr
+    ON rr.course_id = pl.course_id
+   AND rr.coureur_id = pl.coureur_id
+   AND rr.type_classement = pl.type_classement
+   AND COALESCE(rr.etape_numero,0) = COALESCE(pl.etape_numero,0)
+  JOIN rosters r
+    ON r.coureur_id = pl.coureur_id
+   AND r.phase_id  = pl.phase_id
+   AND r.league_id = p_league_id
+  CROSS JOIN scope s
+  WHERE rr.date_classement >= p_start::date
+    AND rr.date_classement <= p_end::date
+    AND (
+      s.selected_course_ids IS NULL
+      OR pl.course_id::text = ANY(s.selected_course_ids)
+    )
+  GROUP BY r.manager_id;
+$$;
 ```
 
-### Étape 3 — Corriger les deux jobs sans les recréer
-Modifier les jobs existants avec `cron.alter_job(...)` au lieu de les supprimer/recréer, afin de :
-- garder les mêmes identifiants,
-- limiter les risques,
-- conserver les schedules déjà en place si souhaité.
+Note : `selected_course_ids` est `text[]` contenant des slugs de course (ex. `amstel-gold-race-mj8by7wi`). Vérifier le type réel (`text[]` vs `uuid[]`) avant la migration et adapter le cast en conséquence.
 
-### Étape 4 — Pointer explicitement vers la bonne Edge Function LIVE
-Mettre dans les deux commandes cron l’URL de `arena-recaps` correspondant strictement à l’environnement LIVE.
+### Fix 2 — Croiser les mouvements startlists avec la phase de la course
 
-Important :
-- ne pas recopier une URL depuis TEST,
-- ne pas réutiliser un ancien project ref,
-- prendre l’URL réellement affichée par l’environnement LIVE.
+Dans `supabase/functions/arena-recaps/index.ts` :
 
-### Étape 5 — Rattrapage manuel
-Déclencher :
-- le récap quotidien manquant,
-- le récap hebdo manquant.
+1. Récupérer `phase_id` pour chaque `course_id` impliqué dans les changements (table `courses`).
+2. Charger les rosters filtrés par `(league_id, coureur_id, phase_id)` correspondants.
+3. Construire la map `coureurOwnerMap` clé = `coureur_id||course_id` (ou `coureur_id||phase_id`) au lieu de `coureur_id` seul, pour gérer le cas multi-courses dans le même récap.
 
-### Étape 6 — Vérification finale
-Contrôler dans `arena_recap_runs` :
-- apparition des nouveaux runs,
-- `run_type`,
-- `target_date`,
-- `status`,
-- `auth_method`.
+Le calcul existant de `activePhaseId` est conservé uniquement pour pré-filtrer les courses présentes dans la phase active (logique actuelle pertinente), mais le mapping owner utilise la phase de chaque course individuelle.
 
-## Résultat attendu
+### Rattrapage / données existantes
+- Le message du récap déjà envoyé reste tel quel dans `arena_messages` (pas de réécriture rétro).
+- Les prochains récaps quotidiens (et hebdo, qui appelle aussi `get_daily_points_by_manager` via la même chaîne — à vérifier) seront corrects.
 
-Après correction :
-- les jobs quotidiens et hebdo appellent bien la fonction LIVE,
-- la fonction accepte l’appel via `x-cron-secret`,
-- elle répond vite au cron,
-- le traitement continue en arrière-plan,
-- les exécutions apparaissent dans `arena_recap_runs`,
-- le watchdog redevient utile comme filet de sécurité.
+## Étapes de mise en œuvre (mode build)
 
-## Détails techniques
+1. Vérifier le type de `league_scopes.selected_course_ids` (text[] vs uuid[]).
+2. Créer la migration SQL pour `get_daily_points_by_manager` avec filtre scope.
+3. Inspecter `sendWeeklyRecap` pour appliquer la même correction si elle agrège aussi par manager.
+4. Modifier la section startlists dans `arena-recaps/index.ts` pour résoudre l'owner par `(coureur, phase de la course)`.
+5. Déployer la fonction `arena-recaps`.
+6. Déclencher manuellement un récap daily pour COPArdennaises et MPC 2026 (date 2026-04-20) pour valider.
+7. Vérifier dans `arena_messages` que :
+   - COPArdennaises n'inclut plus Rolfes Reus (Tour des Alpes hors scope),
+   - MPC 2026 affiche Ciccone — Manager: Ludo.
 
-### Ce qui n’a pas besoin d’être changé
-- `supabase/functions/arena-recaps/index.ts` : déjà compatible avec la stratégie recommandée.
-- `supabase/config.toml` : `verify_jwt = false` est déjà en place pour `arena-recaps`.
-- Le pattern `waitUntil(...)` est déjà implémenté.
-
-### Ce qui devra être modifié
-- uniquement les commandes SQL des jobs cron en LIVE,
-- éventuellement la création du secret `CRON_SECRET` s’il n’existe pas encore.
-
-### Principe de sécurité retenu
-```text
-pg_cron LIVE
-  -> HTTP POST vers arena-recaps LIVE
-  -> header x-cron-secret
-  -> réponse immédiate
-  -> traitement asynchrone
-  -> écriture dans arena_recap_runs
-```
-
-## Livraison prévue en mode build
-1. vérifier l’état exact des jobs LIVE,
-2. préparer les requêtes SQL finales prêtes à coller avec `CRON_SECRET`,
-3. indiquer précisément où créer le secret si absent,
-4. fournir les requêtes de rattrapage,
-5. valider le flux avec les runs enregistrés.
