@@ -1,81 +1,105 @@
 
+## Meilleure solution recommandée
 
-## Investigation supplémentaire nécessaire
+La meilleure réparation est une correction d’infrastructure, pas une refonte de la fonction :
 
-L'utilisateur indique que les récaps fonctionnaient avant le 15 mars. Je dois vérifier l'historique de la fonction `arena-recaps` et confirmer/affiner mon diagnostic précédent.
+1. créer/valider un secret `CRON_SECRET` en LIVE,
+2. modifier les deux jobs cron existants pour qu’ils appellent l’URL Edge Function de l’environnement LIVE avec le header `x-cron-secret`,
+3. conserver les mêmes `jobid` via `cron.alter_job(...)`,
+4. lancer un rattrapage manuel,
+5. vérifier les écritures dans `arena_recap_runs`.
 
-Je vais inspecter le code actuel de `arena-recaps/index.ts` pour confirmer que :
-1. La fonction n'utilise PAS déjà `EdgeRuntime.waitUntil()` 
-2. Il n'y a pas un autre problème introduit récemment (régression code) qui expliquerait que ça marchait avant le 15 mars
-3. Vérifier l'historique des modifications via les logs Postgres / runs
+## Pourquoi c’est la meilleure option
 
-# Plan de validation et correction des récaps Arena
+- La fonction `arena-recaps` est déjà prête :
+  - elle répond immédiatement avec `EdgeRuntime.waitUntil(...)`,
+  - elle supporte déjà `x-cron-secret`,
+  - elle utilise déjà `npm:@supabase/supabase-js@2`.
+- Donc le problème le plus probable n’est plus le code de la fonction, mais le pointage des jobs cron vers le mauvais environnement ou avec le mauvais mode d’authentification.
+- `CRON_SECRET` est préférable à la clé anon :
+  - plus simple à gérer,
+  - plus sûr,
+  - plus facile à révoquer,
+  - évite de dépendre d’un long JWT copié en dur.
 
-## Hypothèse révisée
+## Ce qui sera fait
 
-L'info "ça marchait avant le 15 mars" change l'analyse. Deux scénarios possibles :
+### Étape 1 — Vérifier le mode d’appel actuel
+Contrôler les jobs quotidiens et hebdo dans `cron.job` pour confirmer :
+- l’URL appelée,
+- les headers utilisés,
+- les `jobid` existants.
 
-**Scénario A — Régression code (le plus probable)** : Une modification de la fonction `arena-recaps` après le 15 mars a introduit :
-- Un cold-start plus long (nouvel import lourd, nouvelle dépendance)
-- Un traitement synchrone plus lourd (boucle agrandie, requêtes ajoutées)
-- Un bug bloquant au boot (erreur d'import, variable manquante)
+### Étape 2 — Standardiser l’authentification
+Créer ou réutiliser un secret LIVE nommé `CRON_SECRET`.
 
-**Scénario B — Évolution infra `pg_net`** : Le timeout HTTP de `pg_net` était plus permissif avant et a été durci côté Supabase.
-
-Le scénario A est le plus probable car les logs edge sont **totalement vides** (pas même un "booted") → la fonction ne démarre pas du tout, ce qui pointe vers un crash au boot ou un bundle invalide, pas vers un simple dépassement de timeout.
-
-## Vérifications à mener (en mode default)
-
-1. **Lire `supabase/functions/arena-recaps/index.ts`** intégralement pour repérer :
-   - Imports problématiques (esm.sh instable vs npm:)
-   - Présence éventuelle déjà de `EdgeRuntime.waitUntil`
-   - Volume de traitement synchrone
-
-2. **Tester un appel direct** via `curl_edge_functions` pour observer la vraie réponse (200/500/timeout) et savoir si la fonction boot.
-
-3. **Inspecter `cron.job_run_details`** filtré sur les runs avant le 15 mars pour confirmer qu'ils étaient bien "succeeded" avec une durée < 5s à l'époque.
-
-4. **Inspecter les logs edge `arena-recaps`** sur 30 jours (pas seulement récents) pour voir si la fonction a déjà bootée.
-
-## Plan de correction (combiné, robuste aux deux scénarios)
-
-### Étape 1 — Diagnostic in-situ
-- Tester `curl_edge_functions` sur `arena-recaps` avec `{type:'daily', date:'2026-04-19'}` → mesurer temps de réponse et code HTTP réel.
-- Si **erreur 500/boot crash** → corriger le bundle (imports `npm:` au lieu de `esm.sh`, supprimer `deno.lock` si nécessaire — cf. mémoire `technical/edge-functions/bundling-stability`).
-- Si **timeout 5s côté pg_net mais 200 OK côté direct** → bascule asynchrone obligatoire.
-
-### Étape 2 — Refactor asynchrone (filet de sécurité dans tous les cas)
-Modifier `arena-recaps/index.ts` :
-```typescript
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  const body = await req.json().catch(() => ({}));
-  // Insérer immédiatement la ligne arena_recap_runs en status 'pending'
-  EdgeRuntime.waitUntil(processRecaps(body));
-  return new Response(JSON.stringify({ ok: true, queued: true }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-});
+Les jobs enverront :
+```text
+Content-Type: application/json
+x-cron-secret: <CRON_SECRET_LIVE>
 ```
 
-### Étape 3 — Stabiliser le bundle
-- Remplacer `https://esm.sh/@supabase/supabase-js@2` par `npm:@supabase/supabase-js@2` (cf. mémoire bundling-stability).
-- Supprimer `supabase/functions/arena-recaps/deno.lock` si présent (cf. troubleshooting deploy).
+### Étape 3 — Corriger les deux jobs sans les recréer
+Modifier les jobs existants avec `cron.alter_job(...)` au lieu de les supprimer/recréer, afin de :
+- garder les mêmes identifiants,
+- limiter les risques,
+- conserver les schedules déjà en place si souhaité.
 
-### Étape 4 — Redéploiement explicite + test
-- `deploy_edge_functions(["arena-recaps"])`
-- `curl_edge_functions` pour valider réponse < 1s.
+### Étape 4 — Pointer explicitement vers la bonne Edge Function LIVE
+Mettre dans les deux commandes cron l’URL de `arena-recaps` correspondant strictement à l’environnement LIVE.
 
-### Étape 5 — Récupération manuelle
-- Déclencher `arena-recaps` `{type:'daily', date:'2026-04-19'}`
-- Déclencher `arena-recaps` `{type:'weekly', date:'2026-04-13'}` (dimanche dernier)
-- Vérifier l'apparition de lignes dans `arena_recap_runs`.
+Important :
+- ne pas recopier une URL depuis TEST,
+- ne pas réutiliser un ancien project ref,
+- prendre l’URL réellement affichée par l’environnement LIVE.
 
-## Fichiers modifiés
-1. `supabase/functions/arena-recaps/index.ts` — bascule async + imports `npm:`
-2. Suppression éventuelle de `supabase/functions/arena-recaps/deno.lock`
-3. Re-déploiement + appels manuels de récupération
+### Étape 5 — Rattrapage manuel
+Déclencher :
+- le récap quotidien manquant,
+- le récap hebdo manquant.
 
-## Hors scope
-- Pas de modif du cron, ni du watchdog, ni de `arena_recap_runs`.
+### Étape 6 — Vérification finale
+Contrôler dans `arena_recap_runs` :
+- apparition des nouveaux runs,
+- `run_type`,
+- `target_date`,
+- `status`,
+- `auth_method`.
 
+## Résultat attendu
+
+Après correction :
+- les jobs quotidiens et hebdo appellent bien la fonction LIVE,
+- la fonction accepte l’appel via `x-cron-secret`,
+- elle répond vite au cron,
+- le traitement continue en arrière-plan,
+- les exécutions apparaissent dans `arena_recap_runs`,
+- le watchdog redevient utile comme filet de sécurité.
+
+## Détails techniques
+
+### Ce qui n’a pas besoin d’être changé
+- `supabase/functions/arena-recaps/index.ts` : déjà compatible avec la stratégie recommandée.
+- `supabase/config.toml` : `verify_jwt = false` est déjà en place pour `arena-recaps`.
+- Le pattern `waitUntil(...)` est déjà implémenté.
+
+### Ce qui devra être modifié
+- uniquement les commandes SQL des jobs cron en LIVE,
+- éventuellement la création du secret `CRON_SECRET` s’il n’existe pas encore.
+
+### Principe de sécurité retenu
+```text
+pg_cron LIVE
+  -> HTTP POST vers arena-recaps LIVE
+  -> header x-cron-secret
+  -> réponse immédiate
+  -> traitement asynchrone
+  -> écriture dans arena_recap_runs
+```
+
+## Livraison prévue en mode build
+1. vérifier l’état exact des jobs LIVE,
+2. préparer les requêtes SQL finales prêtes à coller avec `CRON_SECRET`,
+3. indiquer précisément où créer le secret si absent,
+4. fournir les requêtes de rattrapage,
+5. valider le flux avec les runs enregistrés.
