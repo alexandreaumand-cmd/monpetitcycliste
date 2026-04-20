@@ -311,41 +311,60 @@ async function sendDailyRecap(
         const filteredChanges = phaseFilteredChanges.filter((c: any) => eligibleIds.has(c.coureur_id));
 
         if (filteredChanges.length > 0) {
-          // Get roster ownership for these coureurs in this league
+          // Build a course_id -> phase_id map (the phase the course belongs to),
+          // so we resolve the roster owner for the right phase.
           const filteredCoureurIds = [...new Set(filteredChanges.map((c: any) => c.coureur_id))];
-          const { data: rosterData } = await supabase
-            .from("rosters")
-            .select("coureur_id, manager_id")
-            .eq("league_id", league.id)
-            .in("coureur_id", filteredCoureurIds);
+          const filteredCourseIds = [...new Set(filteredChanges.map((c: any) => c.course_id).filter(Boolean))];
+
+          const coursePhaseMap: Record<string, string> = {};
+          if (filteredCourseIds.length > 0) {
+            const { data: coursesPhases } = await supabase
+              .from("courses")
+              .select("id, phase_id")
+              .in("id", filteredCourseIds);
+            for (const c of coursesPhases || []) {
+              if (c.phase_id) coursePhaseMap[c.id] = c.phase_id;
+            }
+          }
+
+          // Load rosters for all (coureur, phase) combos involved
+          const phaseIdsInvolved = [...new Set(Object.values(coursePhaseMap))];
+          let rosterData: any[] = [];
+          if (phaseIdsInvolved.length > 0) {
+            const { data: rd } = await supabase
+              .from("rosters")
+              .select("coureur_id, manager_id, phase_id")
+              .eq("league_id", league.id)
+              .in("coureur_id", filteredCoureurIds)
+              .in("phase_id", phaseIdsInvolved);
+            rosterData = rd || [];
+          }
 
           // Get manager names for owners
-          const ownerManagerIds = [...new Set((rosterData || []).map((r: any) => r.manager_id))];
-          let ownerManagerMap: Record<string, string> = {};
+          const ownerManagerIds = [...new Set(rosterData.map((r: any) => r.manager_id))];
+          const ownerManagerMap: Record<string, string> = {};
           if (ownerManagerIds.length > 0) {
             const { data: ownerManagers } = await supabase
               .from("managers")
               .select("id, nom")
               .in("id", ownerManagerIds);
-            if (ownerManagers) {
-              for (const m of ownerManagers) {
-                ownerManagerMap[m.id] = m.nom;
-              }
+            for (const m of ownerManagers || []) {
+              ownerManagerMap[m.id] = m.nom;
             }
           }
 
-          // Build coureur -> manager name map
-          const coureurOwnerMap: Record<string, string> = {};
-          if (rosterData) {
-            for (const r of rosterData) {
-              coureurOwnerMap[r.coureur_id] = ownerManagerMap[r.manager_id] || "Inconnu";
-            }
+          // Build (coureur_id||phase_id) -> manager name map
+          const coureurPhaseOwnerMap: Record<string, string> = {};
+          for (const r of rosterData) {
+            const key = `${r.coureur_id}||${r.phase_id}`;
+            coureurPhaseOwnerMap[key] = ownerManagerMap[r.manager_id] || "Inconnu";
           }
 
-          startlistChanges = filteredChanges.map((c: any) => ({
-            ...c,
-            ownerName: coureurOwnerMap[c.coureur_id] || null,
-          }));
+          startlistChanges = filteredChanges.map((c: any) => {
+            const phaseId = coursePhaseMap[c.course_id];
+            const owner = phaseId ? coureurPhaseOwnerMap[`${c.coureur_id}||${phaseId}`] : null;
+            return { ...c, ownerName: owner || null };
+          });
         }
         }
       }
