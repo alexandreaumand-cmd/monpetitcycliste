@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import logoDark from "@/assets/logo-bordure.png";
+import logoDark from "@/assets/logo-bordure-landing.webp";
 
 const LandingHeader = () => {
   const { t } = useTranslation("home");
@@ -12,7 +12,7 @@ const LandingHeader = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#F6F3ED] shadow-sm">
       <div className="container mx-auto px-5 py-1 flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img src={logoDark} alt="La Bordure" className="h-16 w-auto" />
+          <img src={logoDark} alt="La Bordure" width="160" height="64" className="h-16 w-auto" />
         </Link>
 
         <span className="hidden md:block text-xs text-[#1B5E3B] font-inter italic">
