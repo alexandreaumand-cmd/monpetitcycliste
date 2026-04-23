@@ -101,8 +101,10 @@ const AuctionBlock = () => {
         <div className="w-full max-w-[680px]">
           <BrowserMockup>
             <img
-              src="/screenshots/encheres.png"
+              src="/screenshots/encheres.webp"
               alt={t("discover.blocks.auction.title")}
+              width="760"
+              height="486"
               className="w-full h-full object-cover object-top"
               loading="lazy"
             />
@@ -152,8 +154,10 @@ const TeamBlock = () => {
         <div className="w-[156px] sm:w-[280px]">
           <PhoneMockup>
             <img
-              src="/screenshots/team.png"
+              src="/screenshots/team.webp"
               alt={t("discover.blocks.team.title")}
+              width="320"
+              height="685"
               className="w-full h-[110%] object-cover object-top"
               loading="lazy"
             />
@@ -203,8 +207,10 @@ const RankingBlock = () => {
         <div className="w-[156px] sm:w-[280px]">
           <PhoneMockup>
             <img
-              src="/screenshots/startlist.png"
+              src="/screenshots/startlist.webp"
               alt={t("discover.blocks.ranking.title")}
+              width="320"
+              height="676"
               className="w-full h-[110%] object-cover object-top"
               loading="lazy"
             />
@@ -254,8 +260,10 @@ const ClassementBlock = () => {
         <div className="w-[156px] sm:w-[280px]">
           <PhoneMockup>
             <img
-              src="/screenshots/ranking.png"
+              src="/screenshots/ranking.webp"
               alt={t("discover.blocks.classement.title")}
+              width="320"
+              height="690"
               className="w-full h-[110%] object-cover object-top"
               loading="lazy"
             />

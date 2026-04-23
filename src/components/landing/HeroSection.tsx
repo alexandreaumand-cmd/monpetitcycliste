@@ -12,8 +12,12 @@ const HeroSection = () => {
       {/* Background — Van der Poel Paris-Roubaix */}
       <div className="absolute inset-0">
         <img
-          src="/images/hero-roubaix.avif"
+          src="/images/hero-roubaix-1680.avif"
+          srcSet="/images/hero-roubaix-960.avif 960w, /images/hero-roubaix-1280.avif 1280w, /images/hero-roubaix-1680.avif 1680w"
+          sizes="100vw"
           alt="Mathieu van der Poel célèbre sa victoire sur le vélodrome de Roubaix"
+          width="1680"
+          height="944"
           className="w-full h-full object-cover object-[46%_20%] sm:object-[center_20%]"
           loading="eager"
           fetchPriority="high"
