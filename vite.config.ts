@@ -11,6 +11,16 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
+    modulePreload: {
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((dep) =>
+          ![
+            'vendor-charts',
+            'vendor-motion',
+            'vendor-supabase',
+          ].some((chunk) => dep.includes(chunk))
+        ),
+    },
     rollupOptions: {
       output: {
         manualChunks: {
