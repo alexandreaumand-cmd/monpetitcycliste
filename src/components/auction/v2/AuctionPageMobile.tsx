@@ -765,6 +765,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         selectedCategories={selectedCategories}
         onCategoriesChange={setSelectedCategories}
         availableTeams={availableTeams}
+        selectedCourses={selectedCourses}
+        onCoursesChange={setSelectedCourses}
+        availableCourses={availableCourses}
       />
 
       {/* Bottom Sheet */}
