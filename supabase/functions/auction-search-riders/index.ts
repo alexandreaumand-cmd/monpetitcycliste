@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     q = null,
     teams = null,
     categories = null,
+    course_ids = null,
     cote_min = null,
     cote_max = null,
     limit = 100,
