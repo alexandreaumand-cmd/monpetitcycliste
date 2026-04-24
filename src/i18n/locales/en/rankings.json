@@ -45,7 +45,14 @@
     "viewAll": "View all ({{total}})",
     "unknownTeam": "Unknown team",
     "races": "{{count}} races",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "filterCourses": "Races",
+    "filterCategories": "Categories",
+    "filterCoursesPlaceholder": "Filter by race...",
+    "filterCategoriesPlaceholder": "Filter by category...",
+    "filterReset": "Reset",
+    "filterNoResults": "No race found",
+    "filtersTitle": "Filters"
   },
   "riderDetails": {
     "totalPoints": "Total points",
