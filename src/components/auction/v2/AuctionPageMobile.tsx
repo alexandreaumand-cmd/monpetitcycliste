@@ -49,6 +49,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
