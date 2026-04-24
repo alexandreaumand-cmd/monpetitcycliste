@@ -190,6 +190,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
   });
 
+  // Available courses (with imported startlists, scoped to league)
+  const { data: availableCourses = [] } = useAuctionAvailableCourses(phaseId, leagueId);
+
   // Search riders with infinite pagination
   const {
     data: ridersPages,
@@ -206,6 +209,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       selectedTeams,
       selectedCotes,
       selectedCategories,
+      selectedCourses,
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
