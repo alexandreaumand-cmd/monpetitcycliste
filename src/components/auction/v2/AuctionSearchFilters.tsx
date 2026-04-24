@@ -39,9 +39,13 @@ export function AuctionSearchFilters({
   onImportFavorites,
   isImportingFavorites = false,
   leagueId,
+  selectedCourses = [],
+  onCoursesChange,
+  availableCourses = [],
 }: AuctionSearchFiltersProps) {
   const { t } = useTranslation("auction");
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
 
   const MPC_2026_LEAGUE_ID = "b5b46b5e-7c78-4ad9-a669-b08e8f099800";
