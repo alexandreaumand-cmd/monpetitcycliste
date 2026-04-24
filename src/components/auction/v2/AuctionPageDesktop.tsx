@@ -212,6 +212,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
           categories: selectedCategories.length > 0 ? selectedCategories : null,
+          course_ids: selectedCourses.length > 0 ? selectedCourses : null,
           cote_min,
           cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
