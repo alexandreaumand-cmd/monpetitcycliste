@@ -144,6 +144,11 @@ Deno.serve(async (req) => {
       query = query.in('equipe_id', equipeIdsFromCategories);
     }
 
+    // Apply startlist filter (course_ids -> riders present on at least one selected startlist)
+    if (startlistRiderIds && startlistRiderIds.length > 0) {
+      query = query.in('coureur_id', startlistRiderIds);
+    }
+
     // Filter by cote (prix_initial)
     if (cote_min !== null) {
       query = query.gte('prix_initial', cote_min);
