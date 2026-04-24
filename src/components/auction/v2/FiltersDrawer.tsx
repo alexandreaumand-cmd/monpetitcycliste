@@ -86,14 +86,36 @@ export function FiltersDrawer({
     }
   };
 
+  const toggleCourse = (courseId: string) => {
+    if (!onCoursesChange) return;
+    if (selectedCourses.includes(courseId)) {
+      onCoursesChange(selectedCourses.filter(c => c !== courseId));
+    } else {
+      onCoursesChange([...selectedCourses, courseId]);
+    }
+  };
+
+  const filteredCourses = availableCourses.filter(c =>
+    (c.nom || "").toLowerCase().includes(courseSearchQuery.toLowerCase())
+  );
+
   const clearAllFilters = () => {
     onTeamsChange([]);
     onCotesChange([]);
     onCategoriesChange([]);
+    onCoursesChange?.([]);
   };
 
-  const hasActiveFilters = selectedTeams.length > 0 || selectedCotes.length > 0 || selectedCategories.length > 0;
-  const activeFiltersCount = (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0) + (selectedCategories.length > 0 ? 1 : 0);
+  const hasActiveFilters =
+    selectedTeams.length > 0 ||
+    selectedCotes.length > 0 ||
+    selectedCategories.length > 0 ||
+    selectedCourses.length > 0;
+  const activeFiltersCount =
+    (selectedTeams.length > 0 ? 1 : 0) +
+    (selectedCotes.length > 0 ? 1 : 0) +
+    (selectedCategories.length > 0 ? 1 : 0) +
+    (selectedCourses.length > 0 ? 1 : 0);
 
   return (
     <Sheet>
