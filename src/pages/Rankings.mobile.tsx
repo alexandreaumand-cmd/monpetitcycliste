@@ -775,6 +775,50 @@ export const RankingsMobile = () => {
         )}
       </MobileBottomSheet>
 
+      <MobileBottomSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title={t('topRiders.filtersTitle')}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">{t('topRiders.filterCourses')}</Label>
+            <MultiSelect
+              options={(availableCourses || []).map((c) => ({
+                value: c.id,
+                label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
+              }))}
+              selected={selectedCourseIds}
+              onChange={setSelectedCourseIds}
+              placeholder={t('topRiders.filterCoursesPlaceholder')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">{t('topRiders.filterCategories')}</Label>
+            <MultiSelect
+              options={[...new Set((availableCourses || []).map((c) => c.categorie).filter(Boolean) as string[])]
+                .sort()
+                .map((cat) => ({ value: cat, label: cat }))}
+              selected={selectedCategories}
+              onChange={setSelectedCategories}
+              placeholder={t('topRiders.filterCategoriesPlaceholder')}
+            />
+          </div>
+          {(selectedCourseIds.length > 0 || selectedCategories.length > 0) && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setSelectedCourseIds([]);
+                setSelectedCategories([]);
+              }}
+            >
+              {t('topRiders.filterReset')}
+            </Button>
+          )}
+        </div>
+      </MobileBottomSheet>
+
     </div>
   );
 };
