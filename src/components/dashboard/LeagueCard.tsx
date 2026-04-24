@@ -32,6 +32,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
   const leagueSeason = cardData?.season || null;
   const stats = cardData?.stats || null;
   const auctionStatus = cardData?.auctionStatus || null;
+  const hasPublishedAuctions = cardData?.hasPublishedAuctions || false;
   
   const loadingMembers = isLoadingCardData;
   const loadingMembersList = isLoadingCardData;
@@ -295,6 +296,22 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                     <p className="text-sm font-semibold">{Math.round(stats.seasonLeader.points).toLocaleString('fr-FR')} pts</p>
                   </div>
                 )}
+              </div>
+            ) : hasPublishedAuctions ? (
+              <div className="text-center py-6 space-y-3">
+                <Trophy className="h-8 w-8 text-muted-foreground/40 mx-auto animate-pulse" />
+                <p className="text-sm font-semibold text-muted-foreground">{t('leagueCard.computingStats')}</p>
+                <p className="text-xs text-muted-foreground">{t('leagueCard.computingStatsDesc')}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.location.reload();
+                  }}
+                >
+                  {t('leagueCard.refresh')}
+                </Button>
               </div>
             ) : (
               <div className="text-center py-6 space-y-2">
