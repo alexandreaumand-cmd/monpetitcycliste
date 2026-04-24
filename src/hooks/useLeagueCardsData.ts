@@ -142,9 +142,14 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       const closedAuctionIds = allAuctions.filter(a => a.statut === 'closed').map(a => a.id);
       const openAuctions = allAuctions.filter(a => a.statut === 'open');
 
-      const [unpublishedResult, ...validationResults] = await Promise.all([
+      const allAuctionIds = allAuctions.map(a => a.id);
+
+      const [unpublishedResult, publishedResult, ...validationResults] = await Promise.all([
         closedAuctionIds.length > 0
           ? supabase.from('annonces').select('auction_id').in('auction_id', closedAuctionIds).eq('published', false)
+          : Promise.resolve({ data: [] as { auction_id: string }[] }),
+        allAuctionIds.length > 0
+          ? supabase.from('annonces').select('auction_id').in('auction_id', allAuctionIds).eq('published', true)
           : Promise.resolve({ data: [] as { auction_id: string }[] }),
         ...openAuctions.map(auction =>
           supabase.functions.invoke('auction-get-validation-status', {
@@ -156,6 +161,15 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       const auctionsWithPendingAnnonces = new Set(
         (unpublishedResult?.data || []).map(a => a.auction_id)
       );
+      const auctionsWithPublishedAnnonces = new Set(
+        (publishedResult?.data || []).map(a => a.auction_id)
+      );
+      const leagueHasPublishedAnnonces = new Map<string, boolean>();
+      for (const auction of allAuctions) {
+        if (auctionsWithPublishedAnnonces.has(auction.id)) {
+          leagueHasPublishedAnnonces.set(auction.league_id, true);
+        }
+      }
 
       const validationStatusMap = new Map<string, { validated_count: number; total_managers: number }>();
       for (const v of validationResults) {
