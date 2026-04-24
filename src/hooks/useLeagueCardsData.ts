@@ -318,6 +318,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
           stats,
           auctionStatus,
           selectedCourseNames,
+          hasPublishedAuctions: leagueHasPublishedAnnonces.get(league.id) || false,
         };
       }
 
