@@ -22,6 +22,7 @@ interface MultiSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  modal?: boolean;
 }
 
 export function MultiSelect({
@@ -31,6 +32,7 @@ export function MultiSelect({
   placeholder = "Sélectionner...",
   disabled = false,
   className,
+  modal,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -51,7 +53,7 @@ export function MultiSelect({
     .map((opt) => opt.label);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={modal}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
