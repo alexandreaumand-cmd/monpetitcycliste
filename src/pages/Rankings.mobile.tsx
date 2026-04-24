@@ -7,7 +7,8 @@ import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp, Shirt } from "lucide-react";
+import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal } from "lucide-react";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -593,7 +594,18 @@ export const RankingsMobile = () => {
                     {t('topRiders.hideWithoutManager')}
                   </Label>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
+                  <Button
+                    variant={(selectedCourseIds.length + selectedCategories.length) > 0 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFiltersOpen(true)}
+                    className="h-8 px-3 text-xs gap-1"
+                  >
+                    <SlidersHorizontal className="h-3 w-3" />
+                    {(selectedCourseIds.length + selectedCategories.length) > 0
+                      ? `(${selectedCourseIds.length + selectedCategories.length})`
+                      : t('topRiders.filtersTitle')}
+                  </Button>
                   <Button
                     variant={riderSortBy === 'points' ? 'default' : 'outline'}
                     size="sm"
