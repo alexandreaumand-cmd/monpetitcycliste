@@ -112,6 +112,23 @@ export function AuctionSearchFilters({
       .join(", ");
   };
 
+  // Courses helpers
+  const toggleCourse = (courseId: string) => {
+    if (!onCoursesChange) return;
+    if (selectedCourses.includes(courseId)) {
+      onCoursesChange(selectedCourses.filter(c => c !== courseId));
+    } else {
+      onCoursesChange([...selectedCourses, courseId]);
+    }
+  };
+  const filteredCourses = availableCourses.filter(c =>
+    (c.nom || "").toLowerCase().includes(courseSearchQuery.toLowerCase())
+  );
+  const getSelectedCourseNames = () => selectedCourses
+    .map(id => availableCourses.find(c => c.id === id)?.nom)
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="space-y-3">
       {/* First row: Search + Category + Team filters + Import Favorites */}
