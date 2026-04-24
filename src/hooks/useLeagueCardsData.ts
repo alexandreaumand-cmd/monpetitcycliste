@@ -114,10 +114,13 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
         allSelectedCourseIds.length > 0
           ? supabase.from('courses').select('id, nom').in('id', allSelectedCourseIds)
           : Promise.resolve({ data: [] as { id: string; nom: string }[] }),
-        supabase
-          .from('v_manager_standings_by_season_v2')
-          .select('*')
-          .in('league_id', leagueIds),
+        scopeSeasonIds.length > 0
+          ? supabase
+              .from('v_manager_standings_by_season_v2')
+              .select('*')
+              .in('league_id', leagueIds)
+              .in('saison_id', scopeSeasonIds)
+          : Promise.resolve({ data: [] as any[] }),
         scopeSeasonIds.length > 0
           ? supabase.from('phases').select('id, saison_id, date_debut, date_fin, index_dans_saison').in('saison_id', scopeSeasonIds).order('index_dans_saison', { ascending: true })
           : Promise.resolve({ data: [] as any[] }),
