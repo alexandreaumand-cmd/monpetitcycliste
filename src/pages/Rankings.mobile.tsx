@@ -62,6 +62,59 @@ export const RankingsMobile = () => {
   const [standingsSortBy, setStandingsSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
   const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
   const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Fetch league scope for course list
+  const { data: leagueScopeCourseIds } = useQuery({
+    queryKey: ["league-scope-course-ids", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      const ids = (data?.selected_course_ids as string[] | null) ?? null;
+      return ids && ids.length > 0 ? ids : null;
+    },
+    enabled: !!leagueId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch available courses in current scope
+  const { data: availableCourses } = useQuery({
+    queryKey: ["top-riders-available-courses-mobile", selectedPhase, selectedSeason?.id, leagueScopeCourseIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("courses")
+        .select("id, nom, categorie, date_debut, phase_id")
+        .order("date_debut", { ascending: false });
+
+      if (selectedPhase) {
+        query = query.eq("phase_id", selectedPhase);
+      } else if (selectedSeason?.id) {
+        const { data: phasesForSeason } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", selectedSeason.id);
+        const phaseIds = (phasesForSeason || []).map((p) => p.id);
+        if (phaseIds.length === 0) return [];
+        query = query.in("phase_id", phaseIds);
+      }
+
+      if (leagueScopeCourseIds) {
+        query = query.in("id", leagueScopeCourseIds);
+      }
+
+      const { data, error } = await query.limit(2000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!leagueId && (!!selectedPhase || !!selectedSeason?.id),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
