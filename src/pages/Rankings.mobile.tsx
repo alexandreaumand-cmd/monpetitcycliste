@@ -200,18 +200,20 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
-    staleTime: 2 * 60 * 1000, // Cache 2 minutes
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId, selectedCourseIds, selectedCategories],
+    staleTime: 2 * 60 * 1000,
     enabled: !!leagueId && !!selectedSeason?.id,
     queryFn: async () => {
       if (!leagueId) return [];
-      
+
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: selectedPhase,
           saison_id: selectedSeason?.id || null,
           league_id: leagueId,
           limit: 100,
+          course_ids: selectedCourseIds.length > 0 ? selectedCourseIds : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         },
       });
 
