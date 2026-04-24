@@ -32,6 +32,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
   const leagueSeason = cardData?.season || null;
   const stats = cardData?.stats || null;
   const auctionStatus = cardData?.auctionStatus || null;
+  const hasPublishedAuctions = cardData?.hasPublishedAuctions || false;
   
   const loadingMembers = isLoadingCardData;
   const loadingMembersList = isLoadingCardData;
