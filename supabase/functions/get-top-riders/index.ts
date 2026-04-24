@@ -31,29 +31,213 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { saison_id, phase_id, league_id, limit = 5000 } = await req.json();
+    const { saison_id, phase_id, league_id, limit = 5000, course_ids, categories } = await req.json();
 
     if (!league_id) {
       throw new Error('league_id is required');
     }
 
-    console.log('Fetching top riders with filters:', { saison_id, phase_id, league_id, limit });
+    const hasCourseFilter = Array.isArray(course_ids) && course_ids.length > 0;
+    const hasCategoryFilter = Array.isArray(categories) && categories.length > 0;
 
-    // Call the optimized PostgreSQL RPC function
-    const { data: items, error } = await supabase
-      .rpc('get_top_riders_optimized', {
-        p_saison_id: saison_id,
-        p_phase_id: phase_id,
-        p_league_id: league_id,
-        p_limit: limit
-      });
+    console.log('Fetching top riders with filters:', { saison_id, phase_id, league_id, limit, hasCourseFilter, hasCategoryFilter });
 
-    if (error) {
-      console.error('Error fetching top riders:', error);
-      throw error;
+    // Resolve effective saison_id
+    let effectiveSaisonId: string | null = saison_id ?? null;
+    if (phase_id && !effectiveSaisonId) {
+      const { data: phaseRow } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phase_id)
+        .maybeSingle();
+      effectiveSaisonId = phaseRow?.saison_id ?? null;
     }
 
-    console.log(`Fetched ${items.length} top riders from RPC`);
+    let items: any[] = [];
+
+    if (hasCourseFilter || hasCategoryFilter) {
+      // ----- Custom filtered aggregation path -----
+      const { data: leagueCourses, error: lcErr } = await supabase
+        .rpc('get_league_course_ids', { p_league_id: league_id });
+      if (lcErr) {
+        console.error('Error fetching league course ids:', lcErr);
+        throw lcErr;
+      }
+      let allowedCourseIds = new Set<string>(
+        (leagueCourses || []).map((row: any) => row.course_id).filter(Boolean)
+      );
+
+      if (hasCourseFilter) {
+        const explicit = new Set<string>(course_ids);
+        allowedCourseIds = new Set([...allowedCourseIds].filter((id) => explicit.has(id)));
+      }
+
+      // Restrict to phase scope
+      let phaseScopeQuery = supabase.from('courses').select('id, phase_id, categorie, date_debut');
+      if (phase_id) {
+        phaseScopeQuery = phaseScopeQuery.eq('phase_id', phase_id);
+      } else if (effectiveSaisonId) {
+        const { data: phasesForSeason } = await supabase
+          .from('phases')
+          .select('id')
+          .eq('saison_id', effectiveSaisonId);
+        const phaseIdsForSeason = (phasesForSeason || []).map((p: any) => p.id);
+        if (phaseIdsForSeason.length === 0) {
+          return new Response(JSON.stringify({ items: [] }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        phaseScopeQuery = phaseScopeQuery.in('phase_id', phaseIdsForSeason);
+      }
+      const { data: scopedCourses, error: scErr } = await phaseScopeQuery.limit(5000);
+      if (scErr) {
+        console.error('Error fetching scoped courses:', scErr);
+        throw scErr;
+      }
+
+      // Apply league started_at_effective
+      const { data: leagueRow } = await supabase
+        .from('leagues')
+        .select('started_at_effective, created_at')
+        .eq('id', league_id)
+        .maybeSingle();
+      const effectiveStart = leagueRow
+        ? (leagueRow.started_at_effective || leagueRow.created_at)
+        : null;
+      const effectiveStartDate = effectiveStart ? new Date(effectiveStart) : null;
+
+      const finalCourseIds: string[] = [];
+      for (const co of scopedCourses || []) {
+        if (!allowedCourseIds.has(co.id)) continue;
+        if (hasCategoryFilter && !categories.includes(co.categorie)) continue;
+        if (effectiveStartDate && co.date_debut && new Date(co.date_debut) < effectiveStartDate) continue;
+        finalCourseIds.push(co.id);
+      }
+
+      console.log(`Filtered to ${finalCourseIds.length} courses for aggregation`);
+
+      if (finalCourseIds.length === 0) {
+        return new Response(JSON.stringify({ items: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Aggregate points_ledger over filtered courses (paginated)
+      const aggMap = new Map<string, { total_points: number; courses: Set<string> }>();
+      const pageSize = 1000;
+      const chunkSize = 200;
+      for (let i = 0; i < finalCourseIds.length; i += chunkSize) {
+        const chunk = finalCourseIds.slice(i, i + chunkSize);
+        let offset = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data: page, error: plErr } = await supabase
+            .from('points_ledger')
+            .select('coureur_id, course_id, points')
+            .in('course_id', chunk)
+            .range(offset, offset + pageSize - 1);
+          if (plErr) {
+            console.error('Error fetching points_ledger page:', plErr);
+            throw plErr;
+          }
+          if (!page || page.length === 0) {
+            hasMore = false;
+            break;
+          }
+          for (const row of page) {
+            if (!row.coureur_id) continue;
+            const entry = aggMap.get(row.coureur_id) || { total_points: 0, courses: new Set<string>() };
+            entry.total_points += Number(row.points) || 0;
+            if (row.course_id) entry.courses.add(row.course_id);
+            aggMap.set(row.coureur_id, entry);
+          }
+          offset += pageSize;
+          hasMore = page.length === pageSize;
+        }
+      }
+
+      const aggRiderIds = [...aggMap.entries()]
+        .filter(([, v]) => v.total_points > 0)
+        .map(([id]) => id);
+
+      if (aggRiderIds.length === 0) {
+        return new Response(JSON.stringify({ items: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Enrich with rider name + season-specific team + prix_initial
+      const { data: ridersRows } = await supabase
+        .from('coureurs')
+        .select('id, nom, prix_initial')
+        .in('id', aggRiderIds);
+
+      const ridersMap = new Map<string, any>(
+        (ridersRows || []).map((r: any) => [r.id, r])
+      );
+
+      const teamByRider = new Map<string, string>();
+      const prixInitialByRider = new Map<string, number>();
+      if (effectiveSaisonId) {
+        const { data: csRows } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, prix_initial, equipe_id')
+          .eq('saison_id', effectiveSaisonId)
+          .in('coureur_id', aggRiderIds);
+        const equipeIds = [...new Set((csRows || []).map((c: any) => c.equipe_id).filter(Boolean))];
+        let equipeNameMap = new Map<string, string>();
+        if (equipeIds.length > 0) {
+          const { data: esRows } = await supabase
+            .from('equipes_saisons')
+            .select('equipe_id, nom_affiche')
+            .eq('saison_id', effectiveSaisonId)
+            .in('equipe_id', equipeIds);
+          equipeNameMap = new Map((esRows || []).map((e: any) => [e.equipe_id, e.nom_affiche]));
+        }
+        for (const cs of csRows || []) {
+          if (cs.equipe_id && equipeNameMap.has(cs.equipe_id)) {
+            teamByRider.set(cs.coureur_id, equipeNameMap.get(cs.equipe_id)!);
+          }
+          if (cs.prix_initial != null) {
+            prixInitialByRider.set(cs.coureur_id, Number(cs.prix_initial));
+          }
+        }
+      }
+
+      items = aggRiderIds
+        .map((rid) => {
+          const r = ridersMap.get(rid);
+          const agg = aggMap.get(rid)!;
+          return {
+            coureur_id: rid,
+            coureur_nom: r?.nom || rid,
+            coureur_equipe: teamByRider.get(rid) || 'N/A',
+            total_points: agg.total_points,
+            courses_count: agg.courses.size,
+            prix_initial: prixInitialByRider.get(rid) ?? Number(r?.prix_initial ?? 0),
+            owner_manager_id: null,
+            owner_manager_nom: null,
+          };
+        })
+        .sort((a, b) => b.total_points - a.total_points)
+        .slice(0, limit);
+    } else {
+      const { data: rpcItems, error } = await supabase
+        .rpc('get_top_riders_optimized', {
+          p_saison_id: saison_id,
+          p_phase_id: phase_id,
+          p_league_id: league_id,
+          p_limit: limit
+        });
+
+      if (error) {
+        console.error('Error fetching top riders:', error);
+        throw error;
+      }
+      items = rpcItems || [];
+    }
+
+    console.log(`Fetched ${items.length} top riders`);
 
     if (!items || items.length === 0) {
       return new Response(JSON.stringify({ items: [] }), {
