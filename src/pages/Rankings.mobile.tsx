@@ -8,7 +8,7 @@ import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal } from "lucide-react";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
