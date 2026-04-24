@@ -21,6 +21,9 @@ interface AuctionSearchFiltersProps {
   onImportFavorites?: () => void;
   isImportingFavorites?: boolean;
   leagueId?: string | null;
+  selectedCourses?: string[];
+  onCoursesChange?: (courses: string[]) => void;
+  availableCourses?: Array<{ id: string; nom: string; date_debut?: string | null }>;
 }
 
 export function AuctionSearchFilters({
