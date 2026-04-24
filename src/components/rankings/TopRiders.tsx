@@ -436,29 +436,58 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     <>
       <Card>
         <CardContent className="pt-6">
+          <div className="space-y-3 mb-4">
+            <div className="grid md:grid-cols-[1fr_auto] gap-3 items-center">
+              <Input
+                placeholder={t('topRiders.searchPlaceholder')}
+                value={riderSearchTerm}
+                onChange={(e) => setRiderSearchTerm(e.target.value)}
+              />
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <Switch
+                  id="hide-no-managers"
+                  checked={showOnlyWithoutManagers}
+                  onCheckedChange={setShowOnlyWithoutManagers}
+                />
+                <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
+                  {t('topRiders.hideWithoutManager')}
+                </Label>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+              <MultiSelect
+                options={courseOptions}
+                selected={selectedCourseIds}
+                onChange={setSelectedCourseIds}
+                placeholder={t('topRiders.filterCoursesPlaceholder')}
+              />
+              <MultiSelect
+                options={categoryOptions}
+                selected={selectedCategories}
+                onChange={setSelectedCategories}
+                placeholder={t('topRiders.filterCategoriesPlaceholder')}
+              />
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCourseIds([]);
+                    setSelectedCategories([]);
+                  }}
+                >
+                  {t('topRiders.filterReset')}
+                </Button>
+              )}
+            </div>
+          </div>
+
           {!riders || riders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t('topRiders.noPoints')}
             </div>
           ) : (
             <>
-              <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-4 items-center">
-                <Input
-                  placeholder={t('topRiders.searchPlaceholder')}
-                  value={riderSearchTerm}
-                  onChange={(e) => setRiderSearchTerm(e.target.value)}
-                />
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                  <Switch
-                    id="hide-no-managers"
-                    checked={showOnlyWithoutManagers}
-                    onCheckedChange={setShowOnlyWithoutManagers}
-                  />
-                  <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
-                    {t('topRiders.hideWithoutManager')}
-                  </Label>
-                </div>
-              </div>
               
               {filteredRiders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
