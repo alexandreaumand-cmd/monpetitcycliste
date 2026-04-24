@@ -783,30 +783,68 @@ export const RankingsMobile = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium">{t('topRiders.filterCourses')}</Label>
-            <MultiSelect
-              modal
-              options={(availableCourses || [])
-                .filter((c) => selectedCategories.length === 0 || (c.categorie && selectedCategories.includes(c.categorie)))
-                .map((c) => ({
-                  value: c.id,
-                  label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
-                }))}
-              selected={selectedCourseIds}
-              onChange={setSelectedCourseIds}
-              placeholder={t('topRiders.filterCoursesPlaceholder')}
-            />
+            <div className="rounded-md border border-border bg-background/40">
+              <div className="max-h-56 overflow-y-auto divide-y divide-border">
+                {(availableCourses || [])
+                  .filter((c) => selectedCategories.length === 0 || (c.categorie && selectedCategories.includes(c.categorie)))
+                  .map((course) => {
+                    const checked = selectedCourseIds.includes(course.id);
+                    return (
+                      <label
+                        key={course.id}
+                        className="flex items-start gap-3 px-3 py-3 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => {
+                            setSelectedCourseIds((current) =>
+                              checked ? current.filter((id) => id !== course.id) : [...current, course.id]
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <span className="text-sm leading-snug">
+                          {course.nom}{course.categorie ? ` · ${course.categorie}` : ''}
+                        </span>
+                      </label>
+                    );
+                  })}
+                {(availableCourses || []).filter((c) => selectedCategories.length === 0 || (c.categorie && selectedCategories.includes(c.categorie))).length === 0 && (
+                  <div className="px-3 py-4 text-sm text-muted-foreground">
+                    {t('topRiders.filterNoResults')}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium">{t('topRiders.filterCategories')}</Label>
-            <MultiSelect
-              modal
-              options={[...new Set((availableCourses || []).map((c) => c.categorie).filter(Boolean) as string[])]
-                .sort()
-                .map((cat) => ({ value: cat, label: cat }))}
-              selected={selectedCategories}
-              onChange={setSelectedCategories}
-              placeholder={t('topRiders.filterCategoriesPlaceholder')}
-            />
+            <div className="rounded-md border border-border bg-background/40">
+              <div className="max-h-56 overflow-y-auto divide-y divide-border">
+                {[...new Set((availableCourses || []).map((c) => c.categorie).filter(Boolean) as string[])]
+                  .sort()
+                  .map((category) => {
+                    const checked = selectedCategories.includes(category);
+                    return (
+                      <label
+                        key={category}
+                        className="flex items-start gap-3 px-3 py-3 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => {
+                            setSelectedCategories((current) =>
+                              checked ? current.filter((value) => value !== category) : [...current, category]
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <span className="text-sm leading-snug">{category}</span>
+                      </label>
+                    );
+                  })}
+              </div>
+            </div>
           </div>
           {(selectedCourseIds.length > 0 || selectedCategories.length > 0) && (
             <Button
