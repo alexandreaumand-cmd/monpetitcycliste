@@ -259,6 +259,69 @@ export function AuctionSearchFilters({
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Courses Filter */}
+        {onCoursesChange && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="h-10 min-w-[140px] justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedCourses.length === 0
+                    ? t("search.courses")
+                    : selectedCourses.length <= 2
+                      ? getSelectedCourseNames()
+                      : t("search.coursesCount", { count: selectedCourses.length })}
+                </span>
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0 bg-popover z-50" align="start">
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">{t("search.courses")} ({selectedCourses.length})</span>
+                  {selectedCourses.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => onCoursesChange([])} className="h-6 text-xs">
+                      {t("search.none")}
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  type="text"
+                  placeholder={t("search.searchCourse")}
+                  value={courseSearchQuery}
+                  onChange={(e) => setCourseSearchQuery(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="max-h-[500px] overflow-y-auto p-2 space-y-1">
+                {filteredCourses.map((course) => (
+                  <div
+                    key={course.id}
+                    className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                    onClick={() => toggleCourse(course.id)}
+                  >
+                    <Checkbox checked={selectedCourses.includes(course.id)} />
+                    <span className="flex-1 text-sm truncate">{course.nom}</span>
+                    {course.date_debut && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {course.date_debut.slice(5).replace("-", "/")}
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {filteredCourses.length === 0 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {t("search.noCourseFound")}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {/* Second row: Price Filter */}
