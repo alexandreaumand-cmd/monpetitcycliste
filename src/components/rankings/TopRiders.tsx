@@ -155,11 +155,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   });
 
   const courseOptions = useMemo(() => {
-    return (availableCourses || []).map((c) => ({
+    const filtered = selectedCategories.length > 0
+      ? (availableCourses || []).filter((c) => c.categorie && selectedCategories.includes(c.categorie))
+      : (availableCourses || []);
+    return filtered.map((c) => ({
       value: c.id,
       label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
     }));
-  }, [availableCourses]);
+  }, [availableCourses, selectedCategories]);
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
