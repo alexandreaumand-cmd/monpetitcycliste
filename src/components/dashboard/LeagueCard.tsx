@@ -297,6 +297,22 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                   </div>
                 )}
               </div>
+            ) : hasPublishedAuctions ? (
+              <div className="text-center py-6 space-y-3">
+                <Trophy className="h-8 w-8 text-muted-foreground/40 mx-auto animate-pulse" />
+                <p className="text-sm font-semibold text-muted-foreground">{t('leagueCard.computingStats')}</p>
+                <p className="text-xs text-muted-foreground">{t('leagueCard.computingStatsDesc')}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.location.reload();
+                  }}
+                >
+                  {t('leagueCard.refresh')}
+                </Button>
+              </div>
             ) : (
               <div className="text-center py-6 space-y-2">
                 <Trophy className="h-8 w-8 text-muted-foreground/40 mx-auto" />
