@@ -784,6 +784,7 @@ export const RankingsMobile = () => {
           <div className="space-y-2">
             <Label className="text-sm font-medium">{t('topRiders.filterCourses')}</Label>
             <MultiSelect
+              modal
               options={(availableCourses || [])
                 .filter((c) => selectedCategories.length === 0 || (c.categorie && selectedCategories.includes(c.categorie)))
                 .map((c) => ({
@@ -798,6 +799,7 @@ export const RankingsMobile = () => {
           <div className="space-y-2">
             <Label className="text-sm font-medium">{t('topRiders.filterCategories')}</Label>
             <MultiSelect
+              modal
               options={[...new Set((availableCourses || []).map((c) => c.categorie).filter(Boolean) as string[])]
                 .sort()
                 .map((cat) => ({ value: cat, label: cat }))}
