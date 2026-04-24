@@ -166,6 +166,8 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
   });
 
+  const { data: availableCourses = [] } = useAuctionAvailableCourses(phaseId, leagueId);
+
   // Search riders with infinite pagination
   const {
     data: ridersPages,
