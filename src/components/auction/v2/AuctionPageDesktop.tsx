@@ -617,6 +617,9 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           setSelectedCotes={setSelectedCotes}
           selectedCategories={selectedCategories}
           setSelectedCategories={setSelectedCategories}
+          selectedCourses={selectedCourses}
+          setSelectedCourses={setSelectedCourses}
+          availableCourses={availableCourses}
           availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
           riders={ridersData?.items || []}
           isSearching={ridersLoading}
