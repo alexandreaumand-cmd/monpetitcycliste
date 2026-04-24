@@ -784,10 +784,12 @@ export const RankingsMobile = () => {
           <div className="space-y-2">
             <Label className="text-sm font-medium">{t('topRiders.filterCourses')}</Label>
             <MultiSelect
-              options={(availableCourses || []).map((c) => ({
-                value: c.id,
-                label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
-              }))}
+              options={(availableCourses || [])
+                .filter((c) => selectedCategories.length === 0 || (c.categorie && selectedCategories.includes(c.categorie)))
+                .map((c) => ({
+                  value: c.id,
+                  label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
+                }))}
               selected={selectedCourseIds}
               onChange={setSelectedCourseIds}
               placeholder={t('topRiders.filterCoursesPlaceholder')}
