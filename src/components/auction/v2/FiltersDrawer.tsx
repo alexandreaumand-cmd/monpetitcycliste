@@ -15,6 +15,9 @@ interface FiltersDrawerProps {
   selectedCategories: string[];
   onCategoriesChange: (categories: string[]) => void;
   availableTeams: Array<{ id: string; name: string }>;
+  selectedCourses?: string[];
+  onCoursesChange?: (courses: string[]) => void;
+  availableCourses?: Array<{ id: string; nom: string; date_debut?: string | null }>;
 }
 
 export function FiltersDrawer({
@@ -25,8 +28,12 @@ export function FiltersDrawer({
   selectedCategories,
   onCategoriesChange,
   availableTeams,
+  selectedCourses = [],
+  onCoursesChange,
+  availableCourses = [],
 }: FiltersDrawerProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
 
   const categoryOptions = [
     { value: "WT", label: "WT" },
