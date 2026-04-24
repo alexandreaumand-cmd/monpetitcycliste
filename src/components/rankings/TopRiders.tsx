@@ -100,9 +100,78 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
   const [detailsSortDirection, setDetailsSortDirection] = useState<"asc" | "desc">("desc");
   const [displayLimit, setDisplayLimit] = useState(20);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // Fetch league scope to restrict course list
+  const { data: leagueScopeCourseIds } = useQuery({
+    queryKey: ["league-scope-course-ids", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      const ids = (data?.selected_course_ids as string[] | null) ?? null;
+      return ids && ids.length > 0 ? ids : null;
+    },
+    enabled: !!leagueId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch available courses in current scope
+  const { data: availableCourses } = useQuery({
+    queryKey: ["top-riders-available-courses", phaseId, saisonId, leagueScopeCourseIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("courses")
+        .select("id, nom, categorie, date_debut, phase_id")
+        .order("date_debut", { ascending: false });
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phasesForSeason } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        const phaseIds = (phasesForSeason || []).map((p) => p.id);
+        if (phaseIds.length === 0) return [];
+        query = query.in("phase_id", phaseIds);
+      }
+
+      if (leagueScopeCourseIds) {
+        query = query.in("id", leagueScopeCourseIds);
+      }
+
+      const { data, error } = await query.limit(2000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!leagueId && (!!phaseId || !!saisonId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const courseOptions = useMemo(() => {
+    return (availableCourses || []).map((c) => ({
+      value: c.id,
+      label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
+    }));
+  }, [availableCourses]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    (availableCourses || []).forEach((c) => {
+      if (c.categorie) set.add(c.categorie);
+    });
+    return [...set].sort().map((cat) => ({ value: cat, label: cat }));
+  }, [availableCourses]);
+
+  const hasActiveFilters = selectedCourseIds.length > 0 || selectedCategories.length > 0;
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, saisonId, leagueId],
+    queryKey: ["top-riders", phaseId, saisonId, leagueId, selectedCourseIds, selectedCategories],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
@@ -110,6 +179,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
           saison_id: saisonId,
           league_id: leagueId,
           limit: 5000,
+          course_ids: selectedCourseIds.length > 0 ? selectedCourseIds : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         },
       });
 
