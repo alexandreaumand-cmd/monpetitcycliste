@@ -43,6 +43,7 @@ export interface LeagueCardData {
   stats: LeagueStats | null;
   auctionStatus: AuctionStatus | null;
   selectedCourseNames: string[];
+  hasPublishedAuctions: boolean;
 }
 
 interface LeagueInfo {
