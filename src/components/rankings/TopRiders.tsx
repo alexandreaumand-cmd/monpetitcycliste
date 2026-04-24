@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { useTranslation } from "react-i18next";
@@ -100,9 +101,78 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
   const [detailsSortDirection, setDetailsSortDirection] = useState<"asc" | "desc">("desc");
   const [displayLimit, setDisplayLimit] = useState(20);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // Fetch league scope to restrict course list
+  const { data: leagueScopeCourseIds } = useQuery({
+    queryKey: ["league-scope-course-ids", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      const ids = (data?.selected_course_ids as string[] | null) ?? null;
+      return ids && ids.length > 0 ? ids : null;
+    },
+    enabled: !!leagueId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch available courses in current scope
+  const { data: availableCourses } = useQuery({
+    queryKey: ["top-riders-available-courses", phaseId, saisonId, leagueScopeCourseIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("courses")
+        .select("id, nom, categorie, date_debut, phase_id")
+        .order("date_debut", { ascending: false });
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phasesForSeason } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        const phaseIds = (phasesForSeason || []).map((p) => p.id);
+        if (phaseIds.length === 0) return [];
+        query = query.in("phase_id", phaseIds);
+      }
+
+      if (leagueScopeCourseIds) {
+        query = query.in("id", leagueScopeCourseIds);
+      }
+
+      const { data, error } = await query.limit(2000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!leagueId && (!!phaseId || !!saisonId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const courseOptions = useMemo(() => {
+    return (availableCourses || []).map((c) => ({
+      value: c.id,
+      label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
+    }));
+  }, [availableCourses]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    (availableCourses || []).forEach((c) => {
+      if (c.categorie) set.add(c.categorie);
+    });
+    return [...set].sort().map((cat) => ({ value: cat, label: cat }));
+  }, [availableCourses]);
+
+  const hasActiveFilters = selectedCourseIds.length > 0 || selectedCategories.length > 0;
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, saisonId, leagueId],
+    queryKey: ["top-riders", phaseId, saisonId, leagueId, selectedCourseIds, selectedCategories],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
@@ -110,6 +180,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
           saison_id: saisonId,
           league_id: leagueId,
           limit: 5000,
+          course_ids: selectedCourseIds.length > 0 ? selectedCourseIds : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         },
       });
 
@@ -365,29 +437,58 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     <>
       <Card>
         <CardContent className="pt-6">
+          <div className="space-y-3 mb-4">
+            <div className="grid md:grid-cols-[1fr_auto] gap-3 items-center">
+              <Input
+                placeholder={t('topRiders.searchPlaceholder')}
+                value={riderSearchTerm}
+                onChange={(e) => setRiderSearchTerm(e.target.value)}
+              />
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <Switch
+                  id="hide-no-managers"
+                  checked={showOnlyWithoutManagers}
+                  onCheckedChange={setShowOnlyWithoutManagers}
+                />
+                <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
+                  {t('topRiders.hideWithoutManager')}
+                </Label>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+              <MultiSelect
+                options={courseOptions}
+                selected={selectedCourseIds}
+                onChange={setSelectedCourseIds}
+                placeholder={t('topRiders.filterCoursesPlaceholder')}
+              />
+              <MultiSelect
+                options={categoryOptions}
+                selected={selectedCategories}
+                onChange={setSelectedCategories}
+                placeholder={t('topRiders.filterCategoriesPlaceholder')}
+              />
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCourseIds([]);
+                    setSelectedCategories([]);
+                  }}
+                >
+                  {t('topRiders.filterReset')}
+                </Button>
+              )}
+            </div>
+          </div>
+
           {!riders || riders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t('topRiders.noPoints')}
             </div>
           ) : (
             <>
-              <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-4 items-center">
-                <Input
-                  placeholder={t('topRiders.searchPlaceholder')}
-                  value={riderSearchTerm}
-                  onChange={(e) => setRiderSearchTerm(e.target.value)}
-                />
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                  <Switch
-                    id="hide-no-managers"
-                    checked={showOnlyWithoutManagers}
-                    onCheckedChange={setShowOnlyWithoutManagers}
-                  />
-                  <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
-                    {t('topRiders.hideWithoutManager')}
-                  </Label>
-                </div>
-              </div>
               
               {filteredRiders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">

@@ -7,7 +7,8 @@ import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp, Shirt } from "lucide-react";
+import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal } from "lucide-react";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,6 +63,59 @@ export const RankingsMobile = () => {
   const [standingsSortBy, setStandingsSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
   const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
   const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Fetch league scope for course list
+  const { data: leagueScopeCourseIds } = useQuery({
+    queryKey: ["league-scope-course-ids", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      const ids = (data?.selected_course_ids as string[] | null) ?? null;
+      return ids && ids.length > 0 ? ids : null;
+    },
+    enabled: !!leagueId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch available courses in current scope
+  const { data: availableCourses } = useQuery({
+    queryKey: ["top-riders-available-courses-mobile", selectedPhase, selectedSeason?.id, leagueScopeCourseIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("courses")
+        .select("id, nom, categorie, date_debut, phase_id")
+        .order("date_debut", { ascending: false });
+
+      if (selectedPhase) {
+        query = query.eq("phase_id", selectedPhase);
+      } else if (selectedSeason?.id) {
+        const { data: phasesForSeason } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", selectedSeason.id);
+        const phaseIds = (phasesForSeason || []).map((p) => p.id);
+        if (phaseIds.length === 0) return [];
+        query = query.in("phase_id", phaseIds);
+      }
+
+      if (leagueScopeCourseIds) {
+        query = query.in("id", leagueScopeCourseIds);
+      }
+
+      const { data, error } = await query.limit(2000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!leagueId && (!!selectedPhase || !!selectedSeason?.id),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -147,18 +201,20 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
-    staleTime: 2 * 60 * 1000, // Cache 2 minutes
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId, selectedCourseIds, selectedCategories],
+    staleTime: 2 * 60 * 1000,
     enabled: !!leagueId && !!selectedSeason?.id,
     queryFn: async () => {
       if (!leagueId) return [];
-      
+
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: selectedPhase,
           saison_id: selectedSeason?.id || null,
           league_id: leagueId,
           limit: 100,
+          course_ids: selectedCourseIds.length > 0 ? selectedCourseIds : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         },
       });
 
@@ -538,7 +594,18 @@ export const RankingsMobile = () => {
                     {t('topRiders.hideWithoutManager')}
                   </Label>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
+                  <Button
+                    variant={(selectedCourseIds.length + selectedCategories.length) > 0 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFiltersOpen(true)}
+                    className="h-8 px-3 text-xs gap-1"
+                  >
+                    <SlidersHorizontal className="h-3 w-3" />
+                    {(selectedCourseIds.length + selectedCategories.length) > 0
+                      ? `(${selectedCourseIds.length + selectedCategories.length})`
+                      : t('topRiders.filtersTitle')}
+                  </Button>
                   <Button
                     variant={riderSortBy === 'points' ? 'default' : 'outline'}
                     size="sm"
@@ -706,6 +773,50 @@ export const RankingsMobile = () => {
             phaseId={selectedPhase}
           />
         )}
+      </MobileBottomSheet>
+
+      <MobileBottomSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title={t('topRiders.filtersTitle')}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">{t('topRiders.filterCourses')}</Label>
+            <MultiSelect
+              options={(availableCourses || []).map((c) => ({
+                value: c.id,
+                label: `${c.nom}${c.categorie ? ` · ${c.categorie}` : ''}`,
+              }))}
+              selected={selectedCourseIds}
+              onChange={setSelectedCourseIds}
+              placeholder={t('topRiders.filterCoursesPlaceholder')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">{t('topRiders.filterCategories')}</Label>
+            <MultiSelect
+              options={[...new Set((availableCourses || []).map((c) => c.categorie).filter(Boolean) as string[])]
+                .sort()
+                .map((cat) => ({ value: cat, label: cat }))}
+              selected={selectedCategories}
+              onChange={setSelectedCategories}
+              placeholder={t('topRiders.filterCategoriesPlaceholder')}
+            />
+          </div>
+          {(selectedCourseIds.length > 0 || selectedCategories.length > 0) && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setSelectedCourseIds([]);
+                setSelectedCategories([]);
+              }}
+            >
+              {t('topRiders.filterReset')}
+            </Button>
+          )}
+        </div>
       </MobileBottomSheet>
 
     </div>

@@ -1,82 +1,80 @@
+## Objectif
 
+Permettre, dans l'onglet **Top Coureurs** du Classement, de filtrer les coureurs par **une ou plusieurs courses** et/ou **une ou plusieurs catégories** (ex. voir uniquement les top coureurs de l'Itzulia Basque Country).
 
-## Bugs identifiés
+Approche choisie : **filtrage côté serveur dans l'edge function `get-top-riders`**, sans modifier la RPC SQL `get_top_riders_optimized`. Cela évite une migration et garde le chemin RPC ultra-rapide quand aucun filtre additionnel n'est appliqué.
 
-### Bug 1 — Points du jour incluent des courses hors scope
-La fonction RPC `get_daily_points_by_manager` (utilisée par `arena-recaps` pour le récap quotidien) joint `points_ledger` + `rosters` filtré par `league_id`, mais **ne filtre pas par `league_scopes.selected_course_ids`**.
+---
 
-Conséquence sur COPArdennaises : la ligue a un scope explicite (Amstel, Flèche Wallonne, Liège-Bastogne-Liège). Les points du Tour des Alpes (et toute autre course hors scope) remontent quand même → Rolfes Reus apparaît avec +125 pts.
+## 1. Edge function `supabase/functions/get-top-riders/index.ts`
 
-### Bug 2 — Mouvements startlists attribuent le coureur au mauvais manager
-Dans `supabase/functions/arena-recaps/index.ts` (section "Get roster ownership for these coureurs"), la requête `rosters` est filtrée uniquement par `league_id` + `coureur_id`. La phase n'est pas prise en compte alors que `activePhaseId` est calculé juste au-dessus.
+Ajouter deux paramètres optionnels au body :
 
-Conséquence sur MPC 2026 : Ciccone est chez Manou en phase 1 (jan→mars) et chez Ludo en phase 2 (mars→mai). On est en phase 2, mais le récap remonte le 1er roster trouvé (Manou).
+- `course_ids?: string[]`
+- `categories?: string[]`
 
-Plus subtil : la phase à utiliser pour croiser les effectifs doit être **la phase de la course** à laquelle le mouvement startlist se rapporte (chaque mouvement a `course_id` → `courses.phase_id`), pas une "phase active" globale calculée depuis la date du jour. Pour les Ardennaises (Flèche, Liège), `course.phase_id` = phase 2 → Ludo, ce qui est correct.
+Comportement :
+- **Aucun des deux fourni** → comportement actuel inchangé (appel RPC `get_top_riders_optimized`).
+- **L'un ou l'autre fourni** → bypass de la RPC, agrégation directe :
+  1. Récupérer la liste des courses autorisées via `get_league_course_ids(league_id)`.
+  2. Intersecter avec `course_ids` si fourni.
+  3. Restreindre au scope de phase (phase unique ou toutes les phases de la saison).
+  4. Filtrer par `categories` via `courses.categorie` si fourni.
+  5. Appliquer le filtre `started_at_effective` de la ligue.
+  6. Agréger `points_ledger` (paginé, chunk de 200 course_ids) → `total_points`, `courses_count` par coureur.
+  7. Enrichir avec nom du coureur, équipe spécifique à la saison (`coureurs_saisons` + `equipes_saisons`), `prix_initial`.
+- La logique en aval (calcul `prix_achat`, `ratio_points_par_prix`, owners depuis rosters) reste identique. Les owners restent ceux du roster de la phase / saison (non re-scopés à la course pour rester cohérent avec le reste de l'écran).
 
-## Corrections proposées
+## 2. Front desktop — `src/components/rankings/TopRiders.tsx`
 
-### Fix 1 — RPC `get_daily_points_by_manager`
+- Ajouter deux états : `selectedCourseIds: string[]`, `selectedCategories: string[]`.
+- Nouvelle requête React Query `available-courses` qui charge les courses du périmètre courant :
+  - Filtre par `phase_id` (si phase active) ou `phases.saison_id = saisonId`.
+  - Restreint à `selected_course_ids` de `league_scopes` si présent (sinon toutes les courses du scope).
+  - Renvoie `id`, `nom`, `categorie`, `date_debut`, `phase_id`.
+- Deux boutons filtre `Popover` à côté du champ recherche (au-dessus du tableau) :
+  - **Courses** : `Command` + `CommandInput` + `Checkbox` par course (groupées par catégorie). Badge avec compteur quand n>0.
+  - **Catégories** : liste déduite des courses disponibles avec `Checkbox`. Badge compteur.
+- Bouton « Réinitialiser » visible si au moins un filtre actif.
+- Passer `course_ids` et `categories` à l'edge function ; ajouter au `queryKey` pour bonne invalidation.
+- Quand un filtre est actif :
+  - `total_points`, `ratio_points_par_prix`, `courses_count` reflètent automatiquement le périmètre filtré (calculés serveur).
+  - Les owners restent ceux des rosters de phase / saison.
 
-Migration SQL pour ajouter le filtre par `selected_course_ids` :
+## 3. Front mobile — `src/pages/Rankings.mobile.tsx`
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_daily_points_by_manager(
-  p_league_id uuid, p_start timestamptz, p_end timestamptz
-) RETURNS TABLE(manager_id uuid, total_points numeric)
-LANGUAGE sql STABLE AS $$
-  WITH scope AS (
-    SELECT selected_course_ids
-    FROM league_scopes
-    WHERE league_id = p_league_id
-  )
-  SELECT r.manager_id, SUM(pl.points) AS total_points
-  FROM points_ledger pl
-  JOIN race_results rr
-    ON rr.course_id = pl.course_id
-   AND rr.coureur_id = pl.coureur_id
-   AND rr.type_classement = pl.type_classement
-   AND COALESCE(rr.etape_numero,0) = COALESCE(pl.etape_numero,0)
-  JOIN rosters r
-    ON r.coureur_id = pl.coureur_id
-   AND r.phase_id  = pl.phase_id
-   AND r.league_id = p_league_id
-  CROSS JOIN scope s
-  WHERE rr.date_classement >= p_start::date
-    AND rr.date_classement <= p_end::date
-    AND (
-      s.selected_course_ids IS NULL
-      OR pl.course_id::text = ANY(s.selected_course_ids)
-    )
-  GROUP BY r.manager_id;
-$$;
+- Ajouter les mêmes états `selectedCourseIds` / `selectedCategories`.
+- Bouton filtre dans la barre d'actions Top Coureurs ouvrant un `Sheet` (drawer bas) avec la même UI que desktop adaptée tactile (listes scrollables + checkboxes).
+- Compteur de filtres actifs dans le bouton.
+- Passer les filtres dans le `queryKey` et le body de l'invocation `get-top-riders`.
+
+## 4. i18n — `src/i18n/locales/{fr,en}/rankings.json`
+
+Ajouter sous `topRiders` :
+
+```json
+"filterCourses": "Courses",
+"filterCategories": "Catégories",
+"filterCoursesPlaceholder": "Filtrer par course...",
+"filterCategoriesPlaceholder": "Filtrer par catégorie...",
+"filterReset": "Réinitialiser",
+"filterActiveCount": "{{count}} sélectionné(s)",
+"filterNoResults": "Aucune course trouvée"
 ```
 
-Note : `selected_course_ids` est `text[]` contenant des slugs de course (ex. `amstel-gold-race-mj8by7wi`). Vérifier le type réel (`text[]` vs `uuid[]`) avant la migration et adapter le cast en conséquence.
+Et l'équivalent anglais (`Courses`, `Categories`, `Filter by race...`, `Filter by category...`, `Reset`, `{{count}} selected`, `No race found`).
 
-### Fix 2 — Croiser les mouvements startlists avec la phase de la course
+## 5. Validation post-implémentation
 
-Dans `supabase/functions/arena-recaps/index.ts` :
+- Lancer `get-top-riders` via `supabase--curl_edge_functions` avec :
+  - aucun filtre (régression),
+  - `course_ids: ["<id_itzulia>"]`,
+  - `categories: ["WT Cat 1"]`,
+  - les deux combinés.
+- Vérifier que le front reflète les bons totaux et que la combinaison `Sans manager` + filtres fonctionne.
 
-1. Récupérer `phase_id` pour chaque `course_id` impliqué dans les changements (table `courses`).
-2. Charger les rosters filtrés par `(league_id, coureur_id, phase_id)` correspondants.
-3. Construire la map `coureurOwnerMap` clé = `coureur_id||course_id` (ou `coureur_id||phase_id`) au lieu de `coureur_id` seul, pour gérer le cas multi-courses dans le même récap.
+## Hors scope
 
-Le calcul existant de `activePhaseId` est conservé uniquement pour pré-filtrer les courses présentes dans la phase active (logique actuelle pertinente), mais le mapping owner utilise la phase de chaque course individuelle.
-
-### Rattrapage / données existantes
-- Le message du récap déjà envoyé reste tel quel dans `arena_messages` (pas de réécriture rétro).
-- Les prochains récaps quotidiens (et hebdo, qui appelle aussi `get_daily_points_by_manager` via la même chaîne — à vérifier) seront corrects.
-
-## Étapes de mise en œuvre (mode build)
-
-1. Vérifier le type de `league_scopes.selected_course_ids` (text[] vs uuid[]).
-2. Créer la migration SQL pour `get_daily_points_by_manager` avec filtre scope.
-3. Inspecter `sendWeeklyRecap` pour appliquer la même correction si elle agrège aussi par manager.
-4. Modifier la section startlists dans `arena-recaps/index.ts` pour résoudre l'owner par `(coureur, phase de la course)`.
-5. Déployer la fonction `arena-recaps`.
-6. Déclencher manuellement un récap daily pour COPArdennaises et MPC 2026 (date 2026-04-20) pour valider.
-7. Vérifier dans `arena_messages` que :
-   - COPArdennaises n'inclut plus Rolfes Reus (Tour des Alpes hors scope),
-   - MPC 2026 affiche Ciccone — Manager: Ludo.
-
+- Pas de modification de la RPC SQL `get_top_riders_optimized` (donc pas de migration).
+- Pas de filtre sur la pop-up de détail d'un coureur (qui reste sur l'historique complet).
+- Pas de filtre sur l'onglet Managers / Hebdo / Chrono / Comparaison.

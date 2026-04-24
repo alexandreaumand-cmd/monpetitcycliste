@@ -45,7 +45,14 @@
     "viewAll": "Voir tous ({{total}})",
     "unknownTeam": "Équipe inconnue",
     "races": "{{count}} courses",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "filterCourses": "Courses",
+    "filterCategories": "Catégories",
+    "filterCoursesPlaceholder": "Filtrer par course...",
+    "filterCategoriesPlaceholder": "Filtrer par catégorie...",
+    "filterReset": "Réinitialiser",
+    "filterNoResults": "Aucune course trouvée",
+    "filtersTitle": "Filtres"
   },
   "riderDetails": {
     "totalPoints": "Points totaux",
