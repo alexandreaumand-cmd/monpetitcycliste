@@ -1,5 +1,6 @@
 // Service Worker for Push Notifications
 // This file is imported by the main service worker via workbox importScripts
+// SW_VERSION: 2026-04-24-1 (bump to invalidate caches on standings fix)
 
 self.addEventListener('push', function(event) {
   console.log('[SW Push] Push event received at', new Date().toISOString());
