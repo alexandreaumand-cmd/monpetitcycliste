@@ -81,7 +81,11 @@
     "none": "Aucun",
     "noTeamFound": "Aucune équipe trouvée",
     "price": "Prix",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "courses": "Courses",
+    "searchCourse": "Rechercher une course…",
+    "coursesCount": "{{count}} courses",
+    "noCourseFound": "Aucune course trouvée"
   },
   "table": {
     "rider": "Coureur",

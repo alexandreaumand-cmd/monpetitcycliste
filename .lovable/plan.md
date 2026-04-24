@@ -1,80 +1,88 @@
 ## Objectif
 
-Permettre, dans l'onglet **Top Coureurs** du Classement, de filtrer les coureurs par **une ou plusieurs courses** et/ou **une ou plusieurs catégories** (ex. voir uniquement les top coureurs de l'Itzulia Basque Country).
+Ajouter un nouveau filtre « Courses » au panneau de filtres des enchères (mobile et desktop), permettant de :
+- rechercher textuellement une ou plusieurs courses,
+- filtrer la liste de coureurs en ne montrant que ceux présents sur la startlist d'au moins une course sélectionnée.
 
-Approche choisie : **filtrage côté serveur dans l'edge function `get-top-riders`**, sans modifier la RPC SQL `get_top_riders_optimized`. Cela évite une migration et garde le chemin RPC ultra-rapide quand aucun filtre additionnel n'est appliqué.
+## UX
 
----
+**Desktop (`AuctionSearchFilters.tsx`)** : nouveau bouton/Popover « Courses » placé à côté de « Équipes », identique en comportement (multi-select avec champ de recherche, badges « Tout / Aucun »). Affiche dans le bouton le nombre de courses sélectionnées ou les noms si ≤ 2.
 
-## 1. Edge function `supabase/functions/get-top-riders/index.ts`
+**Mobile (`FiltersDrawer.tsx`)** : nouvelle section « Courses » dans le drawer, juste sous « Équipes », avec champ de recherche + liste cochable scrollable. Compteur dans le badge global du bouton flottant.
 
-Ajouter deux paramètres optionnels au body :
+**Liste des courses proposées** : courses de la saison de la phase d'enchères en cours, qui ont au moins une startlist importée. Si la ligue a un `selected_course_ids` (cf. `useLeagueFilteredRaces`), on restreint la liste à ce périmètre.
 
-- `course_ids?: string[]`
-- `categories?: string[]`
+**Comportement de filtrage** : un coureur passe le filtre si son `coureur_id` apparaît dans `startlist_entries` d'au moins une `startlist_imports` rattachée à une des courses cochées (union, pas intersection — cohérent avec les autres filtres existants).
 
-Comportement :
-- **Aucun des deux fourni** → comportement actuel inchangé (appel RPC `get_top_riders_optimized`).
-- **L'un ou l'autre fourni** → bypass de la RPC, agrégation directe :
-  1. Récupérer la liste des courses autorisées via `get_league_course_ids(league_id)`.
-  2. Intersecter avec `course_ids` si fourni.
-  3. Restreindre au scope de phase (phase unique ou toutes les phases de la saison).
-  4. Filtrer par `categories` via `courses.categorie` si fourni.
-  5. Appliquer le filtre `started_at_effective` de la ligue.
-  6. Agréger `points_ledger` (paginé, chunk de 200 course_ids) → `total_points`, `courses_count` par coureur.
-  7. Enrichir avec nom du coureur, équipe spécifique à la saison (`coureurs_saisons` + `equipes_saisons`), `prix_initial`.
-- La logique en aval (calcul `prix_achat`, `ratio_points_par_prix`, owners depuis rosters) reste identique. Les owners restent ceux du roster de la phase / saison (non re-scopés à la course pour rester cohérent avec le reste de l'écran).
+## Implémentation technique
 
-## 2. Front desktop — `src/components/rankings/TopRiders.tsx`
+### 1. Backend — Edge Function `auction-search-riders`
 
-- Ajouter deux états : `selectedCourseIds: string[]`, `selectedCategories: string[]`.
-- Nouvelle requête React Query `available-courses` qui charge les courses du périmètre courant :
-  - Filtre par `phase_id` (si phase active) ou `phases.saison_id = saisonId`.
-  - Restreint à `selected_course_ids` de `league_scopes` si présent (sinon toutes les courses du scope).
-  - Renvoie `id`, `nom`, `categorie`, `date_debut`, `phase_id`.
-- Deux boutons filtre `Popover` à côté du champ recherche (au-dessus du tableau) :
-  - **Courses** : `Command` + `CommandInput` + `Checkbox` par course (groupées par catégorie). Badge avec compteur quand n>0.
-  - **Catégories** : liste déduite des courses disponibles avec `Checkbox`. Badge compteur.
-- Bouton « Réinitialiser » visible si au moins un filtre actif.
-- Passer `course_ids` et `categories` à l'edge function ; ajouter au `queryKey` pour bonne invalidation.
-- Quand un filtre est actif :
-  - `total_points`, `ratio_points_par_prix`, `courses_count` reflètent automatiquement le périmètre filtré (calculés serveur).
-  - Les owners restent ceux des rosters de phase / saison.
+Ajouter un paramètre `course_ids: string[] | null` :
+- Si fourni et non vide :
+  1. Charger `startlist_imports.id` où `race_id IN (course_ids)` AND `saison_id = phase.saison_id`.
+  2. Charger `startlist_entries.coureur_id DISTINCT` où `startlist_id IN (...)` AND `coureur_id NOT NULL`.
+  3. Si l'ensemble est vide → retourner `items: []`.
+  4. Sinon, ajouter `query.in('coureur_id', startlistRiderIds)` à la query principale.
+- Logger nb de courses, nb de startlists, nb de coureurs.
 
-## 3. Front mobile — `src/pages/Rankings.mobile.tsx`
+### 2. Nouveau hook `useAuctionAvailableCourses(phaseId, leagueId)`
 
-- Ajouter les mêmes états `selectedCourseIds` / `selectedCategories`.
-- Bouton filtre dans la barre d'actions Top Coureurs ouvrant un `Sheet` (drawer bas) avec la même UI que desktop adaptée tactile (listes scrollables + checkboxes).
-- Compteur de filtres actifs dans le bouton.
-- Passer les filtres dans le `queryKey` et le body de l'invocation `get-top-riders`.
+Fichier : `src/hooks/useAuctionAvailableCourses.ts`.
+- Récupère `phase.saison_id`.
+- Récupère `league_scopes.selected_course_ids` (si `leagueId`).
+- Query `startlist_imports` filtrée par `saison_id` + (optionnel) `race_id IN selected_course_ids` → `DISTINCT race_id`.
+- Joint `courses` (`id, nom, date_debut`) → retourne `[{ id, nom, date_debut }]` triés par date.
+- `staleTime: 5 min`, query key `["auction-available-courses", phaseId, leagueId]`.
 
-## 4. i18n — `src/i18n/locales/{fr,en}/rankings.json`
+### 3. UI — états partagés
 
-Ajouter sous `topRiders` :
+Dans `AuctionPageMobile.tsx` et `AuctionPageDesktop.tsx` :
+- Nouveau state `selectedCourses: string[]`.
+- Ajouter dans la `queryKey` de `auction-search-riders-infinite` et passer `course_ids: selectedCourses.length > 0 ? selectedCourses : null` au body.
+- Passer `selectedCourses` / `setSelectedCourses` + `availableCourses` (du hook) aux composants de filtres.
 
-```json
-"filterCourses": "Courses",
-"filterCategories": "Catégories",
-"filterCoursesPlaceholder": "Filtrer par course...",
-"filterCategoriesPlaceholder": "Filtrer par catégorie...",
-"filterReset": "Réinitialiser",
-"filterActiveCount": "{{count}} sélectionné(s)",
-"filterNoResults": "Aucune course trouvée"
-```
+### 4. UI — composants de filtres
 
-Et l'équivalent anglais (`Courses`, `Categories`, `Filter by race...`, `Filter by category...`, `Reset`, `{{count}} selected`, `No race found`).
+**`AuctionSearchFilters.tsx` (desktop)** :
+- Nouvelles props `selectedCourses`, `onCoursesChange`, `availableCourses`.
+- Nouveau `<Popover>` « Courses » miroir du Popover « Équipes » (Input de recherche, liste cochable, Tout/Aucun, libellé `nom` + petite date à droite).
 
-## 5. Validation post-implémentation
+**`FiltersDrawer.tsx` (mobile)** :
+- Mêmes nouvelles props.
+- Nouvelle section « Courses » avec Input de recherche + liste de Checkbox scrollable.
+- Inclure `selectedCourses.length > 0` dans `hasActiveFilters` et `activeFiltersCount`.
+- `clearAllFilters` réinitialise aussi `selectedCourses`.
 
-- Lancer `get-top-riders` via `supabase--curl_edge_functions` avec :
-  - aucun filtre (régression),
-  - `course_ids: ["<id_itzulia>"]`,
-  - `categories: ["WT Cat 1"]`,
-  - les deux combinés.
-- Vérifier que le front reflète les bons totaux et que la combinaison `Sans manager` + filtres fonctionne.
+### 5. Pass-through dans `AuctionTabs.tsx`
 
-## Hors scope
+Ajouter les nouvelles props et les transmettre à `AuctionSearchFilters`.
 
-- Pas de modification de la RPC SQL `get_top_riders_optimized` (donc pas de migration).
-- Pas de filtre sur la pop-up de détail d'un coureur (qui reste sur l'historique complet).
-- Pas de filtre sur l'onglet Managers / Hebdo / Chrono / Comparaison.
+### 6. i18n
+
+Ajouter les clés dans `src/i18n/locales/{fr,en}/auction.json` :
+- `search.courses` : « Courses » / « Races »
+- `search.searchCourse` : « Rechercher une course… » / « Search a race…  »
+- `search.coursesCount` : « {{count}} courses » / « {{count}} races »
+- `search.noCourseFound` : « Aucune course trouvée » / « No race found »
+
+### 7. Tests manuels
+
+- Cocher 1 course → seuls les coureurs de la startlist apparaissent.
+- Cocher 2 courses → union des deux startlists.
+- Combiner avec filtres « Équipes », « Côtes », « Catégories » → intersection respectée.
+- Vérifier desktop + mobile.
+- Ligue avec `selected_course_ids` : seules les courses du scope sont proposées.
+- Course sans startlist importée : n'apparaît pas dans la liste.
+
+## Fichiers touchés
+
+- `supabase/functions/auction-search-riders/index.ts`
+- `src/hooks/useAuctionAvailableCourses.ts` (nouveau)
+- `src/components/auction/v2/AuctionPageMobile.tsx`
+- `src/components/auction/v2/AuctionPageDesktop.tsx`
+- `src/components/auction/v2/AuctionTabs.tsx`
+- `src/components/auction/v2/AuctionSearchFilters.tsx`
+- `src/components/auction/v2/FiltersDrawer.tsx`
+- `src/i18n/locales/fr/auction.json`
+- `src/i18n/locales/en/auction.json`

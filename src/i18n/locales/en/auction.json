@@ -81,7 +81,11 @@
     "none": "None",
     "noTeamFound": "No team found",
     "price": "Price",
-    "clear": "Clear"
+    "clear": "Clear",
+    "courses": "Races",
+    "searchCourse": "Search a race…",
+    "coursesCount": "{{count}} races",
+    "noCourseFound": "No race found"
   },
   "table": {
     "rider": "Rider",

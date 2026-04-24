@@ -15,6 +15,9 @@ interface FiltersDrawerProps {
   selectedCategories: string[];
   onCategoriesChange: (categories: string[]) => void;
   availableTeams: Array<{ id: string; name: string }>;
+  selectedCourses?: string[];
+  onCoursesChange?: (courses: string[]) => void;
+  availableCourses?: Array<{ id: string; nom: string; date_debut?: string | null }>;
 }
 
 export function FiltersDrawer({
@@ -25,8 +28,12 @@ export function FiltersDrawer({
   selectedCategories,
   onCategoriesChange,
   availableTeams,
+  selectedCourses = [],
+  onCoursesChange,
+  availableCourses = [],
 }: FiltersDrawerProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
 
   const categoryOptions = [
     { value: "WT", label: "WT" },
@@ -79,14 +86,36 @@ export function FiltersDrawer({
     }
   };
 
+  const toggleCourse = (courseId: string) => {
+    if (!onCoursesChange) return;
+    if (selectedCourses.includes(courseId)) {
+      onCoursesChange(selectedCourses.filter(c => c !== courseId));
+    } else {
+      onCoursesChange([...selectedCourses, courseId]);
+    }
+  };
+
+  const filteredCourses = availableCourses.filter(c =>
+    (c.nom || "").toLowerCase().includes(courseSearchQuery.toLowerCase())
+  );
+
   const clearAllFilters = () => {
     onTeamsChange([]);
     onCotesChange([]);
     onCategoriesChange([]);
+    onCoursesChange?.([]);
   };
 
-  const hasActiveFilters = selectedTeams.length > 0 || selectedCotes.length > 0 || selectedCategories.length > 0;
-  const activeFiltersCount = (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0) + (selectedCategories.length > 0 ? 1 : 0);
+  const hasActiveFilters =
+    selectedTeams.length > 0 ||
+    selectedCotes.length > 0 ||
+    selectedCategories.length > 0 ||
+    selectedCourses.length > 0;
+  const activeFiltersCount =
+    (selectedTeams.length > 0 ? 1 : 0) +
+    (selectedCotes.length > 0 ? 1 : 0) +
+    (selectedCategories.length > 0 ? 1 : 0) +
+    (selectedCourses.length > 0 ? 1 : 0);
 
   return (
     <Sheet>
@@ -219,6 +248,61 @@ export function FiltersDrawer({
                 )}
               </div>
             </div>
+
+            {/* Courses Filter */}
+            {onCoursesChange && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">
+                    Courses {selectedCourses.length > 0 && `(${selectedCourses.length})`}
+                  </label>
+                  {selectedCourses.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCoursesChange([])}
+                      className="h-6 text-xs"
+                    >
+                      Aucune
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Rechercher une course…"
+                  value={courseSearchQuery}
+                  onChange={(e) => setCourseSearchQuery(e.target.value)}
+                  className="h-9 text-sm"
+                />
+                <div className="border rounded-md p-2 space-y-1 max-h-[400px] overflow-y-auto">
+                  {filteredCourses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                      onClick={() => toggleCourse(course.id)}
+                    >
+                      <Checkbox
+                        checked={selectedCourses.includes(course.id)}
+                        onCheckedChange={() => toggleCourse(course.id)}
+                      />
+                      <label className="flex-1 text-sm cursor-pointer truncate">
+                        {course.nom}
+                      </label>
+                      {course.date_debut && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {course.date_debut.slice(5).replace("-", "/")}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {filteredCourses.length === 0 && (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Aucune course trouvée
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

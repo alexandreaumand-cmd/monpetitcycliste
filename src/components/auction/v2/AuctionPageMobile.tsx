@@ -31,6 +31,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import { useTranslation } from "react-i18next";
+import { useAuctionAvailableCourses } from "@/hooks/useAuctionAvailableCourses";
 
 interface AuctionPageMobileProps {
   phaseId: string;
@@ -48,6 +49,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
@@ -188,6 +190,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
   });
 
+  // Available courses (with imported startlists, scoped to league)
+  const { data: availableCourses = [] } = useAuctionAvailableCourses(phaseId, leagueId);
+
   // Search riders with infinite pagination
   const {
     data: ridersPages,
@@ -204,6 +209,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       selectedTeams,
       selectedCotes,
       selectedCategories,
+      selectedCourses,
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
@@ -231,6 +237,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
           categories: selectedCategories.length > 0 ? selectedCategories : null,
+          course_ids: selectedCourses.length > 0 ? selectedCourses : null,
           cote_min,
           cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
@@ -758,6 +765,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         selectedCategories={selectedCategories}
         onCategoriesChange={setSelectedCategories}
         availableTeams={availableTeams}
+        selectedCourses={selectedCourses}
+        onCoursesChange={setSelectedCourses}
+        availableCourses={availableCourses}
       />
 
       {/* Bottom Sheet */}

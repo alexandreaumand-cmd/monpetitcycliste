@@ -27,6 +27,9 @@ interface AuctionTabsProps {
   setSelectedCotes: (cotes: number[]) => void;
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
+  selectedCourses?: string[];
+  setSelectedCourses?: (courses: string[]) => void;
+  availableCourses?: Array<{ id: string; nom: string; date_debut?: string | null }>;
   availableTeams: Array<{ id: string; name: string; categorie?: string }>;
   // Riders and bids
   riders: any[];
@@ -63,6 +66,9 @@ export const AuctionTabs = ({
   setSelectedCotes,
   selectedCategories,
   setSelectedCategories,
+  selectedCourses,
+  setSelectedCourses,
+  availableCourses,
   availableTeams,
   riders,
   isSearching,
@@ -260,6 +266,9 @@ export const AuctionTabs = ({
               onImportFavorites={handleImportFavorites}
               isImportingFavorites={isImportingFavorites}
               leagueId={leagueId}
+              selectedCourses={selectedCourses}
+              onCoursesChange={setSelectedCourses}
+              availableCourses={availableCourses}
             />
           </div>
 
