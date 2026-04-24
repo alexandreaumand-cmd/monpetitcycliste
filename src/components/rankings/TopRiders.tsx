@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { useTranslation } from "react-i18next";
