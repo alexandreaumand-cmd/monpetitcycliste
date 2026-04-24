@@ -76,7 +76,50 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 2: Build base query on coureurs_saisons
+    // Step 1c: Pre-filter by selected courses (startlist intersection)
+    let startlistRiderIds: string[] | null = null;
+    if (course_ids && Array.isArray(course_ids) && course_ids.length > 0) {
+      const { data: imports, error: importsErr } = await supabase
+        .from('startlist_imports')
+        .select('id')
+        .eq('saison_id', phase.saison_id)
+        .in('race_id', course_ids);
+
+      if (importsErr) {
+        console.error('[auction-search-riders] Error fetching startlist_imports:', importsErr);
+      }
+
+      const importIds = (imports || []).map((i: any) => i.id);
+      console.log(`[auction-search-riders] Found ${importIds.length} startlists for ${course_ids.length} courses`);
+
+      if (importIds.length === 0) {
+        return new Response(
+          JSON.stringify({ items: [], pagination: { limit, offset, has_more: false } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: entries, error: entriesErr } = await supabase
+        .from('startlist_entries')
+        .select('coureur_id')
+        .in('startlist_id', importIds)
+        .not('coureur_id', 'is', null);
+
+      if (entriesErr) {
+        console.error('[auction-search-riders] Error fetching startlist_entries:', entriesErr);
+      }
+
+      startlistRiderIds = [...new Set((entries || []).map((e: any) => e.coureur_id).filter(Boolean))];
+      console.log(`[auction-search-riders] Found ${startlistRiderIds.length} unique riders in selected startlists`);
+
+      if (startlistRiderIds.length === 0) {
+        return new Response(
+          JSON.stringify({ items: [], pagination: { limit, offset, has_more: false } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     let query = supabase
       .from('coureurs_saisons')
       .select(`
