@@ -20,6 +20,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import { useTranslation } from "react-i18next";
+import { useAuctionAvailableCourses } from "@/hooks/useAuctionAvailableCourses";
 import { useLeague } from "@/contexts/LeagueContext";
 import { MemberWriteGuard } from "@/components/guards/MemberWriteGuard";
 import {
