@@ -31,6 +31,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import { useTranslation } from "react-i18next";
+import { useAuctionAvailableCourses } from "@/hooks/useAuctionAvailableCourses";
 
 interface AuctionPageMobileProps {
   phaseId: string;
