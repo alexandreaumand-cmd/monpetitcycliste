@@ -184,6 +184,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       selectedTeams,
       selectedCotes,
       selectedCategories,
+      selectedCourses,
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
