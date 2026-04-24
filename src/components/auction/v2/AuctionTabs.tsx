@@ -27,6 +27,9 @@ interface AuctionTabsProps {
   setSelectedCotes: (cotes: number[]) => void;
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
+  selectedCourses?: string[];
+  setSelectedCourses?: (courses: string[]) => void;
+  availableCourses?: Array<{ id: string; nom: string; date_debut?: string | null }>;
   availableTeams: Array<{ id: string; name: string; categorie?: string }>;
   // Riders and bids
   riders: any[];
