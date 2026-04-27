@@ -1,88 +1,109 @@
-## Objectif
+# Plan d'action — Lenteurs LIVE (dashboard & classement)
 
-Ajouter un nouveau filtre « Courses » au panneau de filtres des enchères (mobile et desktop), permettant de :
-- rechercher textuellement une ou plusieurs courses,
-- filtrer la liste de coureurs en ne montrant que ceux présents sur la startlist d'au moins une course sélectionnée.
+## Diagnostic
 
-## UX
+J'ai mesuré directement la base LIVE pour comprendre les lenteurs.
 
-**Desktop (`AuctionSearchFilters.tsx`)** : nouveau bouton/Popover « Courses » placé à côté de « Équipes », identique en comportement (multi-select avec champ de recherche, badges « Tout / Aucun »). Affiche dans le bouton le nombre de courses sélectionnées ou les noms si ≤ 2.
+**Cause racine identifiée** : la vue `v_manager_standings_by_season_v2` (et ses cousines `_by_phase_v2`, `_total`) est une **vue SQL standard, pas une vue matérialisée**, contrairement à ce que l'on pensait. Chaque appel recalcule tout depuis zéro :
 
-**Mobile (`FiltersDrawer.tsx`)** : nouvelle section « Courses » dans le drawer, juste sous « Équipes », avec champ de recherche + liste cochable scrollable. Compteur dans le badge global du bouton flottant.
+- 5 CTE qui scannent `points_ledger`, `race_results`, `bonus_points` + jointures sur `rosters`, `phases`, `courses`
+- La fonction `get_league_course_ids()` est appelée comme sous-requête (ré-exécutée pour chaque ligne)
+- **Mesure réelle** : `SELECT * FROM v_manager_standings_by_season_v2 WHERE league_id = '…'` → **9,03 secondes**, **1 068 945 buffers lus (~8 Go de mémoire tampon)** pour retourner 10 lignes.
 
-**Liste des courses proposées** : courses de la saison de la phase d'enchères en cours, qui ont au moins une startlist importée. Si la ligue a un `selected_course_ids` (cf. `useLeagueFilteredRaces`), on restreint la liste à ce périmètre.
+Cette vue est appelée à plusieurs endroits sur les écrans incriminés :
 
-**Comportement de filtrage** : un coureur passe le filtre si son `coureur_id` apparaît dans `startlist_entries` d'au moins une `startlist_imports` rattachée à une des courses cochées (union, pas intersection — cohérent avec les autres filtres existants).
+| Écran | Hook / composant | Appels à la vue |
+|---|---|---|
+| Dashboard (cartes ligues) | `useLeagueCardsData` | 1 fois (toutes ligues actives) |
+| Dashboard (mes stats) | `useMyLeagueStats` | 1 fois par ligue affichée |
+| Classement desktop | `ManagerStandings` | 2 fois (`_by_season_v2` + `_by_phase_v2`) |
+| Classement mobile | `Rankings.mobile` | 3 fois (`_by_season_v2` + `_by_phase_v2` + `_total`) |
+| Mon Équipe | `MyTeam.desktop/mobile` | 1 à 2 fois |
+| Comparaison managers | `ManagerComparison` | 1 fois |
 
-## Implémentation technique
+Sur un dashboard avec 2-3 ligues, on déclenche facilement **5 à 8 recalculs complets en parallèle** = 10 à 30 secondes perçues, avec en plus l'ENV LIVE qui sature CPU/RAM côté backend.
 
-### 1. Backend — Edge Function `auction-search-riders`
+Symptômes secondaires observés : `pg_stat_statements` n'est pas activé (impossible de profiler en prod), aucune vue matérialisée n'existe en base, et les CTE de la vue parcourent tout `points_ledger` même quand on filtre sur une seule ligue.
 
-Ajouter un paramètre `course_ids: string[] | null` :
-- Si fourni et non vide :
-  1. Charger `startlist_imports.id` où `race_id IN (course_ids)` AND `saison_id = phase.saison_id`.
-  2. Charger `startlist_entries.coureur_id DISTINCT` où `startlist_id IN (...)` AND `coureur_id NOT NULL`.
-  3. Si l'ensemble est vide → retourner `items: []`.
-  4. Sinon, ajouter `query.in('coureur_id', startlistRiderIds)` à la query principale.
-- Logger nb de courses, nb de startlists, nb de coureurs.
+## Plan d'action
 
-### 2. Nouveau hook `useAuctionAvailableCourses(phaseId, leagueId)`
+### 1. Convertir les 3 vues de classement en vues matérialisées
 
-Fichier : `src/hooks/useAuctionAvailableCourses.ts`.
-- Récupère `phase.saison_id`.
-- Récupère `league_scopes.selected_course_ids` (si `leagueId`).
-- Query `startlist_imports` filtrée par `saison_id` + (optionnel) `race_id IN selected_course_ids` → `DISTINCT race_id`.
-- Joint `courses` (`id, nom, date_debut`) → retourne `[{ id, nom, date_debut }]` triés par date.
-- `staleTime: 5 min`, query key `["auction-available-courses", phaseId, leagueId]`.
+Remplacer `v_manager_standings_by_season_v2`, `v_manager_standings_by_phase_v2` et `v_manager_standings_total` par des **MATERIALIZED VIEW** avec index sur `(league_id, saison_id)` / `(league_id, phase_id)`.
 
-### 3. UI — états partagés
+Effet attendu : passer de **~9 s à <50 ms** par lecture (lecture indexée d'une table pré-calculée).
 
-Dans `AuctionPageMobile.tsx` et `AuctionPageDesktop.tsx` :
-- Nouveau state `selectedCourses: string[]`.
-- Ajouter dans la `queryKey` de `auction-search-riders-infinite` et passer `course_ids: selectedCourses.length > 0 ? selectedCourses : null` au body.
-- Passer `selectedCourses` / `setSelectedCourses` + `availableCourses` (du hook) aux composants de filtres.
+### 2. Mettre en place le rafraîchissement automatique
 
-### 4. UI — composants de filtres
+Trigger les rafraîchissements (`REFRESH MATERIALIZED VIEW CONCURRENTLY …`) uniquement quand les données sources changent réellement :
 
-**`AuctionSearchFilters.tsx` (desktop)** :
-- Nouvelles props `selectedCourses`, `onCoursesChange`, `availableCourses`.
-- Nouveau `<Popover>` « Courses » miroir du Popover « Équipes » (Input de recherche, liste cochable, Tout/Aucun, libellé `nom` + petite date à droite).
+- À la **publication d'annonces** (fin d'un round d'enchères) → modifie les rosters
+- À l'**import de résultats de course** / recalcul de points → modifie `points_ledger`, `bonus_points`
+- À l'**ajout de bonus** par le super-admin
 
-**`FiltersDrawer.tsx` (mobile)** :
-- Mêmes nouvelles props.
-- Nouvelle section « Courses » avec Input de recherche + liste de Checkbox scrollable.
-- Inclure `selectedCourses.length > 0` dans `hasActiveFilters` et `activeFiltersCount`.
-- `clearAllFilters` réinitialise aussi `selectedCourses`.
+Implémentation via une fonction `refresh_standings_mv(league_id uuid)` appelée explicitement depuis les Edge Functions concernées (`publish-announcements`, `recalc-points`, `super-admin-bonus`…), plus un cron de sécurité toutes les 15 min.
 
-### 5. Pass-through dans `AuctionTabs.tsx`
+### 3. Ajouter un index unique sur chaque MV pour autoriser `REFRESH … CONCURRENTLY`
 
-Ajouter les nouvelles props et les transmettre à `AuctionSearchFilters`.
+Permet de rafraîchir sans bloquer les lectures.
 
-### 6. i18n
+### 4. Activer `pg_stat_statements` en LIVE
 
-Ajouter les clés dans `src/i18n/locales/{fr,en}/auction.json` :
-- `search.courses` : « Courses » / « Races »
-- `search.searchCourse` : « Rechercher une course… » / « Search a race…  »
-- `search.coursesCount` : « {{count}} courses » / « {{count}} races »
-- `search.noCourseFound` : « Aucune course trouvée » / « No race found »
+Pour pouvoir mesurer en continu les requêtes lentes et détecter d'autres régressions à venir.
 
-### 7. Tests manuels
+### 5. Instrumenter le hook `useLeagueCardsData`
 
-- Cocher 1 course → seuls les coureurs de la startlist apparaissent.
-- Cocher 2 courses → union des deux startlists.
-- Combiner avec filtres « Équipes », « Côtes », « Catégories » → intersection respectée.
-- Vérifier desktop + mobile.
-- Ligue avec `selected_course_ids` : seules les courses du scope sont proposées.
-- Course sans startlist importée : n'apparaît pas dans la liste.
+Ajouter un fallback : si le `REFRESH` est en cours et que la MV ne contient pas encore de ligne pour la ligue, retomber proprement sur l'état "Calcul en cours…" déjà en place (corrigé la semaine dernière).
 
-## Fichiers touchés
+### 6. Vérification
 
-- `supabase/functions/auction-search-riders/index.ts`
-- `src/hooks/useAuctionAvailableCourses.ts` (nouveau)
-- `src/components/auction/v2/AuctionPageMobile.tsx`
-- `src/components/auction/v2/AuctionPageDesktop.tsx`
-- `src/components/auction/v2/AuctionTabs.tsx`
-- `src/components/auction/v2/AuctionSearchFilters.tsx`
-- `src/components/auction/v2/FiltersDrawer.tsx`
-- `src/i18n/locales/fr/auction.json`
-- `src/i18n/locales/en/auction.json`
+Après déploiement, re-mesurer sur 3 cas typiques (1 ligue, 3 ligues, page classement complète) avec `EXPLAIN ANALYZE` et vérifier que les temps passent sous **200 ms côté DB**.
+
+## Détails techniques
+
+```sql
+-- Exemple pour la vue saison
+CREATE MATERIALIZED VIEW public.mv_manager_standings_by_season_v2 AS
+  <même requête que la vue actuelle>;
+
+CREATE UNIQUE INDEX mv_standings_season_pk
+  ON public.mv_manager_standings_by_season_v2 (manager_id, league_id, saison_id);
+CREATE INDEX mv_standings_season_league
+  ON public.mv_manager_standings_by_season_v2 (league_id, saison_id);
+
+-- On garde le nom v_… via une vue passe-plat pour ne pas casser le code TypeScript
+DROP VIEW public.v_manager_standings_by_season_v2;
+CREATE VIEW public.v_manager_standings_by_season_v2
+  WITH (security_invoker = on)
+  AS SELECT * FROM public.mv_manager_standings_by_season_v2;
+```
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_standings_mv()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_by_season_v2;
+  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_by_phase_v2;
+  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_total;
+END $$;
+```
+
+**Edge Functions à modifier** : `publish-announcements`, `recalc-course-points`, `super-admin-bonus-attribute` → ajouter `await supabase.rpc('refresh_standings_mv')` en fin de traitement.
+
+**Cron de sécurité** : `select cron.schedule('refresh-standings', '*/15 * * * *', $$select public.refresh_standings_mv();$$);`
+
+**Note de mémoire** : la mémoire `mem://technical/database/standings-materialized-views-performance` indiquait à tort que ces vues étaient déjà matérialisées. Je la corrigerai après implémentation.
+
+## Fichiers / objets impactés
+
+- Migration SQL : création des 3 MV + indexes + fonction refresh + cron
+- `supabase/functions/publish-announcements/index.ts` (ajout RPC refresh)
+- `supabase/functions/recalc-*` / fonctions de calcul de points (ajout RPC refresh)
+- Aucun changement frontend nécessaire (les noms `v_…` restent identiques via vues passe-plat)
+
+## Bénéfice attendu
+
+- Dashboard : chargement des cartes de **5-15 s → <1 s**
+- Page classement : **8-20 s → <500 ms**
+- Réduction massive de la charge CPU/RAM côté Lovable Cloud (utile aussi pour les autres écrans)
