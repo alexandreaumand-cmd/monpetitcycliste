@@ -6648,6 +6648,13 @@ export type Database = {
         Returns: Json
       }
       auto_close_ghost_auctions: { Args: never; Returns: undefined }
+      auto_complete_per_course_leagues: {
+        Args: never
+        Returns: {
+          league_id: string
+          league_name: string
+        }[]
+      }
       auto_open_scheduled_auctions: { Args: never; Returns: undefined }
       auto_update_phase_statuts: { Args: never; Returns: undefined }
       course_points_summary: {
