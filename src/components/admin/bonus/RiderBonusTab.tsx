@@ -137,9 +137,21 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const resetForm = () => {
     setBonusType("");
     setSelectedCoureur(null);
+    setSelectedCourseId("");
     setPoints("");
     setCommentaire("");
   };
+
+  const handleSubmit = async () => {
+    if (!bonusType || !selectedCoureur || !points) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    if (courseRequired && !selectedCourseId) {
+      toast.error("La course est obligatoire pour ce type de bonus");
+      return;
+    }
 
   const handleSubmit = async () => {
     if (!bonusType || !selectedCoureur || !points) {
