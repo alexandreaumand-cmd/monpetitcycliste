@@ -128,7 +128,7 @@ export function CourseMultiSelect({
         </PopoverContent>
       </Popover>
       {selectedOptions.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="absolute left-0 right-0 top-full mt-1 flex flex-wrap gap-1 z-10">
           {selectedOptions.map((opt) => (
             <Badge
               key={opt.id}
