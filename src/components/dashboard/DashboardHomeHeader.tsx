@@ -57,7 +57,7 @@ export function DashboardHomeHeader({
             </button>
             
             <button
-              onClick={() => navigate('/regles')}
+              onClick={() => navigate('/rules')}
               className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md"
               aria-label={t('header.help')}
               title={t('header.help')}
@@ -113,7 +113,7 @@ export function DashboardHomeHeader({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/regles')}
+            onClick={() => navigate('/rules')}
             className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md transition-colors"
             aria-label={t('header.help')}
             title={t('header.help')}
