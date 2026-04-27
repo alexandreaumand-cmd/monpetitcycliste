@@ -23,15 +23,20 @@ Deno.serve(async (req) => {
 
     // Filter phases by league scope if league_id provided
     let phases = allPhases || [];
+    let leagueCourseIds: string[] | null = null;
     if (league_id) {
       const { data: scopeData } = await supabase
         .from('league_scopes')
-        .select('phases')
+        .select('phases, selected_course_ids')
         .eq('league_id', league_id)
         .single();
       const scopedPhaseIds = scopeData?.phases || [];
       if (scopedPhaseIds.length > 0) {
         phases = phases.filter((p: any) => scopedPhaseIds.includes(p.id));
+      }
+      const scopedCourseIds = (scopeData?.selected_course_ids as string[] | null) || null;
+      if (scopedCourseIds && scopedCourseIds.length > 0) {
+        leagueCourseIds = scopedCourseIds;
       }
     }
 
@@ -52,11 +57,12 @@ Deno.serve(async (req) => {
       let offset = 0;
       let hasMore = true;
       while (hasMore) {
-        const { data: batch, error: batchError } = await supabase
+        let q = supabase
           .from('points_ledger')
           .select('coureur_id, phase_id, points')
-          .in('phase_id', activePhaseIds)
-          .range(offset, offset + PAGE_SIZE - 1);
+          .in('phase_id', activePhaseIds);
+        if (leagueCourseIds) q = q.in('course_id', leagueCourseIds);
+        const { data: batch, error: batchError } = await q.range(offset, offset + PAGE_SIZE - 1);
         if (batchError) throw batchError;
         if (batch && batch.length > 0) {
           allPointsData = allPointsData.concat(batch);
