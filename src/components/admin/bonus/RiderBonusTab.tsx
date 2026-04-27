@@ -559,6 +559,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                     <TableHead>Coureur</TableHead>
                     <TableHead>Équipe</TableHead>
                     <TableHead>Manager</TableHead>
+                    <TableHead>Course</TableHead>
                     <TableHead className="text-right">Points</TableHead>
                     <TableHead>Commentaire</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
