@@ -459,9 +459,10 @@ const RulesPage = () => {
               <li className="flex items-start gap-3">
                 <span className="text-bordure-gold font-bold font-montserrat shrink-0 mt-0.5">C.</span>
                 <span>
-                  <strong className="text-bordure-green">Départage au tirage au sort</strong> — À la
-                  clôture du tour, le manager ayant misé le plus remporte le coureur. En cas d'égalité,
-                  un tirage au sort désigne le vainqueur.
+                  <strong className="text-bordure-green">En cas d'égalité</strong> — À la clôture du
+                  tour, le manager ayant misé le plus remporte le coureur. Si plusieurs managers
+                  misent le même montant maximal, <strong>aucun ne remporte le coureur</strong> :
+                  il est remis en jeu et redevient disponible au tour suivant.
                 </span>
               </li>
               <li className="flex items-start gap-3">
