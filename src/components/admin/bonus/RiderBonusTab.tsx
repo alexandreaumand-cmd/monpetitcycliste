@@ -259,22 +259,43 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     setBonusToEdit(bonus);
     setEditPoints(String(bonus.points));
     setEditCommentaire(bonus.commentaire || "");
+    setEditCourseId(bonus.course_id || "");
     setEditDialogOpen(true);
   };
+
+  const editCourseRequired = bonusToEdit?.bonus_type === 'first_win' || bonusToEdit?.bonus_type === 'itt';
 
   const handleEdit = async () => {
     if (!bonusToEdit || !editPoints) return;
 
+    if (editCourseRequired && !editCourseId) {
+      toast.error("La course est obligatoire pour ce type de bonus");
+      return;
+    }
+
     setIsEditing(true);
     try {
-      const { error } = await supabase
-        .from("bonus_points")
-        .update({
-          points: parseFloat(editPoints),
-          commentaire: editCommentaire || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", bonusToEdit.id);
+      const updatePayload: any = {
+        points: parseFloat(editPoints),
+        commentaire: editCommentaire || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (editCourseRequired) {
+        updatePayload.course_id = editCourseId;
+      }
+
+      // For first_win / itt: bonus is shared across all managers owning the rider.
+      // Update all rows that share (phase, bonus_type, coureur) so the course stays consistent.
+      let query = supabase.from("bonus_points").update(updatePayload);
+      if (editCourseRequired) {
+        query = query
+          .eq("phase_id", bonusToEdit.phase_id || phaseId)
+          .eq("bonus_type", bonusToEdit.bonus_type)
+          .eq("coureur_id", bonusToEdit.coureur_id);
+      } else {
+        query = query.eq("id", bonusToEdit.id);
+      }
+      const { error } = await query;
 
       if (error) throw error;
 
