@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/accordion";
 
 /**
- * Condensed FAQ section linking to the full /regles page.
+ * Condensed FAQ section linking to the full /rules page.
  * Keeps the brand palette (cream / forest green / gold / pink).
  */
 const RulesHighlightsSection = () => {
@@ -111,7 +111,7 @@ const RulesHighlightsSection = () => {
           className="mt-8 text-center"
         >
           <Link
-            to="/regles"
+            to="/rules"
             className="inline-flex items-center gap-2 text-secondary font-montserrat font-semibold text-sm hover:text-bordure-gold transition-colors group"
           >
             Voir toutes les règles

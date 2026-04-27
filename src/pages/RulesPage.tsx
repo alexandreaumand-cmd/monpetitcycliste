@@ -21,6 +21,11 @@ import {
   Flag,
   Star,
   Database,
+  Compass,
+  Bell,
+  Menu,
+  Home,
+  MessageCircle,
 } from "lucide-react";
 
 /* ──────────── helpers ──────────── */
@@ -976,6 +981,119 @@ const RulesPage = () => {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          </SectionCard>
+
+          <BordureStripes orientation="horizontal" className="mx-auto max-w-xs" />
+
+          {/* ── 10. Tips de navigation ── */}
+          <SectionCard icon={Compass} num="10" title="Tips de navigation">
+            <p className="text-bordure-green/80 font-inter leading-relaxed mb-5">
+              Quelques raccourcis pour te repérer rapidement dans l'application.
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Home className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Tableau de bord</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Toutes tes ligues actives sont affichées sur la page d'accueil. Clique sur une carte pour
+                  accéder directement à ses enchères ou à son classement selon le contexte.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-bordure-pink" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Changer de ligue</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Le sélecteur de ligue (en haut sur mobile, dans la barre latérale sur desktop) permet de
+                  basculer instantanément entre tes différentes ligues sans perdre la page courante.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Calendrier & Data</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Accessibles depuis le header, ces deux pages sont tes outils d'analyse principaux pour
+                  préparer enchères et stratégies. Voir les sections 8 et 9 pour le détail.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Coureurs favoris</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  L'étoile est disponible partout (Calendrier, Data, Startlists, Enchères). Tes favoris
+                  sont synchronisés en temps réel sur tous tes appareils.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bell className="w-4 h-4 text-bordure-pink" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Notifications</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  La cloche dans le header te prévient des ouvertures et clôtures d'enchères, des résultats
+                  de courses et des messages dans l'Arène. Active les notifications push depuis ton compte
+                  pour ne rien manquer.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gavel className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Enchères</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Pense à <strong>valider</strong> tes mises avant la deadline. Tant que tous les managers
+                  n'ont pas validé, les annonces de résultats restent figées. Une fois la dernière validation
+                  reçue, le tour se clôt automatiquement.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Mon Équipe & Classement</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Suis les performances de tes coureurs jour par jour, consulte le détail des points par
+                  course et compare ton effectif avec celui des autres managers de la ligue.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageCircle className="w-4 h-4 text-bordure-pink" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">L'Arène</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  L'espace social de ta ligue : trash-talk, sondages, pronostics et suivi live des courses.
+                  Récapitulatifs automatiques après chaque épreuve majeure.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-bordure-green/10 bg-bordure-cream/40 p-4 sm:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Menu className="w-4 h-4 text-bordure-gold" />
+                  <h4 className="font-montserrat font-semibold text-bordure-green text-sm">Mobile</h4>
+                </div>
+                <p className="text-bordure-green/70 font-inter text-sm leading-relaxed">
+                  Sur mobile, la barre du bas donne accès aux principales sections (Équipe, Enchères,
+                  Classement, Arène). Le menu burger en haut à gauche déroule les fonctions secondaires
+                  (compte, ligues, paramètres). L'app est installable comme PWA depuis ton navigateur.
+                </p>
+              </div>
+            </div>
           </SectionCard>
         </div>
 
