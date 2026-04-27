@@ -110,15 +110,15 @@ interface MovementsCompactProps {
   scrollMaxClass?: string;
 }
 
-const StartlistMovementsCompact = ({ items, isLoading, resolveTeam, scrollMaxClass = "max-h-[280px]" }: MovementsCompactProps) => {
+const StartlistMovementsCompact = ({ items, isLoading, resolveTeam, scrollMaxClass = "max-h-[460px]" }: MovementsCompactProps) => {
   const { t } = useTranslation('calendar');
 
   if (isLoading) {
     return (
       <div className="space-y-1.5">
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
     );
   }
@@ -132,32 +132,38 @@ const StartlistMovementsCompact = ({ items, isLoading, resolveTeam, scrollMaxCla
   }
 
   return (
-    <div className={cn("space-y-0.5 overflow-y-auto pr-1", scrollMaxClass)}>
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center gap-2 text-xs py-1 px-1.5 rounded hover:bg-muted/50 transition-colors"
-        >
-          {item.change_type === "added" ? (
-            <span className="flex-shrink-0 rounded-full p-0.5 bg-green-500/15 text-green-600 dark:text-green-400" title={t('drawer.movements.added')}>
-              <Plus className="h-2.5 w-2.5" />
-            </span>
-          ) : (
-            <span className="flex-shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 dark:text-red-400" title={t('drawer.movements.removed')}>
-              <Minus className="h-2.5 w-2.5" />
-            </span>
-          )}
-          <span className="font-medium truncate flex-1 min-w-0">{item.rider_name}</span>
-          <span className="text-muted-foreground truncate hidden sm:block max-w-[35%]">
-            {resolveTeam(item) || t('drawer.movements.noTeam')}
-          </span>
-          <span className="text-muted-foreground/80 whitespace-nowrap text-[10px]">
-            {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
-          </span>
-        </div>
-      ))}
+    <div className={cn("space-y-1 overflow-y-auto pr-1", scrollMaxClass)}>
+      {items.map((item) => {
+        const team = resolveTeam(item) || t('drawer.movements.noTeam');
+        return (
+          <div
+            key={item.id}
+            className="flex items-start gap-2 py-1.5 px-1.5 rounded hover:bg-muted/50 transition-colors"
+          >
+            {item.change_type === "added" ? (
+              <span className="flex-shrink-0 rounded-full p-0.5 bg-green-500/15 text-green-600 dark:text-green-400 mt-0.5" title={t('drawer.movements.added')}>
+                <Plus className="h-3 w-3" />
+              </span>
+            ) : (
+              <span className="flex-shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 dark:text-red-400 mt-0.5" title={t('drawer.movements.removed')}>
+                <Minus className="h-3 w-3" />
+              </span>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm leading-tight truncate">{item.rider_name}</div>
+              <div className="flex items-center justify-between gap-2 mt-0.5">
+                <span className="text-xs text-muted-foreground truncate min-w-0">{team}</span>
+                <span className="text-[10px] text-muted-foreground/80 whitespace-nowrap flex-shrink-0">
+                  {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
+
 };
 
 export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCourseDialogProps) => {
