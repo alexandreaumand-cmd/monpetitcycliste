@@ -49,12 +49,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Get league scope (selected_course_ids) — for per_course leagues, restrict prestige to scoped courses
+    let leagueCourseIds: string[] | null = null;
+    {
+      const { data: scopeData } = await supabase
+        .from('league_scopes')
+        .select('selected_course_ids')
+        .eq('league_id', league_id)
+        .maybeSingle();
+      const ids = (scopeData?.selected_course_ids as string[] | null) || null;
+      if (ids && ids.length > 0) {
+        leagueCourseIds = ids;
+      }
+    }
+
     // Step 1: Get all prestige courses with their phase_id
-    const { data: prestigeCourses, error: coursesError } = await supabase
+    let coursesQuery = supabase
       .from('courses')
       .select('id, nom, categorie, phase_id')
       .in('categorie', ['WT GT', 'WT Monument', 'WC RR', 'WC ITT'])
       .in('phase_id', targetPhaseIds);
+    if (leagueCourseIds) {
+      coursesQuery = coursesQuery.in('id', leagueCourseIds);
+    }
+    const { data: prestigeCourses, error: coursesError } = await coursesQuery;
 
     if (coursesError) {
       console.error('Error fetching prestige courses:', coursesError);
