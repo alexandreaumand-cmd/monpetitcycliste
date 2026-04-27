@@ -1,66 +1,49 @@
-## Objectif
+# Ajout de la course obligatoire pour le bonus "First Win"
 
-Sur la page **Données Coureurs** (`/data`) :
-1. Réorganiser les filtres pour gagner de la place et améliorer la lisibilité (desktop + mobile).
-2. Ajouter un **nouveau filtre « Courses »** multi-sélection avec recherche textuelle. Quand une ou plusieurs courses sont sélectionnées, la liste se restreint aux coureurs présents sur la **startlist** de ces courses.
+## Contexte
 
-## Refonte UI des filtres
+Lors des derniers échanges, on a établi que le bonus **First Win** doit être rattaché à une course (la course sur laquelle le coureur a remporté sa 1ère victoire de carrière). C'est le `course_id` qui détermine ensuite, côté `get-rider-points-table`, dans quelles ligues ce bonus apparaît (uniquement les ligues dont le scope contient cette course).
 
-### Desktop
-Aujourd'hui : grille à 6 colonnes mélangeant Recherche, Équipe, Catégorie, **Cotes (gros bloc scroll)**, Programme, Favoris, Reset/Excel — provoque des trous visuels (cf. capture).
+Aujourd'hui, dans le formulaire super-admin "Nouveau Bonus Coureur", il n'y a pas de champ Course → toutes les insertions partent avec `course_id = NULL` et le bonus n'apparaît correctement dans aucune ligue par-course.
 
-Après :
-- **Barre principale (1 ligne)** : Recherche (large) · Équipe · Catégorie · **Courses (nouveau)** · Programme · Favoris uniquement (toggle compact).
-- **Cotes** déplacées dans un **Popover compact** (bouton "Cotes (n)" qui ouvre la liste à cocher actuelle). Plus de gros bloc scrollable inline.
-- **Actions à droite** sur la même ligne que le compteur de résultats : `Réinitialiser` + `Excel`. Ils ne consomment plus une cellule de grille.
-- Compteur "X coureurs affichés (sur Y)" + chips des filtres actifs cliquables pour les retirer rapidement.
+## Ce qui change
 
-### Mobile
-- Garder Recherche toujours visible.
-- Bouton "Filtres" déjà existant : ajouter le nouveau filtre Courses dans le `Collapsible`, au-dessus de Programme.
-- Cotes restent dans le collapsible (déjà compact en mobile).
+### 1. Formulaire "Nouveau Bonus Coureur" (super-admin)
+Fichier : `src/components/admin/bonus/RiderBonusTab.tsx`
 
-## Nouveau filtre « Courses »
+- Ajouter un champ **Course** (combobox cherchable, listant les courses de la saison sélectionnée).
+- Le champ est :
+  - **obligatoire** quand `bonus_type = 'first_win'`
+  - **obligatoire** quand `bonus_type = 'itt'` (cohérent : un ITT a lieu sur une course précise)
+  - **caché / optionnel** quand `bonus_type = 'coureur_bonuse'` (bonus +25% calculé par phase, pas par course)
+- Bloquer le bouton "Enregistrer" tant qu'aucune course n'est choisie pour les types qui l'exigent.
+- À l'insertion dans `bonus_points`, transmettre `course_id` (la table a déjà la colonne, la logique de filtrage par ligue dans `get-rider-points-table` est déjà branchée).
+- Reset du champ à la fermeture du dialog.
 
-### UI
-- Composant : combobox multi-sélection avec recherche (réutiliser `src/components/ui/multi-select.tsx` ou un `Popover` + `Command` à la `CoureursCombobox`).
-- Placeholder : "Filtrer par course…".
-- Liste déroulante avec recherche textuelle (input en haut), résultats triés par date.
-- Affichage des courses sélectionnées sous forme de **badges** retirables.
-- Compteur "(n)" sur le déclencheur.
+### 2. Tableau "Bonus Coureur attribués"
+Même fichier — ajouter une colonne **Course** pour visualiser à quelle course chaque bonus est rattaché (libellé court de la course, ou `—` si NULL pour les `coureur_bonuse`).
 
-### Source de données
-- Reprendre exactement la logique de récupération de `programData` déjà présente dans `RidersData.tsx` (table `startlist_entries` jointe à `startlist_imports` + `courses`, scopée à `localSelectedSeason.id`, paginée).
-- En extraire deux structures :
-  1. `riderRacesMap` (déjà calculé, conservé tel quel pour l'affichage du programme).
-  2. `raceToRidersMap: Map<race_id, Set<coureur_id>>` reconstruite dans la même `useQuery` (un seul fetch, deux index).
-- Liste des courses du filtre : `Array<{ id, nom, date_debut }>` distincte issue du même fetch, triée par `date_debut` croissant. Pas de fetch supplémentaire.
-- Inclure **toutes les courses qui ont une startlist importée pour la saison sélectionnée** (passées + à venir), pas seulement les courses futures. → Adapter la requête : retirer le `gte("date_debut", today)` pour le set "courses du filtre"; conserver le filtre `today` uniquement pour le calcul "Programme à venir" (déjà utilisé pour le filtre Programme et l'affichage).
-  - Implémentation : faire **deux** index dans la même boucle, l'un sans filtre date pour `raceToRidersMap`, l'autre filtré `>= today` pour `riderRacesMap` (programme).
-  - La requête actuelle a `.gte("startlist_imports.courses.date_debut", today)` → la retirer et appliquer le filtre date côté client uniquement pour `riderRacesMap`.
+### 3. (Optionnel — recommandé) Édition d'un bonus existant
+Le dialog d'édition actuel ne permet de modifier que `points` et `commentaire`. Ajouter la possibilité de **rattacher/changer la course** pour les bonus `first_win` / `itt` existants — utile pour corriger les bonus 2026 déjà saisis sans course, comme tu l'as proposé.
 
-### État & filtrage
-- Nouvel état : `const [selectedCourses, setSelectedCourses] = useState<string[]>([])`.
-- Dans `filteredRiders`, ajouter :
+## Détails techniques
+
+- **Source des courses** : requête `useQuery` sur `courses` filtrée par `saison_id` (pattern déjà utilisé dans `CourseSelector.tsx`), triée par `date_debut`. Renvoie `{ id, course_nom, date_debut, categorie }`.
+- **Composant UI** : Popover + Command (cherche par nom de course), même pattern que le `CourseMultiSelect` récemment créé, mais en sélection unique. Pas besoin d'extraire un composant — l'inliner dans le dialog suffit (utilisé à un seul endroit).
+- **Validation** :
   ```ts
-  if (selectedCourses.length > 0) {
-    const ridersInCourses = new Set<string>();
-    for (const cid of selectedCourses) {
-      const set = raceToRidersMap.get(cid);
-      if (set) set.forEach(r => ridersInCourses.add(r));
-    }
-    if (!ridersInCourses.has(rider.coureur_id)) return false;
+  const courseRequired = bonusType === 'first_win' || bonusType === 'itt';
+  if (courseRequired && !selectedCourseId) {
+    toast.error("La course est obligatoire pour ce type de bonus");
+    return;
   }
   ```
-  → Logique **OU** (un coureur présent sur l'une des courses sélectionnées). À confirmer si l'utilisateur préfère ET (intersection).
-- Inclus dans `Réinitialiser` et dans le compteur de filtres actifs (mobile + desktop).
+- **Insert** : ajouter `course_id: selectedCourseId || null` aux objets passés à `supabase.from("bonus_points").insert(...)` dans les deux branches (multi-manager et mono-manager).
+- **Aucune migration DB** nécessaire : `bonus_points.course_id text NULLABLE` existe déjà.
+- **Aucune modif edge function** : `get-rider-points-table` filtre déjà les bonus avec `course_id` selon le scope de la ligue.
 
-## Fichiers impactés
+## Hors scope
 
-- `src/pages/RidersData.tsx` : refonte du bloc filtres desktop + mobile, ajout état + filtrage Courses, ajout `raceToRidersMap` et `coursesList` dans `useQuery` `riders-program`, popover Cotes.
-- `src/i18n/locales/fr/data.json` & `en/data.json` : nouvelles clés `filters.courses`, `filters.coursesPlaceholder`, `filters.coursesAll`.
-- Aucune nouvelle table, aucune Edge Function, aucun changement DB.
-
-## Question ouverte (à confirmer après lecture du plan)
-
-- Si plusieurs courses sont sélectionnées, faut-il afficher les coureurs présents sur **au moins une** (OU, défaut proposé) ou sur **toutes** (ET) ? Je pars sur OU sauf indication contraire.
+- Les bonus `coureur_bonuse` (+25%) restent par phase, sans course.
+- Les bonus manager (TTT, Scoreurs) ne sont pas concernés.
+- Tu corrigeras ensuite manuellement (ou via le dialog d'édition au point 3) les bonus First Win 2026 déjà saisis sans course.

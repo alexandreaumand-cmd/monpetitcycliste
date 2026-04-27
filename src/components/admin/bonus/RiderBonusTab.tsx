@@ -12,8 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw, Check, ChevronsUpDown } from "lucide-react";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
+import { cn } from "@/lib/utils";
 
 interface RiderBonusTabProps {
   phaseId: string;
@@ -47,8 +50,39 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
   const [selectedCoureur, setSelectedCoureur] = useState<any>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [coursePopoverOpen, setCoursePopoverOpen] = useState(false);
   const [points, setPoints] = useState<string>("");
   const [commentaire, setCommentaire] = useState("");
+
+  // Edit course state
+  const [editCourseId, setEditCourseId] = useState<string>("");
+  const [editCoursePopoverOpen, setEditCoursePopoverOpen] = useState(false);
+
+  const courseRequired = bonusType === 'first_win' || bonusType === 'itt';
+
+  // Fetch courses for the selected season
+  const { data: courses = [] } = useQuery({
+    queryKey: ["bonus-courses", saisonId],
+    queryFn: async () => {
+      const { data: phasesData } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", saisonId);
+      const phaseIds = (phasesData || []).map((p) => p.id);
+      if (phaseIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, nom, date_debut, categorie")
+        .in("phase_id", phaseIds)
+        .order("date_debut", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!saisonId,
+  });
+
+  const coursesMap = new Map(courses.map((c: any) => [c.id, c]));
 
   // Fetch existing rider bonuses
   const { data: bonuses, isLoading } = useQuery({
@@ -63,6 +97,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           commentaire,
           coureur_id,
           manager_id,
+          course_id,
           created_at,
           coureur:coureurs!bonus_points_coureur_id_fkey(id, nom),
           manager:managers!bonus_points_manager_id_fkey(id, nom)
@@ -103,6 +138,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const resetForm = () => {
     setBonusType("");
     setSelectedCoureur(null);
+    setSelectedCourseId("");
     setPoints("");
     setCommentaire("");
   };
@@ -110,6 +146,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const handleSubmit = async () => {
     if (!bonusType || !selectedCoureur || !points) {
       toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    if (courseRequired && !selectedCourseId) {
+      toast.error("La course est obligatoire pour ce type de bonus");
       return;
     }
 
@@ -132,6 +173,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       }
 
       const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
+      const courseIdToSave = courseRequired ? selectedCourseId : null;
 
       if (isMultiManagerBonus) {
         const { data: rostersData, error: rostersError } = await supabase
@@ -153,6 +195,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           bonus_type: bonusType,
           coureur_id: selectedCoureur.id,
           manager_id: roster.manager_id,
+          course_id: courseIdToSave,
           points: parseInt(points),
           commentaire: commentaire || null,
           created_by: managerData.id,
@@ -168,6 +211,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           bonus_type: bonusType,
           coureur_id: selectedCoureur.id,
           manager_id: selectedCoureur.manager_id,
+          course_id: courseIdToSave,
           points: parseInt(points),
           commentaire: commentaire || null,
           created_by: managerData.id,
@@ -215,22 +259,43 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     setBonusToEdit(bonus);
     setEditPoints(String(bonus.points));
     setEditCommentaire(bonus.commentaire || "");
+    setEditCourseId(bonus.course_id || "");
     setEditDialogOpen(true);
   };
+
+  const editCourseRequired = bonusToEdit?.bonus_type === 'first_win' || bonusToEdit?.bonus_type === 'itt';
 
   const handleEdit = async () => {
     if (!bonusToEdit || !editPoints) return;
 
+    if (editCourseRequired && !editCourseId) {
+      toast.error("La course est obligatoire pour ce type de bonus");
+      return;
+    }
+
     setIsEditing(true);
     try {
-      const { error } = await supabase
-        .from("bonus_points")
-        .update({
-          points: parseFloat(editPoints),
-          commentaire: editCommentaire || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", bonusToEdit.id);
+      const updatePayload: any = {
+        points: parseFloat(editPoints),
+        commentaire: editCommentaire || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (editCourseRequired) {
+        updatePayload.course_id = editCourseId;
+      }
+
+      // For first_win / itt: bonus is shared across all managers owning the rider.
+      // Update all rows that share (phase, bonus_type, coureur) so the course stays consistent.
+      let query = supabase.from("bonus_points").update(updatePayload);
+      if (editCourseRequired) {
+        query = query
+          .eq("phase_id", bonusToEdit.phase_id || phaseId)
+          .eq("bonus_type", bonusToEdit.bonus_type)
+          .eq("coureur_id", bonusToEdit.coureur_id);
+      } else {
+        query = query.eq("id", bonusToEdit.id);
+      }
+      const { error } = await query;
 
       if (error) throw error;
 
@@ -381,6 +446,61 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                 )}
               </div>
 
+              {courseRequired && (
+                <div className="space-y-2">
+                  <Label>Course *</Label>
+                  <Popover open={coursePopoverOpen} onOpenChange={setCoursePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal"
+                      >
+                        {selectedCourseId
+                          ? (coursesMap.get(selectedCourseId) as any)?.nom
+                          : "Sélectionner une course..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une course..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune course trouvée</CommandEmpty>
+                          <CommandGroup>
+                            {courses.map((c: any) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.nom} ${c.id}`}
+                                onSelect={() => {
+                                  setSelectedCourseId(c.id);
+                                  setCoursePopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedCourseId === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="flex-1 truncate">{c.nom}</span>
+                                {c.date_debut && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {new Date(c.date_debut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Course à laquelle ce bonus est rattaché. Il n'apparaîtra que dans les ligues incluant cette course.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Points *</Label>
                 <Input
@@ -439,6 +559,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                     <TableHead>Coureur</TableHead>
                     <TableHead>Équipe</TableHead>
                     <TableHead>Manager</TableHead>
+                    <TableHead>Course</TableHead>
                     <TableHead className="text-right">Points</TableHead>
                     <TableHead>Commentaire</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -460,6 +581,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                         <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
                       </TableCell>
                       <TableCell>{bonus.manager?.nom || '-'}</TableCell>
+                      <TableCell className="text-xs">
+                        {bonus.course_id
+                          ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
                       </TableCell>
@@ -510,6 +636,62 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                 {getBonusLabel(bonusToEdit.bonus_type)}
                 {bonusToEdit.manager?.nom && ` (${bonusToEdit.manager.nom})`}
               </div>
+
+              {editCourseRequired && (
+                <div className="space-y-2">
+                  <Label>Course *</Label>
+                  <Popover open={editCoursePopoverOpen} onOpenChange={setEditCoursePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal"
+                      >
+                        {editCourseId
+                          ? (coursesMap.get(editCourseId) as any)?.nom || editCourseId
+                          : "Sélectionner une course..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une course..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune course trouvée</CommandEmpty>
+                          <CommandGroup>
+                            {courses.map((c: any) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.nom} ${c.id}`}
+                                onSelect={() => {
+                                  setEditCourseId(c.id);
+                                  setEditCoursePopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    editCourseId === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="flex-1 truncate">{c.nom}</span>
+                                {c.date_debut && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {new Date(c.date_debut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    La modification s'applique à toutes les attributions de ce bonus pour ce coureur sur cette phase.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Points</Label>
