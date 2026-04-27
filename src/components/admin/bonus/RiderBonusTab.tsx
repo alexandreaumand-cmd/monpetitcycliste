@@ -50,8 +50,39 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
   const [selectedCoureur, setSelectedCoureur] = useState<any>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [coursePopoverOpen, setCoursePopoverOpen] = useState(false);
   const [points, setPoints] = useState<string>("");
   const [commentaire, setCommentaire] = useState("");
+
+  // Edit course state
+  const [editCourseId, setEditCourseId] = useState<string>("");
+  const [editCoursePopoverOpen, setEditCoursePopoverOpen] = useState(false);
+
+  const courseRequired = bonusType === 'first_win' || bonusType === 'itt';
+
+  // Fetch courses for the selected season
+  const { data: courses = [] } = useQuery({
+    queryKey: ["bonus-courses", saisonId],
+    queryFn: async () => {
+      const { data: phasesData } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", saisonId);
+      const phaseIds = (phasesData || []).map((p) => p.id);
+      if (phaseIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, nom, date_debut, categorie")
+        .in("phase_id", phaseIds)
+        .order("date_debut", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!saisonId,
+  });
+
+  const coursesMap = new Map(courses.map((c: any) => [c.id, c]));
 
   // Fetch existing rider bonuses
   const { data: bonuses, isLoading } = useQuery({
