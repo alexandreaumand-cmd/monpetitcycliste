@@ -637,6 +637,62 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                 {bonusToEdit.manager?.nom && ` (${bonusToEdit.manager.nom})`}
               </div>
 
+              {editCourseRequired && (
+                <div className="space-y-2">
+                  <Label>Course *</Label>
+                  <Popover open={editCoursePopoverOpen} onOpenChange={setEditCoursePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal"
+                      >
+                        {editCourseId
+                          ? (coursesMap.get(editCourseId) as any)?.nom || editCourseId
+                          : "Sélectionner une course..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une course..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune course trouvée</CommandEmpty>
+                          <CommandGroup>
+                            {courses.map((c: any) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.nom} ${c.id}`}
+                                onSelect={() => {
+                                  setEditCourseId(c.id);
+                                  setEditCoursePopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    editCourseId === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="flex-1 truncate">{c.nom}</span>
+                                {c.date_debut && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {new Date(c.date_debut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    La modification s'applique à toutes les attributions de ce bonus pour ce coureur sur cette phase.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Points</Label>
                 <Input
