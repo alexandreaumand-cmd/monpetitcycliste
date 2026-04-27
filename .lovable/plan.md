@@ -1,71 +1,82 @@
-## Objectif
+## Diagnostic
 
-Améliorer la modale "Course" du Calendrier (`CalendarCourseDialog.tsx`) avec deux évolutions :
+### Les coureurs existent bien
+- `itamar_einhorn` → "Itamar EINHORN" (équipe : NSN Cycling Team)
+- `rotem_tene` → "Rotem TENE" (équipe : (sans contrat))
 
-1. **Derniers mouvements de startlist** affichés dans l'espace libre à gauche (sous Points/Bareme/Route), condensés et lisibles. Sur mobile, en bas de page, repliables dans un accordéon.
-2. **Étoile favoris** à côté de chaque coureur de la startlist, même comportement que `RidersData` (table `rider_favorites`, toggle, jaune si favori).
+### Les alias existent bien aussi dans `name_aliases`
+- `TENE Rotem` → `rotem_tene` (source_team : `NSN Cycling Team (WT)`)
+- `EINHORN Itamar` → `itamar_einhorn` (source_team : `NDT`)
 
----
+### Pourquoi ils sortent quand même "unmatched" sur le Tour de Romandie
 
-## 1. Mouvements startlists (colonne gauche desktop, bas en mobile)
+L'entrée scrapée pour la Romandie est :
+- `EINHORN Itamar` / `NSN Cycling Team (WT)`
+- `TENE Rotem` / `NSN Cycling Team (WT)`
 
-**Données** : table `startlist_tracker_changes` filtrée sur `course_id = course.course_id`, ordre `detected_at DESC`, limite 30 (suffisant pour une seule course, condensé).
+Et l'historique montre que ces mêmes coureurs ont déjà été matchés `confirmed` plusieurs fois sur d'autres startlists (Paris-Nice, Tirreno…). Donc le matching fonctionne **parfois** mais pas ici.
 
-**Requête** (nouveau `useQuery` dans `CalendarCourseDialog.tsx`) :
+La table `name_aliases` **est bien interrogée** (cf. `startlist-tracker/index.ts` ligne 750 et `startlist-import/index.ts` ligne 482). Le problème vient de la **logique de comparaison** dans `matchRider()` (ligne 173-180) :
+
 ```ts
-supabase
-  .from("startlist_tracker_changes")
-  .select("id, change_type, rider_name, team_name, coureur_id, detected_at")
-  .eq("course_id", course.course_id)
-  .order("detected_at", { ascending: false })
-  .limit(30);
+for (const alias of aliases) {
+  const aliasNorm = normalize(alias.alias_text);
+  const aliasSig = tokenSig(alias.alias_text);
+  if (aliasNorm === sourceNorm || aliasNorm === entryNorm
+      || aliasSig === sourceSig || aliasSig === entrySig) {
+    return { coureur_id: alias.coureur_id, ... };
+  }
+}
 ```
 
-Fallback équipe : si `team_name` est `null` mais `coureur_id` présent, résoudre via `coureurs_saisons` + `equipes_saisons` (même logique que `StartlistTrackerMovements.tsx`, ligne 96-130) sur la saison courante (`useSeasonContext`).
+Le `tokenSig` trie les tokens alphabétiquement, donc `EINHORN Itamar` et `Itamar EINHORN` produisent **la même signature** `EINHORN ITAMAR`. Le matching alias **devrait** donc fonctionner.
 
-**Rendu condensé** — nouveau sous-composant local `StartlistMovementsCompact` :
-- En-tête : icône `ArrowDownUp` + libellé `Mouvements startlist` + badge count.
-- Lignes : icône Ajout (vert `Plus`) / Retrait (rouge `Minus`) + nom coureur (font-medium) + équipe (text-muted, truncate) + date relative `dd MMM HH:mm`.
-- Layout : `space-y-1`, `text-xs`, `py-1 px-2 rounded hover:bg-muted/50`.
-- Si zéro mouvement : message discret `Aucun mouvement détecté`.
-- Scroll vertical max-h-[280px] sur desktop pour ne pas pousser le contenu.
+**MAIS** : il existe en base **un autre coureur** que je dois vérifier — il y a un coureur `rotem_tene` dont le nom contient "TENE" et `fabio_puntener` (Fabio PuNTENER). La normalisation de "PuNTENER" donne `PUNTENER`. Le `tokenSig` de `TENE Rotem` = `ROTEM TENE`. Pas de collision directe avec `PUNTENER`. Donc l'alias devrait s'appliquer.
 
-**Placement responsive** :
-- **Desktop (`lg:`)** : intégré dans la colonne gauche existante (ligne 260, sous la route image), sans accordéon (toujours visible).
-- **Mobile (`< lg`)** : déplacé en bas de la grille, dans un `<Collapsible>` (déjà importé) avec trigger `Mouvements startlist (N)` + `ChevronDown/Up`. Pour ça : on rend deux instances conditionnelles (`hidden lg:block` à gauche / `lg:hidden` en bas après la startlist), ou plus propre : un seul bloc rendu deux fois selon breakpoint via `useIsMobile`.
+**Vraie cause probable** : la liste d'alias est chargée *avant* que ces deux alias ne soient parcourus dans la boucle, mais comme l'alias a un `source_team` différent (`NDT` pour Einhorn vs `NSN Cycling Team (WT)` scrapé), un autre filtre/boucle plus en amont (étape 2 "exact normalized roster") peut échouer car ces 2 coureurs **ne sont pas dans le roster de la phase active** (NSN Cycling Team est CT/Continental, hors WorldTour). Les alias étant en étape 1 (priorité haute), cela devrait fonctionner.
 
-Choix retenu : **un seul bloc rendu** dans la colonne gauche pour desktop (toujours déplié), et dupliqué en bas du grid sur mobile dans un Collapsible. Les deux utilisent la même donnée (même queryKey, partagée via React Query cache).
+### Vérification finale à faire
 
----
+Le fait que `bde61add-…` (Einhorn, 26 mars, mêmes nom + équipe) ait `coureur_id=itamar_einhorn` mais `confidence=NULL` et `status=confirmed` montre une incohérence : le code écrit `confidence` du résultat, qui n'est jamais NULL. Cela suggère que le matching s'est fait **après coup** (via `startlist-confirm-matches`) et non par la boucle alias, qui aurait mis confidence=1.0.
 
-## 2. Étoile favoris sur chaque coureur
+**Conclusion** : la boucle alias **ne s'exécute pas** ou bien la table `name_aliases` est **filtrée par RLS** lors de l'appel par le service role. Très improbable. Plus probable : un bug d'**ordre d'exécution** où le tracker écrit l'entrée comme `unmatched` avant même d'appeler `matchRider`, ou bien la requête SELECT sur `name_aliases` est **paginée à 1000 lignes** (limite Supabase par défaut) et les alias récents (créés en février) sont en dehors des 1000 premières lignes retournées.
 
-**Pré-requis** :
-- Récupérer `managerId` via `useCurrentManager()` (déjà utilisé ailleurs).
-- Charger les favoris du manager au montage (queryKey `["rider-favorites", managerId]`) :
-  ```ts
-  supabase.from("rider_favorites").select("coureur_id").eq("manager_id", managerId)
-  ```
-  → `Set<string>` de `coureur_id` favoris.
+## Plan de correction
 
-**Mutation** : copier exactement le pattern de `RidersData.tsx` (lignes 397-425) — `useMutation` qui insert/delete dans `rider_favorites`, invalide `["rider-favorites", managerId]`.
+### 1. Vérifier le nombre total d'alias en base
+Si > 1000, la requête `.from('name_aliases').select(...)` tronque silencieusement à 1000, et les alias récents sont ignorés.
 
-**Modification de `RiderRow`** (ligne 52-67) :
-- Ajouter props `isFavorite: boolean`, `onToggleFavorite: () => void`, `canFavorite: boolean` (false si pas de `coureur_id` matché ou pas de manager).
-- Ajouter en fin de ligne un `<button>` icône `Star` :
-  ```tsx
-  <Star className={cn("h-3.5 w-3.5", isFavorite ? "fill-yellow-400 text-bordure-gold" : "text-muted-foreground/50")} />
-  ```
-- `e.stopPropagation()` au clic pour éviter conflits.
-- Si `!canFavorite` (coureur non matché en base ou pas connecté) → ne pas afficher l'étoile.
+### 2. Corriger les deux Edge Functions (`startlist-import` et `startlist-tracker`)
 
-Propager `favoritesSet`, `toggleFavorite`, `managerId` depuis `CalendarCourseDialog` jusqu'aux `RiderRow` (via les deux colonnes du grid d'équipe).
+Ajouter une pagination explicite sur le chargement des alias :
+```ts
+const { data: aliasesData } = await supabase
+  .from('name_aliases')
+  .select('alias_text, coureur_id, source_team')
+  .range(0, 9999); // ou boucle de pagination si > 10k
+```
 
----
+### 3. Ajouter un log de diagnostic
+Logger le nombre d'alias chargés ET vérifier si les alias des 2 coureurs problématiques sont bien présents dans la liste chargée :
+```ts
+console.log(`[tracker] Loaded ${aliases.length} aliases`);
+const hasEinhorn = aliases.some(a => a.coureur_id === 'itamar_einhorn');
+const hasTene = aliases.some(a => a.coureur_id === 'rotem_tene');
+console.log(`[tracker] Einhorn alias loaded: ${hasEinhorn}, Tene alias loaded: ${hasTene}`);
+```
 
-## Fichiers modifiés
+### 4. Re-déclencher le matching sur la startlist Romandie
+Une fois la fix déployée, ré-exécuter le tracker (ou un re-match ciblé) sur `startlist_id=24984ddd-...` pour reclasser les 2 entrées en `confirmed`.
 
-- `src/components/calendar/CalendarCourseDialog.tsx` — ajout des deux queries (mouvements + favoris), mutation toggleFavorite, sous-composant `StartlistMovementsCompact`, modification de `RiderRow` (étoile), placement responsive (desktop colonne gauche + mobile bas en accordéon).
-- `src/i18n/locales/fr/calendar.json` et `en/calendar.json` — nouvelles clés : `drawer.movements.title`, `drawer.movements.added`, `drawer.movements.removed`, `drawer.movements.empty`, `drawer.movements.detected`.
+## Réponse aux questions
 
-Aucune migration DB nécessaire (tables `startlist_tracker_changes` et `rider_favorites` existent déjà).
+> **La table `name_aliases` est-elle interrogée ?** 
+Oui, à chaque exécution de `startlist-import` (ligne 482) et `startlist-tracker` (ligne 750).
+
+> **Y a-t-il des alias pour ces 2 coureurs ?** 
+Oui, les deux existent :
+- `TENE Rotem` → `rotem_tene` (créé le 11/02/2026)
+- `EINHORN Itamar` → `itamar_einhorn` (créé le 21/02/2026)
+
+> **Pourquoi le matching échoue ?** 
+Très probablement à cause de la **limite implicite de 1000 lignes** sur la requête Supabase qui charge les alias. Les alias récents tombent hors de la fenêtre et ne sont jamais comparés.
