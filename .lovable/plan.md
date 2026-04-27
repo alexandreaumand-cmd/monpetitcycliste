@@ -1,97 +1,73 @@
-## Contexte
+## Diagnostic
 
-La ligue **"T1 - Barb+Amstel"** (mode `per_course`, scope = *De Brabantse Pijl* + *La Flèche Brabançonne* + *Amstel Gold Race*) est en LIVE avec `status = 'active'` alors que sa dernière course (Amstel, 19/04) est terminée.
+### 1. Pourquoi le récap hebdo n'a pas été envoyé hier (dimanche 26/04)
 
-Le tableau de bord (`DashboardHome.tsx`) bascule une ligue dans la section "Ligues terminées" uniquement quand `league.status === 'completed'`. Or :
+J'ai inspecté le LIVE :
 
-- Le bouton `LeagueArchiveButton` (qui appelle `leagues-archive` et passe le statut à `completed`) existe dans le code mais **n'est utilisé nulle part**.
-- L'action Super Admin "Archiver" (`SuperAdminLeagueActions.tsx`) passe à `cancelled`, **pas** `completed` → ne range donc pas la ligue dans "Ligues terminées".
-- **Aucun mécanisme automatique** ne ferme une ligue `per_course` quand toutes ses courses sont passées.
+- **Le cron a bien tiré** : `cron.job_run_details` montre que le job `arena-weekly-recap` (jobid 23) a été exécuté dimanche 26/04 à 20:15 UTC avec statut `succeeded` (HTTP envoyé à l'edge function).
+- **Mais rien n'a été produit** : 
+  - 0 ligne dans `arena_recap_runs` pour `run_type = 'weekly'` (jamais, depuis le début)
+  - 0 message `arena_messages` contenant "Bilan de la semaine" depuis 1 mois
+  - aucun log côté `arena-recaps`
+- **Le récap quotidien fonctionne** sur le même cron, même secret, même fonction → l'auth et le routage sont OK.
+
+**Cause racine probable** : la fonction `sendWeeklyRecap` est nettement plus lourde que `sendDailyRecap` (RPC `get_weekly_top_riders` + RPC `get_daily_points_by_manager` sur 7 jours + requête `bonus_points` + requête `upcoming_races` + push notifications), et elle est exécutée en **boucle séquentielle sur les 12 ligues actives**. Bien que la fonction utilise `EdgeRuntime.waitUntil`, le runtime Edge tue le worker au bout d'environ 150s : la boucle est interrompue avant d'atteindre l'`INSERT` final dans `arena_recap_runs` (ligne 140) → silence total côté audit, et aucun message n'a le temps d'être produit.
+
+### 2. Pourquoi l'horaire ne correspond pas
+
+Les jobs cron pg_cron tournent en **UTC**, pas en heure de Paris :
+
+| Job | Schedule actuel | Heure UTC | Heure Paris (CEST) |
+|---|---|---|---|
+| arena-daily-recap | `0 20 * * *` | 20:00 | **22:00** |
+| arena-weekly-recap | `15 20 * * 0` | 20:15 dimanche | **22:15 dimanche** |
+
+Pour obtenir **20:30 Paris (CEST)**, il faut programmer à **18:30 UTC** d'avril à octobre. En hiver (CET) ce sera 19:30 Paris — voir note ci-dessous.
 
 ## Plan d'action
 
-### 1. Correctif immédiat (LIVE) — clore la ligue T1 - Barb+Amstel
+### Étape 1 — Reprogrammer les crons à 20h30 Paris
 
-Migration SQL ciblée :
-```sql
-UPDATE leagues
-SET status = 'completed',
-    archived_at = COALESCE(archived_at, now())
-WHERE id = '817b6ae6-f8ae-4ccb-a1ed-1546eadb2f2f';
+Via `cron.alter_job` (préserve les jobids 22 et 23, conformément au standard projet) :
+
+- `arena-daily-recap` → `30 18 * * *` (18:30 UTC = 20:30 Paris CEST, tous les jours)
+- `arena-weekly-recap` → `35 18 * * 0` (18:35 UTC dimanche, 5 min après le quotidien pour éviter une collision sur les ressources Edge)
+
+Note timezone : pg_cron ne supporte pas nativement les fuseaux. En heure d'hiver (CET, fin oct → fin mars), les récaps tomberaient à 19:30 Paris. Si l'horaire 20:30 doit rester strict toute l'année, je peux soit :
+- (option A, recommandée) garder un schedule fixe en UTC et ajuster manuellement 2× par an aux changements d'heure
+- (option B) faire tourner le cron à 18:30 ET 19:30 UTC avec un garde-fou côté fonction qui vérifie l'heure de Paris
+
+À confirmer après approbation. Par défaut je pars sur l'option A (CEST = la majorité de la saison cyclisme).
+
+### Étape 2 — Fixer le récap hebdo pour qu'il aille au bout
+
+Modifier `supabase/functions/arena-recaps/index.ts` :
+
+1. **Paralléliser le traitement des ligues** dans `processRecaps` avec `Promise.allSettled` (au lieu de la boucle `for` séquentielle). Sur 12 ligues, ça divise le temps total par ~10.
+2. **Découpler les push notifications** : les envoyer en `Promise.allSettled` plutôt que `await` séquentiel à la fin de `sendWeeklyRecap`.
+3. **Logger l'audit progressivement** : insérer un audit `status: 'started'` dès le début, puis le mettre à jour à la fin → permet de détecter immédiatement les futurs timeouts.
+4. **Ajouter un timeout garde-fou** : envelopper chaque traitement de ligue dans un `Promise.race` avec timeout 30s pour qu'une ligue lente ne bloque pas les autres.
+
+### Étape 3 — Renvoyer manuellement le récap hebdo de la semaine du 20 au 26 avril
+
+Une fois le code corrigé et déployé, invoquer manuellement la fonction en LIVE :
 ```
-Appliquée en Test puis poussée en LIVE au prochain publish.
-
-### 2. Action manuelle pour le owner / admin de ligue
-
-Brancher le composant `LeagueArchiveButton` (déjà écrit, inutilisé) dans `LeagueSettingsForm.tsx`, visible pour `owner`/`admin` de la ligue, libellé adapté :
-- Bouton **"Marquer comme terminée"** → appelle l'edge function `leagues-archive` existante (qui fait `status = 'completed'`).
-- Affiché uniquement si `status === 'active'`.
-- Confirmation : "La ligue passera dans 'Ligues terminées' du tableau de bord. Réversible par un super-admin."
-
-### 3. Action Super Admin — distinguer "Terminer" et "Annuler"
-
-Dans `SuperAdminLeagueActions.tsx`, ajouter une entrée distincte :
-- **"Marquer comme terminée"** → `status = 'completed'` + `archived_at = now()`
-- Conserver "Archiver" actuel (`cancelled`) pour les ligues à annuler.
-- Conserver "Désarchiver" qui repasse à `active`.
-
-### 4. Automatisation — clore les ligues `per_course` quand toutes les courses sont jouées
-
-Nouvelle fonction SQL + cron quotidien (réutilise le pattern `auto-update-phase-status` mémorisé) :
-
-```sql
-CREATE OR REPLACE FUNCTION auto_complete_per_course_leagues()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  UPDATE leagues l
-  SET status = 'completed',
-      archived_at = COALESCE(l.archived_at, now())
-  WHERE l.status = 'active'
-    AND l.game_mode = 'per_course'
-    AND EXISTS (
-      SELECT 1 FROM league_scopes ls
-      WHERE ls.league_id = l.id
-        AND ls.selected_course_ids IS NOT NULL
-        AND array_length(ls.selected_course_ids, 1) > 0
-    )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM league_scopes ls
-      JOIN courses c ON c.id = ANY(ls.selected_course_ids)
-      WHERE ls.league_id = l.id
-        AND (c.date_fin IS NULL OR c.date_fin >= CURRENT_DATE)
-    );
-END;
-$$;
-
-SELECT cron.schedule(
-  'auto-complete-per-course-leagues',
-  '15 3 * * *',
-  $$SELECT public.auto_complete_per_course_leagues();$$
-);
+POST /arena-recaps  body={"type":"weekly","date":"2026-04-26"}
 ```
+pour publier rétroactivement le bilan hebdo manqué dans les 12 ligues actives.
 
-Logique : pour chaque ligue `per_course` active, si toutes les courses du scope ont une `date_fin < today`, on passe la ligue en `completed`.
+### Étape 4 — Vérification
 
-Note : pour les modes `five_phases` / `full_season`, on garde la clôture manuelle (la fin de saison est déjà gérée par les phases). On pourra étendre dans un second temps si souhaité.
-
-### 5. (Optionnel) Backfill des autres ligues `per_course`
-
-Lister les ligues actives `per_course` dont toutes les courses sont déjà terminées, et leur appliquer le même UPDATE que pour T1 - Barb+Amstel.
+- Confirmer via `SELECT * FROM cron.job WHERE jobid IN (22,23)` que les nouveaux schedules sont actifs.
+- Confirmer la présence d'une ligne `weekly` dans `arena_recap_runs` après l'exécution manuelle.
+- Vérifier qu'un message "🏆 Bilan de la semaine" apparaît dans le canal #general des 12 ligues.
 
 ## Détails techniques
 
-- Fichiers modifiés :
-  - Nouvelle migration : UPDATE LIVE de la ligue + création de `auto_complete_per_course_leagues()` + cron.
-  - `src/components/leagues/LeagueSettingsForm.tsx` : intégration `LeagueArchiveButton`.
-  - `src/components/leagues/LeagueArchiveButton.tsx` : ajustement libellé ("Marquer comme terminée").
-  - `src/components/admin/leagues/SuperAdminLeagueActions.tsx` : nouvelle entrée "Marquer comme terminée" (`status=completed`).
-  - i18n FR/EN si nécessaire.
-- Aucun changement côté `DashboardHome.tsx` : la séparation active/terminée fonctionne déjà via `status === 'completed'`.
-- Edge function `leagues-archive` déjà conforme (passe à `completed`).
+**Fichiers modifiés** :
+- `supabase/functions/arena-recaps/index.ts` (parallélisation + audit progressif)
+- 1 migration SQL `cron.alter_job` pour les jobids 22 et 23 (via outil insert, pas migration, conformément au standard projet sur les crons)
 
-## Validation
-
-1. Après publish : la ligue T1 - Barb+Amstel apparaît dans "Ligues terminées" sur le dashboard LIVE.
-2. Le owner d'une ligue voit le bouton "Marquer comme terminée" dans les paramètres de ligue.
-3. Le cron tourne chaque nuit et ferme automatiquement les ligues `per_course` dont toutes les courses sont passées.
+**Risques** :
+- La parallélisation augmente la charge instantanée sur la DB ; les RPC `get_weekly_top_riders` et `get_daily_points_by_manager` doivent supporter ~12 appels concurrents (devrait être OK, requêtes courtes scope-ligue).
+- L'envoi rétroactif du récap hebdo du 26/04 publiera un message daté du dimanche dans toutes les ligues. À valider avant exécution.
