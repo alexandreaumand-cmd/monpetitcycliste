@@ -469,16 +469,11 @@ export default function RidersData() {
         if (programFilter === "with" && !hasProgram) return false;
         if (programFilter === "without" && hasProgram) return false;
       }
-      // Courses filter (rider is on the startlist of at least one selected race)
+      // Courses filter (rider must be on the startlist of ALL selected races - AND logic)
       if (selectedCourses.length > 0) {
-        let inAny = false;
         for (const cid of selectedCourses) {
-          if (ridersByRace?.get(cid)?.has(rider.coureur_id)) {
-            inAny = true;
-            break;
-          }
+          if (!ridersByRace?.get(cid)?.has(rider.coureur_id)) return false;
         }
-        if (!inAny) return false;
       }
       return true;
     });

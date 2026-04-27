@@ -56,7 +56,7 @@ export function CourseMultiSelect({
   };
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("relative", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -128,7 +128,7 @@ export function CourseMultiSelect({
         </PopoverContent>
       </Popover>
       {selectedOptions.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="absolute left-0 right-0 top-full mt-1 flex flex-wrap gap-1 z-10">
           {selectedOptions.map((opt) => (
             <Badge
               key={opt.id}
