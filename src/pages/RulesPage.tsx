@@ -326,31 +326,46 @@ const TourBaremeBlock = ({
   etape,
   maillots,
   porteurs,
+  detailedMaillots,
 }: {
   gc: [number, number][];
   etape: [number, number][];
   maillots: { label: string; pts: number }[];
   porteurs: { label: string; pts: number }[];
+  detailedMaillots?: { label: string; rows: [number, number][] }[];
 }) => (
   <div className="space-y-4">
     <CompactBareme label={`Classement général final (top ${gc.length})`} rows={gc} />
     <CompactBareme label={`Classement d'étape (top ${etape.length})`} rows={etape} />
-    <div>
-      <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
-        Maillots distinctifs (classement final)
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-        {maillots.map((m) => (
-          <div
-            key={m.label}
-            className="flex flex-col items-center p-2 rounded bg-bordure-cream/50 border border-bordure-green/5 text-center"
-          >
-            <span className="text-[11px] text-bordure-green/60 font-inter">{m.label}</span>
-            <span className="font-montserrat font-bold text-sm text-bordure-green">{m.pts} pts</span>
-          </div>
-        ))}
+    {detailedMaillots ? (
+      <div>
+        <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-2">
+          Maillots distinctifs (classement final)
+        </p>
+        <div className="space-y-3">
+          {detailedMaillots.map((m) => (
+            <CompactBareme key={m.label} label={`${m.label} (top ${m.rows.length})`} rows={m.rows} />
+          ))}
+        </div>
       </div>
-    </div>
+    ) : (
+      <div>
+        <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
+          Maillots distinctifs (classement final)
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          {maillots.map((m) => (
+            <div
+              key={m.label}
+              className="flex flex-col items-center p-2 rounded bg-bordure-cream/50 border border-bordure-green/5 text-center"
+            >
+              <span className="text-[11px] text-bordure-green/60 font-inter">{m.label}</span>
+              <span className="font-montserrat font-bold text-sm text-bordure-green">{m.pts} pts</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
     <div>
       <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
         Points porteur (par jour de course)
