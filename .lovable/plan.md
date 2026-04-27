@@ -1,64 +1,66 @@
-## Règle métier clarifiée
+## Objectif
 
-Le bonus **"First win"** = 1ère victoire **en carrière** d'un coureur (événement unique).
-- Doit être **lié à la course de la victoire** (`course_id` rempli).
-- Une **seule ligne** dans `bonus_points` (pas une par ligue).
-- Une ligue affiche/comptabilise ce bonus **uniquement si la course est dans son scope**.
+Sur la page **Données Coureurs** (`/data`) :
+1. Réorganiser les filtres pour gagner de la place et améliorer la lisibilité (desktop + mobile).
+2. Ajouter un **nouveau filtre « Courses »** multi-sélection avec recherche textuelle. Quand une ou plusieurs courses sont sélectionnées, la liste se restreint aux coureurs présents sur la **startlist** de ces courses.
 
-## État actuel en LIVE (à corriger)
+## Refonte UI des filtres
 
-- 16 bonus `first_win` existent, **tous avec `course_id = NULL`** et dupliqués par ligue (ancien modèle).
-- Conséquence : ils fuient dans toutes les ligues (cf. Seixas dans COPArdennaises).
-- Les autres bonus (`coureur_bonuse`, `ttt`, `scoreurs`) sont des bonus de phase sans course → restent filtrés par `league_id`.
+### Desktop
+Aujourd'hui : grille à 6 colonnes mélangeant Recherche, Équipe, Catégorie, **Cotes (gros bloc scroll)**, Programme, Favoris, Reset/Excel — provoque des trous visuels (cf. capture).
 
-## Plan en 3 étapes
+Après :
+- **Barre principale (1 ligne)** : Recherche (large) · Équipe · Catégorie · **Courses (nouveau)** · Programme · Favoris uniquement (toggle compact).
+- **Cotes** déplacées dans un **Popover compact** (bouton "Cotes (n)" qui ouvre la liste à cocher actuelle). Plus de gros bloc scrollable inline.
+- **Actions à droite** sur la même ligne que le compteur de résultats : `Réinitialiser` + `Excel`. Ils ne consomment plus une cellule de grille.
+- Compteur "X coureurs affichés (sur Y)" + chips des filtres actifs cliquables pour les retirer rapidement.
 
-### 1. Code — Filtrage corrigé dans `get-rider-points-table`
+### Mobile
+- Garder Recherche toujours visible.
+- Bouton "Filtres" déjà existant : ajouter le nouveau filtre Courses dans le `Collapsible`, au-dessus de Programme.
+- Cotes restent dans le collapsible (déjà compact en mobile).
 
-Adapter la requête `bonus_points` pour appliquer la bonne règle selon le type :
-- Bonus avec `course_id` rempli → doit être dans le scope de la ligue (filtre par scope, **pas** par league_id pour permettre la propagation universelle).
-- Bonus avec `course_id = NULL` → bonus de ligue spécifique (rider bonus, ttt, scoreurs) → filtré par `league_id`.
+## Nouveau filtre « Courses »
 
-```ts
-// Bonus liés à une course : visibles dans toute ligue ayant la course dans son scope
-// Bonus sans course : isolés par league_id
-const filters: string[] = [];
-if (leagueCourseIds && leagueCourseIds.length > 0) {
-  filters.push(`course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
-}
-if (league_id) {
-  filters.push(`and(course_id.is.null,league_id.eq.${league_id})`);
-}
-if (filters.length > 0) {
-  bonusQuery = bonusQuery.or(filters.join(','));
-}
-```
+### UI
+- Composant : combobox multi-sélection avec recherche (réutiliser `src/components/ui/multi-select.tsx` ou un `Popover` + `Command` à la `CoureursCombobox`).
+- Placeholder : "Filtrer par course…".
+- Liste déroulante avec recherche textuelle (input en haut), résultats triés par date.
+- Affichage des courses sélectionnées sous forme de **badges** retirables.
+- Compteur "(n)" sur le déclencheur.
 
-Cela permet aussi à un bonus first_win sur Amstel d'apparaître automatiquement dans **toutes** les ligues ayant Amstel dans leur scope, sans duplication.
+### Source de données
+- Reprendre exactement la logique de récupération de `programData` déjà présente dans `RidersData.tsx` (table `startlist_entries` jointe à `startlist_imports` + `courses`, scopée à `localSelectedSeason.id`, paginée).
+- En extraire deux structures :
+  1. `riderRacesMap` (déjà calculé, conservé tel quel pour l'affichage du programme).
+  2. `raceToRidersMap: Map<race_id, Set<coureur_id>>` reconstruite dans la même `useQuery` (un seul fetch, deux index).
+- Liste des courses du filtre : `Array<{ id, nom, date_debut }>` distincte issue du même fetch, triée par `date_debut` croissant. Pas de fetch supplémentaire.
+- Inclure **toutes les courses qui ont une startlist importée pour la saison sélectionnée** (passées + à venir), pas seulement les courses futures. → Adapter la requête : retirer le `gte("date_debut", today)` pour le set "courses du filtre"; conserver le filtre `today` uniquement pour le calcul "Programme à venir" (déjà utilisé pour le filtre Programme et l'affichage).
+  - Implémentation : faire **deux** index dans la même boucle, l'un sans filtre date pour `raceToRidersMap`, l'autre filtré `>= today` pour `riderRacesMap` (programme).
+  - La requête actuelle a `.gte("startlist_imports.courses.date_debut", today)` → la retirer et appliquer le filtre date côté client uniquement pour `riderRacesMap`.
 
-### 2. Données — Migration des bonus first_win existants (toi)
+### État & filtrage
+- Nouvel état : `const [selectedCourses, setSelectedCourses] = useState<string[]>([])`.
+- Dans `filteredRiders`, ajouter :
+  ```ts
+  if (selectedCourses.length > 0) {
+    const ridersInCourses = new Set<string>();
+    for (const cid of selectedCourses) {
+      const set = raceToRidersMap.get(cid);
+      if (set) set.forEach(r => ridersInCourses.add(r));
+    }
+    if (!ridersInCourses.has(rider.coureur_id)) return false;
+  }
+  ```
+  → Logique **OU** (un coureur présent sur l'une des courses sélectionnées). À confirmer si l'utilisateur préfère ET (intersection).
+- Inclus dans `Réinitialiser` et dans le compteur de filtres actifs (mobile + desktop).
 
-Une fois le code publié, tu corriges manuellement les 16 bonus first_win pour la saison 2026 :
-- Garder **une seule ligne** par coureur (supprimer les doublons par ligue).
-- Renseigner le `course_id` (course de la victoire).
-- Le `league_id` peut être laissé NULL ou conservé — il sera ignoré par le filtre quand `course_id` est rempli.
+## Fichiers impactés
 
-Je peux te fournir un script de nettoyage/aide si tu le souhaites, mais tu as dit vouloir le faire toi-même.
+- `src/pages/RidersData.tsx` : refonte du bloc filtres desktop + mobile, ajout état + filtrage Courses, ajout `raceToRidersMap` et `coursesList` dans `useQuery` `riders-program`, popover Cotes.
+- `src/i18n/locales/fr/data.json` & `en/data.json` : nouvelles clés `filters.courses`, `filters.coursesPlaceholder`, `filters.coursesAll`.
+- Aucune nouvelle table, aucune Edge Function, aucun changement DB.
 
-### 3. Futur — Création des nouveaux bonus first_win
+## Question ouverte (à confirmer après lecture du plan)
 
-L'interface de création (admin) devra à terme :
-- Imposer la sélection d'un `course_id`.
-- Créer une **seule ligne** (pas de duplication par ligue).
-- Optionnel : `league_id = NULL` (universel, propagé par scope).
-
-→ **Hors scope de cette correction.** À traiter dans un ticket séparé une fois les données nettoyées.
-
-## Fichier modifié dans cette étape
-
-- `supabase/functions/get-rider-points-table/index.ts`
-
-## Impact après publication LIVE (étape 1)
-
-- Tant que les bonus first_win existants ont `course_id = NULL`, ils seront filtrés par `league_id` → **les fuites cessent immédiatement**.
-- Une fois les bonus migrés (étape 2 par toi), ils apparaîtront automatiquement dans toutes les ligues éligibles selon le scope.
+- Si plusieurs courses sont sélectionnées, faut-il afficher les coureurs présents sur **au moins une** (OU, défaut proposé) ou sur **toutes** (ET) ? Je pars sur OU sauf indication contraire.
