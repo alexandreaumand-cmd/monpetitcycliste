@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw } from "lucide-react";
+import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { League } from "@/lib/leagues/types";
 
@@ -58,6 +58,26 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
     } catch (error) {
       console.error("Error toggling archive:", error);
       toast.error("Erreur lors de la modification");
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    try {
+      const { error } = await supabase
+        .from("leagues")
+        .update({
+          status: "completed",
+          archived_at: new Date().toISOString(),
+        })
+        .eq("id", league.id);
+
+      if (error) throw error;
+
+      toast.success("Ligue marquée comme terminée");
+      onActionComplete();
+    } catch (error) {
+      console.error("Error marking league as completed:", error);
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
@@ -148,10 +168,16 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
             )}
           </DropdownMenuItem>
           {league.status === "active" && (
-            <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Repasser en attente
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={handleMarkCompleted}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Marquer comme terminée
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Repasser en attente
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem

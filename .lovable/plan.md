@@ -1,109 +1,97 @@
-# Plan d'action — Lenteurs LIVE (dashboard & classement)
+## Contexte
 
-## Diagnostic
+La ligue **"T1 - Barb+Amstel"** (mode `per_course`, scope = *De Brabantse Pijl* + *La Flèche Brabançonne* + *Amstel Gold Race*) est en LIVE avec `status = 'active'` alors que sa dernière course (Amstel, 19/04) est terminée.
 
-J'ai mesuré directement la base LIVE pour comprendre les lenteurs.
+Le tableau de bord (`DashboardHome.tsx`) bascule une ligue dans la section "Ligues terminées" uniquement quand `league.status === 'completed'`. Or :
 
-**Cause racine identifiée** : la vue `v_manager_standings_by_season_v2` (et ses cousines `_by_phase_v2`, `_total`) est une **vue SQL standard, pas une vue matérialisée**, contrairement à ce que l'on pensait. Chaque appel recalcule tout depuis zéro :
-
-- 5 CTE qui scannent `points_ledger`, `race_results`, `bonus_points` + jointures sur `rosters`, `phases`, `courses`
-- La fonction `get_league_course_ids()` est appelée comme sous-requête (ré-exécutée pour chaque ligne)
-- **Mesure réelle** : `SELECT * FROM v_manager_standings_by_season_v2 WHERE league_id = '…'` → **9,03 secondes**, **1 068 945 buffers lus (~8 Go de mémoire tampon)** pour retourner 10 lignes.
-
-Cette vue est appelée à plusieurs endroits sur les écrans incriminés :
-
-| Écran | Hook / composant | Appels à la vue |
-|---|---|---|
-| Dashboard (cartes ligues) | `useLeagueCardsData` | 1 fois (toutes ligues actives) |
-| Dashboard (mes stats) | `useMyLeagueStats` | 1 fois par ligue affichée |
-| Classement desktop | `ManagerStandings` | 2 fois (`_by_season_v2` + `_by_phase_v2`) |
-| Classement mobile | `Rankings.mobile` | 3 fois (`_by_season_v2` + `_by_phase_v2` + `_total`) |
-| Mon Équipe | `MyTeam.desktop/mobile` | 1 à 2 fois |
-| Comparaison managers | `ManagerComparison` | 1 fois |
-
-Sur un dashboard avec 2-3 ligues, on déclenche facilement **5 à 8 recalculs complets en parallèle** = 10 à 30 secondes perçues, avec en plus l'ENV LIVE qui sature CPU/RAM côté backend.
-
-Symptômes secondaires observés : `pg_stat_statements` n'est pas activé (impossible de profiler en prod), aucune vue matérialisée n'existe en base, et les CTE de la vue parcourent tout `points_ledger` même quand on filtre sur une seule ligue.
+- Le bouton `LeagueArchiveButton` (qui appelle `leagues-archive` et passe le statut à `completed`) existe dans le code mais **n'est utilisé nulle part**.
+- L'action Super Admin "Archiver" (`SuperAdminLeagueActions.tsx`) passe à `cancelled`, **pas** `completed` → ne range donc pas la ligue dans "Ligues terminées".
+- **Aucun mécanisme automatique** ne ferme une ligue `per_course` quand toutes ses courses sont passées.
 
 ## Plan d'action
 
-### 1. Convertir les 3 vues de classement en vues matérialisées
+### 1. Correctif immédiat (LIVE) — clore la ligue T1 - Barb+Amstel
 
-Remplacer `v_manager_standings_by_season_v2`, `v_manager_standings_by_phase_v2` et `v_manager_standings_total` par des **MATERIALIZED VIEW** avec index sur `(league_id, saison_id)` / `(league_id, phase_id)`.
+Migration SQL ciblée :
+```sql
+UPDATE leagues
+SET status = 'completed',
+    archived_at = COALESCE(archived_at, now())
+WHERE id = '817b6ae6-f8ae-4ccb-a1ed-1546eadb2f2f';
+```
+Appliquée en Test puis poussée en LIVE au prochain publish.
 
-Effet attendu : passer de **~9 s à <50 ms** par lecture (lecture indexée d'une table pré-calculée).
+### 2. Action manuelle pour le owner / admin de ligue
 
-### 2. Mettre en place le rafraîchissement automatique
+Brancher le composant `LeagueArchiveButton` (déjà écrit, inutilisé) dans `LeagueSettingsForm.tsx`, visible pour `owner`/`admin` de la ligue, libellé adapté :
+- Bouton **"Marquer comme terminée"** → appelle l'edge function `leagues-archive` existante (qui fait `status = 'completed'`).
+- Affiché uniquement si `status === 'active'`.
+- Confirmation : "La ligue passera dans 'Ligues terminées' du tableau de bord. Réversible par un super-admin."
 
-Trigger les rafraîchissements (`REFRESH MATERIALIZED VIEW CONCURRENTLY …`) uniquement quand les données sources changent réellement :
+### 3. Action Super Admin — distinguer "Terminer" et "Annuler"
 
-- À la **publication d'annonces** (fin d'un round d'enchères) → modifie les rosters
-- À l'**import de résultats de course** / recalcul de points → modifie `points_ledger`, `bonus_points`
-- À l'**ajout de bonus** par le super-admin
+Dans `SuperAdminLeagueActions.tsx`, ajouter une entrée distincte :
+- **"Marquer comme terminée"** → `status = 'completed'` + `archived_at = now()`
+- Conserver "Archiver" actuel (`cancelled`) pour les ligues à annuler.
+- Conserver "Désarchiver" qui repasse à `active`.
 
-Implémentation via une fonction `refresh_standings_mv(league_id uuid)` appelée explicitement depuis les Edge Functions concernées (`publish-announcements`, `recalc-points`, `super-admin-bonus`…), plus un cron de sécurité toutes les 15 min.
+### 4. Automatisation — clore les ligues `per_course` quand toutes les courses sont jouées
 
-### 3. Ajouter un index unique sur chaque MV pour autoriser `REFRESH … CONCURRENTLY`
+Nouvelle fonction SQL + cron quotidien (réutilise le pattern `auto-update-phase-status` mémorisé) :
 
-Permet de rafraîchir sans bloquer les lectures.
+```sql
+CREATE OR REPLACE FUNCTION auto_complete_per_course_leagues()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE leagues l
+  SET status = 'completed',
+      archived_at = COALESCE(l.archived_at, now())
+  WHERE l.status = 'active'
+    AND l.game_mode = 'per_course'
+    AND EXISTS (
+      SELECT 1 FROM league_scopes ls
+      WHERE ls.league_id = l.id
+        AND ls.selected_course_ids IS NOT NULL
+        AND array_length(ls.selected_course_ids, 1) > 0
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM league_scopes ls
+      JOIN courses c ON c.id = ANY(ls.selected_course_ids)
+      WHERE ls.league_id = l.id
+        AND (c.date_fin IS NULL OR c.date_fin >= CURRENT_DATE)
+    );
+END;
+$$;
 
-### 4. Activer `pg_stat_statements` en LIVE
+SELECT cron.schedule(
+  'auto-complete-per-course-leagues',
+  '15 3 * * *',
+  $$SELECT public.auto_complete_per_course_leagues();$$
+);
+```
 
-Pour pouvoir mesurer en continu les requêtes lentes et détecter d'autres régressions à venir.
+Logique : pour chaque ligue `per_course` active, si toutes les courses du scope ont une `date_fin < today`, on passe la ligue en `completed`.
 
-### 5. Instrumenter le hook `useLeagueCardsData`
+Note : pour les modes `five_phases` / `full_season`, on garde la clôture manuelle (la fin de saison est déjà gérée par les phases). On pourra étendre dans un second temps si souhaité.
 
-Ajouter un fallback : si le `REFRESH` est en cours et que la MV ne contient pas encore de ligne pour la ligue, retomber proprement sur l'état "Calcul en cours…" déjà en place (corrigé la semaine dernière).
+### 5. (Optionnel) Backfill des autres ligues `per_course`
 
-### 6. Vérification
-
-Après déploiement, re-mesurer sur 3 cas typiques (1 ligue, 3 ligues, page classement complète) avec `EXPLAIN ANALYZE` et vérifier que les temps passent sous **200 ms côté DB**.
+Lister les ligues actives `per_course` dont toutes les courses sont déjà terminées, et leur appliquer le même UPDATE que pour T1 - Barb+Amstel.
 
 ## Détails techniques
 
-```sql
--- Exemple pour la vue saison
-CREATE MATERIALIZED VIEW public.mv_manager_standings_by_season_v2 AS
-  <même requête que la vue actuelle>;
+- Fichiers modifiés :
+  - Nouvelle migration : UPDATE LIVE de la ligue + création de `auto_complete_per_course_leagues()` + cron.
+  - `src/components/leagues/LeagueSettingsForm.tsx` : intégration `LeagueArchiveButton`.
+  - `src/components/leagues/LeagueArchiveButton.tsx` : ajustement libellé ("Marquer comme terminée").
+  - `src/components/admin/leagues/SuperAdminLeagueActions.tsx` : nouvelle entrée "Marquer comme terminée" (`status=completed`).
+  - i18n FR/EN si nécessaire.
+- Aucun changement côté `DashboardHome.tsx` : la séparation active/terminée fonctionne déjà via `status === 'completed'`.
+- Edge function `leagues-archive` déjà conforme (passe à `completed`).
 
-CREATE UNIQUE INDEX mv_standings_season_pk
-  ON public.mv_manager_standings_by_season_v2 (manager_id, league_id, saison_id);
-CREATE INDEX mv_standings_season_league
-  ON public.mv_manager_standings_by_season_v2 (league_id, saison_id);
+## Validation
 
--- On garde le nom v_… via une vue passe-plat pour ne pas casser le code TypeScript
-DROP VIEW public.v_manager_standings_by_season_v2;
-CREATE VIEW public.v_manager_standings_by_season_v2
-  WITH (security_invoker = on)
-  AS SELECT * FROM public.mv_manager_standings_by_season_v2;
-```
-
-```sql
-CREATE OR REPLACE FUNCTION public.refresh_standings_mv()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_by_season_v2;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_by_phase_v2;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_manager_standings_total;
-END $$;
-```
-
-**Edge Functions à modifier** : `publish-announcements`, `recalc-course-points`, `super-admin-bonus-attribute` → ajouter `await supabase.rpc('refresh_standings_mv')` en fin de traitement.
-
-**Cron de sécurité** : `select cron.schedule('refresh-standings', '*/15 * * * *', $$select public.refresh_standings_mv();$$);`
-
-**Note de mémoire** : la mémoire `mem://technical/database/standings-materialized-views-performance` indiquait à tort que ces vues étaient déjà matérialisées. Je la corrigerai après implémentation.
-
-## Fichiers / objets impactés
-
-- Migration SQL : création des 3 MV + indexes + fonction refresh + cron
-- `supabase/functions/publish-announcements/index.ts` (ajout RPC refresh)
-- `supabase/functions/recalc-*` / fonctions de calcul de points (ajout RPC refresh)
-- Aucun changement frontend nécessaire (les noms `v_…` restent identiques via vues passe-plat)
-
-## Bénéfice attendu
-
-- Dashboard : chargement des cartes de **5-15 s → <1 s**
-- Page classement : **8-20 s → <500 ms**
-- Réduction massive de la charge CPU/RAM côté Lovable Cloud (utile aussi pour les autres écrans)
+1. Après publish : la ligue T1 - Barb+Amstel apparaît dans "Ligues terminées" sur le dashboard LIVE.
+2. Le owner d'une ligue voit le bouton "Marquer comme terminée" dans les paramètres de ligue.
+3. Le cron tourne chaque nuit et ferme automatiquement les ligues `per_course` dont toutes les courses sont passées.
