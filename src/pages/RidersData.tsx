@@ -868,7 +868,7 @@ export default function RidersData() {
             <div className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</div>
           ) : (
             sortedRiders.map((rider) => {
-              const upcomingRaces = programData?.get(rider.coureur_id) || [];
+              const upcomingRaces = upcomingByRider?.get(rider.coureur_id) || [];
               return (
                 <div
                   key={rider.coureur_id}
@@ -943,7 +943,7 @@ export default function RidersData() {
                 </TableRow>
               ) : (
                 sortedRiders.map((rider) => {
-                  const upcomingRaces = programData?.get(rider.coureur_id) || [];
+                  const upcomingRaces = upcomingByRider?.get(rider.coureur_id) || [];
                   return (
                     <TableRow key={rider.coureur_id}>
                       <TableCell>
