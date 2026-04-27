@@ -232,18 +232,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Strict league isolation: bonuses are duplicated per league_id at creation time,
-    // so we MUST filter by league_id to avoid leaking bonuses from other leagues
-    // (e.g. first_win bonuses are stored with course_id = NULL).
-    if (league_id) {
-      bonusQuery = bonusQuery.eq('league_id', league_id);
+    // Bonus visibility rules:
+    // - Bonus with course_id filled (e.g. first_win attached to a race) → visible in any league
+    //   whose scope includes that course. Single source of truth, no per-league duplication.
+    // - Bonus with course_id = NULL (e.g. coureur_bonuse +25% by phase, ttt, scoreurs) → league-specific,
+    //   filtered by league_id.
+    const orFilters: string[] = [];
+    if (leagueCourseIds && leagueCourseIds.length > 0) {
+      orFilters.push(`course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
     }
-
-    // Secondary safety filter: if a bonus is linked to a course, it must be in the league scope.
-    // Bonuses with course_id = NULL (e.g. first_win, rider bonus +25%) are kept as-is
-    // and rely on the league_id filter above for isolation.
-    if (leagueCourseIds) {
-      bonusQuery = bonusQuery.or(`course_id.is.null,course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
+    if (league_id) {
+      orFilters.push(`and(course_id.is.null,league_id.eq.${league_id})`);
+    } else {
+      // No league context: keep NULL-course bonuses as-is (legacy behavior)
+      orFilters.push(`course_id.is.null`);
+    }
+    if (orFilters.length > 0) {
+      bonusQuery = bonusQuery.or(orFilters.join(','));
     }
 
     const { data: bonusData, error: bonusError } = await bonusQuery;
