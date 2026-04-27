@@ -97,6 +97,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           commentaire,
           coureur_id,
           manager_id,
+          course_id,
           created_at,
           coureur:coureurs!bonus_points_coureur_id_fkey(id, nom),
           manager:managers!bonus_points_manager_id_fkey(id, nom)
