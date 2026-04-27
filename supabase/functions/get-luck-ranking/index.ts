@@ -53,15 +53,20 @@ Deno.serve(async (req) => {
 
     // Filter phases by league scope
     let phaseIds = phases.map(p => p.id);
+    let leagueCourseIds: string[] | null = null;
     if (league_id) {
       const { data: scopeData } = await supabase
         .from('league_scopes')
-        .select('phases')
+        .select('phases, selected_course_ids')
         .eq('league_id', league_id)
         .single();
       const scopedPhaseIds = scopeData?.phases || [];
       if (scopedPhaseIds.length > 0) {
         phaseIds = phaseIds.filter(id => scopedPhaseIds.includes(id));
+      }
+      const scopedCourseIds = (scopeData?.selected_course_ids as string[] | null) || null;
+      if (scopedCourseIds && scopedCourseIds.length > 0) {
+        leagueCourseIds = scopedCourseIds;
       }
     }
 
