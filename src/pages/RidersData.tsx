@@ -230,16 +230,17 @@ export default function RidersData() {
   const { data: programData } = useQuery({
     queryKey: ["riders-program", localSelectedSeason?.id],
     queryFn: async () => {
-      if (!localSelectedSeason?.id) return new Map<string, UpcomingRace[]>();
+      const empty = {
+        upcomingByRider: new Map<string, UpcomingRace[]>(),
+        ridersByRace: new Map<string, Set<string>>(),
+        coursesList: [] as CourseOption[],
+      };
+      if (!localSelectedSeason?.id) return empty;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const pageSize = 1000;
 
-      // First page with count to know total
-      const firstPage = await supabase
-        .from("startlist_entries")
-        .select(
-          `
+      const baseSelect = `
           coureur_id,
           startlist_imports!inner(
             pcs_validated,
@@ -251,11 +252,12 @@ export default function RidersData() {
               date_debut
             )
           )
-        `,
-          { count: "exact" }
-        )
+        `;
+
+      const firstPage = await supabase
+        .from("startlist_entries")
+        .select(baseSelect, { count: "exact" })
         .eq("startlist_imports.saison_id", localSelectedSeason.id)
-        .gte("startlist_imports.courses.date_debut", today)
         .not("coureur_id", "is", null)
         .order("coureur_id")
         .range(0, pageSize - 1);
@@ -265,7 +267,6 @@ export default function RidersData() {
       const allEntries: any[] = [...(firstPage.data ?? [])];
       const totalCount = firstPage.count ?? 0;
 
-      // Fetch remaining pages if needed
       if (totalCount > pageSize) {
         const pageCount = Math.ceil(totalCount / pageSize);
         const restPages = await Promise.all(
@@ -274,80 +275,88 @@ export default function RidersData() {
             const to = from + pageSize - 1;
             return supabase
               .from("startlist_entries")
-              .select(
-                `
-                coureur_id,
-                startlist_imports!inner(
-                  pcs_validated,
-                  created_at,
-                  saison_id,
-                  courses!inner(
-                    id,
-                    nom,
-                    date_debut
-                  )
-                )
-              `
-              )
+              .select(baseSelect)
               .eq("startlist_imports.saison_id", localSelectedSeason.id)
-              .gte("startlist_imports.courses.date_debut", today)
               .not("coureur_id", "is", null)
               .order("coureur_id")
               .range(from, to);
           })
         );
-
         for (const page of restPages) {
           if (page.error) throw page.error;
           allEntries.push(...(page.data ?? []));
         }
       }
 
-      // Build a map of coureur_id -> races (keeping only latest import per race)
-      const riderRacesMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
+      // Latest import per (rider, race) for upcoming program
+      const upcomingMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
+      // race -> set of rider ids (all dates, latest import wins implicitly via Set)
+      const ridersByRace = new Map<string, Set<string>>();
+      // distinct courses (all dates)
+      const coursesById = new Map<string, CourseOption>();
 
       allEntries.forEach((entry: any) => {
         if (!entry.coureur_id || !entry.startlist_imports?.courses) return;
-        
         const coureurId = entry.coureur_id;
         const course = entry.startlist_imports.courses;
         const raceId = course.id;
         const createdAt = entry.startlist_imports.created_at;
 
-        if (!riderRacesMap.has(coureurId)) {
-          riderRacesMap.set(coureurId, new Map());
-        }
-
-        const riderMap = riderRacesMap.get(coureurId)!;
-        const existing = riderMap.get(raceId);
-
-        // Keep only the most recent import for each race
-        if (!existing || new Date(createdAt) > new Date(existing.created_at)) {
-          riderMap.set(raceId, {
-            race: {
-              race_id: raceId,
-              race_nom: course.nom,
-              date_debut: course.date_debut,
-              is_confirmed: entry.startlist_imports.pcs_validated || false,
-            },
-            created_at: createdAt,
+        // Distinct courses
+        if (!coursesById.has(raceId)) {
+          coursesById.set(raceId, {
+            id: raceId,
+            nom: course.nom,
+            date_debut: course.date_debut,
           });
         }
+
+        // Race -> riders (all)
+        if (!ridersByRace.has(raceId)) ridersByRace.set(raceId, new Set());
+        ridersByRace.get(raceId)!.add(coureurId);
+
+        // Upcoming program (date >= today)
+        if (course.date_debut && course.date_debut >= today) {
+          if (!upcomingMap.has(coureurId)) upcomingMap.set(coureurId, new Map());
+          const riderMap = upcomingMap.get(coureurId)!;
+          const existing = riderMap.get(raceId);
+          if (!existing || new Date(createdAt) > new Date(existing.created_at)) {
+            riderMap.set(raceId, {
+              race: {
+                race_id: raceId,
+                race_nom: course.nom,
+                date_debut: course.date_debut,
+                is_confirmed: entry.startlist_imports.pcs_validated || false,
+              },
+              created_at: createdAt,
+            });
+          }
+        }
       });
 
-      // Convert to final map with sorted races
-      const resultMap = new Map<string, UpcomingRace[]>();
-      riderRacesMap.forEach((racesMap, coureurId) => {
+      const upcomingByRider = new Map<string, UpcomingRace[]>();
+      upcomingMap.forEach((racesMap, coureurId) => {
         const races = Array.from(racesMap.values())
-          .map(r => r.race)
+          .map((r) => r.race)
           .sort((a, b) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
-        resultMap.set(coureurId, races);
+        upcomingByRider.set(coureurId, races);
       });
 
-      return resultMap;
+      const coursesList = Array.from(coursesById.values()).sort((a, b) => {
+        const da = a.date_debut || "";
+        const db = b.date_debut || "";
+        return da.localeCompare(db);
+      });
+
+      return { upcomingByRider, ridersByRace, coursesList };
     },
     enabled: !!localSelectedSeason?.id,
   });
+
+  // Backwards-compatible accessors
+  const upcomingByRider = programData?.upcomingByRider;
+  const ridersByRace = programData?.ridersByRace;
+  const coursesList = programData?.coursesList ?? [];
 
   // Fetch teams for filter
   const { data: teamsData } = useQuery({
