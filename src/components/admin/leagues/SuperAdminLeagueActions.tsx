@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw } from "lucide-react";
+import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { League } from "@/lib/leagues/types";
 
