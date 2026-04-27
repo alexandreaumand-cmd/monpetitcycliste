@@ -31,7 +31,8 @@
   "header": {
     "calendar": "Calendar",
     "data": "Data",
-    "superAdmin": "Super Admin"
+    "superAdmin": "Super Admin",
+    "help": "Help & rules"
   },
   "myLeagues": {
     "title": "My Leagues",
