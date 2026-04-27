@@ -446,6 +446,61 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                 )}
               </div>
 
+              {courseRequired && (
+                <div className="space-y-2">
+                  <Label>Course *</Label>
+                  <Popover open={coursePopoverOpen} onOpenChange={setCoursePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal"
+                      >
+                        {selectedCourseId
+                          ? (coursesMap.get(selectedCourseId) as any)?.nom
+                          : "Sélectionner une course..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une course..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune course trouvée</CommandEmpty>
+                          <CommandGroup>
+                            {courses.map((c: any) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.nom} ${c.id}`}
+                                onSelect={() => {
+                                  setSelectedCourseId(c.id);
+                                  setCoursePopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedCourseId === c.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="flex-1 truncate">{c.nom}</span>
+                                {c.date_debut && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {new Date(c.date_debut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Course à laquelle ce bonus est rattaché. Il n'apparaîtra que dans les ligues incluant cette course.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Points *</Label>
                 <Input
