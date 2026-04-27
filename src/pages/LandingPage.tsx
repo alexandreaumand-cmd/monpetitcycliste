@@ -11,6 +11,7 @@ import {
 import InstallBanner from "@/components/landing/InstallBanner";
 import LeagueTypesSection from "@/components/landing/LeagueTypesSection";
 import BaremePreviewSection from "@/components/landing/BaremePreviewSection";
+import RulesHighlightsSection from "@/components/landing/RulesHighlightsSection";
 
 const LandingPage = () => {
   return (
@@ -24,6 +25,7 @@ const LandingPage = () => {
         <BaremePreviewSection />
         <AuctionShowcase />
         <SocialProofSection />
+        <RulesHighlightsSection />
         <InstallBanner />
         <CTASection />
       </main>

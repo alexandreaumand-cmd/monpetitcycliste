@@ -1,4 +1,4 @@
-import { Calendar, Bike } from "lucide-react";
+import { Calendar, Bike, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import faviconLogo from "@/assets/logo-carre-rose.png";
@@ -56,6 +56,15 @@ export function DashboardHomeHeader({
               <Bike className="h-5 w-5" />
             </button>
             
+            <button
+              onClick={() => navigate('/regles')}
+              className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md"
+              aria-label={t('header.help')}
+              title={t('header.help')}
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
+
             {manager && (
               <UnifiedProfileDropdown
                 manager={manager}
@@ -103,6 +112,14 @@ export function DashboardHomeHeader({
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/regles')}
+            className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md transition-colors"
+            aria-label={t('header.help')}
+            title={t('header.help')}
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
           <NotificationCenter variant="dark" />
           {manager && (
             <UnifiedProfileDropdown
