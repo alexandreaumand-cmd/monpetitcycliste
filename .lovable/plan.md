@@ -1,56 +1,64 @@
-## Problème
+## Règle métier clarifiée
 
-Dans la ligue **COPArdennaises**, l'écran "Détail des points" de Paul Seixas affiche 3 bonus `first_win` (Algarve Stage 2) qui ne devraient pas apparaître.
+Le bonus **"First win"** = 1ère victoire **en carrière** d'un coureur (événement unique).
+- Doit être **lié à la course de la victoire** (`course_id` rempli).
+- Une **seule ligne** dans `bonus_points` (pas une par ligue).
+- Une ligue affiche/comptabilise ce bonus **uniquement si la course est dans son scope**.
 
-## Diagnostic confirmé
+## État actuel en LIVE (à corriger)
 
-Données en LIVE pour Seixas :
-- 3 bonus `first_win` existent, attribués à **MPC 2026** (1) et **Early Adopters** (2).
-- **Aucun bonus first_win n'est attribué à COPArdennaises** (ce qui est correct, Algarve n'est pas dans son scope).
-- Pourtant l'écran les affiche dans COPArdennaises → fuite côté edge function.
+- 16 bonus `first_win` existent, **tous avec `course_id = NULL`** et dupliqués par ligue (ancien modèle).
+- Conséquence : ils fuient dans toutes les ligues (cf. Seixas dans COPArdennaises).
+- Les autres bonus (`coureur_bonuse`, `ttt`, `scoreurs`) sont des bonus de phase sans course → restent filtrés par `league_id`.
 
-## Cause
+## Plan en 3 étapes
 
-Dans `supabase/functions/get-rider-points-table/index.ts`, la requête sur `bonus_points` ne filtre **pas par `league_id`**. Le filtre par scope de courses `course_id.is.null,course_id.in.(...)` laisse passer tous les bonus avec `course_id IS NULL`, peu importe à quelle ligue ils appartiennent. Or les bonus `first_win` sont stockés avec `course_id = NULL`.
+### 1. Code — Filtrage corrigé dans `get-rider-points-table`
 
-## Pourquoi ne pas modifier le bonus pour lui affecter une course
-
-Le modèle actuel est correct et volontaire :
-- Un bonus `first_win` est attribué **par ligue éligible** : une ligne distincte est créée pour chaque `league_id` concerné.
-- La propagation est gérée à la création du bonus, pas à la lecture.
-- Le bonus n'est pas lié à une course du scope de la ligue — c'est un bonus "méta" sur la 1ère victoire de la saison du coureur.
-- Affecter `course_id` = la course de la victoire (ex: Algarve) bloquerait l'affichage dans les ligues qui n'ont pas Algarve dans leur scope mais sont quand même éligibles au bonus.
-
-→ Il suffit donc de filtrer correctement à la lecture par `league_id`.
-
-## Correction
-
-Dans `supabase/functions/get-rider-points-table/index.ts`, ajouter un filtre strict sur `league_id` pour la requête `bonusQuery` :
+Adapter la requête `bonus_points` pour appliquer la bonne règle selon le type :
+- Bonus avec `course_id` rempli → doit être dans le scope de la ligue (filtre par scope, **pas** par league_id pour permettre la propagation universelle).
+- Bonus avec `course_id = NULL` → bonus de ligue spécifique (rider bonus, ttt, scoreurs) → filtré par `league_id`.
 
 ```ts
-// Filtre principal : isolation par ligue
-if (league_id) {
-  bonusQuery = bonusQuery.eq('league_id', league_id);
+// Bonus liés à une course : visibles dans toute ligue ayant la course dans son scope
+// Bonus sans course : isolés par league_id
+const filters: string[] = [];
+if (leagueCourseIds && leagueCourseIds.length > 0) {
+  filters.push(`course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
 }
-
-// Filtre secondaire (sécurité) : si bonus lié à une course, elle doit être dans le scope
-if (leagueCourseIds) {
-  bonusQuery = bonusQuery.or(
-    `course_id.is.null,course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`
-  );
+if (league_id) {
+  filters.push(`and(course_id.is.null,league_id.eq.${league_id})`);
+}
+if (filters.length > 0) {
+  bonusQuery = bonusQuery.or(filters.join(','));
 }
 ```
 
-## Fichier modifié
+Cela permet aussi à un bonus first_win sur Amstel d'apparaître automatiquement dans **toutes** les ligues ayant Amstel dans leur scope, sans duplication.
+
+### 2. Données — Migration des bonus first_win existants (toi)
+
+Une fois le code publié, tu corriges manuellement les 16 bonus first_win pour la saison 2026 :
+- Garder **une seule ligne** par coureur (supprimer les doublons par ligue).
+- Renseigner le `course_id` (course de la victoire).
+- Le `league_id` peut être laissé NULL ou conservé — il sera ignoré par le filtre quand `course_id` est rempli.
+
+Je peux te fournir un script de nettoyage/aide si tu le souhaites, mais tu as dit vouloir le faire toi-même.
+
+### 3. Futur — Création des nouveaux bonus first_win
+
+L'interface de création (admin) devra à terme :
+- Imposer la sélection d'un `course_id`.
+- Créer une **seule ligne** (pas de duplication par ligue).
+- Optionnel : `league_id = NULL` (universel, propagé par scope).
+
+→ **Hors scope de cette correction.** À traiter dans un ticket séparé une fois les données nettoyées.
+
+## Fichier modifié dans cette étape
 
 - `supabase/functions/get-rider-points-table/index.ts`
 
-## Impact attendu après publication LIVE
+## Impact après publication LIVE (étape 1)
 
-- COPArdennaises : Seixas n'affichera plus les bonus first_win d'Algarve (qui n'appartiennent pas à cette ligue).
-- MPC 2026 et Early Adopters : continueront d'afficher leurs bonus first_win normalement.
-- Aucune donnée n'est modifiée — uniquement la lecture est corrigée.
-
-## Bonus : doublon détecté
-
-J'ai aussi remarqué qu'**Early Adopters a 2 bonus first_win identiques** pour Seixas (100 pts au total au lieu de 50). Veux-tu que je supprime le doublon dans une étape séparée ? (Hors scope de cette correction.)
+- Tant que les bonus first_win existants ont `course_id = NULL`, ils seront filtrés par `league_id` → **les fuites cessent immédiatement**.
+- Une fois les bonus migrés (étape 2 par toi), ils apparaîtront automatiquement dans toutes les ligues éligibles selon le scope.
