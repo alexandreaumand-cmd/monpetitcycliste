@@ -153,12 +153,6 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       return;
     }
 
-  const handleSubmit = async () => {
-    if (!bonusType || !selectedCoureur || !points) {
-      toast.error("Veuillez remplir tous les champs obligatoires");
-      return;
-    }
-
     if (bonusType === 'coureur_bonuse' && !selectedCoureur.manager_id) {
       toast.error("Ce coureur n'est associé à aucun manager");
       return;
