@@ -465,13 +465,24 @@ export default function RidersData() {
       }
       // Program filter
       if (programFilter !== "all") {
-        const hasProgram = programData?.has(rider.coureur_id) && (programData.get(rider.coureur_id)?.length || 0) > 0;
+        const hasProgram = !!upcomingByRider?.has(rider.coureur_id) && (upcomingByRider.get(rider.coureur_id)?.length || 0) > 0;
         if (programFilter === "with" && !hasProgram) return false;
         if (programFilter === "without" && hasProgram) return false;
       }
+      // Courses filter (rider is on the startlist of at least one selected race)
+      if (selectedCourses.length > 0) {
+        let inAny = false;
+        for (const cid of selectedCourses) {
+          if (ridersByRace?.get(cid)?.has(rider.coureur_id)) {
+            inAny = true;
+            break;
+          }
+        }
+        if (!inAny) return false;
+      }
       return true;
     });
-  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, programData]);
+  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, upcomingByRider, selectedCourses, ridersByRace]);
 
   // Sort handlers
   const handleSort = (column: SortColumn) => {
