@@ -172,6 +172,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       }
 
       const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
+      const courseIdToSave = courseRequired ? selectedCourseId : null;
 
       if (isMultiManagerBonus) {
         const { data: rostersData, error: rostersError } = await supabase
@@ -193,6 +194,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           bonus_type: bonusType,
           coureur_id: selectedCoureur.id,
           manager_id: roster.manager_id,
+          course_id: courseIdToSave,
           points: parseInt(points),
           commentaire: commentaire || null,
           created_by: managerData.id,
@@ -208,6 +210,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           bonus_type: bonusType,
           coureur_id: selectedCoureur.id,
           manager_id: selectedCoureur.manager_id,
+          course_id: courseIdToSave,
           points: parseInt(points),
           commentaire: commentaire || null,
           created_by: managerData.id,
