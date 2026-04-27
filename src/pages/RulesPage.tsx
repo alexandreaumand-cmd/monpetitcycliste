@@ -776,6 +776,166 @@ const RulesPage = () => {
               De Paris-Roubaix au Tour de France, en passant par le Tour de Turquie — chaque course compte.
             </p>
           </SectionCard>
+
+          <BordureStripes orientation="horizontal" className="mx-auto max-w-xs" />
+
+          {/* ── 8. La page Calendrier ── */}
+          <SectionCard icon={Calendar} num="8" title="La page Calendrier">
+            <p className="text-bordure-green/80 font-inter leading-relaxed mb-5">
+              Le <strong>Calendrier</strong> recense toutes les courses UCI de la saison. Filtre, trie et
+              clique sur une course pour ouvrir son détail (startlist, mouvements, équipes engagées).
+            </p>
+
+            <div className="rounded-lg overflow-hidden border border-bordure-green/10 mb-5 bg-secondary">
+              <img
+                src="/screenshots/calendar.webp"
+                alt="Aperçu de la page Calendrier"
+                loading="lazy"
+                className="w-full h-auto"
+              />
+            </div>
+
+            <Accordion type="multiple" className="space-y-2">
+              <AccordionItem value="cal-startlist" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Comment voir la startlist d'une course ?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Clique sur n'importe quelle ligne du calendrier pour ouvrir la fenêtre de détail.
+                  Tu y verras les équipes engagées, le nombre de coureurs déclarés, les images du parcours
+                  ainsi que la liste complète des coureurs au départ.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="cal-movements" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  À quoi servent les « Mouvements startlist » ?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Le bloc <strong>Mouvements startlist</strong> liste les derniers ajouts et retraits
+                  détectés automatiquement (Ajout / Retrait, coureur, équipe, date de détection).
+                  Idéal pour anticiper les forfaits ou repérer un favori glissé sur la liste à la dernière minute.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="cal-favorites" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  <span className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-bordure-gold" />
+                    Comment ajouter un coureur en favori ?
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Une étoile est affichée à côté de chaque coureur de la startlist. Un simple clic suffit
+                  pour le marquer comme favori — il sera ensuite mis en avant dans la page
+                  <em> Données coureurs</em> et filtrable rapidement.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="cal-filters" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Quels filtres sont disponibles ?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Recherche par nom, filtre par catégorie (WT, Pro, .1, championnats…), par phase, et
+                  option « Masquer les courses passées ». Les colonnes <em>Countdown</em>, <em>Points</em>
+                  et <em>Startlist</em> permettent un tri instantané pour préparer ta stratégie.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="cal-export" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Vue mobile et export
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Sur mobile, le calendrier passe en vue compacte avec accordéons par mois, et les mouvements
+                  startlist sont accessibles en bas du détail course. Un export Excel reprend l'ensemble
+                  du calendrier filtré pour analyse hors-ligne.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </SectionCard>
+
+          <BordureStripes orientation="horizontal" className="mx-auto max-w-xs" />
+
+          {/* ── 9. La page Données coureurs ── */}
+          <SectionCard icon={Database} num="9" title="La page Données coureurs">
+            <p className="text-bordure-green/80 font-inter leading-relaxed mb-5">
+              <strong>Données coureurs</strong> est ta base de données complète : plus de 3 000 coureurs
+              UCI avec leurs cotes, points marqués, équipe et programme de courses prévu.
+            </p>
+
+            <div className="rounded-lg overflow-hidden border border-bordure-green/10 mb-5 bg-secondary">
+              <img
+                src="/screenshots/data.webp"
+                alt="Aperçu de la page Données coureurs"
+                loading="lazy"
+                className="w-full h-auto"
+              />
+            </div>
+
+            <Accordion type="multiple" className="space-y-2">
+              <AccordionItem value="data-filters" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Quels filtres puis-je utiliser ?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Recherche par nom, équipe, catégorie (WT / Pro / Continental), courses prévues,
+                  cotes, programme (avec / sans) et l'option <strong>Favoris uniquement</strong>.
+                  Les filtres se combinent et un compteur affiche en temps réel le nombre de coureurs filtrés.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="data-favorites" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  <span className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-bordure-gold" />
+                    Comment fonctionnent les coureurs favoris ?
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Clique sur l'étoile à gauche de chaque ligne pour marquer un coureur comme favori.
+                  Tes favoris sont synchronisés avec ton compte et apparaissent partout dans l'app
+                  (Calendrier, Startlists, Enchères). Active <em>Favoris uniquement</em> pour ne voir
+                  que ta short-list.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="data-panel" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Le panneau latéral résultats
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Clique sur le nom d'un coureur pour ouvrir un panneau latéral détaillant tous ses
+                  résultats de la saison (course, classement, points marqués). Pratique pour évaluer la
+                  forme d'un coureur avant de miser.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="data-cote" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Comprendre la cote et le programme
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  La <strong>cote</strong> représente la valeur initiale d'un coureur (mise plancher
+                  estimée). La colonne <strong>Programme</strong> liste les courses sur lesquelles il
+                  est attendu — clé pour cibler les coureurs alignés sur les épreuves de ta ligue
+                  « À la course ».
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="data-export" className="border border-black/[0.04] rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 text-sm font-montserrat font-semibold text-bordure-green hover:no-underline text-left">
+                  Export Excel
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 text-sm text-bordure-green/70 font-inter leading-relaxed">
+                  Le bouton <strong>Excel</strong> exporte la sélection courante (filtres appliqués)
+                  avec nom, équipe, catégorie, cote, points et favori — pratique pour préparer ta
+                  stratégie d'enchères au calme.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </SectionCard>
         </div>
 
         {/* CTA */}
