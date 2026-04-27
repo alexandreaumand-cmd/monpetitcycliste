@@ -168,10 +168,16 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
             )}
           </DropdownMenuItem>
           {league.status === "active" && (
-            <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Repasser en attente
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={handleMarkCompleted}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Marquer comme terminée
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Repasser en attente
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
