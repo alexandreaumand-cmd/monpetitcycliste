@@ -19,6 +19,8 @@ import {
   Medal,
   Users,
   Flag,
+  Star,
+  Database,
 } from "lucide-react";
 
 /* ──────────── helpers ──────────── */
