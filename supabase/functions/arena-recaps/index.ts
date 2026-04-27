@@ -104,10 +104,28 @@ async function processRecaps(
       return;
     }
 
-    const results: { league: string; sent: boolean; type: string }[] = [];
+    // Insert an immediate "started" audit row so we can detect future timeouts
+    // even if the function is killed mid-execution.
+    await logRecapRun(supabase, {
+      run_type: recapType, target_date: targetDate, project_ref: projectRef,
+      leagues_processed: leagues.length, leagues_sent: 0, status: "started",
+      auth_method: authMethod,
+    });
 
-    for (const league of leagues) {
-      try {
+    // Per-league timeout to prevent one slow league from blocking the others
+    const LEAGUE_TIMEOUT_MS = 60_000;
+    const withTimeout = <T,>(p: Promise<T>, label: string): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout (${LEAGUE_TIMEOUT_MS}ms) on ${label}`)), LEAGUE_TIMEOUT_MS)
+        ),
+      ]);
+
+    // Process all leagues in parallel — was sequential before, which caused
+    // weekly recaps to exceed the Edge runtime wall-clock limit.
+    const settled = await Promise.allSettled(
+      leagues.map(async (league) => {
         const { data: channel } = await supabase
           .from("arena_channels")
           .select("id")
@@ -117,22 +135,30 @@ async function processRecaps(
 
         if (!channel) {
           console.log(`No #general channel for league ${league.name}`);
-          results.push({ league: league.name, sent: false, type: recapType });
-          continue;
+          return { league: league.name, sent: false, type: recapType };
         }
 
         if (recapType === "weekly") {
-          await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
-          results.push({ league: league.name, sent: true, type: "weekly" });
+          await withTimeout(
+            sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride),
+            `weekly:${league.name}`,
+          );
+          return { league: league.name, sent: true, type: "weekly" };
         } else {
-          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
-          results.push({ league: league.name, sent, type: "daily" });
+          const sent = await withTimeout(
+            sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride),
+            `daily:${league.name}`,
+          );
+          return { league: league.name, sent, type: "daily" };
         }
-      } catch (err) {
-        console.error(`Error processing league ${league.name}:`, err);
-        results.push({ league: league.name, sent: false, type: recapType });
-      }
-    }
+      }),
+    );
+
+    const results: { league: string; sent: boolean; type: string }[] = settled.map((s, i) => {
+      if (s.status === "fulfilled") return s.value;
+      console.error(`Error processing league ${leagues[i].name}:`, s.reason);
+      return { league: leagues[i].name, sent: false, type: recapType };
+    });
 
     const leaguesSent = results.filter((r) => r.sent).length;
     const status = leaguesSent === 0 ? "no_data" : leaguesSent === leagues.length ? "success" : "partial";
