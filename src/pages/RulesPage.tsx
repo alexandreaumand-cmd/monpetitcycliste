@@ -152,6 +152,20 @@ const gtMaillotsFinaux: { label: string; pts: number }[] = [
   { label: "⚪ Jeune", pts: 150 },
   { label: "🔥 Combatif", pts: 150 },
 ];
+// Barèmes détaillés des classements finaux des maillots (Grands Tours)
+const gtMaillotVert: [number, number][] = [
+  [1, 300], [2, 240], [3, 195], [4, 150], [5, 120],
+  [6, 90], [7, 60], [8, 45], [9, 35], [10, 30],
+];
+const gtMaillotGPM: [number, number][] = [
+  [1, 300], [2, 240], [3, 195], [4, 150], [5, 120],
+];
+const gtMaillotJeune: [number, number][] = [
+  [1, 150], [2, 120], [3, 95],
+];
+const gtMaillotCombatif: [number, number][] = [
+  [1, 150],
+];
 const gtPorteurs: { label: string; pts: number }[] = [
   { label: "Porteur Leader", pts: 20 },
   { label: "Porteur Vert", pts: 12 },
