@@ -477,18 +477,25 @@ serve(async (req) => {
     
     console.log(`[startlist-import] Loaded ${allRiders.length} total riders from coureurs table`);
 
-    // Charger name_aliases
-    const { data: aliasesData, error: aliasesError } = await supabase
-      .from('name_aliases')
-      .select('alias_text, coureur_id, source_team');
-
-    if (aliasesError) throw aliasesError;
-
-    const aliases: AliasRef[] = (aliasesData || []).map(a => ({
-      alias_text: a.alias_text,
-      coureur_id: a.coureur_id,
-      source_team: a.source_team
-    }));
+    // Charger name_aliases (paginé pour contourner la limite PostgREST de 1000 lignes)
+    const aliases: AliasRef[] = [];
+    const ALIAS_PAGE_SIZE = 1000;
+    let aliasOffset = 0;
+    while (true) {
+      const { data: aliasesData, error: aliasesError } = await supabase
+        .from('name_aliases')
+        .select('alias_text, coureur_id, source_team')
+        .range(aliasOffset, aliasOffset + ALIAS_PAGE_SIZE - 1);
+      if (aliasesError) throw aliasesError;
+      const batch = aliasesData || [];
+      aliases.push(...batch.map(a => ({
+        alias_text: a.alias_text,
+        coureur_id: a.coureur_id,
+        source_team: a.source_team
+      })));
+      if (batch.length < ALIAS_PAGE_SIZE) break;
+      aliasOffset += ALIAS_PAGE_SIZE;
+    }
 
     console.log(`[startlist-import] Loaded ${aliases.length} name aliases`);
 
