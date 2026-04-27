@@ -36,14 +36,32 @@ export interface PronosticDeadline {
   } | null;
 }
 
-export function usePronosticDeadlines() {
+export function usePronosticDeadlines(leagueId?: string | null) {
   return useQuery({
-    queryKey: ['arena-pronostic-deadlines'],
+    queryKey: ['arena-pronostic-deadlines', leagueId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get league scope (selected_course_ids) so per_course leagues only see their courses
+      let scopedCourseIds: string[] | null = null;
+      if (leagueId) {
+        const { data: scope } = await supabase
+          .from('league_scopes')
+          .select('selected_course_ids')
+          .eq('league_id', leagueId)
+          .maybeSingle();
+        const ids = (scope?.selected_course_ids as string[] | null) || null;
+        if (ids && ids.length > 0) scopedCourseIds = ids;
+      }
+
+      let query = supabase
         .from('arena_pronostic_deadlines')
         .select('id, course_id, etape_numero, pronostic_type, deadline_at, is_ttt, courses(nom, categorie, type_course, date_debut, date_fin)')
         .order('deadline_at', { ascending: true });
+
+      if (scopedCourseIds) {
+        query = query.in('course_id', scopedCourseIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as PronosticDeadline[];
     },

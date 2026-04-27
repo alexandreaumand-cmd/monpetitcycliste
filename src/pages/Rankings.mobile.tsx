@@ -756,6 +756,7 @@ export const RankingsMobile = () => {
         riderRound={selectedRider?.round}
         phaseId={selectedPhase || ''}
         saisonId={selectedSeason?.id}
+        leagueId={leagueId}
       />
 
       <MobileBottomSheet

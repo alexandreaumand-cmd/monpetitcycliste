@@ -53,15 +53,20 @@ Deno.serve(async (req) => {
 
     // Filter phases by league scope
     let phaseIds = phases.map(p => p.id);
+    let leagueCourseIds: string[] | null = null;
     if (league_id) {
       const { data: scopeData } = await supabase
         .from('league_scopes')
-        .select('phases')
+        .select('phases, selected_course_ids')
         .eq('league_id', league_id)
         .single();
       const scopedPhaseIds = scopeData?.phases || [];
       if (scopedPhaseIds.length > 0) {
         phaseIds = phaseIds.filter(id => scopedPhaseIds.includes(id));
+      }
+      const scopedCourseIds = (scopeData?.selected_course_ids as string[] | null) || null;
+      if (scopedCourseIds && scopedCourseIds.length > 0) {
+        leagueCourseIds = scopedCourseIds;
       }
     }
 
@@ -89,15 +94,16 @@ Deno.serve(async (req) => {
 
       const coureurIds = [...new Set(roster.map(r => r.coureur_id))];
 
-      // Fetch all points for these riders in these phases (paginated)
-      const points = await fetchAllRows((offset) =>
-        supabase
+      // Fetch all points for these riders in these phases (paginated, scoped to league courses if any)
+      const points = await fetchAllRows((offset) => {
+        let q = supabase
           .from('points_ledger')
           .select('points, course_id')
           .in('phase_id', phaseIds)
-          .in('coureur_id', coureurIds)
-          .range(offset, offset + PAGE_SIZE - 1)
-      );
+          .in('coureur_id', coureurIds);
+        if (leagueCourseIds) q = q.in('course_id', leagueCourseIds);
+        return q.range(offset, offset + PAGE_SIZE - 1);
+      });
 
       const actualPoints = points.reduce((sum, p) => sum + p.points, 0);
       const pointsByCourse = new Map<string, number>();
