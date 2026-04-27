@@ -21,7 +21,7 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   const { t } = useTranslation("arena");
   const [activeTab, setActiveTab] = useState("inprogress");
   const { data: managerId, isLoading: managerLoading } = useCurrentManagerId();
-  const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines();
+  const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines(leagueId);
   const { data: myPronostics, isLoading: pronosticsLoading } = useMyPronostics(leagueId, managerId || null);
   const { data: evaluatedIds, isLoading: evaluatedLoading } = useEvaluatedDeadlineIds(deadlines);
 
