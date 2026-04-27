@@ -1,17 +1,21 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck } from "lucide-react";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
+import { useSeasonContext } from "@/contexts/SeasonContext";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type TypeClassement = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
 
@@ -49,27 +53,122 @@ interface StartlistStats {
   total_teams?: number;
 }
 
-const RiderRow = ({ entry }: { entry: StartlistEntry }) => (
-  <div className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted/50 transition-colors">
-    <span className="text-muted-foreground w-6 text-right font-mono text-xs">
-      #{entry.line_no}
-    </span>
-    {entry.team_confirmed && (
-      <ShieldCheck className="h-3 w-3 text-green-500 flex-shrink-0" />
-    )}
-    <span className="flex-1 truncate font-medium text-sm">
-      {entry.coureurs?.nom || entry.source_name}
-    </span>
-    {!entry.coureur_id && (
-      <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
-    )}
-  </div>
-);
+interface RiderRowProps {
+  entry: StartlistEntry;
+  isFavorite: boolean;
+  canFavorite: boolean;
+  onToggleFavorite: () => void;
+}
+
+const RiderRow = ({ entry, isFavorite, canFavorite, onToggleFavorite }: RiderRowProps) => {
+  const { t } = useTranslation('calendar');
+  return (
+    <div className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted/50 transition-colors">
+      <span className="text-muted-foreground w-6 text-right font-mono text-xs">
+        #{entry.line_no}
+      </span>
+      {entry.team_confirmed && (
+        <ShieldCheck className="h-3 w-3 text-green-500 flex-shrink-0" />
+      )}
+      <span className="flex-1 truncate font-medium text-sm">
+        {entry.coureurs?.nom || entry.source_name}
+      </span>
+      {!entry.coureur_id && (
+        <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+      )}
+      {canFavorite && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite();
+          }}
+          className="flex-shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+          aria-label={isFavorite ? t('drawer.favorites.remove') : t('drawer.favorites.add')}
+          title={isFavorite ? t('drawer.favorites.remove') : t('drawer.favorites.add')}
+        >
+          <Star className={cn("h-3.5 w-3.5", isFavorite ? "fill-yellow-400 text-bordure-gold" : "text-muted-foreground/50")} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface MovementItem {
+  id: string;
+  change_type: string;
+  rider_name: string;
+  team_name: string | null;
+  coureur_id: string | null;
+  detected_at: string;
+}
+
+interface MovementsCompactProps {
+  items: MovementItem[];
+  isLoading: boolean;
+  resolveTeam: (item: MovementItem) => string;
+  scrollMaxClass?: string;
+}
+
+const StartlistMovementsCompact = ({ items, isLoading, resolveTeam, scrollMaxClass = "max-h-[280px]" }: MovementsCompactProps) => {
+  const { t } = useTranslation('calendar');
+
+  if (isLoading) {
+    return (
+      <div className="space-y-1.5">
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-6 w-full" />
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <p className="text-xs text-muted-foreground italic px-1 py-2">
+        {t('drawer.movements.empty')}
+      </p>
+    );
+  }
+
+  return (
+    <div className={cn("space-y-0.5 overflow-y-auto pr-1", scrollMaxClass)}>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="flex items-center gap-2 text-xs py-1 px-1.5 rounded hover:bg-muted/50 transition-colors"
+        >
+          {item.change_type === "added" ? (
+            <span className="flex-shrink-0 rounded-full p-0.5 bg-green-500/15 text-green-600 dark:text-green-400" title={t('drawer.movements.added')}>
+              <Plus className="h-2.5 w-2.5" />
+            </span>
+          ) : (
+            <span className="flex-shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 dark:text-red-400" title={t('drawer.movements.removed')}>
+              <Minus className="h-2.5 w-2.5" />
+            </span>
+          )}
+          <span className="font-medium truncate flex-1 min-w-0">{item.rider_name}</span>
+          <span className="text-muted-foreground truncate hidden sm:block max-w-[35%]">
+            {resolveTeam(item) || t('drawer.movements.noTeam')}
+          </span>
+          <span className="text-muted-foreground/80 whitespace-nowrap text-[10px]">
+            {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCourseDialogProps) => {
   const { t, i18n } = useTranslation('calendar');
+  const queryClient = useQueryClient();
+  const { data: currentManager } = useCurrentManager();
+  const { selectedSeason } = useSeasonContext();
+  const managerId = currentManager?.id;
   const [imageError, setImageError] = useState(false);
   const [pointsBreakdownOpen, setPointsBreakdownOpen] = useState(false);
+  const [mobileMovementsOpen, setMobileMovementsOpen] = useState(false);
 
   // Fetch detailed course data from v_course_points_theoriques
   const { data: courseDetails, isLoading: loadingDetails } = useQuery({
@@ -126,11 +225,11 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
     queryKey: ["calendar-startlist-entries", startlistImport?.id],
     queryFn: async () => {
       if (!startlistImport?.id) return null;
-      
+
       const response = await supabase.functions.invoke("startlist-entries-list", {
         body: { startlist_id: startlistImport.id },
       });
-      
+
       if (response.error) throw response.error;
       return response.data as {
         entries: StartlistEntry[];
@@ -138,6 +237,107 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
       };
     },
     enabled: open && !!startlistImport?.id,
+  });
+
+  // Fetch startlist tracker movements for this course
+  const { data: movements, isLoading: loadingMovements } = useQuery({
+    queryKey: ["calendar-course-movements", course?.course_id],
+    queryFn: async () => {
+      if (!course?.course_id) return [];
+      const { data, error } = await supabase
+        .from("startlist_tracker_changes")
+        .select("id, change_type, rider_name, team_name, coureur_id, detected_at")
+        .eq("course_id", course.course_id)
+        .order("detected_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return (data || []) as MovementItem[];
+    },
+    enabled: open && !!course?.course_id,
+  });
+
+  // Fallback team resolution for movements with null team_name
+  const movementCoureurIdsWithoutTeam = useMemo(() => {
+    if (!movements) return [];
+    return movements.filter(m => !m.team_name && m.coureur_id).map(m => m.coureur_id!);
+  }, [movements]);
+
+  const { data: coureurEquipeMap } = useQuery({
+    queryKey: ["calendar-movement-team-fallback", movementCoureurIdsWithoutTeam, selectedSeason?.id],
+    queryFn: async () => {
+      if (!movementCoureurIdsWithoutTeam.length || !selectedSeason?.id) return new Map<string, string>();
+
+      const { data: csData } = await supabase
+        .from("coureurs_saisons")
+        .select("coureur_id, equipe_id")
+        .in("coureur_id", movementCoureurIdsWithoutTeam)
+        .eq("saison_id", selectedSeason.id);
+
+      if (!csData?.length) return new Map<string, string>();
+
+      const equipeIds = [...new Set(csData.map(c => c.equipe_id))];
+
+      const { data: esData } = await supabase
+        .from("equipes_saisons")
+        .select("equipe_id, nom_affiche")
+        .in("equipe_id", equipeIds)
+        .eq("saison_id", selectedSeason.id);
+
+      const equipeNameMap = new Map<string, string>();
+      (esData || []).forEach(e => equipeNameMap.set(e.equipe_id, e.nom_affiche));
+
+      const map = new Map<string, string>();
+      csData.forEach(c => {
+        const nom = equipeNameMap.get(c.equipe_id);
+        if (nom) map.set(c.coureur_id, nom);
+      });
+      return map;
+    },
+    enabled: movementCoureurIdsWithoutTeam.length > 0 && !!selectedSeason?.id,
+  });
+
+  const resolveTeam = (item: MovementItem) =>
+    item.team_name || (item.coureur_id ? coureurEquipeMap?.get(item.coureur_id) : null) || "";
+
+  // Fetch user's favorites
+  const { data: favoritesSet } = useQuery({
+    queryKey: ["rider-favorites", managerId],
+    queryFn: async () => {
+      if (!managerId) return new Set<string>();
+      const { data } = await supabase
+        .from("rider_favorites")
+        .select("coureur_id")
+        .eq("manager_id", managerId);
+      return new Set((data || []).map(f => f.coureur_id));
+    },
+    enabled: !!managerId,
+  });
+
+  const toggleFavorite = useMutation({
+    mutationFn: async ({ coureurId, isFavorite }: { coureurId: string; isFavorite: boolean }) => {
+      if (!managerId) throw new Error("Not logged in");
+      if (isFavorite) {
+        const { error } = await supabase
+          .from("rider_favorites")
+          .delete()
+          .eq("manager_id", managerId)
+          .eq("coureur_id", coureurId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("rider_favorites")
+          .insert({ manager_id: managerId, coureur_id: coureurId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rider-favorites", managerId] });
+      queryClient.invalidateQueries({ queryKey: ["riders-data"] });
+    },
+    onError: (error) => {
+      toast.error(t('drawer.favorites.error'));
+      console.error(error);
+    },
   });
 
   // Group startlist entries by team
@@ -164,6 +364,24 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
     return format(parseISO(dateStr), "d MMM yyyy", { locale: i18n.language === 'fr' ? fr : undefined });
+  };
+
+  const renderRiderRow = (entry: StartlistEntry, idx: number) => {
+    const isFav = entry.coureur_id ? favoritesSet?.has(entry.coureur_id) ?? false : false;
+    const canFav = !!managerId && !!entry.coureur_id;
+    return (
+      <RiderRow
+        key={`${entry.line_no}-${idx}`}
+        entry={entry}
+        isFavorite={isFav}
+        canFavorite={canFav}
+        onToggleFavorite={() => {
+          if (entry.coureur_id) {
+            toggleFavorite.mutate({ coureurId: entry.coureur_id, isFavorite: isFav });
+          }
+        }}
+      />
+    );
   };
 
   const pointsData: {
@@ -226,6 +444,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
 
   const maxPoints = Math.max(...pointsData.map(d => d.points), 1);
   const stats = startlistData?.stats;
+  const movementCount = movements?.length || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -311,13 +530,13 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                             </div>
                           </div>
                           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className="h-full bg-primary/60 rounded-full transition-all"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
-                          <PointsBaremeSection 
-                            courseId={course.course_id} 
+                          <PointsBaremeSection
+                            courseId={course.course_id}
                             typeClassement={item.typeClassement}
                           />
                         </div>
@@ -334,14 +553,14 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                     <Image className="h-4 w-4" />
                     {t('drawer.route')}
                   </h3>
-                  <a 
-                    href={courseRouteImage} 
-                    target="_blank" 
+                  <a
+                    href={courseRouteImage}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="block"
                   >
-                    <img 
-                      src={courseRouteImage} 
+                    <img
+                      src={courseRouteImage}
                       alt={t('drawer.route')}
                       className="w-full rounded-lg border hover:opacity-90 transition-opacity cursor-zoom-in"
                       onError={() => setImageError(true)}
@@ -349,6 +568,26 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                   </a>
                 </div>
               )}
+
+              {/* Startlist movements - Desktop only (always visible in left column) */}
+              <div className="hidden lg:block space-y-2 pt-1">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <h3 className="font-medium text-sm flex items-center gap-2">
+                    <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
+                    {t('drawer.movements.title')}
+                  </h3>
+                  {movementCount > 0 && (
+                    <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
+                  )}
+                </div>
+                <div className="rounded-lg border bg-card p-2">
+                  <StartlistMovementsCompact
+                    items={movements || []}
+                    isLoading={loadingMovements}
+                    resolveTeam={resolveTeam}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Right Column - Startlist */}
@@ -368,19 +607,16 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               {/* Stats badges */}
               {stats && (
                 <div className="flex flex-wrap gap-2">
-                  {/* Confirmed teams */}
                   {stats.confirmed_teams != null && stats.total_teams != null && stats.total_teams > 0 && (
                     <Badge variant="outline" className="gap-1 text-green-700 border-green-300 bg-green-50">
                       <ShieldCheck className="h-3 w-3" />
                       {t('drawer.confirmedTeams', { count: stats.confirmed_teams, total: stats.total_teams })}
                     </Badge>
                   )}
-                  {/* Matched */}
                   <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300 bg-blue-50">
                     <CheckCircle2 className="h-3 w-3" />
                     {t('drawer.matchedRiders', { count: stats.matched })}
                   </Badge>
-                  {/* Unmatched */}
                   {stats.unmatched > 0 && (
                     <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50">
                       <AlertTriangle className="h-3 w-3" />
@@ -428,14 +664,10 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                             <div>
-                              {col1.map((entry, idx) => (
-                                <RiderRow key={idx} entry={entry} />
-                              ))}
+                              {col1.map((entry, idx) => renderRiderRow(entry, idx))}
                             </div>
                             <div>
-                              {col2.map((entry, idx) => (
-                                <RiderRow key={idx} entry={entry} />
-                              ))}
+                              {col2.map((entry, idx) => renderRiderRow(entry, idx + half))}
                             </div>
                           </div>
                         </div>
@@ -449,6 +681,38 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                   <p className="text-sm">{t('drawer.noStartlist')}</p>
                 </div>
               )}
+
+              {/* Startlist movements - Mobile only (collapsible at bottom) */}
+              <div className="lg:hidden">
+                <Collapsible open={mobileMovementsOpen} onOpenChange={setMobileMovementsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
+                      <span className="font-medium text-sm flex items-center gap-2">
+                        <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
+                        {t('drawer.movements.title')}
+                        {movementCount > 0 && (
+                          <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
+                        )}
+                      </span>
+                      {mobileMovementsOpen ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="rounded-lg border bg-card p-2">
+                      <StartlistMovementsCompact
+                        items={movements || []}
+                        isLoading={loadingMovements}
+                        resolveTeam={resolveTeam}
+                        scrollMaxClass="max-h-[400px]"
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
             </div>
           </div>
         </ScrollArea>

@@ -69,6 +69,18 @@
     "unmatchedRiders": "{{count}} unmatched",
     "legendOfficial": "Officially confirmed roster",
     "legendUnmatched": "Rider not identified in database",
+    "movements": {
+      "title": "Startlist movements",
+      "added": "Added",
+      "removed": "Removed",
+      "empty": "No movement detected",
+      "noTeam": "—"
+    },
+    "favorites": {
+      "add": "Add to favorites",
+      "remove": "Remove from favorites",
+      "error": "Could not update favorites"
+    },
     "classifications": {
       "stages": "Stages",
       "gc": "General Classification",
