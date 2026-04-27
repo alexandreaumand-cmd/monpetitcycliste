@@ -56,7 +56,7 @@ export function CourseMultiSelect({
   };
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("relative", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
