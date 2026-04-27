@@ -61,6 +61,26 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
     }
   };
 
+  const handleMarkCompleted = async () => {
+    try {
+      const { error } = await supabase
+        .from("leagues")
+        .update({
+          status: "completed",
+          archived_at: new Date().toISOString(),
+        })
+        .eq("id", league.id);
+
+      if (error) throw error;
+
+      toast.success("Ligue marquée comme terminée");
+      onActionComplete();
+    } catch (error) {
+      console.error("Error marking league as completed:", error);
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
   const handleResetToPending = async () => {
     setIsResetting(true);
     try {
