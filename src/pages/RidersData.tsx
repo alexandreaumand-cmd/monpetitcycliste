@@ -82,6 +82,7 @@ export default function RidersData() {
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   
   // Rider results panel state
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string } | null>(null);
