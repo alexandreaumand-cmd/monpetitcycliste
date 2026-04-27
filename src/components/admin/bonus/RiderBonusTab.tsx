@@ -581,6 +581,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                         <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
                       </TableCell>
                       <TableCell>{bonus.manager?.nom || '-'}</TableCell>
+                      <TableCell className="text-xs">
+                        {bonus.course_id
+                          ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
                       </TableCell>
