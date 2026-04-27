@@ -152,6 +152,20 @@ const gtMaillotsFinaux: { label: string; pts: number }[] = [
   { label: "⚪ Jeune", pts: 150 },
   { label: "🔥 Combatif", pts: 150 },
 ];
+// Barèmes détaillés des classements finaux des maillots (Grands Tours)
+const gtMaillotVert: [number, number][] = [
+  [1, 300], [2, 240], [3, 195], [4, 150], [5, 120],
+  [6, 90], [7, 60], [8, 45], [9, 35], [10, 30],
+];
+const gtMaillotGPM: [number, number][] = [
+  [1, 300], [2, 240], [3, 195], [4, 150], [5, 120],
+];
+const gtMaillotJeune: [number, number][] = [
+  [1, 150], [2, 120], [3, 95],
+];
+const gtMaillotCombatif: [number, number][] = [
+  [1, 150],
+];
 const gtPorteurs: { label: string; pts: number }[] = [
   { label: "Porteur Leader", pts: 20 },
   { label: "Porteur Vert", pts: 12 },
@@ -312,31 +326,46 @@ const TourBaremeBlock = ({
   etape,
   maillots,
   porteurs,
+  detailedMaillots,
 }: {
   gc: [number, number][];
   etape: [number, number][];
   maillots: { label: string; pts: number }[];
   porteurs: { label: string; pts: number }[];
+  detailedMaillots?: { label: string; rows: [number, number][] }[];
 }) => (
   <div className="space-y-4">
     <CompactBareme label={`Classement général final (top ${gc.length})`} rows={gc} />
     <CompactBareme label={`Classement d'étape (top ${etape.length})`} rows={etape} />
-    <div>
-      <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
-        Maillots distinctifs (classement final)
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-        {maillots.map((m) => (
-          <div
-            key={m.label}
-            className="flex flex-col items-center p-2 rounded bg-bordure-cream/50 border border-bordure-green/5 text-center"
-          >
-            <span className="text-[11px] text-bordure-green/60 font-inter">{m.label}</span>
-            <span className="font-montserrat font-bold text-sm text-bordure-green">{m.pts} pts</span>
-          </div>
-        ))}
+    {detailedMaillots ? (
+      <div>
+        <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-2">
+          Maillots distinctifs (classement final)
+        </p>
+        <div className="space-y-3">
+          {detailedMaillots.map((m) => (
+            <CompactBareme key={m.label} label={`${m.label} (top ${m.rows.length})`} rows={m.rows} />
+          ))}
+        </div>
       </div>
-    </div>
+    ) : (
+      <div>
+        <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
+          Maillots distinctifs (classement final)
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          {maillots.map((m) => (
+            <div
+              key={m.label}
+              className="flex flex-col items-center p-2 rounded bg-bordure-cream/50 border border-bordure-green/5 text-center"
+            >
+              <span className="text-[11px] text-bordure-green/60 font-inter">{m.label}</span>
+              <span className="font-montserrat font-bold text-sm text-bordure-green">{m.pts} pts</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
     <div>
       <p className="text-xs font-montserrat font-semibold text-bordure-green/70 uppercase tracking-wider mb-1.5">
         Points porteur (par jour de course)
@@ -459,9 +488,10 @@ const RulesPage = () => {
               <li className="flex items-start gap-3">
                 <span className="text-bordure-gold font-bold font-montserrat shrink-0 mt-0.5">C.</span>
                 <span>
-                  <strong className="text-bordure-green">Départage au tirage au sort</strong> — À la
-                  clôture du tour, le manager ayant misé le plus remporte le coureur. En cas d'égalité,
-                  un tirage au sort désigne le vainqueur.
+                  <strong className="text-bordure-green">En cas d'égalité</strong> — À la clôture du
+                  tour, le manager ayant misé le plus remporte le coureur. Si plusieurs managers
+                  misent le même montant maximal, <strong>aucun ne remporte le coureur</strong> :
+                  il est remis en jeu et redevient disponible au tour suivant.
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -557,7 +587,18 @@ const RulesPage = () => {
                     🟡 Grands Tours — Tour de France, Giro, Vuelta
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-3">
-                    <TourBaremeBlock gc={gtGC} etape={gtEtape} maillots={gtMaillotsFinaux} porteurs={gtPorteurs} />
+                    <TourBaremeBlock
+                      gc={gtGC}
+                      etape={gtEtape}
+                      maillots={gtMaillotsFinaux}
+                      porteurs={gtPorteurs}
+                      detailedMaillots={[
+                        { label: "🟢 Vert (Points)", rows: gtMaillotVert },
+                        { label: "🔴 Montagne (GPM)", rows: gtMaillotGPM },
+                        { label: "⚪ Jeune", rows: gtMaillotJeune },
+                        { label: "🔥 Combatif", rows: gtMaillotCombatif },
+                      ]}
+                    />
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="tours-cat1" className="border border-black/[0.04] rounded-lg overflow-hidden">
