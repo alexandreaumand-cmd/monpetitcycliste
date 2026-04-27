@@ -1,49 +1,71 @@
-# Ajout de la course obligatoire pour le bonus "First Win"
+## Objectif
 
-## Contexte
+Améliorer la modale "Course" du Calendrier (`CalendarCourseDialog.tsx`) avec deux évolutions :
 
-Lors des derniers échanges, on a établi que le bonus **First Win** doit être rattaché à une course (la course sur laquelle le coureur a remporté sa 1ère victoire de carrière). C'est le `course_id` qui détermine ensuite, côté `get-rider-points-table`, dans quelles ligues ce bonus apparaît (uniquement les ligues dont le scope contient cette course).
+1. **Derniers mouvements de startlist** affichés dans l'espace libre à gauche (sous Points/Bareme/Route), condensés et lisibles. Sur mobile, en bas de page, repliables dans un accordéon.
+2. **Étoile favoris** à côté de chaque coureur de la startlist, même comportement que `RidersData` (table `rider_favorites`, toggle, jaune si favori).
 
-Aujourd'hui, dans le formulaire super-admin "Nouveau Bonus Coureur", il n'y a pas de champ Course → toutes les insertions partent avec `course_id = NULL` et le bonus n'apparaît correctement dans aucune ligue par-course.
+---
 
-## Ce qui change
+## 1. Mouvements startlists (colonne gauche desktop, bas en mobile)
 
-### 1. Formulaire "Nouveau Bonus Coureur" (super-admin)
-Fichier : `src/components/admin/bonus/RiderBonusTab.tsx`
+**Données** : table `startlist_tracker_changes` filtrée sur `course_id = course.course_id`, ordre `detected_at DESC`, limite 30 (suffisant pour une seule course, condensé).
 
-- Ajouter un champ **Course** (combobox cherchable, listant les courses de la saison sélectionnée).
-- Le champ est :
-  - **obligatoire** quand `bonus_type = 'first_win'`
-  - **obligatoire** quand `bonus_type = 'itt'` (cohérent : un ITT a lieu sur une course précise)
-  - **caché / optionnel** quand `bonus_type = 'coureur_bonuse'` (bonus +25% calculé par phase, pas par course)
-- Bloquer le bouton "Enregistrer" tant qu'aucune course n'est choisie pour les types qui l'exigent.
-- À l'insertion dans `bonus_points`, transmettre `course_id` (la table a déjà la colonne, la logique de filtrage par ligue dans `get-rider-points-table` est déjà branchée).
-- Reset du champ à la fermeture du dialog.
+**Requête** (nouveau `useQuery` dans `CalendarCourseDialog.tsx`) :
+```ts
+supabase
+  .from("startlist_tracker_changes")
+  .select("id, change_type, rider_name, team_name, coureur_id, detected_at")
+  .eq("course_id", course.course_id)
+  .order("detected_at", { ascending: false })
+  .limit(30);
+```
 
-### 2. Tableau "Bonus Coureur attribués"
-Même fichier — ajouter une colonne **Course** pour visualiser à quelle course chaque bonus est rattaché (libellé court de la course, ou `—` si NULL pour les `coureur_bonuse`).
+Fallback équipe : si `team_name` est `null` mais `coureur_id` présent, résoudre via `coureurs_saisons` + `equipes_saisons` (même logique que `StartlistTrackerMovements.tsx`, ligne 96-130) sur la saison courante (`useSeasonContext`).
 
-### 3. (Optionnel — recommandé) Édition d'un bonus existant
-Le dialog d'édition actuel ne permet de modifier que `points` et `commentaire`. Ajouter la possibilité de **rattacher/changer la course** pour les bonus `first_win` / `itt` existants — utile pour corriger les bonus 2026 déjà saisis sans course, comme tu l'as proposé.
+**Rendu condensé** — nouveau sous-composant local `StartlistMovementsCompact` :
+- En-tête : icône `ArrowDownUp` + libellé `Mouvements startlist` + badge count.
+- Lignes : icône Ajout (vert `Plus`) / Retrait (rouge `Minus`) + nom coureur (font-medium) + équipe (text-muted, truncate) + date relative `dd MMM HH:mm`.
+- Layout : `space-y-1`, `text-xs`, `py-1 px-2 rounded hover:bg-muted/50`.
+- Si zéro mouvement : message discret `Aucun mouvement détecté`.
+- Scroll vertical max-h-[280px] sur desktop pour ne pas pousser le contenu.
 
-## Détails techniques
+**Placement responsive** :
+- **Desktop (`lg:`)** : intégré dans la colonne gauche existante (ligne 260, sous la route image), sans accordéon (toujours visible).
+- **Mobile (`< lg`)** : déplacé en bas de la grille, dans un `<Collapsible>` (déjà importé) avec trigger `Mouvements startlist (N)` + `ChevronDown/Up`. Pour ça : on rend deux instances conditionnelles (`hidden lg:block` à gauche / `lg:hidden` en bas après la startlist), ou plus propre : un seul bloc rendu deux fois selon breakpoint via `useIsMobile`.
 
-- **Source des courses** : requête `useQuery` sur `courses` filtrée par `saison_id` (pattern déjà utilisé dans `CourseSelector.tsx`), triée par `date_debut`. Renvoie `{ id, course_nom, date_debut, categorie }`.
-- **Composant UI** : Popover + Command (cherche par nom de course), même pattern que le `CourseMultiSelect` récemment créé, mais en sélection unique. Pas besoin d'extraire un composant — l'inliner dans le dialog suffit (utilisé à un seul endroit).
-- **Validation** :
+Choix retenu : **un seul bloc rendu** dans la colonne gauche pour desktop (toujours déplié), et dupliqué en bas du grid sur mobile dans un Collapsible. Les deux utilisent la même donnée (même queryKey, partagée via React Query cache).
+
+---
+
+## 2. Étoile favoris sur chaque coureur
+
+**Pré-requis** :
+- Récupérer `managerId` via `useCurrentManager()` (déjà utilisé ailleurs).
+- Charger les favoris du manager au montage (queryKey `["rider-favorites", managerId]`) :
   ```ts
-  const courseRequired = bonusType === 'first_win' || bonusType === 'itt';
-  if (courseRequired && !selectedCourseId) {
-    toast.error("La course est obligatoire pour ce type de bonus");
-    return;
-  }
+  supabase.from("rider_favorites").select("coureur_id").eq("manager_id", managerId)
   ```
-- **Insert** : ajouter `course_id: selectedCourseId || null` aux objets passés à `supabase.from("bonus_points").insert(...)` dans les deux branches (multi-manager et mono-manager).
-- **Aucune migration DB** nécessaire : `bonus_points.course_id text NULLABLE` existe déjà.
-- **Aucune modif edge function** : `get-rider-points-table` filtre déjà les bonus avec `course_id` selon le scope de la ligue.
+  → `Set<string>` de `coureur_id` favoris.
 
-## Hors scope
+**Mutation** : copier exactement le pattern de `RidersData.tsx` (lignes 397-425) — `useMutation` qui insert/delete dans `rider_favorites`, invalide `["rider-favorites", managerId]`.
 
-- Les bonus `coureur_bonuse` (+25%) restent par phase, sans course.
-- Les bonus manager (TTT, Scoreurs) ne sont pas concernés.
-- Tu corrigeras ensuite manuellement (ou via le dialog d'édition au point 3) les bonus First Win 2026 déjà saisis sans course.
+**Modification de `RiderRow`** (ligne 52-67) :
+- Ajouter props `isFavorite: boolean`, `onToggleFavorite: () => void`, `canFavorite: boolean` (false si pas de `coureur_id` matché ou pas de manager).
+- Ajouter en fin de ligne un `<button>` icône `Star` :
+  ```tsx
+  <Star className={cn("h-3.5 w-3.5", isFavorite ? "fill-yellow-400 text-bordure-gold" : "text-muted-foreground/50")} />
+  ```
+- `e.stopPropagation()` au clic pour éviter conflits.
+- Si `!canFavorite` (coureur non matché en base ou pas connecté) → ne pas afficher l'étoile.
+
+Propager `favoritesSet`, `toggleFavorite`, `managerId` depuis `CalendarCourseDialog` jusqu'aux `RiderRow` (via les deux colonnes du grid d'équipe).
+
+---
+
+## Fichiers modifiés
+
+- `src/components/calendar/CalendarCourseDialog.tsx` — ajout des deux queries (mouvements + favoris), mutation toggleFavorite, sous-composant `StartlistMovementsCompact`, modification de `RiderRow` (étoile), placement responsive (desktop colonne gauche + mobile bas en accordéon).
+- `src/i18n/locales/fr/calendar.json` et `en/calendar.json` — nouvelles clés : `drawer.movements.title`, `drawer.movements.added`, `drawer.movements.removed`, `drawer.movements.empty`, `drawer.movements.detected`.
+
+Aucune migration DB nécessaire (tables `startlist_tracker_changes` et `rider_favorites` existent déjà).
