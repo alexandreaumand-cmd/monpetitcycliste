@@ -232,8 +232,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply league course filter on bonuses too:
-    // keep bonuses linked to a scoped course OR with no course_id (global bonuses like rider bonus +25%)
+    // Strict league isolation: bonuses are duplicated per league_id at creation time,
+    // so we MUST filter by league_id to avoid leaking bonuses from other leagues
+    // (e.g. first_win bonuses are stored with course_id = NULL).
+    if (league_id) {
+      bonusQuery = bonusQuery.eq('league_id', league_id);
+    }
+
+    // Secondary safety filter: if a bonus is linked to a course, it must be in the league scope.
+    // Bonuses with course_id = NULL (e.g. first_win, rider bonus +25%) are kept as-is
+    // and rely on the league_id filter above for isolation.
     if (leagueCourseIds) {
       bonusQuery = bonusQuery.or(`course_id.is.null,course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
     }
