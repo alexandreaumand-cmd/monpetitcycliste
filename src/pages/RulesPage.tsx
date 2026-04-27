@@ -587,7 +587,18 @@ const RulesPage = () => {
                     🟡 Grands Tours — Tour de France, Giro, Vuelta
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-3">
-                    <TourBaremeBlock gc={gtGC} etape={gtEtape} maillots={gtMaillotsFinaux} porteurs={gtPorteurs} />
+                    <TourBaremeBlock
+                      gc={gtGC}
+                      etape={gtEtape}
+                      maillots={gtMaillotsFinaux}
+                      porteurs={gtPorteurs}
+                      detailedMaillots={[
+                        { label: "🟢 Vert (Points)", rows: gtMaillotVert },
+                        { label: "🔴 Montagne (GPM)", rows: gtMaillotGPM },
+                        { label: "⚪ Jeune", rows: gtMaillotJeune },
+                        { label: "🔥 Combatif", rows: gtMaillotCombatif },
+                      ]}
+                    />
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="tours-cat1" className="border border-black/[0.04] rounded-lg overflow-hidden">
