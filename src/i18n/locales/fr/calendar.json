@@ -69,6 +69,18 @@
     "unmatchedRiders": "{{count}} non matchés",
     "legendOfficial": "Composition officielle confirmée",
     "legendUnmatched": "Coureur non identifié dans la base",
+    "movements": {
+      "title": "Mouvements startlist",
+      "added": "Ajout",
+      "removed": "Retrait",
+      "empty": "Aucun mouvement détecté",
+      "noTeam": "—"
+    },
+    "favorites": {
+      "add": "Ajouter aux favoris",
+      "remove": "Retirer des favoris",
+      "error": "Impossible de mettre à jour les favoris"
+    },
     "classifications": {
       "stages": "Étapes",
       "gc": "Classement Général",
