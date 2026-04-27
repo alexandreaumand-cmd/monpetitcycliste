@@ -8,6 +8,8 @@
     "allTeams": "All teams",
     "category": "Category",
     "allCategories": "All categories",
+    "courses": "Races",
+    "coursesPlaceholder": "Filter by race...",
     "cotes": "Rating",
     "program": "Program",
     "programAll": "All",

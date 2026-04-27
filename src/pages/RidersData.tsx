@@ -36,8 +36,10 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
+import { CourseMultiSelect, type CourseOption } from "@/components/data/CourseMultiSelect";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface RiderWithPoints {
@@ -80,6 +82,7 @@ export default function RidersData() {
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   
   // Rider results panel state
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string } | null>(null);
@@ -227,16 +230,17 @@ export default function RidersData() {
   const { data: programData } = useQuery({
     queryKey: ["riders-program", localSelectedSeason?.id],
     queryFn: async () => {
-      if (!localSelectedSeason?.id) return new Map<string, UpcomingRace[]>();
+      const empty = {
+        upcomingByRider: new Map<string, UpcomingRace[]>(),
+        ridersByRace: new Map<string, Set<string>>(),
+        coursesList: [] as CourseOption[],
+      };
+      if (!localSelectedSeason?.id) return empty;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const pageSize = 1000;
 
-      // First page with count to know total
-      const firstPage = await supabase
-        .from("startlist_entries")
-        .select(
-          `
+      const baseSelect = `
           coureur_id,
           startlist_imports!inner(
             pcs_validated,
@@ -248,11 +252,12 @@ export default function RidersData() {
               date_debut
             )
           )
-        `,
-          { count: "exact" }
-        )
+        `;
+
+      const firstPage = await supabase
+        .from("startlist_entries")
+        .select(baseSelect, { count: "exact" })
         .eq("startlist_imports.saison_id", localSelectedSeason.id)
-        .gte("startlist_imports.courses.date_debut", today)
         .not("coureur_id", "is", null)
         .order("coureur_id")
         .range(0, pageSize - 1);
@@ -262,7 +267,6 @@ export default function RidersData() {
       const allEntries: any[] = [...(firstPage.data ?? [])];
       const totalCount = firstPage.count ?? 0;
 
-      // Fetch remaining pages if needed
       if (totalCount > pageSize) {
         const pageCount = Math.ceil(totalCount / pageSize);
         const restPages = await Promise.all(
@@ -271,80 +275,88 @@ export default function RidersData() {
             const to = from + pageSize - 1;
             return supabase
               .from("startlist_entries")
-              .select(
-                `
-                coureur_id,
-                startlist_imports!inner(
-                  pcs_validated,
-                  created_at,
-                  saison_id,
-                  courses!inner(
-                    id,
-                    nom,
-                    date_debut
-                  )
-                )
-              `
-              )
+              .select(baseSelect)
               .eq("startlist_imports.saison_id", localSelectedSeason.id)
-              .gte("startlist_imports.courses.date_debut", today)
               .not("coureur_id", "is", null)
               .order("coureur_id")
               .range(from, to);
           })
         );
-
         for (const page of restPages) {
           if (page.error) throw page.error;
           allEntries.push(...(page.data ?? []));
         }
       }
 
-      // Build a map of coureur_id -> races (keeping only latest import per race)
-      const riderRacesMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
+      // Latest import per (rider, race) for upcoming program
+      const upcomingMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
+      // race -> set of rider ids (all dates, latest import wins implicitly via Set)
+      const ridersByRace = new Map<string, Set<string>>();
+      // distinct courses (all dates)
+      const coursesById = new Map<string, CourseOption>();
 
       allEntries.forEach((entry: any) => {
         if (!entry.coureur_id || !entry.startlist_imports?.courses) return;
-        
         const coureurId = entry.coureur_id;
         const course = entry.startlist_imports.courses;
         const raceId = course.id;
         const createdAt = entry.startlist_imports.created_at;
 
-        if (!riderRacesMap.has(coureurId)) {
-          riderRacesMap.set(coureurId, new Map());
-        }
-
-        const riderMap = riderRacesMap.get(coureurId)!;
-        const existing = riderMap.get(raceId);
-
-        // Keep only the most recent import for each race
-        if (!existing || new Date(createdAt) > new Date(existing.created_at)) {
-          riderMap.set(raceId, {
-            race: {
-              race_id: raceId,
-              race_nom: course.nom,
-              date_debut: course.date_debut,
-              is_confirmed: entry.startlist_imports.pcs_validated || false,
-            },
-            created_at: createdAt,
+        // Distinct courses
+        if (!coursesById.has(raceId)) {
+          coursesById.set(raceId, {
+            id: raceId,
+            nom: course.nom,
+            date_debut: course.date_debut,
           });
         }
+
+        // Race -> riders (all)
+        if (!ridersByRace.has(raceId)) ridersByRace.set(raceId, new Set());
+        ridersByRace.get(raceId)!.add(coureurId);
+
+        // Upcoming program (date >= today)
+        if (course.date_debut && course.date_debut >= today) {
+          if (!upcomingMap.has(coureurId)) upcomingMap.set(coureurId, new Map());
+          const riderMap = upcomingMap.get(coureurId)!;
+          const existing = riderMap.get(raceId);
+          if (!existing || new Date(createdAt) > new Date(existing.created_at)) {
+            riderMap.set(raceId, {
+              race: {
+                race_id: raceId,
+                race_nom: course.nom,
+                date_debut: course.date_debut,
+                is_confirmed: entry.startlist_imports.pcs_validated || false,
+              },
+              created_at: createdAt,
+            });
+          }
+        }
       });
 
-      // Convert to final map with sorted races
-      const resultMap = new Map<string, UpcomingRace[]>();
-      riderRacesMap.forEach((racesMap, coureurId) => {
+      const upcomingByRider = new Map<string, UpcomingRace[]>();
+      upcomingMap.forEach((racesMap, coureurId) => {
         const races = Array.from(racesMap.values())
-          .map(r => r.race)
+          .map((r) => r.race)
           .sort((a, b) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
-        resultMap.set(coureurId, races);
+        upcomingByRider.set(coureurId, races);
       });
 
-      return resultMap;
+      const coursesList = Array.from(coursesById.values()).sort((a, b) => {
+        const da = a.date_debut || "";
+        const db = b.date_debut || "";
+        return da.localeCompare(db);
+      });
+
+      return { upcomingByRider, ridersByRace, coursesList };
     },
     enabled: !!localSelectedSeason?.id,
   });
+
+  // Backwards-compatible accessors
+  const upcomingByRider = programData?.upcomingByRider;
+  const ridersByRace = programData?.ridersByRace;
+  const coursesList = programData?.coursesList ?? [];
 
   // Fetch teams for filter
   const { data: teamsData } = useQuery({
@@ -453,13 +465,24 @@ export default function RidersData() {
       }
       // Program filter
       if (programFilter !== "all") {
-        const hasProgram = programData?.has(rider.coureur_id) && (programData.get(rider.coureur_id)?.length || 0) > 0;
+        const hasProgram = !!upcomingByRider?.has(rider.coureur_id) && (upcomingByRider.get(rider.coureur_id)?.length || 0) > 0;
         if (programFilter === "with" && !hasProgram) return false;
         if (programFilter === "without" && hasProgram) return false;
       }
+      // Courses filter (rider is on the startlist of at least one selected race)
+      if (selectedCourses.length > 0) {
+        let inAny = false;
+        for (const cid of selectedCourses) {
+          if (ridersByRace?.get(cid)?.has(rider.coureur_id)) {
+            inAny = true;
+            break;
+          }
+        }
+        if (!inAny) return false;
+      }
       return true;
     });
-  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, programData]);
+  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, upcomingByRider, selectedCourses, ridersByRace]);
 
   // Sort handlers
   const handleSort = (column: SortColumn) => {
@@ -644,37 +667,141 @@ export default function RidersData() {
 
       <div className={cn("container mx-auto", isMobile ? "px-3 py-4" : "px-4 py-8")}>
 
-      {/* Filters */}
-      {isMobile ? (
-        <>
-          {/* Search always visible on mobile */}
-          <div className="mb-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('filters.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
-              />
+      {(() => {
+        const resetAll = () => {
+          setSearch("");
+          setSelectedEquipe("all");
+          setSelectedCategorie("all");
+          setSelectedCotes([]);
+          setShowFavoritesOnly(false);
+          setProgramFilter("all");
+          setSelectedCourses([]);
+        };
+        const activeCount =
+          (selectedEquipe !== "all" ? 1 : 0) +
+          (selectedCategorie !== "all" ? 1 : 0) +
+          (selectedCotes.length > 0 ? 1 : 0) +
+          (programFilter !== "all" ? 1 : 0) +
+          (showFavoritesOnly ? 1 : 0) +
+          (selectedCourses.length > 0 ? 1 : 0);
+
+        return isMobile ? (
+          <>
+            {/* Search always visible on mobile */}
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('filters.searchPlaceholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
-          </div>
-          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full mb-3 justify-between">
-                <span className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  {t('filters.showFilters')}
-                  {(() => {
-                    const count = (selectedEquipe !== 'all' ? 1 : 0) + (selectedCategorie !== 'all' ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0) + (programFilter !== 'all' ? 1 : 0) + (showFavoritesOnly ? 1 : 0);
-                    return count > 0 ? <Badge variant="secondary" className="ml-1">{count}</Badge> : null;
-                  })()}
-                </span>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mb-4">
-              <div className="space-y-1.5">
+            <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full mb-3 justify-between">
+                  <span className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    {t('filters.showFilters')}
+                    {activeCount > 0 && <Badge variant="secondary" className="ml-1">{activeCount}</Badge>}
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 mb-4">
+                <div className="space-y-1.5">
+                  <Label>{t('filters.team')}</Label>
+                  <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
+                    <SelectTrigger><SelectValue placeholder={t('filters.allTeams')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
+                      {filteredTeamsData?.map((team) => (
+                        <SelectItem key={team.id} value={team.equipe_id}>{team.nom_affiche}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('filters.category')}</Label>
+                  <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
+                    <SelectTrigger><SelectValue placeholder={t('filters.allCategories')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
+                      {categorieOptions.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('filters.courses')} {selectedCourses.length > 0 && `(${selectedCourses.length})`}</Label>
+                  <CourseMultiSelect
+                    options={coursesList}
+                    selected={selectedCourses}
+                    onChange={setSelectedCourses}
+                    placeholder={t('filters.coursesPlaceholder')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
+                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                    {coteOptions.map((cote) => (
+                      <div key={cote} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`cote-m-${cote}`}
+                          checked={selectedCotes.includes(cote)}
+                          onCheckedChange={(checked) => {
+                            if (checked) setSelectedCotes([...selectedCotes, cote]);
+                            else setSelectedCotes(selectedCotes.filter(c => c !== cote));
+                          }}
+                        />
+                        <Label htmlFor={`cote-m-${cote}`} className="cursor-pointer text-sm">{cote}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('filters.program')}</Label>
+                  <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
+                    <SelectTrigger><SelectValue placeholder={t('filters.programAll')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('filters.programAll')}</SelectItem>
+                      <SelectItem value="with">{t('filters.programWith')}</SelectItem>
+                      <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="favorites-m"
+                    checked={showFavoritesOnly}
+                    onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
+                  />
+                  <Label htmlFor="favorites-m" className="cursor-pointer">{t('filters.favoritesOnly')}</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={resetAll}>{t('filters.reset')}</Button>
+                  <Button variant="default" size="sm" onClick={handleExportExcel} disabled={!sortedRiders || sortedRiders.length === 0}>
+                    <Download className="h-4 w-4 mr-1" />{t('export.button')}
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </>
+        ) : (
+          <div className="mb-6 space-y-3">
+            {/* Main filters row */}
+            <div className="grid grid-cols-12 gap-3 items-end">
+              <div className="col-span-3 space-y-1.5">
+                <Label htmlFor="search">{t('filters.search')}</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input id="search" placeholder={t('filters.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
+                </div>
+              </div>
+              <div className="col-span-2 space-y-1.5">
                 <Label>{t('filters.team')}</Label>
                 <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
                   <SelectTrigger><SelectValue placeholder={t('filters.allTeams')} /></SelectTrigger>
@@ -686,7 +813,7 @@ export default function RidersData() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
+              <div className="col-span-2 space-y-1.5">
                 <Label>{t('filters.category')}</Label>
                 <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
                   <SelectTrigger><SelectValue placeholder={t('filters.allCategories')} /></SelectTrigger>
@@ -698,25 +825,16 @@ export default function RidersData() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
-                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
-                  {coteOptions.map((cote) => (
-                    <div key={cote} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`cote-m-${cote}`}
-                        checked={selectedCotes.includes(cote)}
-                        onCheckedChange={(checked) => {
-                          if (checked) setSelectedCotes([...selectedCotes, cote]);
-                          else setSelectedCotes(selectedCotes.filter(c => c !== cote));
-                        }}
-                      />
-                      <Label htmlFor={`cote-m-${cote}`} className="cursor-pointer text-sm">{cote}</Label>
-                    </div>
-                  ))}
-                </div>
+              <div className="col-span-3 space-y-1.5">
+                <Label>{t('filters.courses')} {selectedCourses.length > 0 && `(${selectedCourses.length})`}</Label>
+                <CourseMultiSelect
+                  options={coursesList}
+                  selected={selectedCourses}
+                  onChange={setSelectedCourses}
+                  placeholder={t('filters.coursesPlaceholder')}
+                />
               </div>
-              <div className="space-y-1.5">
+              <div className="col-span-2 space-y-1.5">
                 <Label>{t('filters.program')}</Label>
                 <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
                   <SelectTrigger><SelectValue placeholder={t('filters.programAll')} /></SelectTrigger>
@@ -727,101 +845,57 @@ export default function RidersData() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Secondary actions row: Cotes popover + Favorites + Reset + Excel */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-3.5 w-3.5 mr-2" />
+                    {t('filters.cotes')}
+                    {selectedCotes.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">{selectedCotes.length}</Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="start">
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+                    {coteOptions.map((cote) => (
+                      <div key={cote} className="flex items-center space-x-2 px-1 py-0.5 rounded hover:bg-accent">
+                        <Checkbox id={`cote-${cote}`} checked={selectedCotes.includes(cote)} onCheckedChange={(checked) => {
+                          if (checked) setSelectedCotes([...selectedCotes, cote]);
+                          else setSelectedCotes(selectedCotes.filter(c => c !== cote));
+                        }} />
+                        <Label htmlFor={`cote-${cote}`} className="cursor-pointer text-sm flex-1">{cote}</Label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedCotes.length > 0 && (
+                    <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => setSelectedCotes([])}>
+                      {t('filters.reset')}
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="favorites-m"
-                  checked={showFavoritesOnly}
-                  onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
-                />
-                <Label htmlFor="favorites-m" className="cursor-pointer">{t('filters.favoritesOnly')}</Label>
+                <Checkbox id="favorites" checked={showFavoritesOnly} onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)} />
+                <Label htmlFor="favorites" className="cursor-pointer text-sm">{t('filters.favoritesOnly')}</Label>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => {
-                  setSearch(""); setSelectedEquipe("all"); setSelectedCategorie("all");
-                  setSelectedCotes([]); setShowFavoritesOnly(false); setProgramFilter("all");
-                }}>{t('filters.reset')}</Button>
+
+              <div className="ml-auto flex items-center gap-2">
+                {activeCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={resetAll}>{t('filters.reset')}</Button>
+                )}
                 <Button variant="default" size="sm" onClick={handleExportExcel} disabled={!sortedRiders || sortedRiders.length === 0}>
-                  <Download className="h-4 w-4 mr-1" />{t('export.button')}
+                  <Download className="h-4 w-4 mr-2" />{t('export.button')}
                 </Button>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-          <div className="space-y-1.5">
-            <Label htmlFor="search">{t('filters.search')}</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input id="search" placeholder={t('filters.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>{t('filters.team')}</Label>
-            <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
-              <SelectTrigger><SelectValue placeholder={t('filters.allTeams')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
-                {filteredTeamsData?.map((team) => (
-                  <SelectItem key={team.id} value={team.equipe_id}>{team.nom_affiche}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('filters.category')}</Label>
-            <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
-              <SelectTrigger><SelectValue placeholder={t('filters.allCategories')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
-                {categorieOptions.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
-            <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
-              {coteOptions.map((cote) => (
-                <div key={cote} className="flex items-center space-x-2">
-                  <Checkbox id={`cote-${cote}`} checked={selectedCotes.includes(cote)} onCheckedChange={(checked) => {
-                    if (checked) setSelectedCotes([...selectedCotes, cote]);
-                    else setSelectedCotes(selectedCotes.filter(c => c !== cote));
-                  }} />
-                  <Label htmlFor={`cote-${cote}`} className="cursor-pointer text-sm">{cote}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('filters.program')}</Label>
-            <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
-              <SelectTrigger><SelectValue placeholder={t('filters.programAll')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('filters.programAll')}</SelectItem>
-                <SelectItem value="with">{t('filters.programWith')}</SelectItem>
-                <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end pb-1">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="favorites" checked={showFavoritesOnly} onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)} />
-              <Label htmlFor="favorites" className="cursor-pointer">{t('filters.favoritesOnly')}</Label>
-            </div>
-          </div>
-          <div className="flex items-end gap-2">
-            <Button variant="outline" onClick={() => {
-              setSearch(""); setSelectedEquipe("all"); setSelectedCategorie("all");
-              setSelectedCotes([]); setShowFavoritesOnly(false); setProgramFilter("all");
-            }}>{t('filters.reset')}</Button>
-            <Button variant="default" onClick={handleExportExcel} disabled={!sortedRiders || sortedRiders.length === 0}>
-              <Download className="h-4 w-4 mr-2" />{t('export.button')}
-            </Button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground mb-4">
@@ -845,7 +919,7 @@ export default function RidersData() {
             <div className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</div>
           ) : (
             sortedRiders.map((rider) => {
-              const upcomingRaces = programData?.get(rider.coureur_id) || [];
+              const upcomingRaces = upcomingByRider?.get(rider.coureur_id) || [];
               return (
                 <div
                   key={rider.coureur_id}
@@ -920,7 +994,7 @@ export default function RidersData() {
                 </TableRow>
               ) : (
                 sortedRiders.map((rider) => {
-                  const upcomingRaces = programData?.get(rider.coureur_id) || [];
+                  const upcomingRaces = upcomingByRider?.get(rider.coureur_id) || [];
                   return (
                     <TableRow key={rider.coureur_id}>
                       <TableCell>
