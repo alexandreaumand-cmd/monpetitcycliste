@@ -745,11 +745,24 @@ async function syncCourseStartlist(
       .limit(5000);
     allRiders = (allRidersData || []).map((r: any) => ({ id: r.id, nom: r.nom, equipe: r.equipe }));
 
-    // Load aliases
-    const { data: aliasesData } = await supabase
-      .from("name_aliases")
-      .select("alias_text, coureur_id, source_team");
-    aliases = (aliasesData || []).map((a: any) => ({ alias_text: a.alias_text, coureur_id: a.coureur_id, source_team: a.source_team }));
+    // Load aliases (paginated to bypass PostgREST default 1000-row limit)
+    aliases = [];
+    const ALIAS_PAGE_SIZE = 1000;
+    let aliasOffset = 0;
+    while (true) {
+      const { data: aliasesData, error: aliasesError } = await supabase
+        .from("name_aliases")
+        .select("alias_text, coureur_id, source_team")
+        .range(aliasOffset, aliasOffset + ALIAS_PAGE_SIZE - 1);
+      if (aliasesError) {
+        console.error(`[SYNC] Error loading aliases at offset ${aliasOffset}:`, aliasesError);
+        break;
+      }
+      const batch = aliasesData || [];
+      aliases.push(...batch.map((a: any) => ({ alias_text: a.alias_text, coureur_id: a.coureur_id, source_team: a.source_team })));
+      if (batch.length < ALIAS_PAGE_SIZE) break;
+      aliasOffset += ALIAS_PAGE_SIZE;
+    }
 
     console.log(`[SYNC] Loaded matching data: ${rosterRiders.length} roster, ${allRiders.length} all riders, ${aliases.length} aliases`);
   }
