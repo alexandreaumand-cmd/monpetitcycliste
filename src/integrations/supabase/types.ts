@@ -6938,6 +6938,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recompute_league_started_at_effective: {
+        Args: { p_league_id: string }
+        Returns: undefined
+      }
       refresh_standings_mv: { Args: never; Returns: undefined }
       results_course_meta: {
         Args: { p_course_id: string }
