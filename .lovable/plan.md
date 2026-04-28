@@ -1,32 +1,124 @@
 ## Objectif
 
-Modifier la fonction `auto_archive_completed_leagues()` pour qu'elle archive une ligue dès que **toutes ses courses/phases sont terminées**, **même si des enchères sont encore `open` ou `pending_validation`** ou si des annonces ne sont pas publiées.
+Replanifier deux jobs `pg_cron` existants pour qu'ils s'exécutent à l'heure de Paris :
+- `arena-daily-recap` → tous les jours à **20h30 Paris**
+- `arena-weekly-recap` → le **dimanche à 20h45 Paris**
 
-C'est la fin du périmètre sportif qui déclenche l'archivage, pas l'état des enchères.
+## Contexte
 
-## Changements
+`pg_cron` ne comprend que l'**UTC**. Paris est UTC+2 en été (heure actuelle, fin avril) et UTC+1 en hiver. Deux options possibles.
 
-### 1. Migration SQL — `auto_archive_completed_leagues()`
+---
 
-Retirer dans la fonction :
-- le `NOT EXISTS (SELECT 1 FROM auctions WHERE league_id = l.id AND statut IN ('open','pending_validation'))`
-- le `NOT EXISTS (SELECT 1 FROM annonces ... WHERE published = false)`
+## Option A — Recommandée : 2 jobs par récap (été + hiver)
 
-On garde :
-- la condition mode `per_course` : tous les `selected_course_ids` ont `date_fin < CURRENT_DATE`
-- la condition mode `five_phases` / `full_season` : toutes les phases du scope ont `status = 'completed'`
-- l'exclusion de la ligue Legacy
-- le passage à `status = 'completed'` + `archived_at = now()`
+On crée un job pour la période d'été (CEST, UTC+2) et un pour l'hiver (CET, UTC+1), chacun protégé par un test de fuseau au moment de l'exécution. Aucune intervention manuelle au changement d'heure.
 
-### 2. Rattrapage immédiat
+```sql
+-- Supprimer les jobs existants
+SELECT cron.unschedule('arena-daily-recap');
+SELECT cron.unschedule('arena-weekly-recap');
 
-La même migration relance `SELECT public.auto_archive_completed_leagues();` pour archiver d'un coup les ligues actuellement bloquées par l'ancien garde-fou (ex. *Roubaix 2026*, *Ligue Du Nord*, *COPArdennaises*, etc.).
+-- ===== DAILY 20h30 Paris =====
+-- Été (CEST = UTC+2) → 18:30 UTC
+SELECT cron.schedule(
+  'arena-daily-recap',
+  '30 18 * * *',
+  $$
+  SELECT CASE WHEN EXTRACT(timezone_hour FROM (now() AT TIME ZONE 'Europe/Paris')) = 2 THEN
+    net.http_post(
+      url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+      headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+      body := jsonb_build_object('type', 'daily', 'date', (now() AT TIME ZONE 'Europe/Paris')::date::text)
+    )
+  END;
+  $$
+);
 
-### 3. Cron
+-- Hiver (CET = UTC+1) → 19:30 UTC
+SELECT cron.schedule(
+  'arena-daily-recap-winter',
+  '30 19 * * *',
+  $$
+  SELECT CASE WHEN EXTRACT(timezone_hour FROM (now() AT TIME ZONE 'Europe/Paris')) = 1 THEN
+    net.http_post(
+      url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+      headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+      body := jsonb_build_object('type', 'daily', 'date', (now() AT TIME ZONE 'Europe/Paris')::date::text)
+    )
+  END;
+  $$
+);
 
-Inchangé : le job nocturne quotidien à 03h30 reste planifié, il appellera désormais la version sans garde-fou.
+-- ===== WEEKLY dimanche 20h45 Paris =====
+-- Été → 18:45 UTC dimanche
+SELECT cron.schedule(
+  'arena-weekly-recap',
+  '45 18 * * 0',
+  $$
+  SELECT CASE WHEN EXTRACT(timezone_hour FROM (now() AT TIME ZONE 'Europe/Paris')) = 2 THEN
+    net.http_post(
+      url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+      headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+      body := jsonb_build_object('type', 'weekly', 'date', ((now() AT TIME ZONE 'Europe/Paris')::date - 1)::text)
+    )
+  END;
+  $$
+);
 
-## Notes
+-- Hiver → 19:45 UTC dimanche
+SELECT cron.schedule(
+  'arena-weekly-recap-winter',
+  '45 19 * * 0',
+  $$
+  SELECT CASE WHEN EXTRACT(timezone_hour FROM (now() AT TIME ZONE 'Europe/Paris')) = 1 THEN
+    net.http_post(
+      url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+      headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+      body := jsonb_build_object('type', 'weekly', 'date', ((now() AT TIME ZONE 'Europe/Paris')::date - 1)::text)
+    )
+  END;
+  $$
+);
+```
 
-- Aucun changement frontend.
-- Les enchères encore `open`/`scheduled` sur des ligues archivées resteront visibles via leurs hooks existants ; côté UI elles n'apparaissent plus dans les sections "actives" du Dashboard puisque la ligue passe en "Terminées". Si tu veux qu'on ferme aussi automatiquement ces enchères orphelines au moment de l'archivage, dis-le et j'ajoute un `UPDATE auctions SET statut='closed'` dans la même fonction — sinon je laisse les enchères telles quelles.
+---
+
+## Option B — Simple : on fixe en UTC pour l'heure d'été uniquement
+
+Plus court, mais il faudra refaire la requête fin octobre lors du passage à l'heure d'hiver (les récaps partiraient alors à 19h30/19h45 Paris).
+
+```sql
+SELECT cron.unschedule('arena-daily-recap');
+SELECT cron.unschedule('arena-weekly-recap');
+
+SELECT cron.schedule(
+  'arena-daily-recap', '30 18 * * *',
+  $$ SELECT net.http_post(
+    url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+    body := jsonb_build_object('type', 'daily', 'date', (now() AT TIME ZONE 'Europe/Paris')::date::text)
+  ); $$
+);
+
+SELECT cron.schedule(
+  'arena-weekly-recap', '45 18 * * 0',
+  $$ SELECT net.http_post(
+    url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/arena-recaps',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "MPC2026!"}'::jsonb,
+    body := jsonb_build_object('type', 'weekly', 'date', ((now() AT TIME ZONE 'Europe/Paris')::date - 1)::text)
+  ); $$
+);
+```
+
+---
+
+## Vérification (à exécuter après)
+
+```sql
+SELECT jobname, schedule FROM cron.job WHERE jobname LIKE 'arena-%recap%';
+```
+
+## Recommandation
+
+L'**Option A** est à privilégier : tu programmes une fois, et l'heure de Paris est respectée toute l'année automatiquement.
