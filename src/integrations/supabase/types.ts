@@ -6647,6 +6647,13 @@ export type Database = {
         }
         Returns: Json
       }
+      auto_archive_completed_leagues: {
+        Args: never
+        Returns: {
+          archived_league_id: string
+          archived_league_name: string
+        }[]
+      }
       auto_close_ghost_auctions: { Args: never; Returns: undefined }
       auto_complete_per_course_leagues: {
         Args: never

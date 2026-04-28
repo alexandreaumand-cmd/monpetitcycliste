@@ -1,108 +1,62 @@
-## Objectif
+## Diagnostic
 
-1. Mettre à jour la **page Règles** (`/regles`) avec les éléments récents : mode "À la course", variante "World Tour uniquement", barème de points et bonus.
-2. Ajouter sur la même page **deux nouvelles sections FAQ illustrées** pour la page **Calendrier** et la page **Données coureurs**.
-3. Ajouter un **bouton aide "?"** à côté de la cloche de notifications sur la **Dashboard Home** (connectée), qui pointe vers `/regles`.
-4. Compléter la **landing publique** avec une section FAQ condensée renvoyant vers `/regles`.
+**Réponse courte : aucun job n'a tourné cette nuit, parce qu'il n'existe pas.**
 
----
+Aujourd'hui le passage d'une ligue au statut `completed` est uniquement **manuel** :
+- Soit l'owner/admin clique sur le bouton "Archiver" → edge function `leagues-archive`
+- Soit un super-admin force le statut depuis le back-office
 
-## 1. Page Règles (`src/pages/RulesPage.tsx`)
+Aucun cron, aucun trigger SQL ne fait passer une ligue à `completed` quand ses courses/phases sont finies. Les jobs `pg_cron` actuels couvrent uniquement : enchères fantômes, startlists, rappels Arène, ouverture d'enchères programmées, recaps Arène, queue email.
 
-Ajouter de nouvelles `SectionCard` (le composant existant) **après** les sections existantes :
+**Ligues actuellement "active" alors qu'elles devraient être terminées** (mode `per_course`, toutes courses finies) :
+- `Roubaix 2026`, `DjouDjou`, `Test pedro 1` → dernière course le 12/04
+- `Burgaudeau pete moi le c***`, `T1 - Barb+Amstel` → 19/04
+- `COPArdennaises` → 26/04
 
-### Section "Modes de ligue"
-- **Mode 5 Phases** (existant) : 2200 budget, 30 coureurs, enchères par phase.
-- **Mode À la course** (nouveau) : sélection libre de courses, calcul auto :
-  - 1 course d'un jour seule → 8 coureurs / 650 budget
-  - Plusieurs courses d'un jour → 10 coureurs / 800 budget
-  - Au moins une course à étapes → 15 coureurs / 1100 budget
-  - Enchère unique avant le premier départ.
-- **Variante "World Tour uniquement"** (nouveau) : inclut WT + Grands Tours + championnats du monde/continentaux ; exclut Pro Series et autres.
+Les ligues `five_phases` / `full_season` ne sont pas concernées tant que la dernière phase de la saison n'est pas finie.
 
-### Section "Bonus & scoreurs"
-Bloc explicatif (déjà partiellement présent) à compléter / réorganiser :
-- **Scoreurs** : nombre de coureurs comptés selon le type de course (ex : 4 sur les classiques, 8 sur les Grands Tours – récupérer les valeurs depuis `useScoringRules`).
-- **Bonus première victoire** d'un coureur (Super Admin attribue).
-- **Bonus porteurs de maillot** par jour (jaune, vert, pois, blanc…).
-- **Bonus équipe TTT**.
+## Ce que je propose de mettre en place
 
-### Nouvelle section "La page Calendrier" (FAQ accordéon)
-Utiliser `Accordion` shadcn déjà importé. Items :
-- Comment voir les startlists d'une course ?
-- À quoi servent les **mouvements de startlists** affichés sur le détail d'une course ?
-- Comment **ajouter un coureur en favori** depuis le calendrier (icône étoile) ?
-- Filtrer par catégorie / mois / statut (à venir / en cours / terminée).
-- Vue grille desktop vs vue compacte mobile.
-- Capture : `/screenshots/calendar.webp` (à ajouter — voir section assets).
+Un job nocturne qui archive automatiquement toute ligue `active` dont l'intégralité du périmètre est terminée.
 
-### Nouvelle section "La page Données Coureurs" (FAQ accordéon)
-- Filtres disponibles : équipe, catégorie, courses, cotes, programme, **favoris uniquement**.
-- Comment **mettre un coureur en favori** (étoile dans le tableau).
-- Le **panneau latéral résultats** (slide-over) au clic sur un coureur.
-- Export Excel.
-- Capture : `/screenshots/data.webp`.
+### 1. Fonction SQL `auto_archive_completed_leagues()`
 
-Ces deux sections sont rendues via une nouvelle sous-section `<RulesFAQSection icon={Calendar} title="…" items={[…]} screenshot="…" />` placée à la fin de la page, avant le CTA.
+Logique d'éligibilité (la ligue passe à `completed` + `archived_at = now()`) :
 
----
+- **Mode `per_course`** : toutes les courses listées dans `league_scopes.selected_course_ids` ont une `date_fin < CURRENT_DATE`.
+- **Mode `five_phases` / `full_season`** : toutes les phases listées dans `league_scopes.phases` ont leur `status = 'completed'` (la table `phases` est déjà mise à jour automatiquement par un cron quotidien existant — cf. mémoire `phase-status-automation`).
+- Garde-fou : ne jamais archiver une ligue qui a un `auctions.status` encore ouvert (`open`, `pending_validation`) → on attend la fermeture propre des annonces.
+- Garde-fou : ignorer la ligue Legacy.
 
-## 2. Bouton aide "?" sur Dashboard Home
+La fonction écrit dans `public.leagues` (`status`, `archived_at`) et log un compteur via `RAISE NOTICE`.
 
-Fichier : `src/components/dashboard/DashboardHomeHeader.tsx`
+### 2. Cron `auto-archive-completed-leagues`
 
-- Importer `HelpCircle` de `lucide-react` et `useNavigate`.
-- Ajouter un `<button>` placé **juste avant** `<NotificationCenter />` dans les deux branches (mobile + desktop), avec le même style que les autres icônes header (bordure-gold + hover).
-- `onClick` → `navigate('/regles')`.
-- `aria-label` = "Aide" (à ajouter dans `dashboard.json` FR/EN sous `header.help`).
+```text
+schedule : 30 3 * * *   (03h30 Europe/Paris ≈ 01h30 UTC l'été)
+command  : SELECT public.auto_archive_completed_leagues();
+```
 
----
+Pur SQL → pas besoin d'edge function ni de clé. (Conforme à la mémoire `cron-environment-isolation` : pas d'URL/clé spécifique à un environnement.)
 
-## 3. Landing publique (`src/pages/LandingPage.tsx`)
+### 3. Rattrapage one-shot
 
-Ajouter une nouvelle section condensée **`RulesHighlightsSection`** (3-4 cartes FAQ) juste avant `CTASection` :
-- "Comment fonctionnent les enchères ?"
-- "Quels modes de ligue ?"
-- "Comment marquer des points ?"
-- "Pages Calendrier & Data : à quoi servent-elles ?"
+Sur LIVE, exécuter une seule fois la même fonction pour archiver immédiatement les ~6 ligues en retard listées plus haut.
 
-Chaque carte = court résumé + lien "Voir toutes les règles" → `/regles`.
+## Réponse à ta question
 
-Style aligné `bg-bordure-cream`, accent gold/pink, accordéon shadcn.
+> Dois-je faire une requête SQL pour mettre en place le job ?
 
----
+**Non, tu n'as rien à faire toi-même.** Quand tu valides ce plan, je crée la migration qui :
+1. Crée la fonction `auto_archive_completed_leagues()`
+2. Programme le cron `pg_cron`
+3. Lance un appel immédiat pour rattraper les ligues en retard
 
-## 4. Captures à ajouter
+Tu n'auras qu'à approuver la migration côté Lovable Cloud.
 
-Dans `public/screenshots/` :
-- `calendar.webp` (vue grille du calendrier avec une course ouverte montrant les mouvements startlist)
-- `data.webp` (tableau Données Coureurs avec étoiles favoris visibles et panneau latéral)
+## Détails techniques
 
-→ Pendant l'implémentation je prendrai ces captures via `browser--screenshot` sur les routes `/dashboard/calendar` et `/dashboard/data`, puis les copierai dans `public/screenshots/`.
-
----
-
-## 5. i18n
-
-Ajouter clés FR + EN :
-- `dashboard.json` : `header.help`
-- `home.json` : nouvelle clé `rulesHighlights.*` (titre + 4 questions/réponses + CTA)
-- `RulesPage.tsx` utilise du texte FR en dur (cohérent avec l'existant) → idem pour les nouvelles sections.
-
----
-
-## Fichiers modifiés / créés
-
-**Modifiés**
-- `src/pages/RulesPage.tsx` (sections Modes, Bonus, FAQ Calendrier, FAQ Data)
-- `src/components/dashboard/DashboardHomeHeader.tsx` (bouton "?")
-- `src/pages/LandingPage.tsx` (insère nouvelle section)
-- `src/i18n/locales/fr/dashboard.json`, `en/dashboard.json`
-- `src/i18n/locales/fr/home.json`, `en/home.json`
-
-**Créés**
-- `src/components/landing/RulesHighlightsSection.tsx`
-- `public/screenshots/calendar.webp`
-- `public/screenshots/data.webp`
-
-Aucune migration BDD, aucune Edge Function impactée.
+- Migration unique dans `supabase/migrations/` créant la fonction + le `cron.schedule` + l'appel de rattrapage.
+- Fonction `SECURITY DEFINER`, `SET search_path = public`.
+- Exclusion de la ligue Legacy via `WHERE name NOT ILIKE '%legacy%'` (ou via un flag si présent — à confirmer dans la migration).
+- Aucun changement frontend nécessaire : `DashboardHome.tsx` filtre déjà sur `status === 'completed'` pour la section "Terminées".
