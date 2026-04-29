@@ -53,7 +53,7 @@ export const MobileLayout = ({
       )}
 
       {/* Main content */}
-      <main className="pb-safe overflow-x-hidden">{children}</main>
+      <main className="pb-safe [overflow-x:clip]">{children}</main>
 
       {/* Bottom navigation bar — masquée sur home */}
       {!isHomePage && (
