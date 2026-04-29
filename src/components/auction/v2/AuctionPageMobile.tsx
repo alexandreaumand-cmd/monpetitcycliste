@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
@@ -45,12 +46,15 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const queryClient = useQueryClient();
 
   // State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
+  // Persisted across navigations so going back from a rider profile / bid sheet
+  // restores filters, search and sort instead of resetting them.
+  const persistKey = `auction.mobile.${phaseId}.${leagueId ?? "no-league"}`;
+  const [searchQuery, setSearchQuery] = usePersistentState<string>(`${persistKey}.search`, "");
+  const [selectedTeams, setSelectedTeams] = usePersistentState<string[]>(`${persistKey}.teams`, []);
+  const [selectedCotes, setSelectedCotes] = usePersistentState<number[]>(`${persistKey}.cotes`, []);
+  const [selectedCategories, setSelectedCategories] = usePersistentState<string[]>(`${persistKey}.categories`, []);
+  const [selectedCourses, setSelectedCourses] = usePersistentState<string[]>(`${persistKey}.courses`, []);
+  const [sortOrder, setSortOrder] = usePersistentState<'nom' | 'cote'>(`${persistKey}.sort`, 'cote');
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);

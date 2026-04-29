@@ -11,74 +11,70 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   Trophy,
-  Users,
   Calendar,
   BarChart3,
   Shield,
-  ListChecks,
   LogOut,
   User,
   Swords,
-  Radio,
   LineChart,
+  Settings,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
-interface MobileDrawerProps {
+interface MobileMoreSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   manager: any;
   isAdmin: boolean;
   onSignOut: () => void;
-  leagueSelector?: React.ReactNode;
 }
 
-export const MobileDrawer = ({
+/**
+ * Bottom sheet opened from the "Plus" button in the mobile bottom bar.
+ * Contains all secondary destinations + profile/account/admin so that the
+ * bottom bar stays the single source of truth for navigation.
+ */
+export const MobileMoreSheet = ({
   open,
   onOpenChange,
   manager,
   isAdmin,
   onSignOut,
-  leagueSelector,
-}: MobileDrawerProps) => {
+}: MobileMoreSheetProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const currentLeagueId = searchParams.get('leagueId');
+  const currentLeagueId = searchParams.get("leagueId");
   const { selectedSeason } = useSeasonContext();
   const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
-  
+
   const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
 
-  const sections = [
+  const sections: Array<{
+    title: string;
+    items: Array<{ label: string; path: string; icon: any }>;
+  }> = [
     {
-      title: "Principal",
+      title: "Compétition",
       items: [
-        { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
-        { label: "Mon Équipe", path: "/dashboard/mon-equipe", icon: Users },
-        { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
+        { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
+        { label: "Courses", path: "/dashboard/courses", icon: Calendar },
+        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
+        { label: "Arène", path: "/dashboard/arene", icon: Swords },
       ],
     },
     {
-      title: "Courses",
+      title: "Analyse",
       items: [
-        { label: "Courses", path: "/dashboard/courses", icon: Calendar },
-        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
         { label: "Statistiques", path: "/dashboard/statistiques", icon: LineChart },
       ],
     },
     {
-      title: "Gestion",
+      title: "Profil",
       items: [
-        { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
-      ],
-    },
-    {
-      title: "Social",
-      items: [
-        { label: "Live", path: "/dashboard/live", icon: Radio },
-        { label: "Arène", path: "/dashboard/arene", icon: Swords },
+        { label: "Mon compte", path: "/dashboard/compte", icon: Settings },
       ],
     },
   ];
@@ -90,9 +86,7 @@ export const MobileDrawer = ({
     });
   }
 
-  const isActive = (path: string) => {
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   const handleNavigate = (path: string) => {
     const url = currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
@@ -102,11 +96,14 @@ export const MobileDrawer = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={true}>
-      <SheetContent side="left" className="w-[280px] safe-bottom flex flex-col bg-background">
-        <SheetHeader className="text-left pb-4">
-          <div 
-            className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
-            onClick={() => handleNavigate('/dashboard/compte')}
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl max-h-[85vh] safe-bottom flex flex-col bg-background p-0"
+      >
+        <SheetHeader className="text-left px-4 pt-4 pb-2">
+          <div
+            className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => handleNavigate("/dashboard/compte")}
           >
             <Avatar className="w-12 h-12">
               {manager?.avatar_url ? (
@@ -134,16 +131,16 @@ export const MobileDrawer = ({
           </div>
         </SheetHeader>
 
-        {leagueSelector}
-
-        <nav className="flex-1 overflow-y-auto py-4 space-y-2">
+        <nav className="flex-1 overflow-y-auto px-4 pb-2 pt-2 space-y-3">
           {sections.map((section, idx) => (
-            <div key={idx}>
+            <div key={section.title}>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1 mb-1">
+                {section.title}
+              </p>
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.path);
-
                   return (
                     <Button
                       key={item.path}
@@ -160,12 +157,12 @@ export const MobileDrawer = ({
                   );
                 })}
               </div>
-              {idx < sections.length - 1 && <Separator className="my-2" />}
+              {idx < sections.length - 1 && <Separator className="mt-3" />}
             </div>
           ))}
         </nav>
 
-        <div className="pt-4 border-t">
+        <div className="px-4 py-3 border-t safe-bottom">
           <Button
             variant="outline"
             className="w-full justify-start touch-target"

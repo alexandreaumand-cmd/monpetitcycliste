@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,14 +43,14 @@ export const RankingsMobile = () => {
   const currentLeague = leagues.find(l => l.id === leagueId);
   const isPerCourse = currentLeague?.game_mode === 'per_course';
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabView>("standings");
-  const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = usePersistentState<TabView>("rankings.mobile.tab", "standings");
+  const [selectedPhase, setSelectedPhase] = usePersistentState<string | null>("rankings.mobile.phase", null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
-  const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
-  const [riderSortBy, setRiderSortBy] = useState<'points' | 'ratio'>('points');
+  const [riderSearchTerm, setRiderSearchTerm] = usePersistentState<string>("rankings.mobile.riderSearch", "");
+  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = usePersistentState<boolean>("rankings.mobile.withoutManagers", false);
+  const [riderSortBy, setRiderSortBy] = usePersistentState<'points' | 'ratio'>("rankings.mobile.riderSort", 'points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
     nom: string;
@@ -60,11 +61,11 @@ export const RankingsMobile = () => {
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
-  const [standingsSortBy, setStandingsSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
+  const [standingsSortBy, setStandingsSortBy] = usePersistentState<'points' | 'victories' | 'scorers'>("rankings.mobile.standingsSort", 'points');
   const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
   const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCourseIds, setSelectedCourseIds] = usePersistentState<string[]>("rankings.mobile.courseIds", []);
+  const [selectedCategories, setSelectedCategories] = usePersistentState<string[]>("rankings.mobile.categories", []);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Fetch league scope for course list

@@ -7,5 +7,5 @@ export { MobileEmptyState } from "./MobileEmptyState";
 export { MobileStickyBottom } from "./MobileStickyBottom";
 export { MobileHeader } from "./MobileHeader";
 export { MobileBottomBar } from "./MobileBottomBar";
-export { MobileDrawer } from "./MobileDrawer";
+export { MobileMoreSheet } from "./MobileMoreSheet";
 export { MobileLayout } from "./MobileLayout";
