@@ -1,18 +1,10 @@
-import { useState, ReactNode } from "react";
+import { ReactNode } from "react";
 import { useLocation, Link } from "react-router-dom";
 
 import { MobileBottomBar } from "./MobileBottomBar";
-import { MobileDrawer } from "./MobileDrawer";
-import { Button } from "@/components/ui/button";
-
-import { Menu } from "lucide-react";
-import logoBordure from "@/assets/logo-bordure.png";
 import faviconCap from "@/assets/favicon-cap.jpeg";
-import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
-import { Badge } from "@/components/ui/badge";
-import { LeagueSwitcherMobile } from "@/components/leagues/LeagueSwitcherMobile";
 import { LeagueSwitcherHeaderMobile } from "@/components/leagues/LeagueSwitcherHeaderMobile";
 
 interface MobileLayoutProps {
@@ -30,39 +22,28 @@ export const MobileLayout = ({
   onSignOut,
   title = "La Bordure",
 }: MobileLayoutProps) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
-  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
   const { leagueId } = useLeague();
-  
-  const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
+
+  const isHomePage =
+    location.pathname === "/dashboard/home" || location.pathname === "/dashboard";
 
   return (
     <div className="min-h-screen bg-background pb-20 max-w-[100vw] overflow-x-hidden">
-      {/* Header with menu button - masqué sur home */}
+      {/* Header — masqué sur home. Plus de bouton hamburger : la nav est entièrement dans la barre du bas. */}
       {!isHomePage && (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
           <div className="flex h-14 items-center gap-2 px-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="touch-target shrink-0"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Ouvrir le menu</span>
-            </Button>
-
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Link to="/dashboard/home" className="shrink-0">
-                <img 
-                  src={faviconCap} 
-                  alt="La Bordure" 
+                <img
+                  src={faviconCap}
+                  alt="La Bordure"
                   loading="eager"
                   className="h-8 w-8 rounded-sm object-contain"
                 />
               </Link>
-              
+
               {leagueId && <LeagueSwitcherHeaderMobile />}
             </div>
 
@@ -74,18 +55,12 @@ export const MobileLayout = ({
       {/* Main content */}
       <main className="pb-safe overflow-x-hidden">{children}</main>
 
-      {/* Bottom navigation bar - masquée sur home */}
-      {!isHomePage && <MobileBottomBar isAdmin={isAdmin} />}
-
-      {/* Side drawer with League Selector */}
+      {/* Bottom navigation bar — masquée sur home */}
       {!isHomePage && (
-        <MobileDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          manager={manager}
+        <MobileBottomBar
           isAdmin={isAdmin}
+          manager={manager}
           onSignOut={onSignOut}
-          leagueSelector={<LeagueSwitcherMobile />}
         />
       )}
     </div>
