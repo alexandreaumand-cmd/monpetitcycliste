@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +58,7 @@ export const ResultsPageMobile = () => {
   } = useLeague();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = usePersistentState<string>("results.mobile.search", "");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
