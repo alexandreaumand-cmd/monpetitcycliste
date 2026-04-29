@@ -211,7 +211,6 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       selectedCategories,
       selectedCourses,
       sortOrder,
-      context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
     queryFn: async ({ pageParam = 0 }) => {
       // Convert selectedCotes to min/max ranges

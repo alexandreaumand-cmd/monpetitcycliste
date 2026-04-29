@@ -1,103 +1,56 @@
-## Objectif
+## Problème
 
-`leagues.started_at_effective` doit être posée automatiquement à **J+1 (date Paris) après la fin du dernier round d'enchères de la phase de départ** (= `leagues.starting_phase_index`). Tant que la phase de départ n'a pas tous ses rounds clôturés, `started_at_effective` reste `NULL` → aucun point ne remonte (les vues utilisent `COALESCE(started_at_effective, created_at)`, donc on devra adapter ce comportement, voir plus bas).
+Sur mobile, dans l'onglet "Chercher" des enchères, ajouter un coureur fait remonter la liste tout en haut. L'utilisateur doit re-scroller pour reprendre où il en était.
 
-## Définition retenue
+## Cause
 
-Soit L une ligue avec `starting_phase_index = N`. Soit `P` = la phase de la saison de L dont `index_dans_saison = N`.
+Dans `src/components/auction/v2/AuctionPageMobile.tsx`, le `useInfiniteQuery` qui charge les coureurs utilise une `queryKey` qui inclut `context?.my_bids?.map(b => b.coureur_id)`. Dès qu'un coureur est ajouté :
 
-`started_at_effective(L) = (max(closed_at) des auctions de L où phase_id = P) + 1 jour`, converti en date Europe/Paris, **uniquement si** :
-- toutes les auctions phase P de L ont `statut = 'closed'`
-- ET il y a au moins 1 auction (sinon on ne sait pas)
-- ET aucune auction de la phase P n'est encore `open` ou `scheduled`
+1. `context.my_bids` change (refetch après mutation),
+2. La queryKey change → React Query traite ça comme une nouvelle requête,
+3. Toutes les pages déjà chargées sont jetées, la liste est rechargée depuis l'offset 0,
+4. Le conteneur scrollable (`<div className="flex-1 overflow-y-auto">` ligne 707) revient en haut parce que son contenu a été remplacé.
 
-Sinon `started_at_effective` reste `NULL`.
+En plus, le paramètre `exclude_rider_ids` envoyé au backend retire le coureur fraîchement ajouté de la liste, ce qui change l'ordre des items restants.
 
-> Remarque importante : on ne peut pas se baser sur "le round N+1 n'existe pas" car le nombre de rounds n'est pas connu à l'avance. Le signal de fin = **toutes les auctions de la phase P sont `closed`** ET aucune nouvelle n'est créée. En pratique, l'admin ferme le dernier round → on déclenche le calcul. Si un round supplémentaire est créé après, `started_at_effective` repassera à `NULL` automatiquement (auction `open` ou `scheduled` détectée).
+## Solution
 
-## Implémentation
+Gérer le filtrage des coureurs déjà enchéris **côté client** plutôt que côté requête, pour que la queryKey reste stable lors d'un ajout/suppression d'enchère.
 
-### 1. Fonction utilitaire `recompute_league_started_at_effective(p_league_id uuid)`
+### Changements dans `AuctionPageMobile.tsx`
 
-Logique :
-```sql
--- récupère starting_phase_index et la phase correspondante via league_scopes.season_id
--- puis calcule sur public.auctions filtrées par league_id + phase_id
-WITH ph AS (
-  SELECT p.id AS phase_id
-  FROM leagues l
-  JOIN league_scopes ls ON ls.league_id = l.id
-  JOIN phases p ON p.saison_id = ls.season_id
-                AND p.index_dans_saison = COALESCE(l.starting_phase_index, 1)
-  WHERE l.id = p_league_id
-  LIMIT 1
-),
-agg AS (
-  SELECT
-    COUNT(*) FILTER (WHERE statut <> 'closed') AS not_closed_count,
-    COUNT(*) AS total,
-    MAX(closed_at) AS last_closed
-  FROM auctions a
-  JOIN ph ON ph.phase_id = a.phase_id
-  WHERE a.league_id = p_league_id
-)
-UPDATE leagues
-SET started_at_effective = CASE
-  WHEN agg.total > 0 AND agg.not_closed_count = 0 AND agg.last_closed IS NOT NULL
-    THEN ((agg.last_closed AT TIME ZONE 'Europe/Paris')::date + INTERVAL '1 day')::date
-  ELSE NULL
-END
-FROM agg
-WHERE leagues.id = p_league_id;
-```
+1. **Retirer `exclude_rider_ids`** (et la dépendance `context?.my_bids?.map(...)`) de la `queryKey` et du body envoyé à `auction-search-riders`. La queryKey ne dépendra plus que des filtres réels (recherche, équipes, cotes, catégories, courses, tri).
 
-### 2. Trigger sur `auctions`
+2. **Filtrer côté client** dans le `useMemo` qui aplatit `ridersPages` : exclure les `coureur_id` présents dans `context.my_bids` et dans `context.roster`.
 
-`AFTER INSERT OR UPDATE OF statut, closed_at, phase_id OR DELETE` → appelle `recompute_league_started_at_effective(NEW.league_id)` (ou OLD pour DELETE). Limité aux lignes dont `phase_id` correspond à la phase de départ de la ligue (ou on appelle systématiquement, la fonction filtre déjà).
+   ```ts
+   const excludedIds = useMemo(() => {
+     const ids = new Set<string>();
+     (context?.my_bids ?? []).forEach((b: any) => ids.add(b.coureur_id));
+     (context?.roster ?? []).forEach((r: any) => ids.add(r.coureur_id));
+     return ids;
+   }, [context?.my_bids, context?.roster]);
 
-### 3. Backfill ponctuel
+   const ridersData = useMemo(() => {
+     const items = (ridersPages?.pages ?? []).flatMap(p => p.items ?? []);
+     return { items: items.filter((r: any) => !excludedIds.has(r.rider_id)) };
+   }, [ridersPages, excludedIds]);
+   ```
 
-Une migration appelle `recompute_league_started_at_effective(id)` pour **toutes les ligues** existantes. Ça va :
-- recalculer T2 → si la phase de départ (index 2) a toutes ses auctions closed, posera la bonne date ; sinon `NULL` (ce qui correspond exactement au besoin : aucun point affiché).
-- recalculer toutes les autres ligues (incluant Legacy) sur la même règle.
+3. **Aucun changement** dans `RiderResultsList`, le bottom sheet, ou la mutation : le scroll reste préservé naturellement car le DOM du conteneur scrollable n'est plus reconstruit (seuls quelques `<TableRow>` disparaissent au milieu, ce qui ne provoque pas de saut en haut).
 
-### 4. Comportement quand `started_at_effective IS NULL`
+### Effets de bord à vérifier
 
-Aujourd'hui les vues font `COALESCE(started_at_effective, created_at)` → si on laisse ça, T2 retomberait sur `created_at` et continuerait d'afficher des points. **Il faut changer ce fallback** : quand `started_at_effective IS NULL`, **aucune course ne doit compter** pour la ligue.
+- Pagination : le backend continue de renvoyer les mêmes 100 items par page. Filtrer 1–2 items côté client par page est négligeable et n'altère pas `has_more`.
+- Compteur visuel : la liste affichée pourra contenir très légèrement moins d'items qu'avant entre deux fetchs, c'est cohérent.
+- Le bouton "Charger plus" continue de fonctionner via `fetchNextPage`.
 
-Concrètement, dans toutes les vues/fonctions concernées (`v_manager_standings_by_phase_v2`, `v_manager_standings_by_season_v2`, `results_courses_with_entries`, et fonctions associées listées dans les migrations), remplacer :
+## Détails techniques
 
-```sql
-WHERE c.date_debut > COALESCE(l.started_at_effective::timestamptz, l.created_at)::date
-```
+Fichier modifié :
+- `src/components/auction/v2/AuctionPageMobile.tsx` (queryKey, body de l'invoke, useMemo `ridersData`)
 
-par :
-
-```sql
-WHERE l.started_at_effective IS NOT NULL
-  AND c.date_debut > l.started_at_effective
-```
-
-### 5. Fichiers / objets impactés
-
-- **Nouvelle migration** :
-  - Crée `recompute_league_started_at_effective(uuid)` (SECURITY DEFINER, search_path public)
-  - Crée le trigger `trg_auctions_recompute_started_at_effective` sur `public.auctions`
-  - Recrée les vues `v_manager_standings_by_phase_v2`, `v_manager_standings_by_season_v2` avec la nouvelle condition (sans COALESCE → strict `IS NOT NULL`)
-  - Recrée les fonctions `results_courses_with_entries` et toutes celles qui utilisent encore le fallback `COALESCE(... , created_at)` (référencées dans les migrations 20260427080500, 20260328165854, 20260327225610, 20260327224917, 20260327213208, 20260326215507 — à inspecter et harmoniser)
-  - Backfill : `SELECT recompute_league_started_at_effective(id) FROM leagues;`
-- **Frontend** : aucun changement nécessaire. L'UI continue de lire les vues. Quand `started_at_effective IS NULL`, les vues renvoient 0 ligne → 0 point affiché naturellement.
-
-### 6. Effet attendu sur T2 - WT+WC+EC
-
-- `starting_phase_index = 2`
-- Phase 2 actuellement : round 1 closed, round 2 open → **au moins une auction non closed** → `started_at_effective` repasse à `NULL` après backfill
-- Vues de classement : 0 course retenue → 0 point pour tous les managers ✅
-- Quand l'admin clôturera le dernier round de la phase 2, le trigger posera automatiquement `started_at_effective = closed_at + 1 jour` (heure Paris) et les points apparaîtront.
-
-## Questions ouvertes (mineures)
-
-- **Ligue Legacy** : elle n'a pas de starting_phase_index défini de la même manière. Si `starting_phase_index IS NULL`, je propose de **garder l'ancien comportement** (fallback sur `created_at`) pour ne pas casser Legacy. La fonction de recalcul retournera la valeur existante / fera un no-op si `starting_phase_index IS NULL`.
-- **Ligues sans `league_scopes.season_id`** : no-op également (pas assez d'info pour identifier la phase).
-
-Confirme-moi que ces deux exceptions te conviennent et je passe en build.
+Fichiers non touchés :
+- `RiderResultsList.tsx` : reçoit toujours une liste filtrée prête à afficher.
+- L'edge function `auction-search-riders` : on cesse simplement de lui envoyer `exclude_rider_ids`, elle reste compatible.
+- La version desktop : pas modifiée (le user n'a signalé le problème que sur mobile).
