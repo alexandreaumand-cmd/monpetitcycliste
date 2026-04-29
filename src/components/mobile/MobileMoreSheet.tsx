@@ -12,11 +12,10 @@ import { cn } from "@/lib/utils";
 import {
   Trophy,
   Calendar,
-  BarChart3,
   Shield,
   LogOut,
   User,
-  Swords,
+  Radio,
   LineChart,
   Settings,
 } from "lucide-react";
