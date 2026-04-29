@@ -60,8 +60,7 @@ export const MobileMoreSheet = ({
       items: [
         { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
         { label: "Courses", path: "/dashboard/courses", icon: Calendar },
-        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
-        { label: "Arène", path: "/dashboard/arene", icon: Swords },
+        { label: "Live", path: "/dashboard/live", icon: Radio },
       ],
     },
     {
