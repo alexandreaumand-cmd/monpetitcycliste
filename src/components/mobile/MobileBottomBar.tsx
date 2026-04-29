@@ -66,7 +66,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
         role="navigation"
         aria-label={t("navigation.dashboard")}
       >
-        <div className="flex items-center justify-around px-1 py-3">
+        <div className="flex items-center justify-around px-0.5 py-2">
           {mainRoutes.map((route) => {
             const Icon = route.icon;
             const active = isActive(route.path);
@@ -78,7 +78,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
                 onMouseEnter={() => prefetchPageData(route.path)}
                 onClick={() => navigate(buildNavUrl(route.path))}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl touch-target transition-all",
+                  "flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg transition-all min-w-0 flex-1",
                   "active:scale-95",
                   active
                     ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
@@ -86,8 +86,8 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
                 )}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-[10px] font-montserrat font-semibold leading-none">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="text-[9px] font-montserrat font-semibold leading-none truncate max-w-full">
                   {route.label}
                 </span>
               </button>
@@ -97,7 +97,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
           <button
             onClick={() => setMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl touch-target transition-all",
+              "flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg transition-all min-w-0 flex-1",
               "active:scale-95",
               isMoreActive
                 ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
@@ -106,8 +106,8 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
           >
-            <MoreHorizontal className="h-5 w-5" />
-            <span className="text-[10px] font-montserrat font-semibold leading-none">Plus</span>
+            <MoreHorizontal className="h-4 w-4 shrink-0" />
+            <span className="text-[9px] font-montserrat font-semibold leading-none">Plus</span>
           </button>
         </div>
       </nav>
