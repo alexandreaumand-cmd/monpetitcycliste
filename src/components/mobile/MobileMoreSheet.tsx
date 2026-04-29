@@ -12,11 +12,10 @@ import { cn } from "@/lib/utils";
 import {
   Trophy,
   Calendar,
-  BarChart3,
   Shield,
   LogOut,
   User,
-  Swords,
+  Radio,
   LineChart,
   Settings,
 } from "lucide-react";
@@ -61,8 +60,7 @@ export const MobileMoreSheet = ({
       items: [
         { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
         { label: "Courses", path: "/dashboard/courses", icon: Calendar },
-        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
-        { label: "Arène", path: "/dashboard/arene", icon: Swords },
+        { label: "Live", path: "/dashboard/live", icon: Radio },
       ],
     },
     {
