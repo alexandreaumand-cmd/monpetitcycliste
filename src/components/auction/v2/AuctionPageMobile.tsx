@@ -259,13 +259,24 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     enabled: !!context,
   });
 
+  // IDs to exclude client-side (already in roster or current draft bids).
+  // Done client-side so adding/removing a bid doesn't invalidate the riders queryKey
+  // and reset the scroll position.
+  const excludedIds = useMemo(() => {
+    const ids = new Set<string>();
+    (context?.my_bids ?? []).forEach((b: any) => ids.add(b.coureur_id));
+    (context?.roster ?? []).forEach((r: any) => ids.add(r.coureur_id));
+    return ids;
+  }, [context?.my_bids, context?.roster]);
+
   // Flatten pages into single list
   const ridersData = useMemo(() => {
     if (!ridersPages?.pages) return { items: [] };
+    const items = ridersPages.pages.flatMap((page) => page.items || []);
     return {
-      items: ridersPages.pages.flatMap((page) => page.items || []),
+      items: items.filter((r: any) => !excludedIds.has(r.rider_id)),
     };
-  }, [ridersPages]);
+  }, [ridersPages, excludedIds]);
 
   // Upsert bid mutation
   const upsertBidMutation = useMutation({
