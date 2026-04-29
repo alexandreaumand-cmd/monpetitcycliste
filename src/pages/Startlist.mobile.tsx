@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,8 +45,8 @@ export const StartlistMobile = () => {
     leagueId
   } = useLeague();
   const [viewMode, setViewMode] = useState<"list" | "view">("list");
-  const [displayMode, setDisplayMode] = useState<"list" | "calendar">("calendar");
-  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("upcoming-year");
+  const [displayMode, setDisplayMode] = usePersistentState<"list" | "calendar">("startlist.mobile.displayMode", "calendar");
+  const [tabMode, setTabMode] = usePersistentState<"30days" | "90days" | "history" | "upcoming-year">("startlist.mobile.tabMode", "upcoming-year");
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUnmatched, setShowUnmatched] = useState(false);
