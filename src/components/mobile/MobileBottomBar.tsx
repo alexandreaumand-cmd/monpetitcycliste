@@ -41,8 +41,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
   const secondaryPaths = [
     "/dashboard/encheres",
     "/dashboard/courses",
-    "/dashboard/resultats",
-    "/dashboard/arene",
+    "/dashboard/live",
     "/dashboard/statistiques",
     "/dashboard/compte",
     "/dashboard/admin",
@@ -52,7 +51,8 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
     { label: t("navigation.standings"), path: "/dashboard/classement", icon: BarChart3 },
     { label: t("navigation.teams"), path: "/dashboard/mon-equipe", icon: Users },
     { label: t("navigation.startlist"), path: "/dashboard/startlist", icon: ListChecks },
-    { label: t("navigation.live"), path: "/dashboard/live", icon: Radio },
+    { label: t("navigation.results"), path: "/dashboard/resultats", icon: Trophy },
+    { label: t("navigation.arena"), path: "/dashboard/arene", icon: Swords },
   ];
 
   const buildNavUrl = (path: string) => (currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path);
