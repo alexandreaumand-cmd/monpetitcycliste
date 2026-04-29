@@ -1,112 +1,71 @@
-# Améliorations UX mobile : navigation unifiée + fluidité
+# Corriger la situation de course PCS (live)
 
-Deux problèmes remontés par l'utilisateur :
-1. **Navigation confuse** : entre la barre du bas (6 boutons) et le menu hamburger en haut à gauche (5 sections, ~14 entrées), il est difficile de mémoriser où trouver quoi — d'autant que certaines entrées sont dupliquées (Classement, Mon Équipe, Startlist, Résultats, Live, Arène présents des deux côtés).
-2. **Page rafraîchie systématiquement au retour arrière** : ouvrir une fiche coureur ou faire une enchère puis revenir relance des refetchs et perd la position de scroll → friction.
+## Problème observé
 
----
+Sur le panneau Live (capture 1), la situation du Tour de Romandie affiche 9 "groupes" : Pogacar, Nordhagen, Lipowitz, Martinez, Roglic, Tuckwell, Withen, Cepeda, Rodríguez — chacun listé comme un groupe avec un écart entre eux.
 
-## Partie 1 — Unifier toute la navigation dans la barre du bas
+Côté PCS (capture 2), il n'existe en réalité que **2 groupes** :
+- `GROUP POGACAR` (4 coureurs, en tête)
+- `GROUP ROGLIC` à +0:26 (10+ coureurs)
 
-**Décision** : la barre du bas devient la **seule source de navigation principale**. Le tiroir hamburger est supprimé (ou réduit à un mini-panneau "compte" déclenché depuis l'avatar).
+Le scraper traite chaque **ligne de coureur** comme si elle était un groupe.
 
-### Nouvelle barre du bas mobile
+## Cause racine
 
-5 emplacements visibles + 1 bouton "Plus" qui ouvre une bottom sheet pour les destinations secondaires :
+Dans `supabase/functions/scrape-live-race/index.ts` (parsing PCS Live), la structure HTML PCS imbrique des `.sit-grp` à plusieurs niveaux :
 
-```text
-[Classement] [Équipe] [Startlist] [Live] [Plus ⋯]
+```
+.sit-grp                  ← vrai groupe (POGACAR)
+  ├─ header (nom, gap)
+  ├─ .sit-grp             ← ligne coureur (1 rider)
+  ├─ .sit-grp             ← ligne coureur (1 rider)
+  └─ ...
+.sit-grp                  ← vrai groupe (ROGLIC)
+  └─ ...
 ```
 
-Pourquoi ces 4 + Plus :
-- ce sont les pages consultées quotidiennement (vu la fréquence d'utilisation actuelle dans `MobileBottomBar`) ;
-- les autres (Courses, Résultats, Statistiques, Arène, Enchères, Compte, Admin, Déconnexion) passent dans la feuille "Plus".
+La logique actuelle :
+1. Cherche le **premier** `.sit-grp` sans ancêtre `.sit-grp` (= root unique).
+2. Prend ses enfants directs `.sit-grp` comme "groupes".
 
-### Bottom sheet "Plus"
+Quand chaque vrai groupe est lui-même un root (frères au top-level), `find()` n'en retourne qu'un seul, et ses enfants directs sont les **lignes de coureurs**, pas des sous-groupes. Résultat : 9 "groupes" d'un coureur chacun.
 
-Ouverte via le bouton ⋯ de la barre du bas. Contenu organisé en sections claires, exactement comme le tiroir actuel mais accessible **du même endroit** que le reste :
+## Correction
 
-```text
-Compétition
-  • Enchères
-  • Courses
-  • Résultats
-  • Arène
+### 1. Repenser la sélection des "vrais groupes"
 
-Analyse
-  • Statistiques
+Remplacer la logique `rootSitGrp + children` par : **tous les `.sit-grp` qui contiennent plusieurs liens coureur ET ont un header (nom de groupe ou écart `+M:SS`)** sont de vrais groupes. Un `.sit-grp` qui ne contient qu'un seul `<a href*="rider/">` est une ligne de coureur, pas un groupe — on l'ignore.
 
-Profil
-  • Mon compte
-  • Notifications
-  • Déconnexion
+Algorithme :
+- Récupérer **tous** les `.sit-grp` du document.
+- Pour chacun, compter les `a[href*="rider/"]` directement contenus (en excluant ceux dans des `.sit-grp` descendants).
+- Garder uniquement ceux avec ≥ 2 liens coureur OU un nom de groupe explicite (`GROUP …`, `Peloton`, `Head of the race`, etc.).
+- Si après filtrage on a 0 vrai groupe mais N `.sit-grp` totaux, fallback : prendre tous les `.sit-grp` top-level (sans ancêtre `.sit-grp`) comme groupes — chacun étant alors un vrai groupe distinct.
 
-Administration (si admin)
-  • Admin
-```
+### 2. Conserver la logique d'extraction des coureurs
 
-Avantages :
-- une seule "carte mentale" : tout part du bas ;
-- le header mobile devient plus calme (on garde uniquement le sélecteur de ligue + cloche notifications, on retire le bouton hamburger) ;
-- plus de duplication entre les deux menus.
+L'extraction interne (riders, bibs, GC gaps) reste correcte pour un vrai groupe. Le filtre "exclure les liens des `.sit-grp` descendants" garde son sens car les coureurs sont eux-mêmes des sous-`.sit-grp`.
 
-### Header mobile simplifié
+### 3. Logs de diagnostic enrichis
 
-`MobileLayout.tsx` : retirer le bouton `Menu`, garder logo + sélecteur de ligue + `NotificationCenter`. L'avatar/profil reste accessible via "Plus → Mon compte".
+Ajouter des logs côté edge function :
+- nombre total de `.sit-grp`
+- nombre de `.sit-grp` "racine" (sans ancêtre)
+- nombre retenu comme vrais groupes
+- pour chaque groupe retenu : nom, écart, nombre de coureurs
 
----
+Ces logs permettront de valider en conditions réelles la prochaine fois qu'un live PCS sera actif.
 
-## Partie 2 — Préserver scroll et état au retour arrière
+### 4. Test sur l'admin Live Broadcast
 
-### Diagnostic des causes
+Une fois déployé, l'admin pourra rescraper la même URL PCS et vérifier dans la fenêtre de prévisualisation (capture 1) que la situation affiche bien 2 groupes au lieu de 9, alignée avec PCS (capture 2).
 
-1. **`ScrollToTop`** (`src/components/shared/ScrollToTop.tsx`) force `window.scrollTo(0,0)` à **chaque** changement de pathname, **y compris lors d'un retour arrière** → le scroll est perdu même quand le navigateur l'aurait restauré.
-2. Les pages utilisent `useState` local pour les filtres / onglets / recherche → un démontage/remontage (navigation) repart de zéro.
-3. `staleTime` global est déjà à 5 min, donc le cache React Query est OK ; le problème ressenti vient surtout du **scroll** et de la **perte d'état UI**.
+## Fichier modifié
 
-### Solution
+- `supabase/functions/scrape-live-race/index.ts` — section `parsePCSLive` (lignes ~115–268)
 
-**a) Restauration de scroll intelligente**
-- Modifier `ScrollToTop` : ne **pas** scroller en haut si la navigation est de type `POP` (= back/forward du navigateur). Utiliser `useNavigationType()` de react-router-dom.
-- Pour les routes principales (dashboard), mémoriser la position de scroll dans une `Map<pathname, scrollY>` au démontage et la restaurer au remontage si `POP`.
+## Hors scope
 
-**b) Persistance de l'état UI des pages clés**
-Sauvegarder dans `sessionStorage` (clé par page) :
-- onglet actif,
-- requête de recherche,
-- filtres sélectionnés,
-- onglet ouvert dans les enchères (`AuctionTabs`).
-
-Cibles prioritaires :
-- `AuctionPageMobile` : `searchQuery`, `selectedTeams`, `selectedCotes`, `selectedCategories`, `selectedCourses`, `sortOrder`, onglet actif.
-- `Startlist.mobile`, `ResultsPage.mobile`, `Rankings.mobile` : onglet/filtres principaux.
-
-Implémenté via un petit hook réutilisable `usePersistentState(key, defaultValue)` qui se comporte comme `useState` + lecture/écriture `sessionStorage`.
-
-**c) Pas de refetch superflu après une action locale**
-- Vérifier que les mutations d'enchères mettent à jour le cache React Query via `setQueryData` au lieu de `invalidateQueries` quand c'est possible — pour éviter un spinner visible au retour de la fiche coureur.
-- Sur les pages mobiles, ajouter `placeholderData: keepPreviousData` aux requêtes qui paginent ou se rafraîchissent souvent, pour conserver l'UI pendant la revalidation.
-
----
-
-## Fichiers concernés
-
-**Navigation** :
-- `src/components/mobile/MobileBottomBar.tsx` — réduire à 4 entrées + bouton "Plus".
-- `src/components/mobile/MobileMoreSheet.tsx` — **nouveau** composant : bottom sheet listant toutes les destinations secondaires.
-- `src/components/mobile/MobileLayout.tsx` — retirer le bouton hamburger et le `MobileDrawer`.
-- `src/components/mobile/MobileDrawer.tsx` — supprimé (contenu déplacé dans `MobileMoreSheet`).
-
-**Fluidité** :
-- `src/components/shared/ScrollToTop.tsx` — détection `POP` + mémoire de scroll.
-- `src/hooks/usePersistentState.ts` — **nouveau** hook (sessionStorage).
-- `src/components/auction/v2/AuctionPageMobile.tsx` — basculer les `useState` de filtres/recherche/onglet sur `usePersistentState`.
-- `src/pages/Startlist.mobile.tsx`, `src/pages/ResultsPage.mobile.tsx`, `src/pages/Rankings.mobile.tsx` — idem pour leurs onglets/filtres principaux.
-
----
-
-## Notes pour validation visuelle
-
-- Tester sur viewport 390×844 (iPhone) : la barre du bas doit tenir confortablement avec 5 boutons (4 + ⋯).
-- Vérifier que la safe-area iOS est respectée pour la bottom sheet "Plus".
-- Tester le retour arrière depuis la liste des enchères vers une fiche puis retour : scroll, recherche et filtres doivent être préservés.
+- Affichage `RaceSituationDisplay` : inchangé (il affiche correctement ce qu'on lui donne).
+- Parsers L'Équipe et FirstCycling : inchangés.
+- Pas de migration DB.

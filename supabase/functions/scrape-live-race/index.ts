@@ -124,26 +124,58 @@ function parsePCSLive(doc: any, html: string): {
   // Look for the "Situation" section and parse groups
 
   // Try DOM-based parsing first (more reliable)
-  const allSitGrps = doc.querySelectorAll(".sit-grp");
+  const allSitGrps = Array.from(doc.querySelectorAll(".sit-grp"));
   console.log(`[PCS Live] Found ${allSitGrps.length} .sit-grp elements`);
 
-  // Find the root .sit-grp container (the one with no .sit-grp ancestor)
-  const rootSitGrp = Array.from(allSitGrps).find(el => {
-    let parent = (el as any).parentElement;
+  // PCS structure: each "real" group is a .sit-grp at the top level (no .sit-grp ancestor)
+  // and contains nested .sit-grp children that represent individual rider rows.
+  // A .sit-grp that is itself nested inside another .sit-grp is a rider row, not a group.
+  const topLevelSitGrps = allSitGrps.filter((el: any) => {
+    let parent = el.parentElement;
     while (parent) {
       if (parent.classList?.contains("sit-grp")) return false;
       parent = parent.parentElement;
     }
     return true;
   });
+  console.log(`[PCS Live] Top-level .sit-grp count: ${topLevelSitGrps.length}`);
 
-  // The real groups are the direct .sit-grp children of the root container
-  const sitGroups = rootSitGrp
-    ? Array.from(rootSitGrp.children).filter(
-        (el: any) => el.classList?.contains("sit-grp")
-      )
-    : [];
-  console.log(`[PCS Live] Root container found: ${!!rootSitGrp}, direct .sit-grp children: ${sitGroups.length}`);
+  // Helper: count direct rider links (links not inside a nested .sit-grp)
+  const countDirectRiderLinks = (el: any): number => {
+    const all = el.querySelectorAll("a[href*='rider/']");
+    const nested = new Set(Array.from(el.querySelectorAll(".sit-grp")));
+    let count = 0;
+    for (const link of all) {
+      let p = (link as any).parentElement;
+      let inNested = false;
+      while (p && p !== el) {
+        if (nested.has(p)) { inNested = true; break; }
+        p = p.parentElement;
+      }
+      if (!inNested) count++;
+    }
+    return count;
+  };
+
+  // Filter: keep top-level .sit-grp that look like real groups
+  // - Either contain ≥2 direct rider links (multi-rider group)
+  // - Or contain an explicit group-name keyword (Peloton, Group, Head of...)
+  // - Single-rider .sit-grp with no group header are rider rows mistakenly hoisted to top level
+  const groupNameRx = /(peloton|^group\b|^groupe\b|head of|chase|leaders?|breakaway|échappée|echappee)/i;
+  let sitGroups = topLevelSitGrps.filter((el: any) => {
+    const direct = countDirectRiderLinks(el);
+    if (direct >= 2) return true;
+    const text = (el.textContent || "").trim();
+    if (groupNameRx.test(text)) return true;
+    return false;
+  });
+
+  // Fallback: if filtering removed everything but we did have top-level groups, keep them all
+  if (sitGroups.length === 0 && topLevelSitGrps.length > 0) {
+    console.log(`[PCS Live] Filter kept 0 groups, falling back to all top-level .sit-grp`);
+    sitGroups = topLevelSitGrps;
+  }
+  console.log(`[PCS Live] Real groups retained: ${sitGroups.length}`);
 
   if (sitGroups.length > 0) {
     for (const grp of sitGroups) {
