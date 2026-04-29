@@ -29,7 +29,7 @@ export const MobileLayout = ({
     location.pathname === "/dashboard/home" || location.pathname === "/dashboard";
 
   return (
-    <div className="min-h-screen bg-background pb-20 max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen bg-background pb-20 max-w-[100vw] [overflow-x:clip]">
       {/* Header — masqué sur home. Plus de bouton hamburger : la nav est entièrement dans la barre du bas. */}
       {!isHomePage && (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
