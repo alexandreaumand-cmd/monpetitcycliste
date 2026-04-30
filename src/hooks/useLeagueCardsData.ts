@@ -192,10 +192,12 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       (allScopes || []).forEach(s => scopesByLeague.set(s.league_id, s));
 
       const phasesBySeason = new Map<string, typeof allPhases>();
+      const phaseIndexById = new Map<string, number>();
       allPhases.forEach(p => {
         const arr = phasesBySeason.get(p.saison_id) || [];
         arr.push(p);
         phasesBySeason.set(p.saison_id, arr);
+        phaseIndexById.set(p.id, p.index_dans_saison);
       });
 
       // ── Build result map ──
