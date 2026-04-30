@@ -1990,6 +1990,7 @@ export type Database = {
           created_at: string
           id: string
           recipient_count: number
+          scheduled_at: string | null
           sent_by: string
           subject: string
           template_id: string | null
@@ -2000,6 +2001,7 @@ export type Database = {
           created_at?: string
           id?: string
           recipient_count: number
+          scheduled_at?: string | null
           sent_by: string
           subject: string
           template_id?: string | null
@@ -2010,6 +2012,7 @@ export type Database = {
           created_at?: string
           id?: string
           recipient_count?: number
+          scheduled_at?: string | null
           sent_by?: string
           subject?: string
           template_id?: string | null
@@ -6745,6 +6748,10 @@ export type Database = {
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
+        Returns: number
+      }
+      enqueue_email_at: {
+        Args: { payload: Json; queue_name: string; send_at: string }
         Returns: number
       }
       find_courses_missing_porteur_points: {

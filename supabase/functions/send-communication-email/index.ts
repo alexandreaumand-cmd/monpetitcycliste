@@ -146,6 +146,26 @@ serve(async (req) => {
     const bodyHtmlRaw = (body.body_html ?? '').toString();
     const templateId = body.template_id ?? null;
     const recipientUserIds: string[] = Array.isArray(body.recipient_user_ids) ? body.recipient_user_ids : [];
+    const scheduledAtRaw = body.scheduled_at ?? null;
+
+    // Validate scheduled_at if provided
+    let scheduledAt: Date | null = null;
+    if (scheduledAtRaw !== null && scheduledAtRaw !== undefined && scheduledAtRaw !== '') {
+      const d = new Date(scheduledAtRaw);
+      if (isNaN(d.getTime())) {
+        return jsonResponse({ error: 'Date programmée invalide' }, 400);
+      }
+      const now = Date.now();
+      const minTs = now + 60_000; // +60s
+      const maxTs = now + 90 * 24 * 3600_000; // +90 days
+      if (d.getTime() < minTs) {
+        return jsonResponse({ error: 'La date programmée doit être au moins dans 1 minute' }, 400);
+      }
+      if (d.getTime() > maxTs) {
+        return jsonResponse({ error: 'La date programmée doit être dans les 90 jours' }, 400);
+      }
+      scheduledAt = d;
+    }
 
     if (!subject || subject.length > MAX_SUBJECT) {
       return jsonResponse({ error: `Sujet invalide (1-${MAX_SUBJECT} caractères)` }, 400);
@@ -228,6 +248,7 @@ serve(async (req) => {
         body_html: bodyHtml,
         recipient_count: finalRecipients.length,
         sent_by: user.id,
+        scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
       })
       .select('id')
       .single();
@@ -268,26 +289,39 @@ serve(async (req) => {
         template_name: 'communication_general',
         recipient_email: r.email,
         status: 'pending',
-        metadata: { batch_id: batchId, user_id: r.user_id },
-      });
-
-      const { error: enqueueError } = await supabaseAdmin.rpc('enqueue_email', {
-        queue_name: 'transactional_emails',
-        payload: {
-          message_id: messageId,
-          idempotency_key: messageId,
-          to: r.email,
-          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-          sender_domain: SENDER_DOMAIN,
-          subject: personalizedSubject,
-          html: finalHtml,
-          text: finalText,
-          purpose: 'transactional',
-          label: 'communication_general',
-          queued_at: new Date().toISOString(),
-          metadata: { batch_id: batchId, user_id: r.user_id },
+        metadata: {
+          batch_id: batchId,
+          user_id: r.user_id,
+          ...(scheduledAt ? { scheduled_at: scheduledAt.toISOString() } : {}),
         },
       });
+
+      const queuePayload = {
+        message_id: messageId,
+        idempotency_key: messageId,
+        to: r.email,
+        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: personalizedSubject,
+        html: finalHtml,
+        text: finalText,
+        purpose: 'transactional',
+        label: 'communication_general',
+        queued_at: new Date().toISOString(),
+        ...(scheduledAt ? { scheduled_at: scheduledAt.toISOString() } : {}),
+        metadata: { batch_id: batchId, user_id: r.user_id },
+      };
+
+      const { error: enqueueError } = scheduledAt
+        ? await supabaseAdmin.rpc('enqueue_email_at', {
+            queue_name: 'transactional_emails',
+            payload: queuePayload,
+            send_at: scheduledAt.toISOString(),
+          })
+        : await supabaseAdmin.rpc('enqueue_email', {
+            queue_name: 'transactional_emails',
+            payload: queuePayload,
+          });
 
       if (enqueueError) {
         console.error('[send-communication-email] enqueue failed', enqueueError);
@@ -308,6 +342,7 @@ serve(async (req) => {
       batch_id: batchId,
       queued,
       failed,
+      scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
       skipped_unsubscribed: recipients.length - finalRecipients.length,
     }, 200);
   } catch (error: any) {

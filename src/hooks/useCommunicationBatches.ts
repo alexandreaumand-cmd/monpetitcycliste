@@ -10,6 +10,7 @@ export interface CommunicationBatch {
   recipient_count: number;
   sent_by: string;
   created_at: string;
+  scheduled_at: string | null;
 }
 
 export interface BatchStatusCounts {
