@@ -181,7 +181,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                             notif.type === 'auction_ready_to_close';
                           const showPhase =
                             isAuctionType &&
-                            notif.metadata?.game_mode === 'five_phases' &&
+                            (notif.metadata?.game_mode === 'five_phases' ||
+                              notif.metadata?.game_mode === 'full_season') &&
                             notif.metadata?.phase_index != null;
                           return (
                             <p className="text-xs text-muted-foreground mt-0.5">
