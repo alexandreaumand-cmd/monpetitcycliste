@@ -146,6 +146,26 @@ serve(async (req) => {
     const bodyHtmlRaw = (body.body_html ?? '').toString();
     const templateId = body.template_id ?? null;
     const recipientUserIds: string[] = Array.isArray(body.recipient_user_ids) ? body.recipient_user_ids : [];
+    const scheduledAtRaw = body.scheduled_at ?? null;
+
+    // Validate scheduled_at if provided
+    let scheduledAt: Date | null = null;
+    if (scheduledAtRaw !== null && scheduledAtRaw !== undefined && scheduledAtRaw !== '') {
+      const d = new Date(scheduledAtRaw);
+      if (isNaN(d.getTime())) {
+        return jsonResponse({ error: 'Date programmée invalide' }, 400);
+      }
+      const now = Date.now();
+      const minTs = now + 60_000; // +60s
+      const maxTs = now + 90 * 24 * 3600_000; // +90 days
+      if (d.getTime() < minTs) {
+        return jsonResponse({ error: 'La date programmée doit être au moins dans 1 minute' }, 400);
+      }
+      if (d.getTime() > maxTs) {
+        return jsonResponse({ error: 'La date programmée doit être dans les 90 jours' }, 400);
+      }
+      scheduledAt = d;
+    }
 
     if (!subject || subject.length > MAX_SUBJECT) {
       return jsonResponse({ error: `Sujet invalide (1-${MAX_SUBJECT} caractères)` }, 400);
