@@ -27,6 +27,8 @@ interface Notification {
     round_number?: number;
     auto_launched?: boolean;
     league_id?: string;
+    phase_index?: number | null;
+    game_mode?: string | null;
     [key: string]: any;
   };
 }
