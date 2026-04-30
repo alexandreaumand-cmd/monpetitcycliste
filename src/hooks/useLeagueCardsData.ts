@@ -309,7 +309,6 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
               }
             }
           }
-          }
         }
 
         const scopeData = scopesByLeague.get(league.id);
