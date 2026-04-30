@@ -29,7 +29,6 @@ interface Props {
 type Phase = {
   id: string;
   index_dans_saison: number;
-  nom: string | null;
 };
 
 export function SuperAdminLeagueStandings({ leagueId, gameMode }: Props) {
@@ -54,7 +53,7 @@ export function SuperAdminLeagueStandings({ leagueId, gameMode }: Props) {
         if (phaseIds.length > 0) {
           const { data: phasesData } = await supabase
             .from("phases")
-            .select("id, index_dans_saison, nom")
+            .select("id, index_dans_saison")
             .in("id", phaseIds)
             .order("index_dans_saison", { ascending: true });
           if (!cancelled) setPhases((phasesData ?? []) as Phase[]);
@@ -111,7 +110,6 @@ export function SuperAdminLeagueStandings({ leagueId, gameMode }: Props) {
                 {phases.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     Phase {p.index_dans_saison}
-                    {p.nom ? ` — ${p.nom}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
