@@ -248,6 +248,7 @@ serve(async (req) => {
         body_html: bodyHtml,
         recipient_count: finalRecipients.length,
         sent_by: user.id,
+        scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
       })
       .select('id')
       .single();
