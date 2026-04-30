@@ -7014,6 +7014,7 @@ export type Database = {
         Returns: undefined
       }
       refresh_standings_mv: { Args: never; Returns: undefined }
+      refresh_standings_views: { Args: never; Returns: undefined }
       results_course_meta: {
         Args: { p_course_id: string }
         Returns: {
