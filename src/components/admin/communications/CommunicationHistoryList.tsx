@@ -99,6 +99,12 @@ export function CommunicationHistoryList() {
                       {format(new Date(b.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
                       {b.template_name_snapshot && <> · Template : {b.template_name_snapshot}</>}
                     </div>
+                    {b.scheduled_at && new Date(b.scheduled_at).getTime() > Date.now() && (
+                      <div className="text-xs text-primary mt-1 flex items-center gap-1">
+                        <CalendarClock className="h-3 w-3" />
+                        Programmé pour le {format(new Date(b.scheduled_at), "d MMM yyyy 'à' HH:mm", { locale: fr })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:ml-3 sm:shrink-0">
                     <Badge variant="secondary">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
