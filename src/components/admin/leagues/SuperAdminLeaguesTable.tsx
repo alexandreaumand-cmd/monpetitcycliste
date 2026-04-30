@@ -236,6 +236,7 @@ export function SuperAdminLeaguesTable() {
           <TableHead>Mode</TableHead>
           <TableHead>Visibilité</TableHead>
           <TableHead>Membres</TableHead>
+          <TableHead>Enchères</TableHead>
           <TableHead>
             <Button
               variant="ghost"
