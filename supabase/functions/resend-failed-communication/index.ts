@@ -86,7 +86,10 @@ serve(async (req) => {
 
     const failedLogs = (logs ?? []).filter((r: any) => {
       const s = String(r.status ?? '').toLowerCase();
-      return r.metadata?.batch_id === batchId && (s === 'failed' || s === 'error' || s === 'dlq' || s === 'bounced');
+      if (r.metadata?.batch_id !== batchId) return false;
+      if (s === 'failed' || s === 'error' || s === 'dlq' || s === 'bounced') return true;
+      if (includePending && (s === 'pending' || s === 'queued')) return true;
+      return false;
     });
 
     // Dedupe by recipient (most recent first already)
