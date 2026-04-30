@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCommunicationBatches, useCommunicationBatchDetail, type CommunicationBatch, type CommunicationBatchWithStatus } from "@/hooks/useCommunicationBatches";
-import { CheckCircle2, AlertCircle, Clock, RefreshCw, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, RefreshCw, Loader2, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
