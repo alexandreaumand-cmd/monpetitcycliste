@@ -99,7 +99,7 @@ export function PhaseAuctionSchedule() {
           {season && <Badge variant="secondary">Saison {season.annee}</Badge>}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Ces dates s'appliquent à toutes les ligues en mode 5 Phases. La date du premier tour est fixée par le créateur de la ligue.
+          Ces dates s'appliquent aux ligues actives jouant par phase (mode "5 Phases" et anciennes ligues "Saison complète"). La date du premier tour de chaque ligue est fixée par son créateur.
         </p>
       </CardHeader>
       <CardContent>

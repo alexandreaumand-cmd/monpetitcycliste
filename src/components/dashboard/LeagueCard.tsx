@@ -368,8 +368,8 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 </div>
                 
                 <div className="space-y-2">
-                  {/* Phase (uniquement mode "à la phase") */}
-                  {league.game_mode === 'five_phases' && auctionStatus.phaseIndex != null && (
+                  {/* Phase (modes "à la phase" : five_phases ou ancien full_season) */}
+                  {(league.game_mode === 'five_phases' || league.game_mode === 'full_season') && auctionStatus.phaseIndex != null && (
                     <div className="flex items-center justify-between">
                       <span className={`text-sm font-inter ${
                         auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
