@@ -302,6 +302,9 @@ export function SuperAdminLeaguesTable() {
                 )}
               </div>
             </TableCell>
+            <TableCell>
+              <SuperAdminLeagueAuctionBadge leagueId={league.id} gameMode={league.game_mode} />
+            </TableCell>
             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
               {format(new Date(league.created_at), "dd MMM yyyy", { locale: fr })}
             </TableCell>
