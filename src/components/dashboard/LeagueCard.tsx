@@ -368,6 +368,26 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 </div>
                 
                 <div className="space-y-2">
+                  {/* Phase (uniquement mode "à la phase") */}
+                  {league.game_mode === 'five_phases' && auctionStatus.phaseIndex != null && (
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-inter ${
+                        auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
+                          : auctionStatus.isScheduled ? 'text-blue-800' 
+                          : 'text-amber-900'
+                      }`}>
+                        Phase
+                      </span>
+                      <span className={`text-lg font-montserrat font-bold ${
+                        auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
+                          : auctionStatus.isScheduled ? 'text-blue-900' 
+                          : 'text-amber-900'
+                      }`}>
+                        Phase {auctionStatus.phaseIndex}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Round number */}
                   <div className="flex items-center justify-between">
                     <span className={`text-sm font-inter ${

@@ -18,6 +18,7 @@ interface LeagueSeason {
 interface AuctionStatus {
   auctionId: string;
   phaseId: string | null;
+  phaseIndex: number | null;
   roundNumber: number;
   validatedCount: number;
   totalManagers: number;
@@ -191,10 +192,12 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
       (allScopes || []).forEach(s => scopesByLeague.set(s.league_id, s));
 
       const phasesBySeason = new Map<string, typeof allPhases>();
+      const phaseIndexById = new Map<string, number>();
       allPhases.forEach(p => {
         const arr = phasesBySeason.get(p.saison_id) || [];
         arr.push(p);
         phasesBySeason.set(p.saison_id, arr);
+        phaseIndexById.set(p.id, p.index_dans_saison);
       });
 
       // ── Build result map ──
@@ -262,6 +265,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
             auctionStatus = {
               auctionId: openAuction.id,
               phaseId: openAuction.phase_id,
+              phaseIndex: openAuction.phase_id ? phaseIndexById.get(openAuction.phase_id) ?? null : null,
               roundNumber: openAuction.round_number,
               validatedCount: validation?.validated_count ?? 0,
               totalManagers: validation?.total_managers ?? leagueMembers.length,
@@ -278,6 +282,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
               auctionStatus = {
                 auctionId: closedWithPending.id,
                 phaseId: closedWithPending.phase_id,
+                phaseIndex: closedWithPending.phase_id ? phaseIndexById.get(closedWithPending.phase_id) ?? null : null,
                 roundNumber: closedWithPending.round_number,
                 validatedCount: 0,
                 totalManagers: 0,
@@ -294,6 +299,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 auctionStatus = {
                   auctionId: scheduled.id,
                   phaseId: scheduled.phase_id,
+                  phaseIndex: scheduled.phase_id ? phaseIndexById.get(scheduled.phase_id) ?? null : null,
                   roundNumber: scheduled.round_number,
                   validatedCount: 0,
                   totalManagers: 0,
