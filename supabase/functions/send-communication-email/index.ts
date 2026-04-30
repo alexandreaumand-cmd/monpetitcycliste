@@ -289,26 +289,39 @@ serve(async (req) => {
         template_name: 'communication_general',
         recipient_email: r.email,
         status: 'pending',
-        metadata: { batch_id: batchId, user_id: r.user_id },
-      });
-
-      const { error: enqueueError } = await supabaseAdmin.rpc('enqueue_email', {
-        queue_name: 'transactional_emails',
-        payload: {
-          message_id: messageId,
-          idempotency_key: messageId,
-          to: r.email,
-          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-          sender_domain: SENDER_DOMAIN,
-          subject: personalizedSubject,
-          html: finalHtml,
-          text: finalText,
-          purpose: 'transactional',
-          label: 'communication_general',
-          queued_at: new Date().toISOString(),
-          metadata: { batch_id: batchId, user_id: r.user_id },
+        metadata: {
+          batch_id: batchId,
+          user_id: r.user_id,
+          ...(scheduledAt ? { scheduled_at: scheduledAt.toISOString() } : {}),
         },
       });
+
+      const queuePayload = {
+        message_id: messageId,
+        idempotency_key: messageId,
+        to: r.email,
+        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: personalizedSubject,
+        html: finalHtml,
+        text: finalText,
+        purpose: 'transactional',
+        label: 'communication_general',
+        queued_at: new Date().toISOString(),
+        ...(scheduledAt ? { scheduled_at: scheduledAt.toISOString() } : {}),
+        metadata: { batch_id: batchId, user_id: r.user_id },
+      };
+
+      const { error: enqueueError } = scheduledAt
+        ? await supabaseAdmin.rpc('enqueue_email_at', {
+            queue_name: 'transactional_emails',
+            payload: queuePayload,
+            send_at: scheduledAt.toISOString(),
+          })
+        : await supabaseAdmin.rpc('enqueue_email', {
+            queue_name: 'transactional_emails',
+            payload: queuePayload,
+          });
 
       if (enqueueError) {
         console.error('[send-communication-email] enqueue failed', enqueueError);
