@@ -85,40 +85,44 @@ export function CommunicationHistoryList() {
           <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14" />)}</div>
         ) : batches && batches.length > 0 ? (
           <div className="space-y-2">
-            {batches.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setOpenBatch(b)}
-                className="w-full text-left p-3 border rounded-lg hover:bg-muted/30 flex items-center justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">{b.subject}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {format(new Date(b.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
-                    {b.template_name_snapshot && <> · Template : {b.template_name_snapshot}</>}
+            {batches.map((b) => {
+              const showResend = b.status_counts.failed > 0 || b.status_counts.pending > 0;
+              return (
+                <div
+                  key={b.id}
+                  onClick={() => setOpenBatch(b)}
+                  className="w-full text-left p-3 border rounded-lg hover:bg-muted/30 cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium break-words sm:truncate">{b.subject}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      {format(new Date(b.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
+                      {b.template_name_snapshot && <> · Template : {b.template_name_snapshot}</>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-3 sm:shrink-0">
+                    <Badge variant="secondary">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
+                    {renderBatchStatus(b)}
+                    {showResend && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-auto sm:ml-0"
+                        disabled={resendingId === b.id}
+                        onClick={(e) => handleResendFailed(b.id, b.status_counts.failed === 0 && b.status_counts.pending > 0, e)}
+                      >
+                        {resendingId === b.id ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                        )}
+                        {b.status_counts.failed > 0 ? "Renvoyer les échecs" : "Renvoyer"}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-3 shrink-0">
-                  <Badge variant="secondary">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
-                  {renderBatchStatus(b)}
-                  {(b.status_counts.failed > 0 || b.status_counts.pending > 0) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={resendingId === b.id}
-                      onClick={(e) => handleResendFailed(b.id, b.status_counts.failed === 0 && b.status_counts.pending > 0, e)}
-                    >
-                      {resendingId === b.id ? (
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                      )}
-                      {b.status_counts.failed > 0 ? "Renvoyer les échecs" : "Renvoyer"}
-                    </Button>
-                  )}
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center text-muted-foreground py-8">Aucun envoi pour le moment.</div>
