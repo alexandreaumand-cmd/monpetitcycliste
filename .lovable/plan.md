@@ -1,61 +1,53 @@
-## Problème
+## Diagnostic (corrigé)
 
-Quand tu programmes la date/heure d'ouverture des enchères pour la **phase 3** alors que la phase active actuelle est la **phase 2**, l'info ne s'affiche pas sur la carte de la ligue dans le dashboard.
+Tu as raison sur le fuseau : **09:45 UTC = 11:45 Paris**, l'heure n'est pas encore passée au moment où tu écris (il est ~9h Paris). Donc l'enchère n'aurait pas dû être ouverte — mais elle aurait dû exister en `scheduled` et apparaître sur la carte. Or elle n'existe pas.
 
-## Cause
+### Cause racine confirmée
 
-Le hook `useLeagueCardsData` (et son équivalent `useLeagueAuctionStatus`) calcule la **phase active** à partir de la date du jour, puis cherche une enchère `scheduled` **uniquement pour cette phase active**.
+Deux systèmes ne communiquent pas :
 
-Code actuel (`src/hooks/useLeagueCardsData.ts`, lignes ~243-305) :
+1. **`phase_auction_schedule`** (alimentée par "Planning enchères" du superadmin) contient bien ta ligne phase 3 → 30/04 09:45 UTC.
+2. **`auctions(statut='scheduled')`** (lue par les cartes de ligue et le mécanisme d'ouverture) ne contient **rien** pour les ligues `five_phases`.
 
-```ts
-// Calcule activePhaseId = phase courante (today entre date_debut/date_fin)
-// Sinon prochaine phase à venir...
+Vérifié en TEST :
+- Ligues `full_season` (MPC 2026, Early Adopters) : ont déjà des `auctions(scheduled)` pour phases 3/4/5 — créées à la création de la ligue.
+- Ligues `five_phases` (TEST Saison entière 3 managers, Ligue Publique WT, Tête dans le guidon) : **aucune `auctions(scheduled)`** pour les phases futures. Le superadmin doit créer chaque enchère manuellement, et "Planning enchères" est aujourd'hui purement décoratif.
 
-const scheduled = activePhaseId ? leagueAuctions.find(
-  a => a.statut === 'scheduled' 
-    && a.opens_at 
-    && a.opens_at > now 
-    && a.phase_id === activePhaseId   // ← bloque les enchères des phases futures
-) : null;
-```
+À noter : le nom de la ligue "TEST Saison entière 3 managers" est trompeur, son `game_mode` réel est `five_phases`.
 
-Vérifié en base TEST : on a bien des enchères `scheduled` pour la phase 3 (par ex. ligue *Early Adopters*, *MPC 2026*, *Tête dans le guidon*) avec `opens_at` en juillet/septembre 2026, mais on est aujourd'hui dans la phase 2 (date_debut 2026-04-XX, date_fin avant le 2026-05-09). Donc ces enchères programmées sont filtrées et n'apparaissent pas sur les cartes.
+---
 
-## Solution
+## Plan d'implémentation (option A1 retenue)
 
-Élargir la recherche d'enchères `scheduled` à **toutes les phases à venir**, pas uniquement la phase active. On garde l'ordre de priorité actuel :
+### 1. Migration SQL — synchroniser `phase_auction_schedule` → `auctions`
 
-1. Enchère `open` en cours
-2. Enchère `closed` avec annonces non publiées (phase active de préférence, sinon n'importe laquelle)
-3. **Prochaine enchère `scheduled`** : la plus proche dans le temps (`opens_at > now`), toutes phases confondues
-   - Si plusieurs sont programmées, on prend celle dont `opens_at` est le plus tôt
+Créer une fonction Postgres `sync_phase_schedule_to_auctions(p_phase_id uuid)` qui, pour la phase donnée :
+- Lit `auction_opens_at` dans `phase_auction_schedule`.
+- Pour chaque ligue `active` en `game_mode = 'five_phases'` dont le `league_scopes` couvre la saison de cette phase :
+  - Si une `auctions` existe déjà pour `(league_id, phase_id)` → met à jour `opens_at` (et `deadline_at = opens_at + 24h`) tant que `statut = 'scheduled'`. Ne touche pas si déjà `open`/`closed`.
+  - Sinon → insère `auctions(league_id, phase_id, round_number=1, statut='scheduled', opens_at=..., deadline_at=opens_at + 24h)`.
 
-### Fichiers à modifier
+Puis trigger `AFTER INSERT OR UPDATE` sur `phase_auction_schedule` qui appelle cette fonction.
 
-1. **`src/hooks/useLeagueCardsData.ts`** (lignes 287-303)
-   - Remplacer le filtre `a.phase_id === activePhaseId` par un tri sur `opens_at` croissant et prendre la première
-   - Supprimer la condition `activePhaseId ? ... : null` (on cherche même si on n'a pas de phase active)
+### 2. Ouverture automatique à `opens_at`
 
-2. **`src/hooks/useLeagueAuctionStatus.tsx`** (logique étape 3)
-   - Appliquer la même correction pour rester cohérent (utilisé dans la barre latérale / autres écrans)
-   - Trier `scheduled` par `opens_at` ascendant au lieu de filtrer par `activePhaseId`
+Vérifier si une edge function/cron existe déjà pour passer `scheduled → open` (les ligues `full_season` doivent déjà avoir ce mécanisme). Si oui, rien à faire de plus. Si non, ajouter un cron `pg_cron` toutes les minutes qui ouvre les `auctions(scheduled)` arrivées à `opens_at`. **À explorer en phase d'implémentation.**
 
-### Affichage sur la carte
+### 3. Rattrapage one-shot pour la phase 3 en TEST
 
-Aucun changement nécessaire côté UI : la carte affiche déjà correctement le bloc bleu "Programmée" avec :
-- Numéro de round
-- Compte à rebours `jj : hh : mm : ss` jusqu'à `opens_at`
-- Libellé "Ouverture dans"
+Après création du trigger, exécuter manuellement `sync_phase_schedule_to_auctions('61a9cda5-…')` pour créer rétroactivement les `auctions(scheduled)` dans les ligues `five_phases` actives. Résultat attendu : la carte de "TEST Saison entière 3 managers" (et les autres ligues `five_phases`) affichera "Enchère programmée le 30/04 11:45".
 
-Une fois la donnée renvoyée, le bloc apparaît automatiquement.
+### 4. Frontend
 
-### Cas limite
+Aucune modification : le hook `useLeagueCardsData` lit déjà les `auctions(scheduled)` futures (correctif posé précédemment).
 
-Si une enchère `scheduled` pour la phase courante existe en plus d'une pour une phase future, on affichera la plus proche dans le temps — ce qui est le comportement attendu (la prochaine étape pour le manager).
+---
 
-## Hors scope
+## Points à confirmer avant migration
 
-- Pas de changement de schéma DB
-- Pas de changement sur la programmation côté admin (qui fonctionne déjà puisque les enchères sont bien créées)
-- Pas de changement sur les enchères `open` ni les annonces en attente
+1. **Durée de l'enchère par défaut** : `deadline_at = opens_at + 24h` — est-ce la bonne valeur ? (les ligues `full_season` actuelles sont aussi à 24h, donc cohérent)
+2. **Round number** : toujours `round_number = 1` à la création (les rounds 2/3/4 sont créés ensuite par "clore-round"), correct ?
+3. **Si tu modifies une date dans "Planning enchères" après coup**, on met à jour les `auctions(scheduled)` correspondantes. Ok ?
+4. **Nouvelles ligues `five_phases` créées plus tard** : elles devront aussi récupérer les dates planifiées. Le trigger sur `phase_auction_schedule` ne couvre pas ce cas — il faudrait un second trigger sur la création de ligue, ou un appel à `sync_*` à la création d'une ligue `five_phases`. À ajouter au plan ?
+
+Une fois que tu confirmes, je lance la migration.
