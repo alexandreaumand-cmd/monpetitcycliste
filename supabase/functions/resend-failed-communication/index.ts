@@ -70,6 +70,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const batchId = (body.batch_id ?? '').toString();
+    const includePending = body.include_pending === true;
     if (!batchId) return jsonResponse({ error: 'batch_id requis' }, 400);
 
     // Load batch
@@ -85,7 +86,10 @@ serve(async (req) => {
 
     const failedLogs = (logs ?? []).filter((r: any) => {
       const s = String(r.status ?? '').toLowerCase();
-      return r.metadata?.batch_id === batchId && (s === 'failed' || s === 'error' || s === 'dlq' || s === 'bounced');
+      if (r.metadata?.batch_id !== batchId) return false;
+      if (s === 'failed' || s === 'error' || s === 'dlq' || s === 'bounced') return true;
+      if (includePending && (s === 'pending' || s === 'queued')) return true;
+      return false;
     });
 
     // Dedupe by recipient (most recent first already)
