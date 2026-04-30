@@ -61,18 +61,18 @@ export function CommunicationHistoryList() {
   const renderBatchStatus = (b: CommunicationBatchWithStatus) => {
     const { sent, pending, failed, total } = b.status_counts;
     if (total === 0) {
-      return <Badge variant="outline" className="ml-2"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
+      return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
     }
     if (failed > 0 && sent === 0 && pending === 0) {
-      return <Badge variant="destructive" className="ml-2"><AlertCircle className="h-3 w-3 mr-1" />Échec ({failed}/{b.recipient_count})</Badge>;
+      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Échec ({failed}/{b.recipient_count})</Badge>;
     }
     if (failed > 0) {
-      return <Badge variant="destructive" className="ml-2"><AlertCircle className="h-3 w-3 mr-1" />{failed} échec{failed > 1 ? "s" : ""} / {b.recipient_count}</Badge>;
+      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />{failed} échec{failed > 1 ? "s" : ""} / {b.recipient_count}</Badge>;
     }
     if (pending > 0) {
-      return <Badge variant="secondary" className="ml-2"><Clock className="h-3 w-3 mr-1" />{pending} en attente</Badge>;
+      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />{pending} en attente</Badge>;
     }
-    return <Badge variant="default" className="ml-2"><CheckCircle2 className="h-3 w-3 mr-1" />Envoyé ({sent}/{b.recipient_count})</Badge>;
+    return <Badge variant="default"><CheckCircle2 className="h-3 w-3 mr-1" />Envoyé ({sent}/{b.recipient_count})</Badge>;
   };
 
   return (
