@@ -1,47 +1,38 @@
-# Diagnostic : pourquoi les emails ne partent pas en LIVE
+## Problème
 
-## Ce qui se passe
+Le badge "En attente" s'affiche par défaut, le bouton "Renvoyer" n'apparaît jamais, et la modale de détail est vide. La cause : la table `email_send_log` n'autorise en lecture **que le service role**, donc le client (même superadmin) reçoit zéro ligne.
 
-1. Tu envoies l'email → la fonction `send-communication-email` met bien les 2 emails dans la queue interne (`transactional_emails`) et crée le batch dans l'historique. ✅
-2. Un **cron** doit ensuite, toutes les 5 secondes, appeler la fonction `process-email-queue` qui dépile la queue et envoie réellement les emails via Resend.
-3. **Ce cron est cassé en LIVE** depuis longtemps :
-   - Il appelle une URL qui pointe vers **un autre projet Supabase** (`oisfvryhpovwxaxqbmow` au lieu de `khahpetvqjoyrwambaqn`).
-   - Avant même d'appeler l'URL, il interroge une queue `auth_emails` qui n'existe pas en LIVE → le cron plante à chaque exécution avec l'erreur `relation "pgmq.q_auth_emails" does not exist`.
+## Solution
 
-Résultat : la queue grossit, les lignes dans `email_send_log` restent au statut `pending`, et aucun email ne part jamais.
+Exposer les données du log et du statut aux superadmins via le backend, puis brancher le frontend dessus.
 
-## Vérifications faites
+### 1. Backend — autoriser la lecture aux superadmins
 
-- `pgmq.metrics('transactional_emails')` → 2 messages en attente, plus vieux ~5 min (= tes 2 emails).
-- `email_send_log` → tes 2 envois sont en `status = pending` sans `error_message`.
-- `cron.job_run_details` → toutes les exécutions du job `process-email-queue` sont en `failed` avec l'erreur ci-dessus.
-- `pgmq.list_queues()` → seule la queue `transactional_emails` existe (pas de `auth_emails`).
-- Le secret `email_queue_service_role_key` existe bien dans le Vault.
-- La fonction `process-email-queue` existe bien dans le code et est déployée sur le bon projet.
+Migration SQL : ajouter une policy SELECT sur `public.email_send_log` :
+```
+USING (is_superadmin())
+```
+Les autres policies (service_role) restent inchangées.
 
-## Correctif proposé
+### 2. Frontend — restaurer affichage et bouton
 
-Une **migration** qui réécrit le job cron `process-email-queue` :
-- Remplace l'URL par celle du bon projet : `https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/process-email-queue`.
-- Supprime la condition sur `pgmq.q_auth_emails` (queue inexistante) et garde seulement le check sur `pgmq.q_transactional_emails`.
-- Conserve la garde `retry_after_until` et le secret depuis `vault`.
-- Conserve la fréquence de 5 secondes.
+Une fois la lecture possible, `useCommunicationBatches` et `useCommunicationBatchDetail` retourneront enfin des lignes. Cela suffit à :
+- Afficher le badge correct (Envoyé / X en attente / X échec(s))
+- Faire apparaître le bouton "Renvoyer" (déjà conditionné sur `failed > 0 || pending > 0`)
+- Remplir le tableau "Statut par destinataire" dans la modale
 
-Le cron sera reprogrammé via `cron.schedule(...)` (qui fait un upsert sur le nom du job).
+Petits ajustements UI dans `CommunicationHistoryList.tsx` :
+- Rendre le bouton "Renvoyer" visible aussi en ligne dans la liste pour les batchs avec uniquement du pending (déjà en place — à vérifier après que les données arrivent).
+- Dans la modale : la section "Statut par destinataire" affichera désormais les vraies lignes ; ajouter un libellé clair pour les statuts (`pending` → "En attente", `sent` → "Envoyé", `failed` → "Échec").
 
-## Après application
+### 3. Vérification
 
-Dès que le cron tournera correctement (5 sec plus tard), il va :
-1. Voir les 2 messages en attente dans la queue.
-2. Appeler `process-email-queue` qui les dépile et les envoie via Resend.
-3. Tu devrais recevoir les 2 emails dans la foulée et leur statut passera de `pending` à `sent` dans l'historique.
+Après la migration, recharger l'onglet Historique :
+- Le batch "TEST Préprod" doit afficher "2 en attente" (pas "En attente" générique)
+- Le bouton "Renvoyer" doit apparaître à droite
+- Cliquer sur le batch doit lister les 2 destinataires avec leur statut
 
-## Détails techniques
+## Fichiers touchés
 
-- Fichier touché : nouvelle migration SQL uniquement (aucun code TS modifié).
-- Aucune action côté Test n'est nécessaire — le bug est spécifique au cron LIVE.
-- Optionnel à valider : faut-il aussi vérifier/corriger le job en TEST ? À ma connaissance les emails fonctionnaient déjà en TEST, donc non par défaut.
-
-## Question
-
-Veux-tu que je vérifie aussi d'éventuels autres jobs cron en LIVE qui pointeraient vers le mauvais projet (`oisfvryhpovwxaxqbmow`) pendant qu'on y est ?
+- Nouvelle migration SQL : policy SELECT superadmin sur `email_send_log`
+- `src/components/admin/communications/CommunicationHistoryList.tsx` : libellés statut FR dans le tableau

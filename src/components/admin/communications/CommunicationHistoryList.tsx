@@ -42,10 +42,20 @@ export function CommunicationHistoryList() {
   };
 
   const statusVariant = (s: string) => {
-    if (s === "sent") return "default";
-    if (s === "pending") return "secondary";
-    if (s === "failed" || s === "dlq") return "destructive";
+    if (s === "sent" || s === "delivered") return "default";
+    if (s === "pending" || s === "queued") return "secondary";
+    if (s === "failed" || s === "dlq" || s === "error" || s === "bounced") return "destructive";
     return "outline";
+  };
+
+  const statusLabel = (s: string) => {
+    const k = (s ?? "").toLowerCase();
+    if (k === "sent" || k === "delivered") return "Envoyé";
+    if (k === "pending" || k === "queued") return "En attente";
+    if (k === "failed" || k === "error") return "Échec";
+    if (k === "dlq") return "Échec (DLQ)";
+    if (k === "bounced") return "Rejeté";
+    return s;
   };
 
   const renderBatchStatus = (b: CommunicationBatchWithStatus) => {
@@ -164,7 +174,7 @@ export function CommunicationHistoryList() {
                         {details.map((d) => (
                           <tr key={d.message_id ?? d.recipient_email} className="border-t">
                             <td className="p-2 font-mono text-xs">{d.recipient_email}</td>
-                            <td className="p-2"><Badge variant={statusVariant(d.status) as any}>{d.status}</Badge></td>
+                            <td className="p-2"><Badge variant={statusVariant(d.status) as any}>{statusLabel(d.status)}</Badge></td>
                             <td className="p-2 text-xs text-muted-foreground">{d.error_message ?? "—"}</td>
                           </tr>
                         ))}
