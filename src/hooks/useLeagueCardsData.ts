@@ -18,6 +18,7 @@ interface LeagueSeason {
 interface AuctionStatus {
   auctionId: string;
   phaseId: string | null;
+  phaseIndex: number | null;
   roundNumber: number;
   validatedCount: number;
   totalManagers: number;
