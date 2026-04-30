@@ -91,19 +91,19 @@ export function CommunicationHistoryList() {
                 <div className="flex items-center gap-2 ml-3 shrink-0">
                   <Badge variant="secondary">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
                   {renderBatchStatus(b)}
-                  {b.status_counts.failed > 0 && (
+                  {(b.status_counts.failed > 0 || b.status_counts.pending > 0) && (
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={resendingId === b.id}
-                      onClick={(e) => handleResendFailed(b.id, e)}
+                      onClick={(e) => handleResendFailed(b.id, b.status_counts.failed === 0 && b.status_counts.pending > 0, e)}
                     >
                       {resendingId === b.id ? (
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                       ) : (
                         <RefreshCw className="h-3 w-3 mr-1" />
                       )}
-                      Renvoyer les échecs
+                      {b.status_counts.failed > 0 ? "Renvoyer les échecs" : "Renvoyer"}
                     </Button>
                   )}
                 </div>
