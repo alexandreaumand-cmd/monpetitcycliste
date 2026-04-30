@@ -130,19 +130,21 @@ export function CommunicationHistoryList() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Statut par destinataire</h4>
-                  {openBatch.status_counts.failed > 0 && (
+                  {(openBatch.status_counts.failed > 0 || openBatch.status_counts.pending > 0) && (
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={resendingId === openBatch.id}
-                      onClick={() => handleResendFailed(openBatch.id)}
+                      onClick={() => handleResendFailed(openBatch.id, openBatch.status_counts.failed === 0 && openBatch.status_counts.pending > 0)}
                     >
                       {resendingId === openBatch.id ? (
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                       ) : (
                         <RefreshCw className="h-3 w-3 mr-1" />
                       )}
-                      Renvoyer les {openBatch.status_counts.failed} échec{openBatch.status_counts.failed > 1 ? "s" : ""}
+                      {openBatch.status_counts.failed > 0
+                        ? `Renvoyer les ${openBatch.status_counts.failed} échec${openBatch.status_counts.failed > 1 ? "s" : ""}`
+                        : `Renvoyer les ${openBatch.status_counts.pending} en attente`}
                     </Button>
                   )}
                 </div>
