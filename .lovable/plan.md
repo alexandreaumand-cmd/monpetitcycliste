@@ -1,142 +1,82 @@
-# Plan post-publish : remettre l'envoi d'emails en état de marche sur LIVE
 
-## Diagnostic complet de LIVE (avant action)
+## Constat
 
-| Élément | État LIVE |
-|---|---|
-| Domaine email `labordure.app` | ✅ Vérifié au niveau workspace |
-| Configuré pour ce projet | ✅ Oui |
-| RPC `enqueue_email` | ✅ Existe |
-| Queue `pgmq.q_transactional_emails` | ✅ Existe (3 messages bloqués) |
-| Queue `pgmq.q_auth_emails` | ❌ N'existe pas |
-| DLQ `pgmq.q_transactional_emails_dlq` | ❌ N'existe pas |
-| Cron `process-email-queue` (5s) | ✅ Actif **mais plante en boucle** |
-| Edge function `process-email-queue` | ❓ Jamais invoquée (aucun log) |
-| Toggle "Lovable Emails" sur LIVE | ❓ Probablement off (à confirmer dans Cloud→Emails) |
+Les mails d'inscription "fonctionnent" en LIVE non pas via notre système custom (`auth-email-hook` + queue pgmq + `process-email-queue`), mais via les **templates auth par défaut de Lovable** qui envoient directement, sans passer par la queue.
 
-**Cause racine du blocage** : le cron référence `pgmq.q_auth_emails` qui n'existe pas → erreur SQL toutes les 5s → la fonction `process-email-queue` n'est **jamais appelée** → tous les `pending` restent éternellement en attente.
+Preuve :
+- `email_send_log` LIVE ne contient **aucun** log de type signup/recovery/magiclink, uniquement des `communication_general` en `pending`.
+- Aucun log côté edge functions `auth-email-hook` ni `process-email-queue` en LIVE.
+- Le cron `process-email-queue` se déclenche bien toutes les 5s, mais l'appel HTTP à la fonction reçoit `401 UNAUTHORIZED_LEGACY_JWT` — la JWT stockée dans le vault (`email_queue_service_role_key`) est l'ancien format que Supabase rejette désormais.
 
----
+Donc le système de queue n'a **jamais réellement tourné en LIVE**. Les communications resteront bloquées en `pending` tant que le cron ne peut pas appeler la fonction.
 
-## Étapes post-publish (dans l'ordre)
+## Solution
 
-### Étape 1 — Publier le projet
-Clic sur **Publish → Update**. Cela déploie :
-- Le code des edge functions (`send-communication-email`, `resend-failed-communication` avec le fix `idempotency_key`)
-- Les migrations en attente (refresh standings, alias RPC)
-- Les secrets nouvellement ajoutés
+Reproduire en LIVE le chemin qui fonctionne déjà en TEST pour la queue :
+1. La fonction `process-email-queue` doit être joignable par le cron interne (sans JWT vérifié, ou avec une clé valide).
+2. Une fois la fonction joignable, elle pop les messages et appelle `sendLovableEmail` qui utilise `LOVABLE_API_KEY` (déjà provisionné) pour envoyer via Lovable Emails.
 
-⚠️ Cela ne corrigera **pas** automatiquement les problèmes infra ci-dessous.
+Le changement de `verify_jwt = false` sur `process-email-queue` dans `supabase/config.toml` a déjà été fait dans la conversation précédente. Il reste à publier et à valider que la chaîne complète fonctionne.
 
-### Étape 2 — Activer Lovable Emails sur LIVE
-Dans **Cloud → Emails** (environnement **LIVE** sélectionné) :
-1. Vérifier que `labordure.app` (ou `notify.labordure.app`) est listé comme sender domain actif
-2. **Activer** le toggle "Lovable Emails"
+## Étapes
 
-Sans ça → erreur `Emails disabled for this project` ou `403 no_matching_sender`.
+### 1. Publier le projet (frontend + config edge functions)
 
-### Étape 3 — Réparer l'infra email manquante (SQL à exécuter sur LIVE)
+Le `supabase/config.toml` modifié (`process-email-queue` → `verify_jwt = false`) doit être déployé en LIVE. La fonction reste sécurisée car :
+- Elle n'est appelée que par le cron interne via `net.http_post`.
+- Elle ne lit que la queue et envoie les mails déjà préparés ; aucun input client.
 
-Dans **Cloud View → Run SQL** (LIVE sélectionné), exécuter ce bloc :
+### 2. Vérifier que le cron tourne sans erreur après publish
+
+Dans Cloud (LIVE) → Run SQL :
+```sql
+SELECT j.jobname, d.status, d.return_message, d.start_time
+FROM cron.job_run_details d
+JOIN cron.job j ON j.jobid = d.jobid
+WHERE j.jobname = 'process-email-queue'
+ORDER BY d.start_time DESC LIMIT 5;
+```
+Attendu : 5 lignes `succeeded`.
 
 ```sql
--- 3.1 — Créer la queue auth manquante (référencée par le cron)
-SELECT pgmq.create('auth_emails');
-
--- 3.2 — Créer la DLQ transactionnelle manquante
-SELECT pgmq.create('transactional_emails_dlq');
-
--- 3.3 — Vider les 3 messages stuck dans la queue principale
-SELECT pgmq.delete('transactional_emails', 1);
-SELECT pgmq.delete('transactional_emails', 2);
-SELECT pgmq.delete('transactional_emails', 3);
-
--- 3.4 — Marquer les 3 logs pending comme annulés (ils ne partiront jamais)
-UPDATE public.email_send_log
-SET status = 'cancelled',
-    error_message = 'Annulé : queue non opérationnelle avant correction infra (cron en erreur sur q_auth_emails)'
-WHERE status = 'pending';
+SELECT id, status_code, left(content::text, 100) AS content, created
+FROM net._http_response
+ORDER BY created DESC LIMIT 5;
 ```
+Attendu : `status_code = 200` (plus de 401).
 
-### Étape 4 — Vérifier que le cron tourne enfin
-
-Toujours dans **Run SQL (LIVE)**, attendre ~30s après l'étape 3 puis :
+### 3. Vérifier que les 5 mails en attente partent
 
 ```sql
--- Doit montrer status='succeeded' au lieu de 'failed'
-SELECT status, return_message, start_time
-FROM cron.job_run_details
-WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'process-email-queue')
-ORDER BY start_time DESC
-LIMIT 5;
+SELECT status, COUNT(*) FROM email_send_log GROUP BY status;
 ```
-
-✅ Attendu : `status: succeeded`, `return_message: NULL` (queues vides, donc pas d'appel HTTP).
-
-### Étape 5 — Test end-to-end depuis l'UI
-
-1. Aller sur **Super Admin → Communications** sur le LIVE
-2. Sélectionner 1 destinataire de test (toi-même)
-3. Envoyer un email
-4. Dans Run SQL (LIVE), surveiller :
+Attendu : `pending` → 0, `sent` → 5 (ou un mix avec `failed` si Lovable Emails refuse certains).
 
 ```sql
--- Le log doit passer pending → sent en moins de 30s
-SELECT message_id, recipient_email, status, error_message, created_at
-FROM email_send_log
-ORDER BY created_at DESC
-LIMIT 5;
+SELECT 'q_transactional_emails', COUNT(*) FROM pgmq.q_transactional_emails;
 ```
+Attendu : 0.
 
-✅ Si `status: sent` → tout fonctionne.
-❌ Si `status: failed` → lire `error_message`, ce sera probablement :
-- `Emails disabled` → étape 2 pas faite
-- `no_matching_sender` → mauvais domaine configuré
-- `missing idempotency_key` → publish pas fait (code pas à jour)
+### 4. Faire un envoi test depuis l'UI
 
-### Étape 6 — Surveillance
+Depuis Super Admin → Communications → Nouvel envoi : envoyer à un destinataire. Vérifier que l'historique passe en `1 envoyé` (et non plus `1 en attente`) en moins de 30 s.
 
-Une fois que ça marche, garder un œil sur :
+### 5. Plan de repli si ça échoue encore
 
-```sql
-SELECT status, COUNT(*) FROM email_send_log
-WHERE created_at > now() - interval '1 day'
-GROUP BY status;
-```
-
-Et la DLQ (qui devrait rester quasi vide) :
-
-```sql
-SELECT * FROM pgmq.q_transactional_emails_dlq;
-```
-
----
+Si après publish on a toujours 401 ou si `process-email-queue` ne reçoit toujours rien :
+- Inspecter `supabase--edge_function_logs` (LIVE) sur `process-email-queue` pour voir le vrai code retour.
+- Si la fonction n'est pas déployée en LIVE, la redéployer manuellement.
+- Si le secret `LOVABLE_API_KEY` manque côté LIVE, le faire ajouter (normalement provisionné automatiquement).
 
 ## Détails techniques
 
-### Pourquoi le cron plante malgré `to_regclass(...) IS NOT NULL`
+**Fichiers concernés (déjà modifiés)** :
+- `supabase/config.toml` : `[functions.process-email-queue] verify_jwt = false`
 
-PostgreSQL parse le SQL **avant** d'évaluer les `CASE/AND` short-circuits. Dès que le planner voit `SELECT 1 FROM pgmq.q_auth_emails`, il vérifie l'existence de la table → erreur fatale. Solution : **créer la queue** (étape 3.1) plutôt que modifier le cron, ce qui évite de toucher à la définition générée par `setup_email_infra`.
+**Aucun changement de code applicatif nécessaire** — `send-communication-email` est déjà bon (il enqueue correctement, on l'a vu dans la queue avec 5 messages).
 
-### Fichiers code impactés
-**Aucun.** Tout le travail est :
-- 1 publish
-- 1 toggle UI dans Cloud
-- 4 requêtes SQL en Cloud View
+**Pourquoi ne pas réparer le secret `email_queue_service_role_key` du vault** :
+- C'est faisable mais demande de récupérer la nouvelle service role key et de la coller dans le vault via SQL.
+- L'option `verify_jwt = false` est plus simple, sûre dans ce contexte (cron interne uniquement), et alignée avec ce que font la plupart des fonctions cron Lovable (`arena-recap-watchdog`, `auto-open-scheduled-auctions`, etc. qui sont déjà toutes en `verify_jwt = false`).
 
-### Risques
-- **Étape 3.1/3.2** : `pgmq.create()` est idempotent côté nom mais lève une erreur si la table existe déjà. Si tu vois `relation already exists`, c'est OK — passer à la suite.
-- **Étape 3.3** : si entre temps un autre message arrive, ne supprimer que les `msg_id` 1, 2, 3 (ce sont les seuls actuellement bloqués).
-- **Étape 3.4** : `cancelled` n'est utilisé nulle part comme statut bloquant — safe.
-
----
-
-## Action requise de ta part
-
-1. ✅ Publier
-2. ✅ Activer Lovable Emails sur LIVE (Cloud → Emails)
-3. ✅ Coller le bloc SQL de l'étape 3 dans Run SQL (LIVE)
-4. ✅ Faire un envoi test
-5. 📩 Me dire le résultat
-
-Une fois validé sur LIVE, on pourra appliquer la même logique sur TEST si tu veux aussi y tester réellement les envois.
+**Validation finale attendue** : l'historique des envois LIVE doit afficher `X envoyé` au lieu de `X en attente`, et les destinataires doivent recevoir le mail dans leur boîte.
