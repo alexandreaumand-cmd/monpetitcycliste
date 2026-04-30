@@ -7230,6 +7230,10 @@ export type Database = {
           total_count: number
         }[]
       }
+      sync_phase_schedule_to_auctions: {
+        Args: { p_phase_id: string }
+        Returns: number
+      }
       unaccent: { Args: { "": string }; Returns: string }
       verify_course_save: {
         Args: { p_course_id: string }
