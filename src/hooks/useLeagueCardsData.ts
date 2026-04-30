@@ -265,6 +265,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
             auctionStatus = {
               auctionId: openAuction.id,
               phaseId: openAuction.phase_id,
+              phaseIndex: openAuction.phase_id ? phaseIndexById.get(openAuction.phase_id) ?? null : null,
               roundNumber: openAuction.round_number,
               validatedCount: validation?.validated_count ?? 0,
               totalManagers: validation?.total_managers ?? leagueMembers.length,
@@ -281,6 +282,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
               auctionStatus = {
                 auctionId: closedWithPending.id,
                 phaseId: closedWithPending.phase_id,
+                phaseIndex: closedWithPending.phase_id ? phaseIndexById.get(closedWithPending.phase_id) ?? null : null,
                 roundNumber: closedWithPending.round_number,
                 validatedCount: 0,
                 totalManagers: 0,
@@ -297,6 +299,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 auctionStatus = {
                   auctionId: scheduled.id,
                   phaseId: scheduled.phase_id,
+                  phaseIndex: scheduled.phase_id ? phaseIndexById.get(scheduled.phase_id) ?? null : null,
                   roundNumber: scheduled.round_number,
                   validatedCount: 0,
                   totalManagers: 0,
@@ -305,6 +308,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 };
               }
             }
+          }
           }
         }
 
