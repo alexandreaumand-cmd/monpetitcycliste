@@ -72,6 +72,9 @@ export function SendCommunicationForm({ initialTemplate, onSent }: SendCommunica
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.success || typeof data?.queued !== "number") {
+        throw new Error("Réponse inattendue du serveur (envoi non confirmé)");
+      }
       toast.success(`Envoi en file d'attente : ${data.queued} email(s)${data.skipped_unsubscribed ? `, ${data.skipped_unsubscribed} désinscrit(s) ignoré(s)` : ""}`);
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["communication-batches"] });

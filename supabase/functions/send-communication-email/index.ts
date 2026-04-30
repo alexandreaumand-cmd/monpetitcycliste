@@ -1,9 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const ROOT_DOMAIN = Deno.env.get('EMAIL_ROOT_DOMAIN') || 'labordure.app';
@@ -15,8 +15,6 @@ const MAX_RECIPIENTS = 500;
 const MAX_SUBJECT = 300;
 const MAX_BODY = 100_000;
 
-// Very small allow-list HTML sanitizer (server-side defence in depth).
-// We strip <script>, <style>, on* handlers, and javascript: URLs.
 function sanitizeHtml(html: string): string {
   let out = html;
   out = out.replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, '');
@@ -83,31 +81,64 @@ function wrapEmail(bodyHtml: string, unsubscribeUrl: string): string {
 </body></html>`;
 }
 
+function jsonResponse(payload: unknown, status: number) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-    const { data: isSuperAdmin, error: superErr } = await supabaseClient.rpc('is_superadmin');
-    if (superErr) throw new Error('Erreur de vérification des permissions');
-    if (!isSuperAdmin) {
-      return new Response(JSON.stringify({ error: 'Réservé aux super-administrateurs' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!SUPABASE_URL || !ANON_KEY) {
+      console.error('[send-communication-email] Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+      return jsonResponse({ error: 'Configuration serveur manquante' }, 500);
+    }
+    if (!SERVICE_ROLE) {
+      console.error('[send-communication-email] Missing SUPABASE_SERVICE_ROLE_KEY');
+      return jsonResponse({ error: 'SERVICE_ROLE_MISSING' }, 500);
     }
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Non authentifié' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Extract JWT explicitly from Authorization header
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      console.error('[send-communication-email] No Authorization header / token');
+      return jsonResponse({ error: 'Non authentifié (token manquant)' }, 401);
+    }
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Resolve user from token using service role (most reliable)
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      console.error('[send-communication-email] getUser failed:', userErr?.message);
+      return jsonResponse({ error: 'Non authentifié (token invalide)' }, 401);
+    }
+    const user = userData.user;
+
+    // Verify super-admin via direct table read with service role
+    const { data: roles, error: rolesErr } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    if (rolesErr) {
+      console.error('[send-communication-email] roles read error:', rolesErr.message);
+      return jsonResponse({ error: 'Erreur de vérification des permissions' }, 500);
+    }
+    const roleSet = new Set((roles ?? []).map((r: any) => r.role));
+    const isSuperAdmin = roleSet.has('superadmin') || roleSet.has('admin');
+    if (!isSuperAdmin) {
+      console.warn('[send-communication-email] user is not super-admin', user.id, [...roleSet]);
+      return jsonResponse({ error: 'Réservé aux super-administrateurs' }, 403);
     }
 
     const body = await req.json();
@@ -117,40 +148,28 @@ serve(async (req) => {
     const recipientUserIds: string[] = Array.isArray(body.recipient_user_ids) ? body.recipient_user_ids : [];
 
     if (!subject || subject.length > MAX_SUBJECT) {
-      return new Response(JSON.stringify({ error: `Sujet invalide (1-${MAX_SUBJECT} caractères)` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: `Sujet invalide (1-${MAX_SUBJECT} caractères)` }, 400);
     }
     if (!bodyHtmlRaw || bodyHtmlRaw.length > MAX_BODY) {
-      return new Response(JSON.stringify({ error: `Corps invalide (1-${MAX_BODY} caractères)` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: `Corps invalide (1-${MAX_BODY} caractères)` }, 400);
     }
     if (recipientUserIds.length === 0) {
-      return new Response(JSON.stringify({ error: 'Aucun destinataire' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Aucun destinataire' }, 400);
     }
     if (recipientUserIds.length > MAX_RECIPIENTS) {
-      return new Response(JSON.stringify({ error: `Maximum ${MAX_RECIPIENTS} destinataires par envoi` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: `Maximum ${MAX_RECIPIENTS} destinataires par envoi` }, 400);
     }
 
     const bodyHtml = sanitizeHtml(bodyHtmlRaw);
 
-    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    if (!SERVICE_ROLE) {
-      return new Response(JSON.stringify({ error: 'SERVICE_ROLE_MISSING' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', SERVICE_ROLE);
-
     // Resolve recipients (email + manager name)
     const recipients: { user_id: string; email: string; manager_name: string }[] = [];
     for (const uid of recipientUserIds) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid);
+      const { data: u, error: uErr } = await supabaseAdmin.auth.admin.getUserById(uid);
+      if (uErr) {
+        console.warn('[send-communication-email] getUserById failed for', uid, uErr.message);
+        continue;
+      }
       if (u?.user?.email) {
         recipients.push({
           user_id: uid,
@@ -158,6 +177,11 @@ serve(async (req) => {
           manager_name: '',
         });
       }
+    }
+
+    if (recipients.length === 0) {
+      console.error('[send-communication-email] No resolvable recipients from input', recipientUserIds);
+      return jsonResponse({ error: 'Aucun destinataire valide' }, 400);
     }
 
     // Manager names
@@ -180,9 +204,7 @@ serve(async (req) => {
     const finalRecipients = recipients.filter((r) => !unsubscribed.has(r.email.toLowerCase()));
 
     if (finalRecipients.length === 0) {
-      return new Response(JSON.stringify({ error: 'Tous les destinataires sont désinscrits' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Tous les destinataires sont désinscrits' }, 400);
     }
 
     // Get template snapshot name
@@ -211,7 +233,7 @@ serve(async (req) => {
       .single();
     if (batchErr) {
       console.error('[send-communication-email] batch insert error', batchErr);
-      throw new Error('Erreur lors de la création du lot');
+      return jsonResponse({ error: `Erreur lors de la création du lot: ${batchErr.message}` }, 500);
     }
     const batchId = batch!.id;
 
@@ -230,7 +252,6 @@ serve(async (req) => {
         .replace(/\{\{\s*email\s*\}\}/gi, r.email)
         .replace(/\{\{\s*nom_manager\s*\}\}/gi, r.manager_name);
 
-      // Generate unsubscribe token
       const token = crypto.randomUUID().replace(/-/g, '');
       await supabaseAdmin.from('email_unsubscribe_tokens').insert({
         email: r.email.toLowerCase(),
@@ -279,19 +300,17 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
+    console.log(`[send-communication-email] batch=${batchId} queued=${queued} failed=${failed}`);
+
+    return jsonResponse({
       success: true,
       batch_id: batchId,
       queued,
       failed,
       skipped_unsubscribed: recipients.length - finalRecipients.length,
-    }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    }, 200);
   } catch (error: any) {
     console.error('[send-communication-email] error:', error);
-    return new Response(JSON.stringify({ error: error?.message || 'Erreur inconnue' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error?.message || 'Erreur inconnue' }, 500);
   }
 });
