@@ -1,38 +1,30 @@
-## Problème
+# Réparer l'envoi d'emails en TEST
 
-Le badge "En attente" s'affiche par défaut, le bouton "Renvoyer" n'apparaît jamais, et la modale de détail est vide. La cause : la table `email_send_log` n'autorise en lecture **que le service role**, donc le client (même superadmin) reçoit zéro ligne.
+## Diagnostic
 
-## Solution
+Le cron `process-email-queue` (jobid 24) plante toutes les 5 secondes :
 
-Exposer les données du log et du statut aux superadmins via le backend, puis brancher le frontend dessus.
-
-### 1. Backend — autoriser la lecture aux superadmins
-
-Migration SQL : ajouter une policy SELECT sur `public.email_send_log` :
 ```
-USING (is_superadmin())
+ERROR: relation "pgmq.q_auth_emails" does not exist
 ```
-Les autres policies (service_role) restent inchangées.
 
-### 2. Frontend — restaurer affichage et bouton
+Sa définition contient aussi une URL pointant vers un ancien projet
+(`oisfvryhpovwxaxqbmow.supabase.co`) au lieu du projet actuel.
 
-Une fois la lecture possible, `useCommunicationBatches` et `useCommunicationBatchDetail` retourneront enfin des lignes. Cela suffit à :
-- Afficher le badge correct (Envoyé / X en attente / X échec(s))
-- Faire apparaître le bouton "Renvoyer" (déjà conditionné sur `failed > 0 || pending > 0`)
-- Remplir le tableau "Statut par destinataire" dans la modale
+## Blocage
 
-Petits ajustements UI dans `CommunicationHistoryList.tsx` :
-- Rendre le bouton "Renvoyer" visible aussi en ligne dans la liste pour les batchs avec uniquement du pending (déjà en place — à vérifier après que les données arrivent).
-- Dans la modale : la section "Statut par destinataire" affichera désormais les vraies lignes ; ajouter un libellé clair pour les statuts (`pending` → "En attente", `sent` → "Envoyé", `failed` → "Échec").
+Le job appartient au rôle `postgres`. Les outils SQL utilisés depuis Lovable
+tournent en `supabase_read_only_user`, qui n'a ni le droit de modifier le
+job (`cron.alter_job` → "Job 24 does not exist or you don't own it"), ni de
+le supprimer (`cron.unschedule(24)` → idem), ni de le mettre à jour
+directement (UPDATE → permission denied).
 
-### 3. Vérification
+`cron.unschedule('process-email-queue')` renvoie `true` mais ne fait rien,
+et `cron.schedule(...)` renvoie un id sans créer de nouveau job.
 
-Après la migration, recharger l'onglet Historique :
-- Le batch "TEST Préprod" doit afficher "2 en attente" (pas "En attente" générique)
-- Le bouton "Renvoyer" doit apparaître à droite
-- Cliquer sur le batch doit lister les 2 destinataires avec leur statut
+→ **Impossible de réparer le cron depuis cette session.**
 
-## Fichiers touchés
+## Action manuelle requise (à faire par l'utilisateur)
 
-- Nouvelle migration SQL : policy SELECT superadmin sur `email_send_log`
-- `src/components/admin/communications/CommunicationHistoryList.tsx` : libellés statut FR dans le tableau
+L'utilisateur doit ouvrir **Cloud → Run SQL** (avec l'environnement **TEST**
+sélectionné) et exécuter le script SQL fourni.
