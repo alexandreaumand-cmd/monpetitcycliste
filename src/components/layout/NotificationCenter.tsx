@@ -27,6 +27,8 @@ interface Notification {
     round_number?: number;
     auto_launched?: boolean;
     league_id?: string;
+    phase_index?: number | null;
+    game_mode?: string | null;
     [key: string]: any;
   };
 }
@@ -172,11 +174,22 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                         )}>
                           {translated.title}
                         </p>
-                        {(notif.metadata?.race_name || notif.metadata?.league_name) && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {notif.metadata.race_name || notif.metadata.league_name}
-                          </p>
-                        )}
+                        {(notif.metadata?.race_name || notif.metadata?.league_name) && (() => {
+                          const isAuctionType =
+                            notif.type === 'auction_opened' ||
+                            notif.type === 'auction_closed' ||
+                            notif.type === 'auction_ready_to_close';
+                          const showPhase =
+                            isAuctionType &&
+                            notif.metadata?.game_mode === 'five_phases' &&
+                            notif.metadata?.phase_index != null;
+                          return (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {notif.metadata.race_name || notif.metadata.league_name}
+                              {showPhase && ` · Phase ${notif.metadata.phase_index}`}
+                            </p>
+                          );
+                        })()}
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDistanceToNow(new Date(notif.created_at), {
                             addSuffix: true,

@@ -297,13 +297,25 @@ Deno.serve(async (req) => {
         .eq('id', league_id);
     }
 
-    // Fetch league name for notification context
+    // Fetch league name + game_mode for notification context
     const { data: leagueData } = await supabase
       .from('leagues')
-      .select('name')
+      .select('name, game_mode')
       .eq('id', league_id)
       .single();
     const leagueName = leagueData?.name || 'Ligue';
+    const gameMode = leagueData?.game_mode || null;
+
+    // Resolve phase index for notifications (used when game_mode === 'five_phases')
+    let phaseIndex: number | null = null;
+    if (effectivePhaseId) {
+      const { data: phaseRow } = await supabase
+        .from('phases')
+        .select('index_dans_saison')
+        .eq('id', effectivePhaseId)
+        .maybeSingle();
+      phaseIndex = phaseRow?.index_dans_saison ?? null;
+    }
 
     // Notify all league members
     await notifyLeagueMembers(supabase, league_id, {
@@ -314,6 +326,8 @@ Deno.serve(async (req) => {
         auction_id: auction_id,
         round_number: auction.round_number,
         phase_id: auction.phase_id,
+        phase_index: phaseIndex,
+        game_mode: gameMode,
         league_id: league_id,
         league_name: leagueName,
         annonces_count: annonces.length
