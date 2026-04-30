@@ -174,7 +174,7 @@ export function CommunicationHistoryList() {
                         {details.map((d) => (
                           <tr key={d.message_id ?? d.recipient_email} className="border-t">
                             <td className="p-2 font-mono text-xs">{d.recipient_email}</td>
-                            <td className="p-2"><Badge variant={statusVariant(d.status) as any}>{d.status}</Badge></td>
+                            <td className="p-2"><Badge variant={statusVariant(d.status) as any}>{statusLabel(d.status)}</Badge></td>
                             <td className="p-2 text-xs text-muted-foreground">{d.error_message ?? "—"}</td>
                           </tr>
                         ))}
