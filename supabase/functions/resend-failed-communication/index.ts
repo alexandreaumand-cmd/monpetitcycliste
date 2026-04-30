@@ -70,6 +70,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const batchId = (body.batch_id ?? '').toString();
+    const includePending = body.include_pending === true;
     if (!batchId) return jsonResponse({ error: 'batch_id requis' }, 400);
 
     // Load batch
