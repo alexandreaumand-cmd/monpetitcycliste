@@ -12,15 +12,15 @@ export default function SuperAdminCommunicationsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Communications</h1>
-        <p className="text-sm text-muted-foreground">Envoyez des emails de communication générale aux utilisateurs inscrits.</p>
+        <h1 className="text-xl sm:text-2xl font-bold">Communications</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">Envoyez des emails de communication générale aux utilisateurs inscrits.</p>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
-          <TabsTrigger value="send">Nouvel envoi</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="history">Historique</TabsTrigger>
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="send" className="text-xs sm:text-sm">Nouvel envoi</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs sm:text-sm">Templates</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm">Historique</TabsTrigger>
         </TabsList>
 
         <TabsContent value="send" className="mt-4">
