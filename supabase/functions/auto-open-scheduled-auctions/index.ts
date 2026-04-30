@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const leagueIds = [...new Set(auctions.map(a => a.league_id))];
     const { data: leagues } = await supabase
       .from('leagues')
-      .select('id, name, status')
+      .select('id, name, status, game_mode')
       .in('id', leagueIds);
 
     const activeLeagueIds = new Set(
@@ -53,6 +53,18 @@ Deno.serve(async (req) => {
 
     const leagueNames = Object.fromEntries(
       (leagues || []).map(l => [l.id, l.name])
+    );
+    const leagueGameModes = Object.fromEntries(
+      (leagues || []).map(l => [l.id, l.game_mode])
+    );
+
+    // Resolve phase indexes for the relevant phases
+    const phaseIds = [...new Set(auctions.map(a => a.phase_id).filter(Boolean))];
+    const { data: phasesRows } = phaseIds.length
+      ? await supabase.from('phases').select('id, index_dans_saison').in('id', phaseIds)
+      : { data: [] as Array<{ id: string; index_dans_saison: number | null }> };
+    const phaseIndexes = Object.fromEntries(
+      (phasesRows || []).map(p => [p.id, p.index_dans_saison])
     );
 
     // Only open auctions for active leagues
