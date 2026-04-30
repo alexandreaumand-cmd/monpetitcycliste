@@ -94,6 +94,20 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
+    // === REFRESH STANDINGS (option C) ===
+    // The standings are stored in materialized views; refresh them immediately
+    // so the UI reflects the new results without waiting for the cron (every 2 min).
+    try {
+      const { error: refreshError } = await supabaseService.rpc('refresh_standings_mv');
+      if (refreshError) {
+        console.error('[admin-result-save-lot] refresh_standings_mv error:', refreshError);
+      } else {
+        console.log('[admin-result-save-lot] standings materialized views refreshed');
+      }
+    } catch (e) {
+      console.error('[admin-result-save-lot] refresh_standings_mv threw:', e);
+    }
+
     // === AUTO-EVALUATE PRONOSTICS ===
     // When results are saved, automatically evaluate matching pronostics
     if (p_type_classement === 'Etape' || p_type_classement === 'General') {
