@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useCommunicationBatches, useCommunicationBatchDetail, type CommunicationBatch } from "@/hooks/useCommunicationBatches";
+import { useCommunicationBatches, useCommunicationBatchDetail, type CommunicationBatch, type CommunicationBatchWithStatus } from "@/hooks/useCommunicationBatches";
+import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export function CommunicationHistoryList() {
   const { data: batches, isLoading } = useCommunicationBatches();
@@ -17,6 +18,23 @@ export function CommunicationHistoryList() {
     if (s === "pending") return "secondary";
     if (s === "failed" || s === "dlq") return "destructive";
     return "outline";
+  };
+
+  const renderBatchStatus = (b: CommunicationBatchWithStatus) => {
+    const { sent, pending, failed, total } = b.status_counts;
+    if (total === 0) {
+      return <Badge variant="outline" className="ml-2"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
+    }
+    if (failed > 0 && sent === 0 && pending === 0) {
+      return <Badge variant="destructive" className="ml-2"><AlertCircle className="h-3 w-3 mr-1" />Échec ({failed}/{b.recipient_count})</Badge>;
+    }
+    if (failed > 0) {
+      return <Badge variant="destructive" className="ml-2"><AlertCircle className="h-3 w-3 mr-1" />{failed} échec{failed > 1 ? "s" : ""} / {b.recipient_count}</Badge>;
+    }
+    if (pending > 0) {
+      return <Badge variant="secondary" className="ml-2"><Clock className="h-3 w-3 mr-1" />{pending} en attente</Badge>;
+    }
+    return <Badge variant="default" className="ml-2"><CheckCircle2 className="h-3 w-3 mr-1" />Envoyé ({sent}/{b.recipient_count})</Badge>;
   };
 
   return (
@@ -42,7 +60,10 @@ export function CommunicationHistoryList() {
                     {b.template_name_snapshot && <> · Template : {b.template_name_snapshot}</>}
                   </div>
                 </div>
-                <Badge variant="secondary" className="ml-3">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
+                <div className="flex items-center gap-2 ml-3 shrink-0">
+                  <Badge variant="secondary">{b.recipient_count} destinataire{b.recipient_count > 1 ? "s" : ""}</Badge>
+                  {renderBatchStatus(b)}
+                </div>
               </button>
             ))}
           </div>

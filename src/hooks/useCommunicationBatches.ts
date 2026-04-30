@@ -12,9 +12,20 @@ export interface CommunicationBatch {
   created_at: string;
 }
 
+export interface BatchStatusCounts {
+  sent: number;
+  pending: number;
+  failed: number;
+  total: number;
+}
+
+export interface CommunicationBatchWithStatus extends CommunicationBatch {
+  status_counts: BatchStatusCounts;
+}
+
 export function useCommunicationBatches() {
   return useQuery({
-    queryKey: ["communication-batches"],
+    queryKey: ["communication-batches-with-status"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("communication_batches")
@@ -22,7 +33,33 @@ export function useCommunicationBatches() {
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
-      return (data ?? []) as unknown as CommunicationBatch[];
+      const batches = (data ?? []) as unknown as CommunicationBatch[];
+
+      // Fetch recent send logs to compute per-batch status counts
+      const { data: logs, error: logsError } = await supabase
+        .from("email_send_log")
+        .select("status, metadata")
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      if (logsError) throw logsError;
+
+      const counts = new Map<string, BatchStatusCounts>();
+      for (const row of (logs ?? []) as any[]) {
+        const batchId = row.metadata?.batch_id as string | undefined;
+        if (!batchId) continue;
+        const c = counts.get(batchId) ?? { sent: 0, pending: 0, failed: 0, total: 0 };
+        const s = String(row.status ?? "").toLowerCase();
+        if (s === "sent" || s === "delivered") c.sent++;
+        else if (s === "failed" || s === "dlq" || s === "error" || s === "bounced") c.failed++;
+        else c.pending++;
+        c.total++;
+        counts.set(batchId, c);
+      }
+
+      return batches.map((b) => ({
+        ...b,
+        status_counts: counts.get(b.id) ?? { sent: 0, pending: 0, failed: 0, total: 0 },
+      })) as CommunicationBatchWithStatus[];
     },
   });
 }
