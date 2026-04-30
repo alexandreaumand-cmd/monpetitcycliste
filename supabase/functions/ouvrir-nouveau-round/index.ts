@@ -120,6 +120,13 @@ Deno.serve(async (req) => {
       
       console.log('Started scheduled auction early:', updatedAuction);
       
+      // Fetch league + phase context for notification metadata
+      const phaseIdForCtx = effective_phase_id || phase_id;
+      const [{ data: leagueCtx }, { data: phaseCtx }] = await Promise.all([
+        supabase.from('leagues').select('name, game_mode').eq('id', league_id).single(),
+        supabase.from('phases').select('index_dans_saison').eq('id', phaseIdForCtx).maybeSingle(),
+      ]);
+
       // Notify league members
       await notifyLeagueMembers(supabase, league_id, {
         type: 'auction_opened',
@@ -133,8 +140,10 @@ Deno.serve(async (req) => {
           auction_id: updatedAuction.id,
           round_number: scheduledAuction.round_number,
           phase_id: phase_id,
+          phase_index: phaseCtx?.index_dans_saison ?? null,
+          game_mode: leagueCtx?.game_mode ?? null,
           league_id: league_id,
-          league_name: (await supabase.from('leagues').select('name').eq('id', league_id).single()).data?.name || '',
+          league_name: leagueCtx?.name || '',
           deadline_at: deadline_at,
           auto_launched: auto_launched || false
         }
