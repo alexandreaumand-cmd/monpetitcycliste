@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SuperAdminLeagueActions } from "./SuperAdminLeagueActions";
+import { SuperAdminLeagueAuctionBadge } from "./SuperAdminLeagueAuctionBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -178,6 +179,12 @@ export function SuperAdminLeaguesTable() {
         <Progress value={(league.member_count / league.max_players) * 100} className="h-1" />
       </div>
 
+      {/* Auction status */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Enchères :</span>
+        <SuperAdminLeagueAuctionBadge leagueId={league.id} gameMode={league.game_mode} compact />
+      </div>
+
       {/* Collapsible members */}
       {league.member_names && league.member_names.length > 0 && (
         <Collapsible>
@@ -229,6 +236,7 @@ export function SuperAdminLeaguesTable() {
           <TableHead>Mode</TableHead>
           <TableHead>Visibilité</TableHead>
           <TableHead>Membres</TableHead>
+          <TableHead>Enchères</TableHead>
           <TableHead>
             <Button
               variant="ghost"
@@ -293,6 +301,9 @@ export function SuperAdminLeaguesTable() {
                   </Collapsible>
                 )}
               </div>
+            </TableCell>
+            <TableCell>
+              <SuperAdminLeagueAuctionBadge leagueId={league.id} gameMode={league.game_mode} />
             </TableCell>
             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
               {format(new Date(league.created_at), "dd MMM yyyy", { locale: fr })}

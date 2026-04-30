@@ -5,6 +5,8 @@ import { LeagueAdminGuard } from "@/components/guards/LeagueAdminGuard";
 import { LeagueInvitesManager } from "@/components/admin/LeagueInvitesManager";
 import { LeagueDeleteManager } from "@/components/admin/LeagueDeleteManager";
 import { LeagueMemberSponsorsManager } from "@/components/admin/LeagueMemberSponsorsManager";
+import { SuperAdminLeagueAuctionStatus } from "@/components/admin/leagues/SuperAdminLeagueAuctionStatus";
+import { SuperAdminLeagueStandings } from "@/components/admin/leagues/SuperAdminLeagueStandings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -227,6 +229,12 @@ export function LeagueDetailPage() {
 
         {/* League Settings */}
         <LeagueSettingsCard league={league} onSaved={loadLeagueData} />
+
+        {/* Auction status */}
+        <SuperAdminLeagueAuctionStatus leagueId={leagueId} gameMode={league.game_mode} />
+
+        {/* Standings */}
+        <SuperAdminLeagueStandings leagueId={leagueId} gameMode={league.game_mode} />
 
         {/* Selected Courses (per_course mode) */}
         {league.game_mode === "per_course" && (
