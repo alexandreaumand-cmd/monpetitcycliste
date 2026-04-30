@@ -1,128 +1,91 @@
 ## Objectif
 
-Permettre au super-admin d'envoyer une communication générale par email à un ou plusieurs utilisateurs, à partir d'une bibliothèque de templates réutilisables, avec édition à la volée et historique des envois.
+Copier le template "Communication générale - La Bordure" depuis l'environnement TEST vers l'environnement LIVE, sachant que les données ne sont jamais synchronisées automatiquement entre les deux environnements.
 
-## Périmètre
+## Constat
 
-- Accès : super-admins uniquement
-- Destinataires : sélection multiple parmi tous les inscrits, avec recherche et filtres (ligue, rôle, statut)
-- Templates : bibliothèque persistée en base, créables/éditables/supprimables, pré-remplis dans l'éditeur d'envoi
-- Envoi : un email par destinataire via la file d'attente existante (`enqueue_email`), avec log et lien de désinscription
+- **TEST** : 1 template présent (`Communication générale - La Bordure`, créé le 30/04/2026)
+- **LIVE** : table `communication_templates` vide
+- **Super-admin** : ton `user_id` (`47635252-a460-4a79-98f3-9b30896a47ad`) existe dans les deux environnements → on peut réutiliser le même `created_by`
 
-## UX — Nouvelle page "Communications" dans le super-admin
+## Procédure
 
-Ajout d'une entrée de menu dans le super-admin (à côté de "Utilisateurs", "Ligues", etc.) → page `SuperAdminCommunicationsPage` avec deux onglets :
+### Étape 1 — Ouvrir Cloud View → Run SQL en mode Live
 
-### Onglet 1 — Templates
+1. Ouvrir le panneau **Cloud**
+2. Aller dans **Database → Run SQL** (ou "SQL Editor")
+3. **Sélectionner l'environnement "Live"** dans le sélecteur en haut
 
-- Liste des templates existants (nom, sujet, dernière modification)
-- Bouton "Nouveau template" → dialog avec : nom interne, sujet, corps en éditeur riche (gras, italique, liens, listes, sauts de ligne)
-- Variables disponibles affichées sous l'éditeur : `{{prenom}}`, `{{email}}`, `{{nom_manager}}` (insérables d'un clic)
-- Actions par template : Éditer, Dupliquer, Supprimer, "Utiliser pour envoyer" (bascule sur l'onglet 2 avec template pré-sélectionné)
-
-### Onglet 2 — Nouvel envoi
-
-Layout en 3 étapes verticales :
-
-**1. Choix du template**
-- Dropdown des templates disponibles + bouton "Sans template (vide)"
-
-**2. Composition** (pré-remplie depuis le template, modifiable)
-- Champ Sujet
-- Éditeur riche pour le corps
-- Aperçu en direct (rendu HTML avec variables substituées par des valeurs d'exemple)
-
-**3. Destinataires**
-- Filtres en haut : recherche texte, select Ligue, select Rôle (membre / admin de ligue / superadmin), select Statut (confirmé / non confirmé / banni)
-- Tableau paginé : checkbox + email + nom manager + ligues + statut
-- Boutons : "Tout sélectionner (filtre courant)", "Tout désélectionner"
-- Compteur "X destinataires sélectionnés" toujours visible
-- Bouton final "Envoyer" (désactivé si 0 destinataire ou sujet/corps vide) → dialog de confirmation rappelant le nombre d'emails
-
-### Sous-onglet "Historique" (dans l'onglet Nouvel envoi ou en 3e onglet)
-
-- Liste des envois passés (date, template utilisé, sujet, nombre de destinataires, statuts agrégés : envoyés/échoués/en attente)
-- Clic sur une ligne → détail destinataire par destinataire (statut individuel depuis `email_send_log`)
-
-## Détails techniques
-
-### Base de données (migration)
-
-Deux nouvelles tables :
+### Étape 2 — Coller et exécuter la requête
 
 ```sql
--- Bibliothèque de templates
-CREATE TABLE public.communication_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  subject text NOT NULL,
-  body_html text NOT NULL,
-  created_by uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Lot d'envoi (regroupe tous les emails d'un même envoi)
-CREATE TABLE public.communication_batches (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id uuid REFERENCES public.communication_templates(id) ON DELETE SET NULL,
-  subject text NOT NULL,
-  body_html text NOT NULL,
-  recipient_count integer NOT NULL,
-  sent_by uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+INSERT INTO public.communication_templates (
+  id,
+  name,
+  subject,
+  body_html,
+  created_by,
+  created_at,
+  updated_at
+) VALUES (
+  '40a87005-e8d5-4a68-b6bf-c7612a0f8cd6',
+  'Communication générale - La Bordure',
+  'Une nouvelle communication de La Bordure',
+  $HTML$<div style="background-color:#F6F3ED;padding:24px;font-family:Georgia,'Times New Roman',serif;">
+  <div style="max-width:520px;margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;">
+    <div style="background-color:#1B5E3B;padding:24px;text-align:center;">
+      <img src="https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png" alt="La Bordure" width="120" style="display:block;margin:0 auto;" />
+    </div>
+    <div style="padding:28px 28px 8px;">
+      <h1 style="font-size:22px;font-weight:bold;color:#1B5E3B;margin:0 0 16px;">Bonjour {{prenom}},</h1>
+      <p style="font-size:15px;color:#2D3D32;line-height:1.6;margin:0 0 16px;">
+        Nous avons une information importante à partager avec toi concernant <strong>La Bordure</strong>.
+      </p>
+      <p style="font-size:15px;color:#2D3D32;line-height:1.6;margin:0 0 16px;">
+        <em>Remplace ce paragraphe par le contenu de ta communication. Tu peux ajouter du texte en gras, des liens, des listes, etc.</em>
+      </p>
+      <p style="font-size:15px;color:#2D3D32;line-height:1.6;margin:0 0 24px;">
+        Pour toute question, n'hésite pas à répondre à cet email.
+      </p>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="https://labordure.app" style="background-color:#C8963A;color:#ffffff;font-size:15px;font-weight:bold;border-radius:12px;padding:14px 28px;text-decoration:none;display:inline-block;">
+          Accéder à La Bordure
+        </a>
+      </div>
+      <p style="font-size:14px;color:#2D3D32;line-height:1.6;margin:0 0 8px;">
+        Sportivement,<br/>
+        <strong>L'équipe La Bordure</strong>
+      </p>
+    </div>
+    <div style="padding:16px 28px 24px;border-top:1px solid #EAE5DA;">
+      <p style="font-size:12px;color:#8B8B8B;margin:0;line-height:1.5;">
+        Tu reçois cet email car tu es inscrit sur La Bordure ({{email}}).
+      </p>
+    </div>
+  </div>
+</div>$HTML$,
+  '47635252-a460-4a79-98f3-9b30896a47ad',
+  now(),
+  now()
 );
 ```
 
-RLS : `is_superadmin()` requis pour `ALL` sur les deux tables. L'historique destinataire par destinataire est récupéré en joignant `communication_batches` avec `email_send_log` via `metadata->>'batch_id'`.
+> Note : on utilise `$HTML$ ... $HTML$` (dollar-quoting Postgres) au lieu de guillemets simples pour éviter d'avoir à échapper les apostrophes du HTML.
 
-### Edge Function : `send-communication-email`
+### Étape 3 — Vérifier
 
-- Vérifie JWT + `is_superadmin()` côté serveur (sécurité critique)
-- Reçoit : `{ subject, body_html, template_id?, recipient_user_ids: uuid[] }`
-- Validation Zod : sujet 1-300 chars, corps 1-100k chars, max 500 destinataires par envoi
-- Crée un `communication_batches`
-- Pour chaque destinataire : récupère email + prénom/nom_manager, substitue les variables `{{...}}`, ajoute le lien de désinscription, appelle `enqueue_email` avec `metadata = { batch_id, template_name: 'communication_general' }`
-- Renvoie le `batch_id` et le nombre d'emails enfilés
+Toujours dans le SQL Editor en mode Live :
 
-L'envoi réel est ensuite traité par la fonction existante `process-email-queue` (cron). Aucun changement nécessaire côté infra email.
+```sql
+SELECT id, name, subject, created_at FROM public.communication_templates;
+```
 
-### Edge Function : `admin-communication-recipients`
+Tu devrais voir la ligne fraîchement insérée.
 
-Liste paginée des utilisateurs candidats avec filtres (ligue, rôle, statut). Réutilise la logique d'`admin-users-list` en l'adaptant pour ne retourner que les champs nécessaires (id, email, nom manager, ligues, statut). Restreinte aux superadmins.
+### Étape 4 — Tester dans l'app LIVE
 
-### Frontend
+Aller sur `https://labordure.app/dashboard/super-admin/communications` → onglet **Templates** : le template doit apparaître et être utilisable depuis l'onglet **Nouvel envoi**.
 
-Nouveaux fichiers :
+## Pour les futurs templates
 
-- `src/pages/admin/SuperAdminCommunicationsPage.tsx` — page principale avec onglets
-- `src/components/admin/communications/TemplatesList.tsx` — liste + CRUD templates
-- `src/components/admin/communications/TemplateEditorDialog.tsx` — dialog création/édition
-- `src/components/admin/communications/RichTextEditor.tsx` — wrapper léger autour de Tiptap (déjà disponible si présent, sinon textarea + barre d'outils minimale)
-- `src/components/admin/communications/RecipientsPicker.tsx` — tableau filtrable avec sélection multiple
-- `src/components/admin/communications/SendCommunicationForm.tsx` — assemble template + composition + destinataires + envoi
-- `src/components/admin/communications/CommunicationHistoryList.tsx` — historique des envois
-- `src/hooks/useCommunicationTemplates.ts` — CRUD templates
-- `src/hooks/useCommunicationRecipients.ts` — chargement liste utilisateurs filtrée
-
-Modifications :
-
-- Ajout de la route `/admin/communications` et de l'entrée de menu dans la nav super-admin
-- Réutilisation des composants UI existants (Card, Dialog, Table, Checkbox, Select, Tabs, Button)
-
-### Sécurité
-
-- Toutes les opérations d'envoi passent par edge function avec validation `is_superadmin()` côté serveur
-- Validation Zod stricte des inputs
-- Sanitisation du HTML avant envoi (DOMPurify ou allow-list de balises)
-- Plafond de 500 destinataires par envoi pour éviter l'abus
-- Lien de désinscription automatiquement injecté en pied d'email (utilise `email_unsubscribe_tokens`)
-- Respect de la table de désinscription : exclusion des emails ayant un token `used_at` non nul
-
-### Hors périmètre (à confirmer si tu en veux plus tard)
-
-- Programmation d'envoi à une date future
-- Templates par langue
-- Pièces jointes
-- Statistiques d'ouverture / clics
-- Envoi de tests à soi-même avant l'envoi réel (pourrait être ajouté facilement si souhaité)
+À chaque nouveau template créé en TEST que tu veux retrouver en LIVE, il faudra refaire cette opération manuelle (ou bien créer le template directement en LIVE via l'UI). Si tu veux à terme un mécanisme d'export/import intégré dans l'UI super-admin, c'est faisable mais hors périmètre de ce ticket.
