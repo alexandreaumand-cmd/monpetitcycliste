@@ -19,12 +19,12 @@ export function CommunicationHistoryList() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const handleResendFailed = async (batchId: string, e?: React.MouseEvent) => {
+  const handleResendFailed = async (batchId: string, includePending = false, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setResendingId(batchId);
     try {
       const { data, error } = await supabase.functions.invoke("resend-failed-communication", {
-        body: { batch_id: batchId },
+        body: { batch_id: batchId, include_pending: includePending },
       });
       if (error) throw error;
       const requeued = (data as any)?.requeued ?? 0;
