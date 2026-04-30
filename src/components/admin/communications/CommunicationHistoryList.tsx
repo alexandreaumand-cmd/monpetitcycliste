@@ -128,7 +128,24 @@ export function CommunicationHistoryList() {
               </div>
               <div className="border rounded p-3 bg-muted/20 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: openBatch.body_html }} />
               <div>
-                <h4 className="font-semibold mb-2">Statut par destinataire</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">Statut par destinataire</h4>
+                  {openBatch.status_counts.failed > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={resendingId === openBatch.id}
+                      onClick={() => handleResendFailed(openBatch.id)}
+                    >
+                      {resendingId === openBatch.id ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                      )}
+                      Renvoyer les {openBatch.status_counts.failed} échec{openBatch.status_counts.failed > 1 ? "s" : ""}
+                    </Button>
+                  )}
+                </div>
                 {detailLoading ? (
                   <Skeleton className="h-32" />
                 ) : details && details.length > 0 ? (
