@@ -286,9 +286,9 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
               };
             } else {
               const now = new Date().toISOString();
-              const scheduled = activePhaseId ? leagueAuctions.find(
-                a => a.statut === 'scheduled' && a.opens_at && a.opens_at > now && a.phase_id === activePhaseId
-              ) : null;
+              const scheduled = leagueAuctions
+                .filter(a => a.statut === 'scheduled' && a.opens_at && a.opens_at > now)
+                .sort((a, b) => (a.opens_at || '').localeCompare(b.opens_at || ''))[0];
 
               if (scheduled) {
                 auctionStatus = {

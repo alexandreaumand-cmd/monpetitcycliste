@@ -133,15 +133,13 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         }
       }
 
-      // 3. Si aucune enchère fermée avec annonces, chercher une enchère SCHEDULED (phase active uniquement)
-      if (!activePhaseId) return null;
-
+      // 3. Si aucune enchère fermée avec annonces, chercher la prochaine enchère SCHEDULED (toutes phases)
       const { data: scheduledAuction } = await supabase
         .from('auctions')
         .select('id, round_number, opens_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'scheduled')
-        .eq('phase_id', activePhaseId)
+        .not('opens_at', 'is', null)
         .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
