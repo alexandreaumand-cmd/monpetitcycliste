@@ -342,6 +342,7 @@ serve(async (req) => {
       batch_id: batchId,
       queued,
       failed,
+      scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
       skipped_unsubscribed: recipients.length - finalRecipients.length,
     }, 200);
   } catch (error: any) {
