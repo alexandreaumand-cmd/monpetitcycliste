@@ -1984,6 +1984,77 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_batches: {
+        Row: {
+          body_html: string
+          created_at: string
+          id: string
+          recipient_count: number
+          sent_by: string
+          subject: string
+          template_id: string | null
+          template_name_snapshot: string | null
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          id?: string
+          recipient_count: number
+          sent_by: string
+          subject: string
+          template_id?: string | null
+          template_name_snapshot?: string | null
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          id?: string
+          recipient_count?: number
+          sent_by?: string
+          subject?: string
+          template_id?: string | null
+          template_name_snapshot?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_batches_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "communication_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string

@@ -1,53 +1,128 @@
-## Diagnostic (corrigé)
+## Objectif
 
-Tu as raison sur le fuseau : **09:45 UTC = 11:45 Paris**, l'heure n'est pas encore passée au moment où tu écris (il est ~9h Paris). Donc l'enchère n'aurait pas dû être ouverte — mais elle aurait dû exister en `scheduled` et apparaître sur la carte. Or elle n'existe pas.
+Permettre au super-admin d'envoyer une communication générale par email à un ou plusieurs utilisateurs, à partir d'une bibliothèque de templates réutilisables, avec édition à la volée et historique des envois.
 
-### Cause racine confirmée
+## Périmètre
 
-Deux systèmes ne communiquent pas :
+- Accès : super-admins uniquement
+- Destinataires : sélection multiple parmi tous les inscrits, avec recherche et filtres (ligue, rôle, statut)
+- Templates : bibliothèque persistée en base, créables/éditables/supprimables, pré-remplis dans l'éditeur d'envoi
+- Envoi : un email par destinataire via la file d'attente existante (`enqueue_email`), avec log et lien de désinscription
 
-1. **`phase_auction_schedule`** (alimentée par "Planning enchères" du superadmin) contient bien ta ligne phase 3 → 30/04 09:45 UTC.
-2. **`auctions(statut='scheduled')`** (lue par les cartes de ligue et le mécanisme d'ouverture) ne contient **rien** pour les ligues `five_phases`.
+## UX — Nouvelle page "Communications" dans le super-admin
 
-Vérifié en TEST :
-- Ligues `full_season` (MPC 2026, Early Adopters) : ont déjà des `auctions(scheduled)` pour phases 3/4/5 — créées à la création de la ligue.
-- Ligues `five_phases` (TEST Saison entière 3 managers, Ligue Publique WT, Tête dans le guidon) : **aucune `auctions(scheduled)`** pour les phases futures. Le superadmin doit créer chaque enchère manuellement, et "Planning enchères" est aujourd'hui purement décoratif.
+Ajout d'une entrée de menu dans le super-admin (à côté de "Utilisateurs", "Ligues", etc.) → page `SuperAdminCommunicationsPage` avec deux onglets :
 
-À noter : le nom de la ligue "TEST Saison entière 3 managers" est trompeur, son `game_mode` réel est `five_phases`.
+### Onglet 1 — Templates
 
----
+- Liste des templates existants (nom, sujet, dernière modification)
+- Bouton "Nouveau template" → dialog avec : nom interne, sujet, corps en éditeur riche (gras, italique, liens, listes, sauts de ligne)
+- Variables disponibles affichées sous l'éditeur : `{{prenom}}`, `{{email}}`, `{{nom_manager}}` (insérables d'un clic)
+- Actions par template : Éditer, Dupliquer, Supprimer, "Utiliser pour envoyer" (bascule sur l'onglet 2 avec template pré-sélectionné)
 
-## Plan d'implémentation (option A1 retenue)
+### Onglet 2 — Nouvel envoi
 
-### 1. Migration SQL — synchroniser `phase_auction_schedule` → `auctions`
+Layout en 3 étapes verticales :
 
-Créer une fonction Postgres `sync_phase_schedule_to_auctions(p_phase_id uuid)` qui, pour la phase donnée :
-- Lit `auction_opens_at` dans `phase_auction_schedule`.
-- Pour chaque ligue `active` en `game_mode = 'five_phases'` dont le `league_scopes` couvre la saison de cette phase :
-  - Si une `auctions` existe déjà pour `(league_id, phase_id)` → met à jour `opens_at` (et `deadline_at = opens_at + 24h`) tant que `statut = 'scheduled'`. Ne touche pas si déjà `open`/`closed`.
-  - Sinon → insère `auctions(league_id, phase_id, round_number=1, statut='scheduled', opens_at=..., deadline_at=opens_at + 24h)`.
+**1. Choix du template**
+- Dropdown des templates disponibles + bouton "Sans template (vide)"
 
-Puis trigger `AFTER INSERT OR UPDATE` sur `phase_auction_schedule` qui appelle cette fonction.
+**2. Composition** (pré-remplie depuis le template, modifiable)
+- Champ Sujet
+- Éditeur riche pour le corps
+- Aperçu en direct (rendu HTML avec variables substituées par des valeurs d'exemple)
 
-### 2. Ouverture automatique à `opens_at`
+**3. Destinataires**
+- Filtres en haut : recherche texte, select Ligue, select Rôle (membre / admin de ligue / superadmin), select Statut (confirmé / non confirmé / banni)
+- Tableau paginé : checkbox + email + nom manager + ligues + statut
+- Boutons : "Tout sélectionner (filtre courant)", "Tout désélectionner"
+- Compteur "X destinataires sélectionnés" toujours visible
+- Bouton final "Envoyer" (désactivé si 0 destinataire ou sujet/corps vide) → dialog de confirmation rappelant le nombre d'emails
 
-Vérifier si une edge function/cron existe déjà pour passer `scheduled → open` (les ligues `full_season` doivent déjà avoir ce mécanisme). Si oui, rien à faire de plus. Si non, ajouter un cron `pg_cron` toutes les minutes qui ouvre les `auctions(scheduled)` arrivées à `opens_at`. **À explorer en phase d'implémentation.**
+### Sous-onglet "Historique" (dans l'onglet Nouvel envoi ou en 3e onglet)
 
-### 3. Rattrapage one-shot pour la phase 3 en TEST
+- Liste des envois passés (date, template utilisé, sujet, nombre de destinataires, statuts agrégés : envoyés/échoués/en attente)
+- Clic sur une ligne → détail destinataire par destinataire (statut individuel depuis `email_send_log`)
 
-Après création du trigger, exécuter manuellement `sync_phase_schedule_to_auctions('61a9cda5-…')` pour créer rétroactivement les `auctions(scheduled)` dans les ligues `five_phases` actives. Résultat attendu : la carte de "TEST Saison entière 3 managers" (et les autres ligues `five_phases`) affichera "Enchère programmée le 30/04 11:45".
+## Détails techniques
 
-### 4. Frontend
+### Base de données (migration)
 
-Aucune modification : le hook `useLeagueCardsData` lit déjà les `auctions(scheduled)` futures (correctif posé précédemment).
+Deux nouvelles tables :
 
----
+```sql
+-- Bibliothèque de templates
+CREATE TABLE public.communication_templates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  subject text NOT NULL,
+  body_html text NOT NULL,
+  created_by uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
-## Points à confirmer avant migration
+-- Lot d'envoi (regroupe tous les emails d'un même envoi)
+CREATE TABLE public.communication_batches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id uuid REFERENCES public.communication_templates(id) ON DELETE SET NULL,
+  subject text NOT NULL,
+  body_html text NOT NULL,
+  recipient_count integer NOT NULL,
+  sent_by uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
 
-1. **Durée de l'enchère par défaut** : `deadline_at = opens_at + 24h` — est-ce la bonne valeur ? (les ligues `full_season` actuelles sont aussi à 24h, donc cohérent)
-2. **Round number** : toujours `round_number = 1` à la création (les rounds 2/3/4 sont créés ensuite par "clore-round"), correct ?
-3. **Si tu modifies une date dans "Planning enchères" après coup**, on met à jour les `auctions(scheduled)` correspondantes. Ok ?
-4. **Nouvelles ligues `five_phases` créées plus tard** : elles devront aussi récupérer les dates planifiées. Le trigger sur `phase_auction_schedule` ne couvre pas ce cas — il faudrait un second trigger sur la création de ligue, ou un appel à `sync_*` à la création d'une ligue `five_phases`. À ajouter au plan ?
+RLS : `is_superadmin()` requis pour `ALL` sur les deux tables. L'historique destinataire par destinataire est récupéré en joignant `communication_batches` avec `email_send_log` via `metadata->>'batch_id'`.
 
-Une fois que tu confirmes, je lance la migration.
+### Edge Function : `send-communication-email`
+
+- Vérifie JWT + `is_superadmin()` côté serveur (sécurité critique)
+- Reçoit : `{ subject, body_html, template_id?, recipient_user_ids: uuid[] }`
+- Validation Zod : sujet 1-300 chars, corps 1-100k chars, max 500 destinataires par envoi
+- Crée un `communication_batches`
+- Pour chaque destinataire : récupère email + prénom/nom_manager, substitue les variables `{{...}}`, ajoute le lien de désinscription, appelle `enqueue_email` avec `metadata = { batch_id, template_name: 'communication_general' }`
+- Renvoie le `batch_id` et le nombre d'emails enfilés
+
+L'envoi réel est ensuite traité par la fonction existante `process-email-queue` (cron). Aucun changement nécessaire côté infra email.
+
+### Edge Function : `admin-communication-recipients`
+
+Liste paginée des utilisateurs candidats avec filtres (ligue, rôle, statut). Réutilise la logique d'`admin-users-list` en l'adaptant pour ne retourner que les champs nécessaires (id, email, nom manager, ligues, statut). Restreinte aux superadmins.
+
+### Frontend
+
+Nouveaux fichiers :
+
+- `src/pages/admin/SuperAdminCommunicationsPage.tsx` — page principale avec onglets
+- `src/components/admin/communications/TemplatesList.tsx` — liste + CRUD templates
+- `src/components/admin/communications/TemplateEditorDialog.tsx` — dialog création/édition
+- `src/components/admin/communications/RichTextEditor.tsx` — wrapper léger autour de Tiptap (déjà disponible si présent, sinon textarea + barre d'outils minimale)
+- `src/components/admin/communications/RecipientsPicker.tsx` — tableau filtrable avec sélection multiple
+- `src/components/admin/communications/SendCommunicationForm.tsx` — assemble template + composition + destinataires + envoi
+- `src/components/admin/communications/CommunicationHistoryList.tsx` — historique des envois
+- `src/hooks/useCommunicationTemplates.ts` — CRUD templates
+- `src/hooks/useCommunicationRecipients.ts` — chargement liste utilisateurs filtrée
+
+Modifications :
+
+- Ajout de la route `/admin/communications` et de l'entrée de menu dans la nav super-admin
+- Réutilisation des composants UI existants (Card, Dialog, Table, Checkbox, Select, Tabs, Button)
+
+### Sécurité
+
+- Toutes les opérations d'envoi passent par edge function avec validation `is_superadmin()` côté serveur
+- Validation Zod stricte des inputs
+- Sanitisation du HTML avant envoi (DOMPurify ou allow-list de balises)
+- Plafond de 500 destinataires par envoi pour éviter l'abus
+- Lien de désinscription automatiquement injecté en pied d'email (utilise `email_unsubscribe_tokens`)
+- Respect de la table de désinscription : exclusion des emails ayant un token `used_at` non nul
+
+### Hors périmètre (à confirmer si tu en veux plus tard)
+
+- Programmation d'envoi à une date future
+- Templates par langue
+- Pièces jointes
+- Statistiques d'ouverture / clics
+- Envoi de tests à soi-même avant l'envoi réel (pourrait être ajouté facilement si souhaité)
