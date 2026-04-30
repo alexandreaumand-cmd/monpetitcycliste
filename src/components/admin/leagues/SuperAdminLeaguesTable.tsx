@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SuperAdminLeagueActions } from "./SuperAdminLeagueActions";
+import { SuperAdminLeagueAuctionBadge } from "./SuperAdminLeagueAuctionBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -176,6 +177,12 @@ export function SuperAdminLeaguesTable() {
           <span className="text-muted-foreground">/ {league.max_players}</span>
         </div>
         <Progress value={(league.member_count / league.max_players) * 100} className="h-1" />
+      </div>
+
+      {/* Auction status */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Enchères :</span>
+        <SuperAdminLeagueAuctionBadge leagueId={league.id} gameMode={league.game_mode} compact />
       </div>
 
       {/* Collapsible members */}
