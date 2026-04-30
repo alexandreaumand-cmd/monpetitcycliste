@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -19,6 +19,7 @@ import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDea
 import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
+import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunicationsPage";
 
 interface NavGroup {
   label: string;
@@ -56,6 +57,7 @@ const navGroups: NavGroup[] = [
       { label: "Enchères Live", path: "auctions", icon: Gavel },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
+      { label: "Communications", path: "communications", icon: Mail },
     ],
   },
   {
@@ -151,6 +153,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="auctions" element={<SuperAdminAuctionsPage />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
               <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
+              <Route path="communications" element={<SuperAdminCommunicationsPage />} />
               <Route path="data" element={<DataManagementTabs />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
             </Routes>
