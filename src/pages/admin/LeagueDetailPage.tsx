@@ -230,6 +230,12 @@ export function LeagueDetailPage() {
         {/* League Settings */}
         <LeagueSettingsCard league={league} onSaved={loadLeagueData} />
 
+        {/* Auction status */}
+        <SuperAdminLeagueAuctionStatus leagueId={leagueId} gameMode={league.game_mode} />
+
+        {/* Standings */}
+        <SuperAdminLeagueStandings leagueId={leagueId} gameMode={league.game_mode} />
+
         {/* Selected Courses (per_course mode) */}
         {league.game_mode === "per_course" && (
           <SelectedCoursesCard courses={selectedCourses} />
