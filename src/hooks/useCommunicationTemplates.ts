@@ -17,7 +17,7 @@ export function useCommunicationTemplates() {
     queryKey: ["communication-templates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("communication_templates" as any)
+        .from("communication_templates")
         .select("*")
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -34,13 +34,13 @@ export function useUpsertCommunicationTemplate() {
       if (!user) throw new Error("Non authentifié");
       if (input.id) {
         const { error } = await supabase
-          .from("communication_templates" as any)
+          .from("communication_templates")
           .update({ name: input.name, subject: input.subject, body_html: input.body_html })
           .eq("id", input.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("communication_templates" as any)
+          .from("communication_templates")
           .insert({
             name: input.name,
             subject: input.subject,
@@ -62,7 +62,7 @@ export function useDeleteCommunicationTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("communication_templates" as any).delete().eq("id", id);
+      const { error } = await supabase.from("communication_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -17,7 +17,7 @@ export function useCommunicationBatches() {
     queryKey: ["communication-batches"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("communication_batches" as any)
+        .from("communication_batches")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
@@ -41,7 +41,7 @@ export function useCommunicationBatchDetail(batchId: string | null) {
     enabled: !!batchId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("email_send_log" as any)
+        .from("email_send_log")
         .select("message_id, recipient_email, status, error_message, created_at, metadata")
         .order("created_at", { ascending: false })
         .limit(1000);
