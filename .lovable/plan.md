@@ -1,71 +1,61 @@
-# Corriger la situation de course PCS (live)
+## Problème
 
-## Problème observé
+Quand tu programmes la date/heure d'ouverture des enchères pour la **phase 3** alors que la phase active actuelle est la **phase 2**, l'info ne s'affiche pas sur la carte de la ligue dans le dashboard.
 
-Sur le panneau Live (capture 1), la situation du Tour de Romandie affiche 9 "groupes" : Pogacar, Nordhagen, Lipowitz, Martinez, Roglic, Tuckwell, Withen, Cepeda, Rodríguez — chacun listé comme un groupe avec un écart entre eux.
+## Cause
 
-Côté PCS (capture 2), il n'existe en réalité que **2 groupes** :
-- `GROUP POGACAR` (4 coureurs, en tête)
-- `GROUP ROGLIC` à +0:26 (10+ coureurs)
+Le hook `useLeagueCardsData` (et son équivalent `useLeagueAuctionStatus`) calcule la **phase active** à partir de la date du jour, puis cherche une enchère `scheduled` **uniquement pour cette phase active**.
 
-Le scraper traite chaque **ligne de coureur** comme si elle était un groupe.
+Code actuel (`src/hooks/useLeagueCardsData.ts`, lignes ~243-305) :
 
-## Cause racine
+```ts
+// Calcule activePhaseId = phase courante (today entre date_debut/date_fin)
+// Sinon prochaine phase à venir...
 
-Dans `supabase/functions/scrape-live-race/index.ts` (parsing PCS Live), la structure HTML PCS imbrique des `.sit-grp` à plusieurs niveaux :
-
-```
-.sit-grp                  ← vrai groupe (POGACAR)
-  ├─ header (nom, gap)
-  ├─ .sit-grp             ← ligne coureur (1 rider)
-  ├─ .sit-grp             ← ligne coureur (1 rider)
-  └─ ...
-.sit-grp                  ← vrai groupe (ROGLIC)
-  └─ ...
+const scheduled = activePhaseId ? leagueAuctions.find(
+  a => a.statut === 'scheduled' 
+    && a.opens_at 
+    && a.opens_at > now 
+    && a.phase_id === activePhaseId   // ← bloque les enchères des phases futures
+) : null;
 ```
 
-La logique actuelle :
-1. Cherche le **premier** `.sit-grp` sans ancêtre `.sit-grp` (= root unique).
-2. Prend ses enfants directs `.sit-grp` comme "groupes".
+Vérifié en base TEST : on a bien des enchères `scheduled` pour la phase 3 (par ex. ligue *Early Adopters*, *MPC 2026*, *Tête dans le guidon*) avec `opens_at` en juillet/septembre 2026, mais on est aujourd'hui dans la phase 2 (date_debut 2026-04-XX, date_fin avant le 2026-05-09). Donc ces enchères programmées sont filtrées et n'apparaissent pas sur les cartes.
 
-Quand chaque vrai groupe est lui-même un root (frères au top-level), `find()` n'en retourne qu'un seul, et ses enfants directs sont les **lignes de coureurs**, pas des sous-groupes. Résultat : 9 "groupes" d'un coureur chacun.
+## Solution
 
-## Correction
+Élargir la recherche d'enchères `scheduled` à **toutes les phases à venir**, pas uniquement la phase active. On garde l'ordre de priorité actuel :
 
-### 1. Repenser la sélection des "vrais groupes"
+1. Enchère `open` en cours
+2. Enchère `closed` avec annonces non publiées (phase active de préférence, sinon n'importe laquelle)
+3. **Prochaine enchère `scheduled`** : la plus proche dans le temps (`opens_at > now`), toutes phases confondues
+   - Si plusieurs sont programmées, on prend celle dont `opens_at` est le plus tôt
 
-Remplacer la logique `rootSitGrp + children` par : **tous les `.sit-grp` qui contiennent plusieurs liens coureur ET ont un header (nom de groupe ou écart `+M:SS`)** sont de vrais groupes. Un `.sit-grp` qui ne contient qu'un seul `<a href*="rider/">` est une ligne de coureur, pas un groupe — on l'ignore.
+### Fichiers à modifier
 
-Algorithme :
-- Récupérer **tous** les `.sit-grp` du document.
-- Pour chacun, compter les `a[href*="rider/"]` directement contenus (en excluant ceux dans des `.sit-grp` descendants).
-- Garder uniquement ceux avec ≥ 2 liens coureur OU un nom de groupe explicite (`GROUP …`, `Peloton`, `Head of the race`, etc.).
-- Si après filtrage on a 0 vrai groupe mais N `.sit-grp` totaux, fallback : prendre tous les `.sit-grp` top-level (sans ancêtre `.sit-grp`) comme groupes — chacun étant alors un vrai groupe distinct.
+1. **`src/hooks/useLeagueCardsData.ts`** (lignes 287-303)
+   - Remplacer le filtre `a.phase_id === activePhaseId` par un tri sur `opens_at` croissant et prendre la première
+   - Supprimer la condition `activePhaseId ? ... : null` (on cherche même si on n'a pas de phase active)
 
-### 2. Conserver la logique d'extraction des coureurs
+2. **`src/hooks/useLeagueAuctionStatus.tsx`** (logique étape 3)
+   - Appliquer la même correction pour rester cohérent (utilisé dans la barre latérale / autres écrans)
+   - Trier `scheduled` par `opens_at` ascendant au lieu de filtrer par `activePhaseId`
 
-L'extraction interne (riders, bibs, GC gaps) reste correcte pour un vrai groupe. Le filtre "exclure les liens des `.sit-grp` descendants" garde son sens car les coureurs sont eux-mêmes des sous-`.sit-grp`.
+### Affichage sur la carte
 
-### 3. Logs de diagnostic enrichis
+Aucun changement nécessaire côté UI : la carte affiche déjà correctement le bloc bleu "Programmée" avec :
+- Numéro de round
+- Compte à rebours `jj : hh : mm : ss` jusqu'à `opens_at`
+- Libellé "Ouverture dans"
 
-Ajouter des logs côté edge function :
-- nombre total de `.sit-grp`
-- nombre de `.sit-grp` "racine" (sans ancêtre)
-- nombre retenu comme vrais groupes
-- pour chaque groupe retenu : nom, écart, nombre de coureurs
+Une fois la donnée renvoyée, le bloc apparaît automatiquement.
 
-Ces logs permettront de valider en conditions réelles la prochaine fois qu'un live PCS sera actif.
+### Cas limite
 
-### 4. Test sur l'admin Live Broadcast
-
-Une fois déployé, l'admin pourra rescraper la même URL PCS et vérifier dans la fenêtre de prévisualisation (capture 1) que la situation affiche bien 2 groupes au lieu de 9, alignée avec PCS (capture 2).
-
-## Fichier modifié
-
-- `supabase/functions/scrape-live-race/index.ts` — section `parsePCSLive` (lignes ~115–268)
+Si une enchère `scheduled` pour la phase courante existe en plus d'une pour une phase future, on affichera la plus proche dans le temps — ce qui est le comportement attendu (la prochaine étape pour le manager).
 
 ## Hors scope
 
-- Affichage `RaceSituationDisplay` : inchangé (il affiche correctement ce qu'on lui donne).
-- Parsers L'Équipe et FirstCycling : inchangés.
-- Pas de migration DB.
+- Pas de changement de schéma DB
+- Pas de changement sur la programmation côté admin (qui fonctionne déjà puisque les enchères sont bien créées)
+- Pas de changement sur les enchères `open` ni les annonces en attente
