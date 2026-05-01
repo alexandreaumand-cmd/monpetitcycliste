@@ -1,48 +1,74 @@
-## Problème identifié
+# Plan de correction du classement LIVE MPC 2026
 
-Le classement général de la ligue **MPC 2026** (LIVE) est désynchronisé alors que les détails par manager sont corrects.
+## Ce que je vais corriger
 
-Exemple pour Fab :
-- Détail complet (vue `v_manager_breakdown`) : **19 246 pts** de course (cohérent avec ce que tu vois à l'écran : 19 221 pts course + bonus)
-- Classement (vue `v_manager_standings_by_season_v2`) : **18 826 pts**, soit **445 pts manquants**
+Le problème ne vient pas seulement de l’actualisation automatique.
+En LIVE, j’ai confirmé que :
 
-### Cause racine
+- le cron `refresh-standings-mv` n’existe pas actuellement ;
+- le classement général affiché provient bien des vues matérialisées `v_manager_standings_by_season_v2` / `v_manager_standings_by_phase_v2` ;
+- le détail d’un manager (`v_manager_breakdown`) donne des totaux plus élevés pour plusieurs managers de MPC 2026 ;
+- le classement général stocké est cohérent avec lui-même (saison = somme des phases), mais **pas cohérent avec le détail manager**.
 
-Les "vues" du classement (`v_manager_standings_by_season_v2`, `v_manager_standings_by_phase_v2`, `v_manager_standings_total`) sont en réalité des **vues matérialisées** (matviews). Elles stockent un instantané des données et ne se mettent à jour qu'à l'exécution explicite de `REFRESH MATERIALIZED VIEW`.
+Exemples constatés en LIVE sur MPC 2026 :
 
-Vérifications faites :
-- Une fonction `refresh_standings_mv()` existe bien et fait le bon boulot.
-- **Aucun trigger** sur `points_ledger` / `race_results` / `bonus_points` ne l'appelle.
-- **Aucun job cron** ne l'appelle non plus.
+- Max : écart de **800 pts**
+- Fab : écart de **445 pts**
+- Matt L : écart de **255 pts**
+- Obi : écart de **215 pts**
 
-Conséquence : depuis le dernier refresh manuel, tous les nouveaux points ingérés (résultats de courses récentes, bonus, etc.) sont visibles dans les vues "live" (`v_manager_breakdown`, calculs unitaires) mais pas dans la matview du classement.
+Donc la meilleure solution est de **réaligner la logique de calcul**, puis de remettre un refresh fiable.
 
-### Plan de correction
+## Implémentation prévue
 
-1. **Refresh immédiat** des trois matviews via `SELECT public.refresh_standings_mv();` (corrige le classement de MPC 2026 et de toutes les autres ligues).
-2. **Mettre en place un refresh automatique** pour que ça ne se reproduise plus. Option retenue : un **job cron pg_cron** qui appelle `refresh_standings_mv()` toutes les **2 minutes**.
-   - C'est le pattern le plus simple, déjà utilisé dans le projet pour d'autres traitements.
-   - Les matviews utilisent `CONCURRENTLY` donc le refresh ne bloque pas les lectures.
-   - 2 minutes = compromis entre fraîcheur perçue (acceptable pour un classement) et charge DB.
-3. **Vérification post-refresh** : reconfirmer en LIVE que `v_manager_standings_by_season_v2` retourne bien 19 246 pts course pour Fab.
+### 1. Unifier la source de vérité du classement
+Je vais modifier la logique backend pour que le classement général et le détail manager reposent sur **la même base métier**.
 
-### Détails techniques
+Objectif :
+- éviter qu’un manager ait un détail correct mais un total général faux ;
+- supprimer les divergences entre vue “breakdown” et vues “standings”.
 
-```sql
--- 1. Refresh ponctuel
-SELECT public.refresh_standings_mv();
+### 2. Corriger le calcul des vues de classement
+Je vais recréer la logique de `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` pour qu’elle applique exactement les mêmes règles de périmètre que le détail manager, y compris pour les ligues à phases comme MPC 2026.
 
--- 2. Cron toutes les 2 minutes
-SELECT cron.schedule(
-  'refresh-standings-mv',
-  '*/2 * * * *',
-  $$ SELECT public.refresh_standings_mv(); $$
-);
-```
+Objectif :
+- obtenir les mêmes totaux de points course que le détail manager ;
+- conserver les bonus, scoreurs et victoires ;
+- garantir une cohérence stable en LIVE.
 
-Aucun changement côté frontend nécessaire — les hooks `useLeagueStandingsBySeason`, `useGlobalStandings` etc. continueront à lire ces matviews, mais avec des données fraîches.
+### 3. Ajouter un mécanisme de recalcul ciblé et vérifiable
+Au lieu de dépendre uniquement d’un cron absent ou fragile, je vais prévoir un recalcul robuste :
 
-### Points à confirmer avant exécution
+- refresh général des vues matérialisées ;
+- possibilité de recalcul immédiat après correction ;
+- vérification que MPC 2026 retourne désormais les bons totaux.
 
-- OK pour le **rythme de 2 minutes** ? (alternatives : 1 min plus réactif mais plus de charge ; 5 min plus économe mais perceptible par les utilisateurs)
-- OK pour appliquer le refresh immédiat **directement en LIVE** (le cron sera créé via migration et donc poussé en LIVE à la prochaine publication du projet) ?
+### 4. Remettre l’automatisation correctement
+Je vais sécuriser le rafraîchissement automatique pour LIVE :
+
+- recréer le job cron manquant ;
+- éviter les doublons de schedule ;
+- faire en sorte que l’état soit visible dans la page admin des crons.
+
+### 5. Vérifier spécifiquement MPC 2026 en LIVE
+Après la correction, je validerai :
+
+- le classement général de MPC 2026 ;
+- la cohérence entre classement général et détail manager ;
+- la présence du cron et de sa dernière exécution.
+
+## Détails techniques
+
+- Base concernée : Lovable Cloud LIVE
+- Objets concernés :
+  - `public.v_manager_breakdown`
+  - `public.v_manager_standings_by_season_v2`
+  - `public.v_manager_standings_by_phase_v2`
+  - `public.refresh_standings_mv()`
+  - schedule cron `refresh-standings-mv`
+- Approche : correction backend d’abord, pas de contournement frontend
+- Validation attendue : égalité entre somme du détail manager et total du classement pour MPC 2026
+
+## Résultat attendu
+
+Le classement général de la ligue MPC 2026 en LIVE sera enfin aligné avec les détails managers, puis restera à jour automatiquement.
