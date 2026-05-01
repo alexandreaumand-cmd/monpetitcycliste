@@ -6788,6 +6788,21 @@ export type Database = {
         Args: { team_name: string }
         Returns: string
       }
+      get_cron_jobs_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          command: string
+          jobid: number
+          jobname: string
+          last_run_duration_ms: number
+          last_run_end: string
+          last_run_message: string
+          last_run_start: string
+          last_run_status: string
+          schedule: string
+        }[]
+      }
       get_daily_points_by_manager: {
         Args: { p_end: string; p_league_id: string; p_start: string }
         Returns: {
