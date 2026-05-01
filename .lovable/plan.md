@@ -1,91 +1,48 @@
-## Objectif
+## Problème identifié
 
-Permettre au super-admin de choisir, dans l'onglet **Nouvel envoi**, une date + heure d'envoi programmé. Si renseignée, l'email part à ce moment-là ; sinon, comportement actuel (envoi immédiat).
+Le classement général de la ligue **MPC 2026** (LIVE) est désynchronisé alors que les détails par manager sont corrects.
 
-## Approche — pourquoi le cron ne change (presque) pas
+Exemple pour Fab :
+- Détail complet (vue `v_manager_breakdown`) : **19 246 pts** de course (cohérent avec ce que tu vois à l'écran : 19 221 pts course + bonus)
+- Classement (vue `v_manager_standings_by_season_v2`) : **18 826 pts**, soit **445 pts manquants**
 
-Le système actuel utilise déjà une file **pgmq** dépilée en boucle par le cron `process-email-queue`. pgmq supporte nativement un **délai d'envoi** : un message avec `delay` (timestamp futur) reste invisible dans la queue jusqu'à l'heure prévue, puis devient consommable normalement.
+### Cause racine
 
-Donc :
-- Le **cron reste identique** (même fréquence, même fonction).
-- On change uniquement la fonction d'enfilage pour passer un `delay` quand une date est fournie.
-- Pas de table de scheduling séparée à maintenir, pas de nouveau cron.
+Les "vues" du classement (`v_manager_standings_by_season_v2`, `v_manager_standings_by_phase_v2`, `v_manager_standings_total`) sont en réalité des **vues matérialisées** (matviews). Elles stockent un instantané des données et ne se mettent à jour qu'à l'exécution explicite de `REFRESH MATERIALIZED VIEW`.
 
-## UI — `SendCommunicationForm.tsx`
+Vérifications faites :
+- Une fonction `refresh_standings_mv()` existe bien et fait le bon boulot.
+- **Aucun trigger** sur `points_ledger` / `race_results` / `bonus_points` ne l'appelle.
+- **Aucun job cron** ne l'appelle non plus.
 
-Nouvelle carte « 4. Programmation (optionnel) » avant le bouton Envoyer :
+Conséquence : depuis le dernier refresh manuel, tous les nouveaux points ingérés (résultats de courses récentes, bonus, etc.) sont visibles dans les vues "live" (`v_manager_breakdown`, calculs unitaires) mais pas dans la matview du classement.
 
-- Toggle / switch : « Envoyer maintenant » (par défaut) vs « Programmer l'envoi »
-- Si programmé :
-  - Date picker (shadcn Calendar dans Popover) — futur uniquement
-  - Input heure (HH:mm), fuseau local du navigateur
-  - Affichage récapitulatif : « Envoi prévu le 12 mai 2026 à 09:00 (heure locale) »
-  - Validation : la date/heure doit être ≥ maintenant + 2 minutes
-- Le libellé du bouton devient « Programmer l'envoi à … » au lieu de « Envoyer à N destinataires »
-- Le dialog de confirmation reflète l'heure programmée
+### Plan de correction
 
-Le `handleSend` envoie un champ supplémentaire `scheduled_at` (ISO string) ou `null`.
+1. **Refresh immédiat** des trois matviews via `SELECT public.refresh_standings_mv();` (corrige le classement de MPC 2026 et de toutes les autres ligues).
+2. **Mettre en place un refresh automatique** pour que ça ne se reproduise plus. Option retenue : un **job cron pg_cron** qui appelle `refresh_standings_mv()` toutes les **2 minutes**.
+   - C'est le pattern le plus simple, déjà utilisé dans le projet pour d'autres traitements.
+   - Les matviews utilisent `CONCURRENTLY` donc le refresh ne bloque pas les lectures.
+   - 2 minutes = compromis entre fraîcheur perçue (acceptable pour un classement) et charge DB.
+3. **Vérification post-refresh** : reconfirmer en LIVE que `v_manager_standings_by_season_v2` retourne bien 19 246 pts course pour Fab.
 
-## Backend — `send-communication-email/index.ts`
-
-1. Accepter `scheduled_at?: string | null` dans le body.
-2. Validation : si fourni, doit être un ISO valide ≥ now + 60s, ≤ now + 90 jours.
-3. Calculer `delaySeconds = max(0, floor((scheduled_at - now) / 1000))`.
-4. Au moment de l'enqueue :
-   - Conserver `email_send_log` en `status='pending'` (existant), mais ajouter `scheduled_at` dans `metadata`.
-   - Remplacer l'appel `rpc('enqueue_email', …)` par un appel direct à `pgmq.send(queue, payload, delay)` quand `delaySeconds > 0`. Sinon, garder le chemin actuel (rétrocompat).
-5. Stocker `scheduled_at` aussi dans `communication_batches` (nouvelle colonne) pour l'historique.
-
-### Migration DB
+### Détails techniques
 
 ```sql
-ALTER TABLE public.communication_batches
-  ADD COLUMN scheduled_at timestamptz NULL;
+-- 1. Refresh ponctuel
+SELECT public.refresh_standings_mv();
+
+-- 2. Cron toutes les 2 minutes
+SELECT cron.schedule(
+  'refresh-standings-mv',
+  '*/2 * * * *',
+  $$ SELECT public.refresh_standings_mv(); $$
+);
 ```
 
-(Pas de modif de `email_send_log` — `scheduled_at` y va dans `metadata`.)
+Aucun changement côté frontend nécessaire — les hooks `useLeagueStandingsBySeason`, `useGlobalStandings` etc. continueront à lire ces matviews, mais avec des données fraîches.
 
-### Accès à pgmq.send
+### Points à confirmer avant exécution
 
-`enqueue_email` ne supporte pas le delay. Deux options :
-- **A** (préférée) : créer une RPC wrapper `enqueue_email_at(queue_name text, payload jsonb, send_at timestamptz)` qui appelle `pgmq.send(queue, payload, send_at)`. Granted à `service_role`.
-- **B** : étendre `enqueue_email` avec un 3e paramètre optionnel.
-
-→ Je pars sur **A** pour ne pas casser les autres appelants d'`enqueue_email`.
-
-```sql
-CREATE OR REPLACE FUNCTION public.enqueue_email_at(
-  queue_name text, payload jsonb, send_at timestamptz
-) RETURNS bigint
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq
-AS $$
-DECLARE msg_id bigint;
-BEGIN
-  SELECT pgmq.send(queue_name, payload, send_at) INTO msg_id;
-  RETURN msg_id;
-END;
-$$;
-GRANT EXECUTE ON FUNCTION public.enqueue_email_at(text,jsonb,timestamptz) TO service_role;
-```
-
-## Historique
-
-`CommunicationHistoryList.tsx` : afficher un badge « Programmé » + l'heure prévue quand `scheduled_at` est dans le futur (lecture simple, hors scope d'écriture).
-
-## Annulation (hors scope cette itération)
-
-Ne PAS gérer l'annulation d'un envoi programmé dans cette première passe. Une fois en queue avec délai, il part. Ajout possible plus tard via `pgmq.delete(queue, msg_id)` si tu le veux.
-
-## Fichiers touchés
-
-- `src/components/admin/communications/SendCommunicationForm.tsx` (UI date/heure + payload)
-- `supabase/functions/send-communication-email/index.ts` (validation + branche scheduled)
-- `src/components/admin/communications/CommunicationHistoryList.tsx` (badge programmé — read-only)
-- 1 migration : colonne `scheduled_at` + fonction `enqueue_email_at`
-
-## Test
-
-1. Créer un envoi programmé à now+3min avec 1 destinataire (toi).
-2. Vérifier que `email_send_log` est `pending` et que pgmq montre `vt` futur.
-3. Attendre : le cron passe toutes les minutes, le message devient visible à T+3min, est traité, statut `sent`.
-4. Vérifier l'envoi immédiat (sans date) — non régression.
+- OK pour le **rythme de 2 minutes** ? (alternatives : 1 min plus réactif mais plus de charge ; 5 min plus économe mais perceptible par les utilisateurs)
+- OK pour appliquer le refresh immédiat **directement en LIVE** (le cron sera créé via migration et donc poussé en LIVE à la prochaine publication du projet) ?
