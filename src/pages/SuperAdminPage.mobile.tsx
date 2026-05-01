@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radio, Gavel, Mail } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radio, Gavel, Mail, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +23,7 @@ import { StartlistHub } from "@/components/admin/StartlistHub";
 import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
 import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunicationsPage";
+import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -71,6 +72,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Import / Export", path: "data", icon: Database },
       { label: "Points Ledger", path: "points-ledger", icon: Database },
+      { label: "Cron Jobs", path: "cron-jobs", icon: Timer },
     ],
   },
 ];
@@ -246,6 +248,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="communications" element={<SuperAdminCommunicationsPage />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="points-ledger" element={<PointsLedgerTable />} />
+            <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
           </Routes>
         </div>
       </main>
