@@ -234,7 +234,20 @@ export default function SuperAdminCronJobsPage() {
                             ? format(new Date(job.last_run_end), "dd/MM/yyyy HH:mm:ss", { locale: fr })
                             : "—"}
                         </div>
-                      </div>
+                      {job.target_project_ref && (
+                        <div>
+                          <div className="text-muted-foreground">Projet ciblé</div>
+                          <div className={`font-mono ${job.is_misrouted ? "text-destructive" : ""}`}>
+                            {job.target_project_ref}
+                          </div>
+                        </div>
+                      )}
+                      {job.current_project_ref && (
+                        <div>
+                          <div className="text-muted-foreground">Projet courant</div>
+                          <div className="font-mono">{job.current_project_ref}</div>
+                        </div>
+                      )}
                     </div>
                     {job.last_run_message && (
                       <div>
