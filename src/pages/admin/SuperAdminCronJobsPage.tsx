@@ -117,7 +117,24 @@ export default function SuperAdminCronJobsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      {stats.misrouted > 0 && (
+        <Card className="p-3 border-destructive/50 bg-destructive/10">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="text-xs sm:text-sm">
+              <div className="font-semibold text-destructive">
+                {stats.misrouted} cron job{stats.misrouted > 1 ? "s" : ""} mal routé{stats.misrouted > 1 ? "s" : ""}
+              </div>
+              <div className="text-muted-foreground mt-0.5">
+                Ces jobs appellent l'URL d'un autre projet Supabase que le projet courant
+                {currentRef ? ` (${currentRef})` : ""}. Leurs requêtes partent ailleurs et ne font rien ici.
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Card className="p-3">
           <div className="text-xs text-muted-foreground">Total</div>
           <div className="text-2xl font-bold">{stats.total}</div>
@@ -130,6 +147,12 @@ export default function SuperAdminCronJobsPage() {
           <div className="text-xs text-muted-foreground">En échec</div>
           <div className={`text-2xl font-bold ${stats.failed > 0 ? "text-destructive" : ""}`}>
             {stats.failed}
+          </div>
+        </Card>
+        <Card className="p-3">
+          <div className="text-xs text-muted-foreground">Mal routés</div>
+          <div className={`text-2xl font-bold ${stats.misrouted > 0 ? "text-destructive" : ""}`}>
+            {stats.misrouted}
           </div>
         </Card>
       </div>
@@ -154,6 +177,11 @@ export default function SuperAdminCronJobsPage() {
                         <span className="font-mono font-semibold text-sm truncate">{job.jobname}</span>
                         {!job.active && (
                           <Badge variant="outline" className="text-xs">Désactivé</Badge>
+                        )}
+                        {job.is_misrouted && (
+                          <Badge variant="destructive" className="text-xs gap-1">
+                            <AlertTriangle className="h-3 w-3" /> Mal routé
+                          </Badge>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
