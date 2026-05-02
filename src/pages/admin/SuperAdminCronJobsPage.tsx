@@ -234,6 +234,7 @@ export default function SuperAdminCronJobsPage() {
                             ? format(new Date(job.last_run_end), "dd/MM/yyyy HH:mm:ss", { locale: fr })
                             : "—"}
                         </div>
+                      </div>
                       {job.target_project_ref && (
                         <div>
                           <div className="text-muted-foreground">Projet ciblé</div>
