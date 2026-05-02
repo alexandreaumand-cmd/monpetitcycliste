@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle2, XCircle, Clock, Power, PowerOff } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Clock, Power, PowerOff, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -19,6 +19,9 @@ interface CronJob {
   last_run_status: string | null;
   last_run_message: string | null;
   last_run_duration_ms: number | null;
+  target_project_ref: string | null;
+  current_project_ref: string | null;
+  is_misrouted: boolean;
 }
 
 export default function SuperAdminCronJobsPage() {
@@ -85,7 +88,9 @@ export default function SuperAdminCronJobsPage() {
     total: jobs.length,
     active: jobs.filter((j) => j.active).length,
     failed: jobs.filter((j) => j.last_run_status?.toLowerCase() === "failed").length,
+    misrouted: jobs.filter((j) => j.is_misrouted).length,
   };
+  const currentRef = jobs.find((j) => j.current_project_ref)?.current_project_ref ?? null;
 
   return (
     <div className="space-y-4">
