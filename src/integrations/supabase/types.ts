@@ -6824,6 +6824,8 @@ export type Database = {
         Returns: {
           active: boolean
           command: string
+          current_project_ref: string
+          is_misrouted: boolean
           jobid: number
           jobname: string
           last_run_duration_ms: number
@@ -6832,6 +6834,7 @@ export type Database = {
           last_run_start: string
           last_run_status: string
           schedule: string
+          target_project_ref: string
         }[]
       }
       get_daily_points_by_manager: {
