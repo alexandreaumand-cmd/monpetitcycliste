@@ -5509,6 +5509,36 @@ export type Database = {
           },
         ]
       }
+      cron_jobs_audit: {
+        Row: {
+          active: boolean | null
+          current_project_ref: string | null
+          is_misrouted: boolean | null
+          jobid: number | null
+          jobname: string | null
+          schedule: string | null
+          target_project_ref: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          current_project_ref?: never
+          is_misrouted?: never
+          jobid?: number | null
+          jobname?: string | null
+          schedule?: string | null
+          target_project_ref?: never
+        }
+        Update: {
+          active?: boolean | null
+          current_project_ref?: never
+          is_misrouted?: never
+          jobid?: number | null
+          jobname?: string | null
+          schedule?: string | null
+          target_project_ref?: never
+        }
+        Relationships: []
+      }
       current_round_drafts: {
         Row: {
           auction_id: string | null
@@ -6763,6 +6793,7 @@ export type Database = {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
       }
+      current_project_ref: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -6793,6 +6824,8 @@ export type Database = {
         Returns: {
           active: boolean
           command: string
+          current_project_ref: string
+          is_misrouted: boolean
           jobid: number
           jobname: string
           last_run_duration_ms: number
@@ -6801,6 +6834,7 @@ export type Database = {
           last_run_start: string
           last_run_status: string
           schedule: string
+          target_project_ref: string
         }[]
       }
       get_daily_points_by_manager: {
