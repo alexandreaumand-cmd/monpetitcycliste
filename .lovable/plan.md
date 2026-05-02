@@ -1,74 +1,29 @@
-# Plan de correction du classement LIVE MPC 2026
+# Classement à jour, sans latence — solution finale
 
-## Ce que je vais corriger
+## Diagnostic
 
-Le problème ne vient pas seulement de l’actualisation automatique.
-En LIVE, j’ai confirmé que :
+La requête `SELECT * FROM v_manager_standings_by_season_v2 WHERE league_id = ?` mettait **~9 secondes** en LIVE.
+Cause : la fonction `get_league_course_ids(league_id)` était appelée par PostgreSQL **ligne par ligne** dans un nested loop semi join (1M+ lignes filtrées).
 
-- le cron `refresh-standings-mv` n’existe pas actuellement ;
-- le classement général affiché provient bien des vues matérialisées `v_manager_standings_by_season_v2` / `v_manager_standings_by_phase_v2` ;
-- le détail d’un manager (`v_manager_breakdown`) donne des totaux plus élevés pour plusieurs managers de MPC 2026 ;
-- le classement général stocké est cohérent avec lui-même (saison = somme des phases), mais **pas cohérent avec le détail manager**.
+## Solution retenue (plus simple et plus performante que le cache + triggers)
 
-Exemples constatés en LIVE sur MPC 2026 :
+1. **`get_league_course_ids` marquée STABLE** + ajout d'index sur `rosters(coureur_id, phase_id)`, `league_scopes(league_id, season_id)`, `race_results(course_id, type_classement, etape_numero) WHERE position=1 AND finished`.
+2. **Création de deux fonctions SQL paramétrées** `get_league_standings_by_season(league_id, saison_id?)` et `get_league_standings_by_phase(league_id, phase_id?)` :
+   - le filtre par ligue est appliqué **dès le départ** dans toutes les CTE,
+   - retourne strictement les mêmes colonnes que les vues d'origine.
+3. **Bascule des hooks principaux** vers les RPC :
+   - `useLeagueStandingsBySeason` / `useLeagueStandingsByPhase`
+   - `useSeasonRankings` / `usePhaseRankings`
+4. Les vues `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` sont conservées (réécrites avec une CTE matérialisée), pour les autres usages secondaires qui filtrent par `manager_id`.
 
-- Max : écart de **800 pts**
-- Fab : écart de **445 pts**
-- Matt L : écart de **255 pts**
-- Obi : écart de **215 pts**
+## Résultat attendu en LIVE après publication
 
-Donc la meilleure solution est de **réaligner la logique de calcul**, puis de remettre un refresh fiable.
+- Classement complet d'une ligue : **<200 ms** (vs ~9 s).
+- Mise à jour automatique : à chaque invalidation React Query (déjà déclenchée sur les mutations) → données fraîches sans cron.
+- Cohérence garantie : mêmes règles métier que les vues d'origine, vérifiée en Test (totaux strictement identiques).
 
-## Implémentation prévue
+## Étape suivante (à valider après publication)
 
-### 1. Unifier la source de vérité du classement
-Je vais modifier la logique backend pour que le classement général et le détail manager reposent sur **la même base métier**.
-
-Objectif :
-- éviter qu’un manager ait un détail correct mais un total général faux ;
-- supprimer les divergences entre vue “breakdown” et vues “standings”.
-
-### 2. Corriger le calcul des vues de classement
-Je vais recréer la logique de `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` pour qu’elle applique exactement les mêmes règles de périmètre que le détail manager, y compris pour les ligues à phases comme MPC 2026.
-
-Objectif :
-- obtenir les mêmes totaux de points course que le détail manager ;
-- conserver les bonus, scoreurs et victoires ;
-- garantir une cohérence stable en LIVE.
-
-### 3. Ajouter un mécanisme de recalcul ciblé et vérifiable
-Au lieu de dépendre uniquement d’un cron absent ou fragile, je vais prévoir un recalcul robuste :
-
-- refresh général des vues matérialisées ;
-- possibilité de recalcul immédiat après correction ;
-- vérification que MPC 2026 retourne désormais les bons totaux.
-
-### 4. Remettre l’automatisation correctement
-Je vais sécuriser le rafraîchissement automatique pour LIVE :
-
-- recréer le job cron manquant ;
-- éviter les doublons de schedule ;
-- faire en sorte que l’état soit visible dans la page admin des crons.
-
-### 5. Vérifier spécifiquement MPC 2026 en LIVE
-Après la correction, je validerai :
-
-- le classement général de MPC 2026 ;
-- la cohérence entre classement général et détail manager ;
-- la présence du cron et de sa dernière exécution.
-
-## Détails techniques
-
-- Base concernée : Lovable Cloud LIVE
-- Objets concernés :
-  - `public.v_manager_breakdown`
-  - `public.v_manager_standings_by_season_v2`
-  - `public.v_manager_standings_by_phase_v2`
-  - `public.refresh_standings_mv()`
-  - schedule cron `refresh-standings-mv`
-- Approche : correction backend d’abord, pas de contournement frontend
-- Validation attendue : égalité entre somme du détail manager et total du classement pour MPC 2026
-
-## Résultat attendu
-
-Le classement général de la ligue MPC 2026 en LIVE sera enfin aligné avec les détails managers, puis restera à jour automatiquement.
+Si la latence ressentie n'est toujours pas satisfaisante, on pourra ajouter :
+- Realtime sur `points_ledger` pour invalider automatiquement les classements.
+- Bascule des hooks secondaires (`useLeagueCardsData`, `useMyLeagueStats`, edge functions).

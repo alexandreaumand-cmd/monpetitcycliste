@@ -6848,6 +6848,38 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_league_standings_by_phase: {
+        Args: { p_league_id: string; p_phase_id?: string }
+        Returns: {
+          avatar_url: string
+          league_id: string
+          manager_bonus: number
+          manager_id: string
+          manager_nom: string
+          nb_scoreurs: number
+          nb_victoires: number
+          phase_id: string
+          rider_bonus: number
+          total_points: number
+          total_race_pts: number
+        }[]
+      }
+      get_league_standings_by_season: {
+        Args: { p_league_id: string; p_saison_id?: string }
+        Returns: {
+          avatar_url: string
+          league_id: string
+          manager_bonus: number
+          manager_id: string
+          manager_nom: string
+          nb_scoreurs: number
+          nb_victoires: number
+          rider_bonus: number
+          saison_id: string
+          total_points: number
+          total_race_pts: number
+        }[]
+      }
       get_league_standings_for_recap: {
         Args: { p_league_id: string }
         Returns: {
