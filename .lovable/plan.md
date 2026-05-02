@@ -1,74 +1,88 @@
-# Plan de correction du classement LIVE MPC 2026
+# Classement à jour en auto et sans latence
 
-## Ce que je vais corriger
+## Diagnostic
 
-Le problème ne vient pas seulement de l’actualisation automatique.
-En LIVE, j’ai confirmé que :
+J’ai mesuré la requête actuelle en LIVE sur MPC 2026 :
 
-- le cron `refresh-standings-mv` n’existe pas actuellement ;
-- le classement général affiché provient bien des vues matérialisées `v_manager_standings_by_season_v2` / `v_manager_standings_by_phase_v2` ;
-- le détail d’un manager (`v_manager_breakdown`) donne des totaux plus élevés pour plusieurs managers de MPC 2026 ;
-- le classement général stocké est cohérent avec lui-même (saison = somme des phases), mais **pas cohérent avec le détail manager**.
+- `SELECT * FROM v_manager_standings_by_season_v2 WHERE league_id = 'MPC 2026'` met **~8,7 secondes**.
+- Cause principale : la fonction `get_league_course_ids(league_id)` est marquée `VOLATILE` et appelée par PostgreSQL **ligne par ligne** dans un `Nested Loop Semi Join`. Le plan montre **1 046 239 lignes filtrées** rien que pour cette étape.
+- Aggravé par le fait qu’on a transformé les anciennes vues matérialisées en **vues simples** pour corriger le bug de classement : chaque chargement recalcule tout depuis `points_ledger`, `race_results`, `rosters`, `manager_bonus_points`, `bonus_points`, etc., pour toute la ligue.
+- Côté front, `get-performance-matrix` aggrave encore : il appelle la vue **N managers × M phases** fois en boucle.
 
-Exemples constatés en LIVE sur MPC 2026 :
+Conclusion : la lenteur n’est pas un détail à indexer, c’est structurel. Recalculer le classement complet à chaque affichage ne tiendra pas.
 
-- Max : écart de **800 pts**
-- Fab : écart de **445 pts**
-- Matt L : écart de **255 pts**
-- Obi : écart de **215 pts**
+## Solution proposée
 
-Donc la meilleure solution est de **réaligner la logique de calcul**, puis de remettre un refresh fiable.
+Mettre en place un **cache de classement maintenu en temps réel** :
 
-## Implémentation prévue
+1. Une table `manager_standings_cache` qui stocke, par (`league_id`, `saison_id`, `phase_id`, `manager_id`), les colonnes du classement (points course, bonus manager, bonus rider, scoreurs, victoires, total).
+2. Cette table est mise à jour **automatiquement** par des triggers sur les sources de vérité :
+   - `points_ledger` (insert/update/delete)
+   - `manager_bonus_points`
+   - `bonus_points`
+   - `race_results` (pour les victoires)
+   - `rosters` (changement d’équipe)
+   - `league_scopes` / `leagues` (changement de périmètre ligue)
+3. Les triggers ne recalculent **que ce qui change** (la combinaison ligue + saison + phase + manager touchée), pas tout le classement.
+4. Les vues `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` sont réécrites pour **lire ce cache** au lieu de recalculer. Aucun changement côté front.
+5. **Realtime** est activé sur `manager_standings_cache` pour que les pages classement et la matrice de performance se mettent à jour en direct, sans refresh.
+6. Suppression du cron `refresh-standings-mv` devenu inutile, et de l’edge function `admin-refresh-standings`.
 
-### 1. Unifier la source de vérité du classement
-Je vais modifier la logique backend pour que le classement général et le détail manager reposent sur **la même base métier**.
+Bénéfices :
+- Lecture du classement = simple `SELECT` indexé → **temps réel et sans latence** (millisecondes au lieu de secondes).
+- Mise à jour **immédiate** dès qu’un point est ajouté ou corrigé (pas de délai cron).
+- Cohérence garantie avec le détail manager (mêmes règles métier, juste pré-agrégées).
+- Plus de vue matérialisée à rafraîchir, plus de cron fragile.
 
-Objectif :
-- éviter qu’un manager ait un détail correct mais un total général faux ;
-- supprimer les divergences entre vue “breakdown” et vues “standings”.
+## Étapes de mise en œuvre
 
-### 2. Corriger le calcul des vues de classement
-Je vais recréer la logique de `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` pour qu’elle applique exactement les mêmes règles de périmètre que le détail manager, y compris pour les ligues à phases comme MPC 2026.
+### Étape 1 — Optimisation immédiate (gain rapide, faible risque)
+Avant de migrer vers le cache, marquer `get_league_course_ids` comme `STABLE` et ajouter quelques index manquants sur `points_ledger(course_id, coureur_id)`, `rosters(phase_id, coureur_id, league_id)`, `bonus_points(league_id, phase_id)`. Estimation : passage de 8,7 s à environ 1–2 s. Ça soulage tout de suite pendant qu’on prépare l’étape 2.
 
-Objectif :
-- obtenir les mêmes totaux de points course que le détail manager ;
-- conserver les bonus, scoreurs et victoires ;
-- garantir une cohérence stable en LIVE.
+### Étape 2 — Création du cache de classement
+- Création de la table `manager_standings_cache` avec contraintes et index par (`league_id`, `saison_id`, `phase_id`, `manager_id`).
+- RLS : lecture autorisée aux membres de la ligue (mêmes règles que les vues actuelles).
+- Fonction `recompute_manager_standings(league_id, saison_id, manager_id)` qui réutilise la logique métier déjà validée et écrit dans le cache.
+- Initialisation : peuplement complet du cache pour toutes les ligues actives.
 
-### 3. Ajouter un mécanisme de recalcul ciblé et vérifiable
-Au lieu de dépendre uniquement d’un cron absent ou fragile, je vais prévoir un recalcul robuste :
+### Étape 3 — Triggers de mise à jour ciblée
+Triggers `AFTER INSERT/UPDATE/DELETE` sur les tables sources, qui appellent `recompute_manager_standings` uniquement pour les `(league, saison, manager)` impactés. Pour éviter les rafales de recalculs (ex. import massif de résultats), debounce léger via une file d’attente `standings_recompute_queue` traitée immédiatement par défaut, mais regroupable.
 
-- refresh général des vues matérialisées ;
-- possibilité de recalcul immédiat après correction ;
-- vérification que MPC 2026 retourne désormais les bons totaux.
+### Étape 4 — Branchement des vues sur le cache
+Réécriture de `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` pour qu’elles lisent `manager_standings_cache`. **Aucun changement côté front, hooks ni edge functions** : le contrat reste identique.
 
-### 4. Remettre l’automatisation correctement
-Je vais sécuriser le rafraîchissement automatique pour LIVE :
+### Étape 5 — Realtime + suppression du cron
+- `ALTER PUBLICATION supabase_realtime ADD TABLE manager_standings_cache;`
+- Ajout d’un hook `useRealtimeStandings` côté front sur les pages classement et matrice, pour invalider les queries React Query à chaque changement.
+- Suppression du schedule `refresh-standings-mv` et de la function `admin-refresh-standings` (devenus inutiles).
+- La page admin Cron Jobs reflète automatiquement la suppression.
 
-- recréer le job cron manquant ;
-- éviter les doublons de schedule ;
-- faire en sorte que l’état soit visible dans la page admin des crons.
-
-### 5. Vérifier spécifiquement MPC 2026 en LIVE
-Après la correction, je validerai :
-
-- le classement général de MPC 2026 ;
-- la cohérence entre classement général et détail manager ;
-- la présence du cron et de sa dernière exécution.
+### Étape 6 — Vérification LIVE MPC 2026
+- Comparer total cache vs détail manager pour chaque manager → doit être strictement égal.
+- Mesurer le temps de chargement du classement (objectif < 200 ms).
+- Vérifier qu’une correction de point se propage en < 1 seconde dans l’UI sans refresh.
 
 ## Détails techniques
 
-- Base concernée : Lovable Cloud LIVE
-- Objets concernés :
-  - `public.v_manager_breakdown`
-  - `public.v_manager_standings_by_season_v2`
-  - `public.v_manager_standings_by_phase_v2`
-  - `public.refresh_standings_mv()`
-  - schedule cron `refresh-standings-mv`
-- Approche : correction backend d’abord, pas de contournement frontend
-- Validation attendue : égalité entre somme du détail manager et total du classement pour MPC 2026
+- Base concernée : Lovable Cloud (Test puis Live à la publication).
+- Objets créés :
+  - `public.manager_standings_cache` (table + RLS + index)
+  - `public.recompute_manager_standings(uuid, uuid, uuid)` (fonction)
+  - Triggers sur `points_ledger`, `manager_bonus_points`, `bonus_points`, `race_results`, `rosters`, `league_scopes`, `leagues`
+- Objets modifiés :
+  - `public.v_manager_standings_by_season_v2` (réécrite, contrat identique)
+  - `public.v_manager_standings_by_phase_v2` (réécrite, contrat identique)
+  - `public.get_league_course_ids` (marquée `STABLE`)
+- Objets supprimés :
+  - schedule `refresh-standings-mv`
+  - edge function `admin-refresh-standings`
+  - `public.refresh_standings_mv()` (no-op actuel)
+- Front : ajout d’un hook `useRealtimeStandings` utilisé sur Rankings + matrice de performance. Aucun changement des hooks `useLeagueStandingsBySeason` / `useLeagueStandingsByPhase` / `useGlobalStandings`.
+- Rétrocompatibilité : assurée tant qu’on ne supprime pas la fonction `refresh_standings_mv` avant de publier le code qui ne l’appelle plus.
 
 ## Résultat attendu
 
-Le classement général de la ligue MPC 2026 en LIVE sera enfin aligné avec les détails managers, puis restera à jour automatiquement.
+- Affichage du classement MPC 2026 en LIVE en **moins de 200 ms**.
+- Mise à jour **automatique et immédiate** dès qu’un point change, sans refresh ni cron.
+- Cohérence garantie entre le classement général et le détail manager.
+- Plus aucun job planifié à surveiller pour les classements.
