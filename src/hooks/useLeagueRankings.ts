@@ -35,15 +35,16 @@ export function useSeasonRankings(seasonId: string) {
     setError(null);
     try {
       const id = await ensureLeagueId(leagueId);
-      const { data, error } = await supabase
-        .from("v_manager_standings_by_season_v2")
-        .select("*")
-        .eq("league_id", id)
-        .eq("saison_id", seasonId)
-        .order("total_points", { ascending: false });
-      
+      const { data, error } = await supabase.rpc('get_league_standings_by_season', {
+        p_league_id: id,
+        p_saison_id: seasonId,
+      });
+
       if (error) throw error;
-      setData(data ?? []);
+      const sorted = (data ?? []).slice().sort(
+        (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+      );
+      setData(sorted as any);
     } catch (e: any) {
       setError(e?.message ?? "Erreur inconnue");
       setData([]);
@@ -70,15 +71,16 @@ export function usePhaseRankings(phaseId: string) {
     setError(null);
     try {
       const id = await ensureLeagueId(leagueId);
-      const { data, error } = await supabase
-        .from("v_manager_standings_by_phase_v2")
-        .select("*")
-        .eq("league_id", id)
-        .eq("phase_id", phaseId)
-        .order("total_points", { ascending: false });
-      
+      const { data, error } = await supabase.rpc('get_league_standings_by_phase', {
+        p_league_id: id,
+        p_phase_id: phaseId,
+      });
+
       if (error) throw error;
-      setData(data ?? []);
+      const sorted = (data ?? []).slice().sort(
+        (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+      );
+      setData(sorted as any);
     } catch (e: any) {
       setError(e?.message ?? "Erreur inconnue");
       setData([]);
