@@ -6736,6 +6736,7 @@ export type Database = {
       }
     }
     Functions: {
+      _get_vault_secret: { Args: { p_name: string }; Returns: string }
       admin_clean_courses_phases: {
         Args: { p_confirm_phrase: string }
         Returns: Json
