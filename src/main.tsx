@@ -1,4 +1,4 @@
-import { init } from 'https://esm.sh/@bworlds/launchkit@1';
+import { init } from '@bworlds/launchkit';
 init({ buildSlug: 'labordure-b8aa' });
 import React from "react";
 import { createRoot } from "react-dom/client";
