@@ -44,10 +44,7 @@
     "subtitle": "Créez votre propre ligue ou rejoignez une ligue publique / privée (avec code d'invitation)",
     "createLeague": "Créer une ligue",
     "join": "Rejoindre une ligue",
-    "joinHint": "Parcourez les ligues publiques ou entrez un code d'invitation",
-    "openPublicLeagues_one": "{{count}} ligue publique ouverte",
-    "openPublicLeagues_other": "{{count}} ligues publiques ouvertes",
-    "noOpenPublicLeagues": "Aucune ligue publique ouverte actuellement"
+    "joinHint": "Parcourez les ligues publiques ou entrez un code d'invitation"
   },
   "leagueCard": {
     "generalRanking": "Classement général",

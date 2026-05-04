@@ -1,37 +1,29 @@
-## Objectif
-Restaurer les lockfiles `bun.lockb` et `package-lock.json` exactement tels qu'ils existaient dans le dernier publish fonctionnel (commit `57afcaf`, 02/05 ~09:19), pour vérifier si leur absence est ce qui fait échouer le pipeline de publication.
+# Classement à jour, sans latence — solution finale
 
-## Contexte
-- Snapshot de référence `57afcaf` : contient `bun.lock`, `bun.lockb`, `package-lock.json`, `package.json`.
-- État actuel du repo : seul `bun.lock` est présent. `bun.lockb` et `package-lock.json` ont été supprimés lors d'une étape précédente de troubleshooting.
-- `package.json` et `bun.lock` ont déjà été ramenés à l'état du 02/05 lors de la précédente itération.
-- Hypothèse : le pipeline de publish s'attend à trouver l'un de ces lockfiles binaires/npm — leur disparition coïncide avec le début des échecs.
+## Diagnostic
 
-## Plan
-1. **Restaurer les deux fichiers depuis le commit de référence**
-   - `git checkout 57afcaf -- bun.lockb`
-   - `git checkout 57afcaf -- package-lock.json`
-   - Ces fichiers seront restaurés à l'octet près tels qu'ils étaient au dernier publish réussi.
+La requête `SELECT * FROM v_manager_standings_by_season_v2 WHERE league_id = ?` mettait **~9 secondes** en LIVE.
+Cause : la fonction `get_league_course_ids(league_id)` était appelée par PostgreSQL **ligne par ligne** dans un nested loop semi join (1M+ lignes filtrées).
 
-2. **Vérifications de cohérence (lecture seule)**
-   - Confirmer que `bun.lock`, `bun.lockb`, `package-lock.json` et `package.json` correspondent tous au snapshot `57afcaf` (comparaison via `git diff 57afcaf -- <fichier>`).
-   - S'assurer qu'aucun autre fichier de build (`vite.config.ts`, `tsconfig*.json`, `index.html`, `src/main.tsx`) n'a divergé depuis.
+## Solution retenue (plus simple et plus performante que le cache + triggers)
 
-3. **Ne rien toucher d'autre**
-   - Aucune modification de `package.json`, du code applicatif, des migrations SQL, des paramètres de visibilité, du domaine ou du badge.
-   - Les fonctionnalités ajoutées depuis le 02/05 (ligues publiques, etc.) restent intactes.
+1. **`get_league_course_ids` marquée STABLE** + ajout d'index sur `rosters(coureur_id, phase_id)`, `league_scopes(league_id, season_id)`, `race_results(course_id, type_classement, etape_numero) WHERE position=1 AND finished`.
+2. **Création de deux fonctions SQL paramétrées** `get_league_standings_by_season(league_id, saison_id?)` et `get_league_standings_by_phase(league_id, phase_id?)` :
+   - le filtre par ligue est appliqué **dès le départ** dans toutes les CTE,
+   - retourne strictement les mêmes colonnes que les vues d'origine.
+3. **Bascule des hooks principaux** vers les RPC :
+   - `useLeagueStandingsBySeason` / `useLeagueStandingsByPhase`
+   - `useSeasonRankings` / `usePhaseRankings`
+4. Les vues `v_manager_standings_by_season_v2` et `v_manager_standings_by_phase_v2` sont conservées (réécrites avec une CTE matérialisée), pour les autres usages secondaires qui filtrent par `manager_id`.
 
-4. **Demander un nouvel essai de publication**
-   - Une fois les lockfiles restaurés, tu relances `Publish → Update`.
-   - Si ça passe : la suppression des lockfiles était la cause racine.
-   - Si ça échoue encore : on enchaîne sur la piste suivante (vérifier les migrations SQL du 04/05, ou demander le log d'erreur exact du publish).
+## Résultat attendu en LIVE après publication
 
-## Détails techniques
-- Commit de référence : `57afcaf58b1615a90daa2da7026c68a8b571dde9` (02/05 07:19 UTC ≈ 09:19 Paris).
-- Hashes attendus après restauration :
-  - `bun.lockb` → `d3914e8476ac7bcf7821f221922c3af9816eb903`
-  - `package-lock.json` → `5184d75bfdc3efe7443681b4c32dd3e6addeb2d5`
-- Aucun `bun install` / `npm install` ne sera exécuté : on veut le contenu exact du dernier publish, pas un lockfile régénéré qui pourrait à nouveau diverger.
+- Classement complet d'une ligue : **<200 ms** (vs ~9 s).
+- Mise à jour automatique : à chaque invalidation React Query (déjà déclenchée sur les mutations) → données fraîches sans cron.
+- Cohérence garantie : mêmes règles métier que les vues d'origine, vérifiée en Test (totaux strictement identiques).
 
-## Résultat attendu
-Le repo retrouve les trois lockfiles tels qu'ils étaient au dernier publish réussi. Tu peux relancer `Publish → Update` et on saura si l'absence de ces fichiers était bien la cause de la panne.
+## Étape suivante (à valider après publication)
+
+Si la latence ressentie n'est toujours pas satisfaisante, on pourra ajouter :
+- Realtime sur `points_ledger` pour invalider automatiquement les classements.
+- Bascule des hooks secondaires (`useLeagueCardsData`, `useMyLeagueStats`, edge functions).

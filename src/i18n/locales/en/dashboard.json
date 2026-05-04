@@ -44,10 +44,7 @@
     "subtitle": "Create your own league or join a public / private league (with invite code)",
     "createLeague": "Create a league",
     "join": "Join a league",
-    "joinHint": "Browse public leagues or enter an invite code",
-    "openPublicLeagues_one": "{{count}} open public league",
-    "openPublicLeagues_other": "{{count}} open public leagues",
-    "noOpenPublicLeagues": "No open public league at the moment"
+    "joinHint": "Browse public leagues or enter an invite code"
   },
   "leagueCard": {
     "generalRanking": "General ranking",
