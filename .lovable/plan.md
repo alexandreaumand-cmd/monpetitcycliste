@@ -1,33 +1,35 @@
-# Plan pour corriger `Publishing failed`
+## Objectif
+Faire repartir la publication en supprimant le ou les vrais bloqueurs de build, puis revalider une mise en ligne.
 
-## Ce que j’ai trouvé
-- La requête de lancement de publication part bien (`deployments?async=true` répond), donc le bouton de publication n’est pas le problème principal.
-- Le backend géré est sain de notre côté, donc ce n’est probablement pas un blocage de base de données/auth.
-- Le dépôt contient **deux lockfiles** : `bun.lockb` et `package-lock.json`.
-- Le `package-lock.json` est **désynchronisé** de `package.json` : il ne contient pas au moins `exceljs`, `file-saver`, `xlsx` et `@types/file-saver`.
-- Ces dépendances sont **réellement importées** dans le code, donc un pipeline de publication qui s’appuie sur npm peut échouer pendant l’installation ou le build.
+## Plan
+1. Vérifier le pipeline de publication côté frontend
+- Contrôler la cause exacte de l’échec de build liée au projet, pas seulement l’échec générique dans l’interface.
+- Confirmer qu’on n’est plus sur un problème de dépendances npm résiduel.
 
-## Correction proposée
-1. Aligner la gestion des dépendances pour la publication.
-   - Régénérer/synchroniser le lockfile utilisé par la publication.
-   - Éviter le conflit entre `bun.lockb` et `package-lock.json`.
+2. Corriger les bloqueurs de build probables
+- Normaliser les lockfiles Bun pour éviter toute ambiguïté pendant l’installation.
+- Corriger le point sensible le plus probable : l’import CDN direct dans `src/main.tsx`, qui peut passer en preview mais échouer en publication.
+- Conserver le SDK BWORLDS comme demandé par le projet, sans le supprimer, en le rendant compatible avec la build.
 
-2. Vérifier les fichiers frontend les plus susceptibles de casser le build.
-   - Contrôler les imports utilisant `exceljs` et `file-saver`.
-   - Vérifier qu’aucun import cassé n’a été introduit récemment.
+3. Vérifier les autres points de publication déjà suspects
+- Recontrôler rapidement la config PWA, les assets référencés et les imports frontend lourds (`exceljs`, `file-saver`, `xlsx`).
+- Écarter les faux positifs : le backend géré et les assets PWA semblent déjà sains.
 
-3. Contrôler les éléments de publication annexes.
-   - Vérifier la config PWA et les assets déclarés.
-   - Vérifier qu’aucune fonction backend ou config Deno ne bloque indirectement le pipeline.
+4. Valider le correctif
+- Relancer une vérification ciblée des éléments qui cassent la publication.
+- Te demander de refaire `Publish -> Update` une fois les blocages levés.
 
-4. Valider le correctif.
-   - Confirmer que l’installation résout bien toutes les dépendances attendues.
-   - Refaire une tentative de publication après synchronisation.
+## Détails techniques
+- Le backend géré répond normalement, donc ce n’est pas la piste principale.
+- Les assets PWA référencés dans `vite.config.ts` existent bien, donc ce n’est probablement pas le point bloquant.
+- Il reste un doublon `bun.lock` / `bun.lockb`, qui peut encore perturber la résolution selon le pipeline.
+- Surtout, `src/main.tsx` contient un import HTTP direct :
 
-## Détail technique
-- Hypothèse principale : le pipeline de publication utilise `package-lock.json` plutôt que `bun.lockb`, et échoue car ce lockfile npm ne reflète plus l’état actuel du projet.
-- Signal le plus fort : des paquets utilisés dans `src/pages/RidersData.tsx`, `src/pages/CalendarPage.tsx` et `src/components/team/LeagueRostersOverviewDialog.tsx` sont absents du lockfile npm.
-- Ce type de décalage provoque souvent un `Publishing failed` sans détail utile dans l’UI.
+```ts
+import { init } from 'https://esm.sh/@bworlds/launchkit@1';
+```
+
+Ce type d’import peut être toléré dans certains environnements de preview, mais casser une build Vite de publication. C’est actuellement la piste la plus forte.
 
 ## Résultat attendu
-- La publication repart sans erreur après remise en cohérence des dépendances et vérification rapide des imports concernés.
+La publication ne doit plus échouer sur `Publishing failed`, et tu pourras relancer l’update du site normalement.
