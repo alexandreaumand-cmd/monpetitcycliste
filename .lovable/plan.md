@@ -1,73 +1,33 @@
-## Objectif
+# Plan pour corriger `Publishing failed`
 
-Afficher, sous les boutons "Créer une ligue" / "Rejoindre une ligue" du bandeau `QuickActions`, un compteur du nombre de **ligues publiques ouvertes** (publiques, non démarrées, places disponibles).
+## Ce que j’ai trouvé
+- La requête de lancement de publication part bien (`deployments?async=true` répond), donc le bouton de publication n’est pas le problème principal.
+- Le backend géré est sain de notre côté, donc ce n’est probablement pas un blocage de base de données/auth.
+- Le dépôt contient **deux lockfiles** : `bun.lockb` et `package-lock.json`.
+- Le `package-lock.json` est **désynchronisé** de `package.json` : il ne contient pas au moins `exceljs`, `file-saver`, `xlsx` et `@types/file-saver`.
+- Ces dépendances sont **réellement importées** dans le code, donc un pipeline de publication qui s’appuie sur npm peut échouer pendant l’installation ou le build.
 
-## Définition d'une "ligue publique ouverte"
+## Correction proposée
+1. Aligner la gestion des dépendances pour la publication.
+   - Régénérer/synchroniser le lockfile utilisé par la publication.
+   - Éviter le conflit entre `bun.lockb` et `package-lock.json`.
 
-```
-visibility = 'public'
-AND status   = 'pending'
-AND current_player_count < max_players
-```
+2. Vérifier les fichiers frontend les plus susceptibles de casser le build.
+   - Contrôler les imports utilisant `exceljs` et `file-saver`.
+   - Vérifier qu’aucun import cassé n’a été introduit récemment.
 
-Ces colonnes existent déjà sur la table `leagues` et sont accessibles côté client via la policy publique de lecture.
+3. Contrôler les éléments de publication annexes.
+   - Vérifier la config PWA et les assets déclarés.
+   - Vérifier qu’aucune fonction backend ou config Deno ne bloque indirectement le pipeline.
 
-## Changements
+4. Valider le correctif.
+   - Confirmer que l’installation résout bien toutes les dépendances attendues.
+   - Refaire une tentative de publication après synchronisation.
 
-### 1. Nouveau hook `useOpenPublicLeaguesCount`
+## Détail technique
+- Hypothèse principale : le pipeline de publication utilise `package-lock.json` plutôt que `bun.lockb`, et échoue car ce lockfile npm ne reflète plus l’état actuel du projet.
+- Signal le plus fort : des paquets utilisés dans `src/pages/RidersData.tsx`, `src/pages/CalendarPage.tsx` et `src/components/team/LeagueRostersOverviewDialog.tsx` sont absents du lockfile npm.
+- Ce type de décalage provoque souvent un `Publishing failed` sans détail utile dans l’UI.
 
-Fichier : `src/hooks/useOpenPublicLeaguesCount.ts`
-
-- React Query, `staleTime` 60 s.
-- Requête `head: true, count: 'exact'` → pas de transfert de lignes :
-  ```ts
-  supabase
-    .from('leagues')
-    .select('*', { count: 'exact', head: true })
-    .eq('visibility', 'public')
-    .eq('status', 'pending')
-    .filter('current_player_count', 'lt', 'max_players')
-  ```
-  Note : `lt` entre deux colonnes n'est pas supporté par PostgREST → on récupérera plutôt les lignes concernées et on filtrera côté client (volume très faible) :
-  ```ts
-  const { data } = await supabase
-    .from('leagues')
-    .select('id, current_player_count, max_players')
-    .eq('visibility', 'public')
-    .eq('status', 'pending');
-  return (data ?? []).filter(l => (l.current_player_count ?? 0) < (l.max_players ?? 0)).length;
-  ```
-
-### 2. Mise à jour de `QuickActions.tsx`
-
-Sous la rangée des boutons (juste après le `<p>` "Parcourez les ligues publiques…"), ajouter un petit élément cliquable :
-
-```
-┌────────────────────────────────────────────────┐
-│ 🟢 3 ligues publiques ouvertes  →             │
-└────────────────────────────────────────────────┘
-```
-
-- Variantes :
-  - count > 0 : badge vert + label cliquable qui ouvre la `JoinLeagueDialog` (réutilise `setJoinDialogOpen(true)`).
-  - count = 0 : message discret "Aucune ligue publique ouverte actuellement" (muted, non cliquable).
-  - loading : skeleton fin.
-- Style : aligné avec le ton bordure/gold existant, typographie `font-inter`, espacement `mt-1`.
-
-### 3. i18n
-
-Ajouter dans `src/i18n/locales/fr/dashboard.json` et `en/dashboard.json` sous `quickActions` :
-
-- `openPublicLeagues_one` : "{{count}} ligue publique ouverte"
-- `openPublicLeagues_other` : "{{count}} ligues publiques ouvertes"
-- `noOpenPublicLeagues` : "Aucune ligue publique ouverte actuellement"
-
-### 4. Hors-scope
-
-- Pas de modification backend / RLS (les lignes ciblées sont déjà lisibles publiquement par les utilisateurs authentifiés via la policy existante).
-- Pas de refonte de la `JoinLeagueDialog`.
-
-## Vérification
-
-- Aujourd'hui en TEST : 1 ligue publique ouverte → le bandeau doit afficher "1 ligue publique ouverte".
-- Cliquer sur l'élément doit ouvrir la modale Rejoindre une ligue.
+## Résultat attendu
+- La publication repart sans erreur après remise en cohérence des dépendances et vérification rapide des imports concernés.
