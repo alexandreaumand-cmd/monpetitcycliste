@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Users, Globe } from "lucide-react";
+import { Plus, Users, Globe, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateLeagueDialog } from "@/components/leagues/CreateLeagueDialog";
 import { JoinLeagueDialog } from "@/components/leagues/JoinLeagueDialog";
+import { useOpenPublicLeaguesCount } from "@/hooks/useOpenPublicLeaguesCount";
 
 export function QuickActions() {
   const { t } = useTranslation('dashboard');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const { data: openCount, isLoading: isLoadingCount } = useOpenPublicLeaguesCount();
 
   return (
     <>
@@ -35,6 +37,30 @@ export function QuickActions() {
             <Globe className="h-3 w-3 shrink-0" />
             {t('quickActions.joinHint')}
           </p>
+
+          {isLoadingCount ? (
+            <div className="h-6 w-56 rounded-md bg-muted/50 animate-pulse mx-auto sm:mx-0" />
+          ) : (openCount ?? 0) > 0 ? (
+            <button
+              type="button"
+              onClick={() => setJoinDialogOpen(true)}
+              className="group inline-flex items-center gap-2 self-center sm:self-start rounded-md border border-border bg-muted/30 hover:bg-muted/60 transition-colors px-3 py-1.5 text-xs font-inter text-foreground"
+              aria-label={t('quickActions.openPublicLeagues', { count: openCount ?? 0 })}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="font-medium">
+                {t('quickActions.openPublicLeagues', { count: openCount ?? 0 })}
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center sm:text-left font-inter italic">
+              {t('quickActions.noOpenPublicLeagues')}
+            </p>
+          )}
         </div>
       </Card>
 
