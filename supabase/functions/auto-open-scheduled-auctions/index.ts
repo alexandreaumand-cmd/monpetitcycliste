@@ -5,55 +5,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async () => {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
 
-  const url = Deno.env.get('SUPABASE_URL') ?? '';
-  const srk = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-  const supabase = createClient(url, srk, { auth: { persistSession: false, autoRefreshToken: false } });
-
-  // Test 1: count all auctions
-  const { count: totalAuctions } = await supabase
+  const { data: mpcAuctions } = await supabase
     .from('auctions')
-    .select('*', { count: 'exact', head: true });
+    .select('id, statut, round_number, phase_id, opens_at, deadline_at, closed_at')
+    .eq('league_id', 'b5b46b5e-7c78-4ad9-a669-b08e8f099800')
+    .order('opens_at', { ascending: true });
 
-  // Test 2: count scheduled auctions
-  const { count: scheduledCount } = await supabase
+  const { data: eaAuctions } = await supabase
     .from('auctions')
-    .select('*', { count: 'exact', head: true })
-    .eq('statut', 'scheduled');
+    .select('id, statut, round_number, phase_id, opens_at, deadline_at, closed_at')
+    .eq('league_id', '85d46f9b-62b4-48d6-b9e7-3ca6fc5a0062')
+    .order('opens_at', { ascending: true });
 
-  // Test 3: count leagues
-  const { count: totalLeagues } = await supabase
-    .from('leagues')
-    .select('*', { count: 'exact', head: true });
-
-  // Test 4: try to fetch the specific MPC 2026 auction by id
-  const { data: mpcAuction } = await supabase
-    .from('auctions')
-    .select('id, league_id, statut, opens_at')
-    .eq('id', '595196b4-c679-4c30-9fc7-632267e27f9d')
-    .maybeSingle();
-
-  // Test 5: try to fetch MPC 2026 league
-  const { data: mpcLeague } = await supabase
-    .from('leagues')
-    .select('id, name, status')
-    .eq('id', 'b5b46b5e-7c78-4ad9-a669-b08e8f099800')
-    .maybeSingle();
+  const { data: phases } = await supabase
+    .from('phases')
+    .select('id, index_dans_saison, date_debut, date_fin, saisons(annee)')
+    .order('index_dans_saison');
 
   return new Response(
-    JSON.stringify({
-      url,
-      totalAuctions,
-      scheduledCount,
-      totalLeagues,
-      mpcAuction,
-      mpcLeague,
-    }, null, 2),
+    JSON.stringify({ mpcAuctions, eaAuctions, phases, now: new Date().toISOString() }, null, 2),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 });
