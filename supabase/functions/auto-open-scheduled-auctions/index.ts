@@ -14,23 +14,29 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
-    // Find all scheduled auctions where opens_at has passed AND the league is active
+    const nowIso = new Date().toISOString();
+
     const { data: auctions, error: fetchError } = await supabase
       .from('auctions')
       .select('id, league_id, opens_at, deadline_at, round_number, phase_id')
       .eq('statut', 'scheduled')
-      .lte('opens_at', new Date().toISOString());
+      .lte('opens_at', nowIso)
+      .order('opens_at', { ascending: true })
+      .limit(2000);
 
     if (fetchError) {
-      console.error('Error fetching scheduled auctions:', fetchError);
+      console.error('[auto-open] Error fetching scheduled auctions:', fetchError);
       return new Response(JSON.stringify({ error: fetchError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`[auto-open] Found ${auctions?.length ?? 0} scheduled auction(s) past opens_at (now=${nowIso})`);
 
     if (!auctions || auctions.length === 0) {
       return new Response(JSON.stringify({ message: 'No auctions to open', opened: 0 }), {
@@ -38,101 +44,118 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Found ${auctions.length} scheduled auction(s) past opens_at`);
+    const leagueIds = [...new Set(auctions.map((a) => a.league_id))];
 
-    // Get unique league IDs to check their status
-    const leagueIds = [...new Set(auctions.map(a => a.league_id))];
-    const { data: leagues } = await supabase
+    const { data: leagues, error: leaguesError } = await supabase
       .from('leagues')
       .select('id, name, status, game_mode')
       .in('id', leagueIds);
 
-    const activeLeagueIds = new Set(
-      (leagues || []).filter(l => l.status === 'active').map(l => l.id)
-    );
-
-    const leagueNames = Object.fromEntries(
-      (leagues || []).map(l => [l.id, l.name])
-    );
-    const leagueGameModes = Object.fromEntries(
-      (leagues || []).map(l => [l.id, l.game_mode])
-    );
-
-    // Resolve phase indexes for the relevant phases
-    const phaseIds = [...new Set(auctions.map(a => a.phase_id).filter(Boolean))];
-    const { data: phasesRows } = phaseIds.length
-      ? await supabase.from('phases').select('id, index_dans_saison').in('id', phaseIds)
-      : { data: [] as Array<{ id: string; index_dans_saison: number | null }> };
-    const phaseIndexes = Object.fromEntries(
-      (phasesRows || []).map(p => [p.id, p.index_dans_saison])
-    );
-
-    // Only open auctions for active leagues
-    const auctionsToOpen = auctions.filter(a => activeLeagueIds.has(a.league_id));
-
-    if (auctionsToOpen.length === 0) {
-      console.log('No auctions to open (leagues not active yet)');
-      return new Response(JSON.stringify({ message: 'No active leagues with pending auctions', opened: 0 }), {
+    if (leaguesError) {
+      console.error('[auto-open] Error fetching leagues:', leaguesError);
+      return new Response(JSON.stringify({ error: leaguesError.message }), {
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const activeLeagueIds = new Set(
+      (leagues || []).filter((l) => l.status === 'active').map((l) => l.id)
+    );
+    const leagueNames = Object.fromEntries((leagues || []).map((l) => [l.id, l.name]));
+    const leagueGameModes = Object.fromEntries((leagues || []).map((l) => [l.id, l.game_mode]));
+
+    const phaseIds = [...new Set(auctions.map((a) => a.phase_id).filter(Boolean))];
+    const { data: phasesRows } = phaseIds.length
+      ? await supabase.from('phases').select('id, index_dans_saison').in('id', phaseIds)
+      : { data: [] as Array<{ id: string; index_dans_saison: number | null }> };
+    const phaseIndexes = Object.fromEntries(
+      (phasesRows || []).map((p) => [p.id, p.index_dans_saison])
+    );
+
+    const auctionsToOpen = auctions.filter((a) => activeLeagueIds.has(a.league_id));
+    const skipped = auctions.length - auctionsToOpen.length;
+
+    console.log(
+      `[auto-open] Active leagues: ${activeLeagueIds.size}/${leagueIds.length}. To open: ${auctionsToOpen.length}, skipped: ${skipped}`
+    );
+
+    if (auctionsToOpen.length === 0) {
+      return new Response(
+        JSON.stringify({ message: 'No active leagues with pending auctions', opened: 0, found: auctions.length, skipped }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let opened = 0;
+    const errors: Array<{ auction_id: string; error: string }> = [];
+
     for (const auction of auctionsToOpen) {
-      // Recalculate deadline: 24h from now if the original deadline has also passed
-      const originalDeadline = new Date(auction.deadline_at);
-      const now = new Date();
-      const newDeadline = originalDeadline > now 
-        ? auction.deadline_at 
-        : new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-
-      const { error: updateError } = await supabase
-        .from('auctions')
-        .update({ 
-          statut: 'open',
-          deadline_at: newDeadline
-        })
-        .eq('id', auction.id)
-        .eq('statut', 'scheduled'); // Prevent race conditions
-
-      if (updateError) {
-        console.error(`Error opening auction ${auction.id}:`, updateError);
-        continue;
-      }
-
-      opened++;
-      console.log(`✅ Opened auction ${auction.id} for league ${auction.league_id} (round ${auction.round_number})`);
-
-      // Send notifications
       try {
-        await notifyLeagueMembers(supabase, auction.league_id, {
-          type: 'auction_opened',
-          title: '🔔 Enchères ouvertes !',
-          message: `Le tour ${auction.round_number} des enchères est ouvert dans ${leagueNames[auction.league_id] || 'votre ligue'} !`,
-          metadata: {
-            league_id: auction.league_id,
-            league_name: leagueNames[auction.league_id] || 'votre ligue',
-            auction_id: auction.id,
-            round_number: auction.round_number,
-            phase_id: auction.phase_id ?? null,
-            phase_index: auction.phase_id ? (phaseIndexes[auction.phase_id] ?? null) : null,
-            game_mode: leagueGameModes[auction.league_id] ?? null,
-          },
+        const originalDeadline = new Date(auction.deadline_at);
+        const now = new Date();
+        const newDeadline =
+          originalDeadline > now
+            ? auction.deadline_at
+            : new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+        const { error: updateError } = await supabase
+          .from('auctions')
+          .update({ statut: 'open', deadline_at: newDeadline })
+          .eq('id', auction.id)
+          .eq('statut', 'scheduled');
+
+        if (updateError) {
+          console.error(`[auto-open] Error opening auction ${auction.id}:`, updateError);
+          errors.push({ auction_id: auction.id, error: updateError.message });
+          continue;
+        }
+
+        opened++;
+        console.log(`[auto-open] ✅ Opened auction ${auction.id} (league ${auction.league_id} round ${auction.round_number})`);
+
+        try {
+          await notifyLeagueMembers(supabase, auction.league_id, {
+            type: 'auction_opened',
+            title: '🔔 Enchères ouvertes !',
+            message: `Le tour ${auction.round_number} des enchères est ouvert dans ${leagueNames[auction.league_id] || 'votre ligue'} !`,
+            metadata: {
+              league_id: auction.league_id,
+              league_name: leagueNames[auction.league_id] || 'votre ligue',
+              auction_id: auction.id,
+              round_number: auction.round_number,
+              phase_id: auction.phase_id ?? null,
+              phase_index: auction.phase_id ? phaseIndexes[auction.phase_id] ?? null : null,
+              game_mode: leagueGameModes[auction.league_id] ?? null,
+            },
+          });
+        } catch (notifErr) {
+          console.error('[auto-open] Notification error (non-fatal):', notifErr);
+        }
+      } catch (loopErr) {
+        console.error(`[auto-open] Unexpected error processing ${auction.id}:`, loopErr);
+        errors.push({
+          auction_id: auction.id,
+          error: loopErr instanceof Error ? loopErr.message : String(loopErr),
         });
-      } catch (notifErr) {
-        console.error('Notification error (non-fatal):', notifErr);
       }
     }
 
     return new Response(
-      JSON.stringify({ message: `Opened ${opened} auction(s)`, opened }),
+      JSON.stringify({
+        message: `Opened ${opened} auction(s)`,
+        opened,
+        found: auctions.length,
+        skipped,
+        errors: errors.length > 0 ? errors : undefined,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('[auto-open] Unexpected error:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
