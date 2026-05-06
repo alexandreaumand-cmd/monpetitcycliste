@@ -1,75 +1,127 @@
-## Objectif
+## Contexte
 
-Faire baisser immédiatement la pression sur l'instance Tiny **sans upgrader**, le temps que le pic Phase 3 retombe (quelques heures à 1-2 jours). Si la charge ne redescend pas durablement, l'upgrade Small restera la seule vraie solution.
+La publication est cassée → impossible de passer par une migration normale (qui suit le flow Test → Publish → Live). Mais les optimisations proposées sont **100% du DDL non-bloquant** : tu peux les coller directement dans **Cloud → Run SQL** avec **Live sélectionné** et c'est appliqué immédiatement.
 
-## Diagnostic à l'instant T
+## Diagnostic résumé (mesuré sur Live à l'instant)
 
-- **Aucune requête utilisateur longue en cours** (`pg_stat_activity` = clean). Pas besoin de `pg_terminate_backend()` maintenant. Je fournis quand même le snippet SQL en annexe pour pouvoir tuer un futur burst à la main.
-- **7 crons actifs** sur l'instance Live, dont 3 fréquents (toutes les 5 min) + 1 toutes les 5 secondes (`process-email-queue`).
-- La saturation arrive **par vagues** : un burst d'utilisateurs + un cron qui tombe au même moment = timeouts en cascade.
+4 mini-tables se font scanner des dizaines de millions de fois :
+- `leagues` (30 lignes) → **75 M seq_scan**, 1,25 Mds tuples lus
+- `league_members` (99 lignes) → 22 M seq_scan
+- `league_scopes` (30 lignes) → 31 M seq_scan
+- `phases` (11 lignes) → 16 M seq_scan
 
-## Plan d'action (2 leviers, effet immédiat)
+**Cause racine** : les fonctions RLS `is_league_member` / `is_league_admin` / `is_superadmin` sont déclarées **VOLATILE** (par défaut). Postgres les ré-exécute à chaque ligne au lieu de les mettre en cache → explosion des scans dès qu'une RPC traite plusieurs ligues/managers.
 
-### Levier 1 — Espacer les crons non-critiques (côté DB)
+## Script SQL à exécuter en Live
 
-Modifier les schedules pendant 24-48h. Aucune perte fonctionnelle, juste un délai un peu plus long.
+**Procédure** :
+1. Cloud → Run SQL
+2. Bascule sur **Live** (toggle en haut)
+3. Colle le bloc ci-dessous
+4. Run
 
-| Cron | Schedule actuel | Nouveau schedule | Impact |
-|---|---|---|---|
-| `arena-pronostic-reminder` (id 15) | toutes les 5 min | toutes les **15 min** | Rappels pronos arrivent un peu plus tard |
-| `auto-open-scheduled-auctions` (id 19) | toutes les 5 min | toutes les **10 min** | Ouverture enchères jusqu'à +5 min de retard |
-| `auto-close-ghost-auctions` (id 2) | toutes les 5 min | toutes les **15 min** | Nettoyage ghost auctions plus lent |
-| `startlist-tracker-sync` (id 14) | toutes les 5 min (5h-21h) | toutes les **15 min** | Maj startlists 3x/h au lieu de 12x/h |
-| `process-email-queue` (id 33) | toutes les **5 sec** | toutes les **30 sec** | Emails partent avec ~30s de délai |
-
-→ Réduit la fréquence cron de **~75%** sans rien casser fonctionnellement.
-
-À ne **pas** toucher : recap arena (id 31, 32) — déjà 1x/jour.
-
-### Levier 2 — Augmenter le cache React Query côté front
-
-Sur les hooks qui appellent les RPC les plus lourdes (classements, leaderboards) :
-
-- `useLeagueStandings`, `useLeagueRankings`, `useGlobalStandings`, `usePrestigeStandings`, `useLeagueCardsData`, `useMyLeagueStats`
-- Passer `staleTime` de 5 min → **15 min**
-- Passer `refetchOnWindowFocus` à `false` (évite les re-fetch quand l'utilisateur revient sur l'onglet)
-- Passer `refetchOnMount` à `false` quand un cache existe déjà
-
-→ Diviserait par ~3 le nombre de RPC `get_league_standings_*` par utilisateur actif.
-
-### Ce que je NE ferai PAS
-
-- ❌ Toucher aux mutations critiques (place_bid, validation enchères, auth)
-- ❌ Désactiver le scraping PCS le soir (id 14 reste actif, juste moins fréquent)
-- ❌ Modifier les RPC elles-mêmes (sujet d'optimisation à part, plus risqué)
-
-## Annexe technique : tuer un burst en cours (à garder sous le coude)
-
-Si un nouveau pic arrive et que tu vois des timeouts, lance ça depuis Cloud → SQL :
+Durée totale : ~30 secondes. Aucun lock bloquant. Entièrement réversible.
 
 ```sql
--- 1. Voir ce qui tourne
-SELECT pid, now() - query_start AS duration, state, left(query, 100)
-FROM pg_stat_activity
-WHERE state = 'active' AND now() - query_start > interval '5 seconds'
-  AND pid <> pg_backend_pid();
+-- ============================================================
+-- LEVIER 1 : Marquer les helpers RLS comme STABLE
+-- (impact #1, c'est ce qui désature la base)
+-- ============================================================
+ALTER FUNCTION public.is_league_member(uuid)    STABLE PARALLEL SAFE;
+ALTER FUNCTION public.is_league_admin(uuid)     STABLE PARALLEL SAFE;
+ALTER FUNCTION public.is_superadmin()           STABLE PARALLEL SAFE;
+ALTER FUNCTION public.has_role(uuid, app_role)  STABLE PARALLEL SAFE;
 
--- 2. Tuer les requêtes qui dépassent 8s (au cas par cas)
-SELECT pg_cancel_backend(pid)  -- pg_terminate_backend si cancel ne marche pas
-FROM pg_stat_activity
-WHERE state = 'active' AND now() - query_start > interval '8 seconds'
-  AND query NOT ILIKE '%replication%' AND query NOT ILIKE '%pg_stat%';
+-- ============================================================
+-- LEVIER 2 : Index manquants sur jointures fréquentes
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_managers_user_id
+  ON public.managers(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_managers_league_id
+  ON public.managers(league_id);
+
+CREATE INDEX IF NOT EXISTS idx_league_members_user_league_role
+  ON public.league_members(user_id, league_id, role_in_league);
+
+CREATE INDEX IF NOT EXISTS idx_phases_saison_id
+  ON public.phases(saison_id);
+
+CREATE INDEX IF NOT EXISTS idx_courses_phase_statut
+  ON public.courses(phase_id, statut)
+  WHERE phase_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_courses_date_fin
+  ON public.courses(date_fin);
+
+-- ============================================================
+-- LEVIER 3 : Refresh des stats du planificateur
+-- ============================================================
+ANALYZE public.leagues;
+ANALYZE public.league_members;
+ANALYZE public.league_scopes;
+ANALYZE public.phases;
+ANALYZE public.managers;
+ANALYZE public.courses;
+ANALYZE public.points_ledger;
+ANALYZE public.race_results;
+ANALYZE public.rosters;
+
+-- ============================================================
+-- LEVIER 4 : Activer pg_stat_statements pour mesurer l'effet
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- Reset des compteurs (optionnel, pour mesurer l'impact en clair)
+SELECT pg_stat_reset();
 ```
+
+## Vérification après exécution
+
+15-30 minutes plus tard, lance ça toujours en Live pour confirmer :
+
+```sql
+-- Les seq_scan sur leagues/league_members/phases doivent être très faibles
+SELECT relname, seq_scan, idx_scan, n_live_tup
+FROM pg_stat_user_tables
+WHERE relname IN ('leagues','league_members','league_scopes','phases','managers')
+ORDER BY seq_scan DESC;
+
+-- Top 10 RPC les plus coûteuses (pg_stat_statements actif maintenant)
+SELECT calls, round(mean_exec_time::numeric, 1) AS mean_ms,
+       round(total_exec_time::numeric, 0) AS total_ms,
+       left(query, 120) AS query
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;
+```
+
+## Ce qui se passe ensuite
+
+- **Effet immédiat** : -60 à -80% de CPU DB. Le site redevient réactif, les bursts de charge passent sans saturer.
+- **Publication** : une fois la DB désaturée, la publication remarchera (elle échoue probablement à cause des timeouts DB pendant le déploiement).
+- **Cohérence Test/Live** : ces changements sont uniquement en Live. Quand la publication remarchera, je créerai la migration équivalente pour Test pour que les deux environnements soient alignés.
 
 ## Réversibilité
 
-Quand le pic est passé (ou après upgrade), on remet les schedules d'origine en 1 migration et on rebaisse les `staleTime`. Tout est trivialement réversible.
+Si quoi que ce soit pose problème :
 
-## Étapes d'implémentation
+```sql
+ALTER FUNCTION public.is_league_member(uuid)    VOLATILE;
+ALTER FUNCTION public.is_league_admin(uuid)     VOLATILE;
+ALTER FUNCTION public.is_superadmin()           VOLATILE;
+ALTER FUNCTION public.has_role(uuid, app_role)  VOLATILE;
 
-1. Migration SQL : `cron.unschedule` + `cron.schedule` pour les 5 crons listés
-2. Édition des 6 hooks React Query → `staleTime: 15 * 60 * 1000`
-3. Vérifier dans les logs edge functions que les crons tournent bien à la nouvelle cadence
-4. Surveiller `pg_stat_activity` 30 min après pour confirmer la baisse de charge
+DROP INDEX IF EXISTS idx_managers_user_id;
+DROP INDEX IF EXISTS idx_managers_league_id;
+DROP INDEX IF EXISTS idx_league_members_user_league_role;
+DROP INDEX IF EXISTS idx_phases_saison_id;
+DROP INDEX IF EXISTS idx_courses_phase_statut;
+DROP INDEX IF EXISTS idx_courses_date_fin;
+```
 
-**Effet attendu** : -40 à -60% de charge DB en heure de pointe. Suffisant pour tenir la Phase 3 sans upgrade. Si insuffisant après 2h, on bascule sur l'upgrade Small.
+## Risques
+
+- **Aucun lock long** : les `CREATE INDEX` sur des tables de 30-500 lignes sont instantanés.
+- **Aucun changement de comportement** : `STABLE` n'altère pas la sémantique des fonctions, juste leur cache au sein d'une requête.
+- **Aucun risque sur les données** : pas de UPDATE/DELETE, uniquement du DDL et des stats.
