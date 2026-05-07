@@ -1,47 +1,49 @@
-# Revenir en arrière sur la phase active en LIVE
+## Problème
 
-## Objectif
-Remettre **la phase 2** comme phase active à la date du **2026-05-07** et annuler l’activation précédente de la phase 3.
+Dans la ligue **Suceurs_de_Roux** (LIVE), la phase 3 a été choisie comme phase de départ (`starting_phase_index = 3`, `started_at_effective = 2026-05-08`). Le **Giro d'Italia** commence aussi le **2026-05-08** (`date_debut`).
 
-## État vérifié
-- Aujourd’hui en LIVE: **2026-05-07**
-- **Phase 2** (`8b939cb8-7079-4938-ba00-920603813092`) est actuellement `completed`
-- **Phase 3** (`61a9cda5-5d45-4776-bf5e-78fb0e14cc80`) est actuellement `active`
-- La ligue **CopaGIRO** a bien un scope fixé sur la phase 3 via `league_scopes.phases = [61a9cda5-5d45-4776-bf5e-78fb0e14cc80]`
-
-## Action à appliquer en LIVE
-Exécuter ce SQL dans **Cloud → Run SQL (Live)** :
+La fonction `get_league_courses_with_points` filtre les courses avec une comparaison **strictement supérieure** :
 
 ```sql
--- Remettre la phase 2 active pour aujourd'hui
-UPDATE public.phases
-SET statut = 'active',
-    date_fin = '2026-05-07'
-WHERE id = '8b939cb8-7079-4938-ba00-920603813092';
-
--- Rebasculer la phase 3 en phase à venir
-UPDATE public.phases
-SET statut = 'completed',
-    date_debut = '2026-05-08'
-WHERE id = '61a9cda5-5d45-4776-bf5e-78fb0e14cc80';
-
--- Vérification
-SELECT id, index_dans_saison, statut, date_debut, date_fin
-FROM public.phases
-WHERE saison_id = '74a561e7-06c5-4ddd-988d-d4f4449f42f5'
-ORDER BY index_dans_saison;
+(l.starting_phase_index IS NOT NULL
+  AND l.started_at_effective IS NOT NULL
+  AND vcp.date_debut > l.started_at_effective)
 ```
 
-## Résultat attendu
-- Le calcul de phase active de la saison repassera sur **la phase 2** aujourd’hui.
-- Cela annule le changement précédent sur le calendrier.
+Comme `2026-05-08 > 2026-05-08` est faux, le Giro est exclu — alors que c'est précisément la première course de la phase de départ.
 
-## Point important
-Ce rollback remet bien le calendrier comme avant, **mais il ne corrigera probablement pas l’onglet équipe de CopaGIRO**, car cette ligue est en mode **à la course** et son scope reste explicitement fixé sur **la phase 3**. Si tu veux, l’étape suivante sera de préparer un correctif ciblé SQL pour la ligue elle-même, sans publication.
+## Correction proposée
 
-## Détail technique
-- Saison concernée: `74a561e7-06c5-4ddd-988d-d4f4449f42f5`
-- Phase 2: `8b939cb8-7079-4938-ba00-920603813092`
-- Phase 3: `61a9cda5-5d45-4776-bf5e-78fb0e14cc80`
-- Ligue CopaGIRO: `2b08ea2c-0c6a-48fd-83d4-40e0e3574643`
-- Scope ligue actuel: `league_scopes.phases = [61a9cda5-5d45-4776-bf5e-78fb0e14cc80]`
+Remplacer `>` par `>=` dans la branche `starting_phase_index IS NOT NULL` (et de manière cohérente dans la branche par défaut), via une migration SQL qui recrée la fonction :
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_league_courses_with_points(
+  p_league_id uuid, p_season_id uuid DEFAULT NULL
+)
+RETURNS SETOF v_course_points_theoriques
+LANGUAGE sql STABLE AS $$
+  SELECT vcp.*
+  FROM v_course_points_theoriques vcp
+  WHERE vcp.course_id IN (SELECT course_id FROM get_league_course_ids(p_league_id))
+    AND (p_season_id IS NULL OR vcp.phase_id IN (
+      SELECT id FROM phases WHERE saison_id = p_season_id
+    ))
+    AND EXISTS (
+      SELECT 1 FROM leagues l
+      WHERE l.id = p_league_id
+        AND (
+          (l.starting_phase_index IS NULL
+            AND vcp.date_debut >= COALESCE(l.started_at_effective, l.created_at::date))
+          OR
+          (l.starting_phase_index IS NOT NULL
+            AND l.started_at_effective IS NOT NULL
+            AND vcp.date_debut >= l.started_at_effective)
+        )
+    )
+  ORDER BY vcp.date_debut DESC;
+$$;
+```
+
+## Effet attendu
+
+Le Giro d'Italia (et toute course commençant pile le jour de la phase de départ) apparaîtra dans la liste des courses de la ligue.
