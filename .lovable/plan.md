@@ -1,49 +1,35 @@
-## Problème
+## Cause
 
-Dans la ligue **Suceurs_de_Roux** (LIVE), la phase 3 a été choisie comme phase de départ (`starting_phase_index = 3`, `started_at_effective = 2026-05-08`). Le **Giro d'Italia** commence aussi le **2026-05-08** (`date_debut`).
+La ligue **Suceurs_de_Roux** (LIVE) a `starting_phase_index = 3` et `started_at_effective = 2026-05-08`. Le **Giro d'Italia 2026** a `date_debut = 2026-05-08` (donc l'étape 1 du 2026-05-08).
 
-La fonction `get_league_courses_with_points` filtre les courses avec une comparaison **strictement supérieure** :
+La fonction `get_league_courses_with_points` a déjà été corrigée (`>=`), donc la course apparaît bien dans la liste des courses de la ligue.
+
+**Mais les deux fonctions qui calculent les classements n'ont pas été corrigées** et utilisent encore une comparaison stricte :
 
 ```sql
 (l.starting_phase_index IS NOT NULL
-  AND l.started_at_effective IS NOT NULL
-  AND vcp.date_debut > l.started_at_effective)
+ AND l.started_at_effective IS NOT NULL
+ AND c.date_debut > l.started_at_effective)   -- ❌ devrait être >=
 ```
 
-Comme `2026-05-08 > 2026-05-08` est faux, le Giro est exclu — alors que c'est précisément la première course de la phase de départ.
+Concernées :
+- `public.get_league_standings_by_season(uuid, uuid)` — 4 occurrences (CTE `race_pts`, `scoreurs`, `victories`)
+- `public.get_league_standings_by_phase(uuid, uuid)` — 4 occurrences (mêmes CTE)
+
+Comme `2026-05-08 > 2026-05-08` est faux, **toutes les lignes de points du Giro (étape 1, GC, KOM, etc.) sont exclues du classement** de Suceurs_de_Roux, alors qu'elles existent dans `points_ledger`.
 
 ## Correction proposée
 
-Remplacer `>` par `>=` dans la branche `starting_phase_index IS NOT NULL` (et de manière cohérente dans la branche par défaut), via une migration SQL qui recrée la fonction :
+Migration SQL qui recrée les deux fonctions à l'identique en remplaçant `c.date_debut >` par `c.date_debut >=` dans la branche `starting_phase_index IS NOT NULL`. Cela aligne les fonctions de standings avec `get_league_courses_with_points` (même règle : la phase de départ inclut les courses qui commencent pile le jour `started_at_effective`).
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_league_courses_with_points(
-  p_league_id uuid, p_season_id uuid DEFAULT NULL
-)
-RETURNS SETOF v_course_points_theoriques
-LANGUAGE sql STABLE AS $$
-  SELECT vcp.*
-  FROM v_course_points_theoriques vcp
-  WHERE vcp.course_id IN (SELECT course_id FROM get_league_course_ids(p_league_id))
-    AND (p_season_id IS NULL OR vcp.phase_id IN (
-      SELECT id FROM phases WHERE saison_id = p_season_id
-    ))
-    AND EXISTS (
-      SELECT 1 FROM leagues l
-      WHERE l.id = p_league_id
-        AND (
-          (l.starting_phase_index IS NULL
-            AND vcp.date_debut >= COALESCE(l.started_at_effective, l.created_at::date))
-          OR
-          (l.starting_phase_index IS NOT NULL
-            AND l.started_at_effective IS NOT NULL
-            AND vcp.date_debut >= l.started_at_effective)
-        )
-    )
-  ORDER BY vcp.date_debut DESC;
-$$;
-```
+### Effet attendu
 
-## Effet attendu
+- **Suceurs_de_Roux** : les points du Giro d'Italia (et de toute course commençant pile à `started_at_effective`) remontent immédiatement dans le classement → l'écran « Calcul du classement en cours… » se remplit.
+- Aucun impact sur les ligues sans `starting_phase_index` (branche déjà en `>=`).
+- Aucun impact sur les ligues dont `started_at_effective` ne tombe pas exactement sur une `date_debut` de course.
 
-Le Giro d'Italia (et toute course commençant pile le jour de la phase de départ) apparaîtra dans la liste des courses de la ligue.
+### Hors scope
+
+- Pas de changement frontend.
+- Pas de touch aux données (pas d'`UPDATE`/`DELETE` sur `points_ledger`, `leagues` ou `phases`).
+- La migration s'applique à TEST puis à LIVE lors du publish.
