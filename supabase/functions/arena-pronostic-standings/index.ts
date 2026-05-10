@@ -62,14 +62,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch all evaluated pronostics for this league
-    const { data: pronostics, error: proError } = await adminClient
-      .from('arena_pronostics')
-      .select('manager_id, is_correct')
-      .eq('league_id', league_id)
-      .not('is_correct', 'is', null);
-
-    if (proError) throw proError;
+    // Fetch all evaluated pronostics for this league (paginated to bypass 1000-row default cap)
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    const pronostics: { manager_id: string; is_correct: boolean }[] = [];
+    while (true) {
+      const { data, error: proError } = await adminClient
+        .from('arena_pronostics')
+        .select('manager_id, is_correct')
+        .eq('league_id', league_id)
+        .not('is_correct', 'is', null)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (proError) throw proError;
+      const batch = data ?? [];
+      pronostics.push(...batch as any);
+      if (batch.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
 
     // Aggregate by manager
     const managerStats: Record<string, { correct: number; total: number }> = {};
