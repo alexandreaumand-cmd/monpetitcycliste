@@ -49,8 +49,6 @@ export const LeagueRostersOverviewDialog = ({
   
   const [loading, setLoading] = useState(false);
   const [rosters, setRosters] = useState<RiderEntry[]>([]);
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [analyzingAI, setAnalyzingAI] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
 
