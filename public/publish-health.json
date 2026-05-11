@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-05-11T08:41:28.450Z",
+  "thresholds": {
+    "edgeFunctions": 130,
+    "assetsMB": 8,
+    "migrations": 600,
+    "distMB": 12,
+    "singleAssetKB": 500
+  },
+  "edgeFunctions": 115,
+  "migrations": 520,
+  "assets": {
+    "count": 52,
+    "totalMB": 4.44,
+    "top": [
+      {
+        "path": "src/assets/showcase-results.png",
+        "kb": 337.8
+      },
+      {
+        "path": "public/images/peloton-finish.jpg",
+        "kb": 305.6
+      },
+      {
+        "path": "src/assets/mpc-logo-vertical.png",
+        "kb": 269.6
+      },
+      {
+        "path": "public/screenshots/encheres.png",
+        "kb": 258.7
+      },
+      {
+        "path": "public/pwa-192x192-v2.png",
+        "kb": 177.8
+      },
+      {
+        "path": "public/pwa-512x512-v2.png",
+        "kb": 176.2
+      },
+      {
+        "path": "src/assets/mpc-logo-horizontal.png",
+        "kb": 148
+      },
+      {
+        "path": "src/assets/logo-carré-sans-marque.png",
+        "kb": 122.4
+      },
+      {
+        "path": "public/apple-touch-icon-180x180-v2.png",
+        "kb": 122.4
+      },
+      {
+        "path": "public/apple-touch-icon-180x180.png",
+        "kb": 122.4
+      }
+    ]
+  },
+  "distMB": null
+}
