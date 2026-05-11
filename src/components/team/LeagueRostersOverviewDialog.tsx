@@ -354,30 +354,6 @@ export const LeagueRostersOverviewDialog = ({
           </div>
         )}
 
-        {/* AI Analysis section */}
-        {analysis && (
-          <div className="mt-4 border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Analyse IA des effectifs
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAnalyzeAI}
-                disabled={analyzingAI}
-              >
-                <RefreshCw className={`h-4 w-4 ${analyzingAI ? "animate-spin" : ""}`} />
-              </Button>
-            </div>
-            <div className="max-h-[50vh] overflow-y-auto border rounded-md p-4 bg-muted/30">
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
-                {analysis}
-              </div>
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
