@@ -59,39 +59,19 @@ export const LeagueRostersOverviewDialog = ({
     }
   }, [open, leagueId, phaseId]);
 
-  // Store league context for AI analysis
-  const [leagueContext, setLeagueContext] = useState<{
-    seasonYear: number;
-    phaseIndex: number;
-    races: string[];
-  } | null>(null);
-
   const fetchRosters = async () => {
     setLoading(true);
     try {
-      // First get the saison_id and phase info from the phase
+      // First get the saison_id from the phase
       const { data: phaseData, error: phaseError } = await supabase
         .from("phases")
-        .select("saison_id, index_dans_saison, saisons(annee)")
+        .select("saison_id")
         .eq("id", phaseId)
         .single();
 
       if (phaseError) throw phaseError;
 
       const saisonId = phaseData.saison_id;
-      const seasonYear = (phaseData as any).saisons?.annee || new Date().getFullYear();
-      const phaseIndex = phaseData.index_dans_saison;
-
-      // Fetch races for this phase
-      const { data: coursesData } = await supabase
-        .from("courses")
-        .select("nom")
-        .eq("phase_id", phaseId)
-        .order("date_debut");
-
-      const races = (coursesData || []).map((c: any) => c.nom);
-      
-      setLeagueContext({ seasonYear, phaseIndex, races });
 
       // Fetch rosters with coureur info
       const { data, error } = await supabase
