@@ -1,29 +1,25 @@
-## Plan : sécuriser `scrape-live-race` (auth superadmin + allowlist d'URL)
+## Fix: Add auth check to `send-push-notification`
 
-### Contexte
-La fonction edge `scrape-live-race` n'a aucune vérification d'authentification et fait `fetch(url)` avec une URL fournie par l'appelant. Risques :
-- **SSRF** : un attaquant peut viser des endpoints internes (ex. `http://169.254.169.254/...`).
-- **Endpoint ouvert** : n'importe qui peut déclencher du scraping arbitraire.
+The function is unauthenticated and accepts `broadcast: true`, letting anyone push to all users.
 
-Seul `SuperAdminLiveBroadcastPage` appelle cette fonction (côté admin), donc la restreindre aux superadmins ne casse rien.
+### Callers (must keep working)
+- **Server-to-server (edge functions)**: `_shared/notifications.ts`, `admin-import-race-results-csv`, `admin-result-save-lot`, `arena-pronostic-reminder`, `arena-recaps` — all call with `Authorization: Bearer <SERVICE_ROLE_KEY>`.
+- **Frontend**: `StartlistDetailView.tsx` — superadmin-only UI invoking `supabase.functions.invoke('send-push-notification', { broadcast: true, ... })`, which forwards the logged-in user's JWT.
 
-### Changements
+### Changes
 
-**1. `supabase/functions/scrape-live-race/index.ts`** — ajouter en tête du handler, après le check OPTIONS :
+**`supabase/functions/send-push-notification/index.ts`** — at the top of the handler, after CORS:
 
-- Vérifier le header `Authorization`, créer un client Supabase avec ce header, valider le JWT via `getClaims()`.
-- Vérifier que l'utilisateur est superadmin via `userClient.rpc('is_superadmin')`. Sinon → 401/403.
-- Après parsing du body, valider `url` :
-  - `new URL(url)` doit réussir, protocole `http:` ou `https:` uniquement.
-  - `hostname` doit appartenir à une allowlist : `procyclingstats.com`, `firstcycling.com`, `lequipe.fr` (et leurs sous-domaines, via `endsWith`).
-  - Sinon → 400 `URL not allowed`.
+1. Require `Authorization: Bearer ...` header (401 otherwise).
+2. Accept the call if the bearer token equals `SUPABASE_SERVICE_ROLE_KEY` (internal edge function calls).
+3. Otherwise treat it as a user JWT: build a user-scoped client with the anon key + auth header, call `auth.getClaims(token)`, then call the `is_superadmin` RPC. Reject with 401/403 if not a verified superadmin.
+4. Keep the rest of the logic unchanged (it already uses the service-role client internally for DB + sending).
 
-**2. Pas de changement côté client** — `SuperAdminLiveBroadcastPage` est déjà derrière `SuperAdminGuard` et envoie l'`Authorization` automatiquement via `supabase.functions.invoke`.
+**Security finding**
+- Mark `push_notif_no_auth` as fixed once the function is updated.
 
-**3. Pas de changement à `supabase/config.toml`** — la fonction n'y est pas listée, on garde le défaut (`verify_jwt = false` géré par signing-keys ; on valide en code).
+### Frontend
+No changes needed — `StartlistDetailView` already runs only for superadmins and uses `supabase.functions.invoke`, which sends the user's JWT.
 
-### Vérification
-- Tester en non-superadmin → 403.
-- Tester avec une URL hors allowlist (ex. `http://169.254.169.254`) → 400.
-- Tester depuis SuperAdmin Live Broadcast avec une URL PCS → fonctionne.
-- Marquer le finding `scrape_live_no_auth` comme résolu.
+### Out of scope
+The other open security findings (arena recaps weak auth, arena recap watchdog, startlist tracker SSRF, pronostic reminder, realtime, RLS issues, etc.) are not addressed here.
