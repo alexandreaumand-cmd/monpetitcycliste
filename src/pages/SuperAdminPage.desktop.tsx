@@ -21,6 +21,7 @@ import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
 import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunicationsPage";
 import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
+import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
 
 interface NavGroup {
   label: string;
