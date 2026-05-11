@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Sparkles, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
