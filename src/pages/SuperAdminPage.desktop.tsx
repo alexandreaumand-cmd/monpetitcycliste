@@ -161,6 +161,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="data" element={<DataManagementTabs />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
               <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
+              <Route path="publish-health" element={<SuperAdminPublishHealthPage />} />
             </Routes>
           </div>
         </main>
