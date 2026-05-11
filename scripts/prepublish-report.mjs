@@ -90,7 +90,30 @@ if (existsSync(distDir)) {
   console.log(`\nDist build         : ${c.yellow}non buildé${c.reset}  (lance \`bun run build\` pour mesurer)`);
 }
 
-// 6. Verdict
+// 6. JSON snapshot pour l'écran d'admin
+import { writeFileSync, mkdirSync } from "node:fs";
+const distBytesIfExists = existsSync(distDir) ? walk(distDir).reduce((a, f) => a + f.size, 0) : null;
+const snapshot = {
+  generatedAt: new Date().toISOString(),
+  thresholds: THRESHOLDS,
+  edgeFunctions,
+  migrations,
+  assets: {
+    count: assetFiles.length,
+    totalMB: totalAssetMB,
+    top: top.map(f => ({ path: relative(ROOT, f.path), kb: +(f.size / 1024).toFixed(1) })),
+  },
+  distMB: distBytesIfExists != null ? +(distBytesIfExists / 1024 / 1024).toFixed(2) : null,
+};
+try {
+  mkdirSync(join(ROOT, "public"), { recursive: true });
+  writeFileSync(join(ROOT, "public/publish-health.json"), JSON.stringify(snapshot, null, 2));
+  console.log(`\n${c.cyan}↳ snapshot écrit dans public/publish-health.json${c.reset}`);
+} catch (e) {
+  console.warn(`Impossible d'écrire le snapshot: ${e.message}`);
+}
+
+// 7. Verdict
 const warnings = [];
 if (edgeFunctions > THRESHOLDS.edgeFunctions) warnings.push(`Trop d'edge functions (${edgeFunctions})`);
 if (totalAssetMB > THRESHOLDS.assetsMB) warnings.push(`Assets trop volumineux (${totalAssetMB} MB)`);
