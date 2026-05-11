@@ -71,6 +71,7 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 500,
   },
   plugins: [
+    publishHealthSnapshot(),
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
