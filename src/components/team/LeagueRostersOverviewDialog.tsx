@@ -166,46 +166,6 @@ export const LeagueRostersOverviewDialog = ({
     0
   );
 
-  const handleAnalyzeAI = async () => {
-    setAnalyzingAI(true);
-    setAnalysis(null);
-    
-    try {
-      const rostersPayload = managers.map((manager) => ({
-        manager_name: manager.nom,
-        riders: (rostersByManager[manager.id] || []).map((r) => ({
-          nom: r.nom,
-          equipe: r.equipe,
-          prix_achat: r.prix_signature,
-        })),
-      }));
-
-      const { data, error } = await supabase.functions.invoke("analyze-rosters", {
-        body: { 
-          rosters: rostersPayload,
-          context: leagueContext,
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      setAnalysis(data.analysis);
-    } catch (err: any) {
-      console.error("AI analysis error:", err);
-      toast({
-        title: "Erreur d'analyse",
-        description: err.message || "Impossible d'analyser les effectifs",
-        variant: "destructive",
-      });
-    } finally {
-      setAnalyzingAI(false);
-    }
-  };
-
   const handleExportImage = async () => {
     if (!tableRef.current) return;
     
