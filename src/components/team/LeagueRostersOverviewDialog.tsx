@@ -282,19 +282,6 @@ export const LeagueRostersOverviewDialog = ({
             )}
             Exporter Excel
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleAnalyzeAI}
-            disabled={loading || analyzingAI || rosters.length === 0}
-          >
-            {analyzingAI ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Analyser avec l'IA
-          </Button>
         </div>
 
         {loading ? (
