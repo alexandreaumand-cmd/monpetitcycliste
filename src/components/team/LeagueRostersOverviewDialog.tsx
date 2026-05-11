@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Sparkles, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -49,8 +49,6 @@ export const LeagueRostersOverviewDialog = ({
   
   const [loading, setLoading] = useState(false);
   const [rosters, setRosters] = useState<RiderEntry[]>([]);
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [analyzingAI, setAnalyzingAI] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
 
@@ -61,39 +59,19 @@ export const LeagueRostersOverviewDialog = ({
     }
   }, [open, leagueId, phaseId]);
 
-  // Store league context for AI analysis
-  const [leagueContext, setLeagueContext] = useState<{
-    seasonYear: number;
-    phaseIndex: number;
-    races: string[];
-  } | null>(null);
-
   const fetchRosters = async () => {
     setLoading(true);
     try {
-      // First get the saison_id and phase info from the phase
+      // First get the saison_id from the phase
       const { data: phaseData, error: phaseError } = await supabase
         .from("phases")
-        .select("saison_id, index_dans_saison, saisons(annee)")
+        .select("saison_id")
         .eq("id", phaseId)
         .single();
 
       if (phaseError) throw phaseError;
 
       const saisonId = phaseData.saison_id;
-      const seasonYear = (phaseData as any).saisons?.annee || new Date().getFullYear();
-      const phaseIndex = phaseData.index_dans_saison;
-
-      // Fetch races for this phase
-      const { data: coursesData } = await supabase
-        .from("courses")
-        .select("nom")
-        .eq("phase_id", phaseId)
-        .order("date_debut");
-
-      const races = (coursesData || []).map((c: any) => c.nom);
-      
-      setLeagueContext({ seasonYear, phaseIndex, races });
 
       // Fetch rosters with coureur info
       const { data, error } = await supabase
@@ -187,46 +165,6 @@ export const LeagueRostersOverviewDialog = ({
     ...Object.values(rostersByManager).map((r) => r.length),
     0
   );
-
-  const handleAnalyzeAI = async () => {
-    setAnalyzingAI(true);
-    setAnalysis(null);
-    
-    try {
-      const rostersPayload = managers.map((manager) => ({
-        manager_name: manager.nom,
-        riders: (rostersByManager[manager.id] || []).map((r) => ({
-          nom: r.nom,
-          equipe: r.equipe,
-          prix_achat: r.prix_signature,
-        })),
-      }));
-
-      const { data, error } = await supabase.functions.invoke("analyze-rosters", {
-        body: { 
-          rosters: rostersPayload,
-          context: leagueContext,
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      setAnalysis(data.analysis);
-    } catch (err: any) {
-      console.error("AI analysis error:", err);
-      toast({
-        title: "Erreur d'analyse",
-        description: err.message || "Impossible d'analyser les effectifs",
-        variant: "destructive",
-      });
-    } finally {
-      setAnalyzingAI(false);
-    }
-  };
 
   const handleExportImage = async () => {
     if (!tableRef.current) return;
@@ -344,19 +282,6 @@ export const LeagueRostersOverviewDialog = ({
             )}
             Exporter Excel
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleAnalyzeAI}
-            disabled={loading || analyzingAI || rosters.length === 0}
-          >
-            {analyzingAI ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Analyser avec l'IA
-          </Button>
         </div>
 
         {loading ? (
@@ -429,30 +354,6 @@ export const LeagueRostersOverviewDialog = ({
           </div>
         )}
 
-        {/* AI Analysis section */}
-        {analysis && (
-          <div className="mt-4 border-t pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Analyse IA des effectifs
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAnalyzeAI}
-                disabled={analyzingAI}
-              >
-                <RefreshCw className={`h-4 w-4 ${analyzingAI ? "animate-spin" : ""}`} />
-              </Button>
-            </div>
-            <div className="max-h-[50vh] overflow-y-auto border rounded-md p-4 bg-muted/30">
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
-                {analysis}
-              </div>
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

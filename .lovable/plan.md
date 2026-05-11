@@ -1,36 +1,20 @@
-## Problème
+## Objectif
 
-La table `public._debug_standings_audit` est exposée via PostgREST sans RLS. N'importe qui (même anonyme) peut lire/écrire/supprimer ses lignes (manager_id, league_id, total_race_pts, saison_id).
+Supprimer la fonctionnalité « Analyser avec l'IA » des effectifs de ligue : peu de valeur ajoutée, et elle expose `LOVABLE_API_KEY` à un abus (finding `analyze_rosters_no_auth`). La suppression résout le finding de sécurité sans avoir besoin d'ajouter une garde auth.
 
-C'est une table de debug interne — elle ne devrait pas être accessible publiquement.
+## Changements
 
-## Solution proposée
+1. **`src/components/team/LeagueRostersOverviewDialog.tsx`**
+   - Retirer le bouton « Analyser avec l'IA » (lignes ~350-358) et la section d'affichage de l'analyse (lignes ~432-455).
+   - Supprimer les states `analysis`, `analyzingAI`, la fonction `handleAnalyzeAI`, et les imports désormais inutilisés (`RefreshCw`, `Sparkles`/icônes de l'analyse, `supabase.functions.invoke` si plus utilisé ailleurs dans le fichier, contexte ligue chargé uniquement pour l'IA).
 
-Migration SQL en deux temps de sécurité :
+2. **Supprimer l'edge function** `supabase/functions/analyze-rosters/index.ts` (et son éventuel bloc de config dans `supabase/config.toml` s'il existe).
 
-1. **Activer RLS** sur `_debug_standings_audit`
-2. **Créer une policy unique réservée aux superadmins** (lecture + écriture) via `is_superadmin()`
-3. **Révoquer les droits** `anon` et `authenticated` au niveau GRANT pour que la table disparaisse de l'API PostgREST publique
+3. **Sécurité**
+   - Marquer le finding `analyze_rosters_no_auth` comme corrigé via `manage_security_finding` (raison : endpoint supprimé).
+   - Mettre à jour `public/publish-health.json` pour refléter la résolution.
 
-```sql
-ALTER TABLE public._debug_standings_audit ENABLE ROW LEVEL SECURITY;
+## Hors périmètre
 
-REVOKE ALL ON public._debug_standings_audit FROM anon, authenticated;
-
-CREATE POLICY "superadmins_only_audit"
-  ON public._debug_standings_audit
-  FOR ALL
-  TO authenticated
-  USING (public.is_superadmin())
-  WITH CHECK (public.is_superadmin());
-```
-
-## Impact
-
-- Aucun changement frontend nécessaire (table debug, pas utilisée par l'app cliente).
-- Les éventuels jobs SQL/scripts internes qui peuplent cette table doivent tourner via `service_role` (qui bypass RLS) — ce qui est déjà le cas pour les edge functions admin.
-- Élimine les findings `SUPA_rls_disabled_in_public` et `debug_audit_no_rls`.
-
-## Alternative
-
-Si la table n'est plus utilisée du tout, je peux aussi simplement la **DROP** (plus propre). Dis-moi si tu préfères cette option — sinon je pars sur "RLS + superadmin only".
+- Pas de modification de la logique d'affichage des effectifs eux-mêmes (la vue d'ensemble des rosters reste).
+- Pas de changement de traductions (aucune clé i18n dédiée détectée pour ce bouton — texte en dur).
