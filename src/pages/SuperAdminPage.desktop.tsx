@@ -69,6 +69,7 @@ const navGroups: NavGroup[] = [
       { label: "Import / Export", path: "data", icon: Database },
       { label: "Points Ledger", path: "points-ledger", icon: Database },
       { label: "Cron Jobs", path: "cron-jobs", icon: Timer },
+      { label: "État du publish", path: "publish-health", icon: Activity },
     ],
   },
 ];
