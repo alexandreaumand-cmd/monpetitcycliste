@@ -863,9 +863,63 @@ serve(async (req) => {
   }
 
   try {
+    // --- Auth: superadmin only ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: isSuperAdmin, error: roleErr } = await userClient.rpc("is_superadmin");
+    if (roleErr || !isSuperAdmin) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { url, course_id } = await req.json();
     if (!url || !course_id) {
       return new Response(JSON.stringify({ error: "url and course_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- URL allowlist (anti-SSRF) ---
+    const ALLOWED_HOSTS = ["procyclingstats.com", "firstcycling.com", "lequipe.fr"];
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return new Response(JSON.stringify({ error: "URL protocol not allowed" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const host = parsedUrl.hostname.toLowerCase();
+    if (!ALLOWED_HOSTS.some((d) => host === d || host.endsWith(`.${d}`))) {
+      return new Response(JSON.stringify({ error: "URL not allowed" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
