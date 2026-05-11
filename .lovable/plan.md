@@ -1,64 +1,98 @@
-## Diagnostic réalisé
+## Diagnostic confirmé
 
-J'ai vérifié tout ce qui peut bloquer la publication côté projet, et **rien ne casse localement** :
+Le message **« Publishing failed » 10–20 s après le clic** + **WebSocket sandbox fermé brutalement (code 1006)** = le conteneur de build Lovable **crashe** (OOM ou timeout) pendant l'étape de packaging. Le code compile localement en 17 s sans erreur, donc la cause n'est pas applicative mais bien le **volume** à traiter par la pipeline :
 
-| Vérification | Résultat |
-|---|---|
-| `tsc --noEmit` (TypeScript) | OK |
-| `vite build` (production) | OK — `built in 17s` |
-| Taille de `dist/` | 18 MB total (sous la limite hébergeur) |
-| PWA / Workbox precache | 94 entrées, 10.8 MB, max-file 10 MB OK |
-| Routes `React.lazy` | toutes résolues |
-| Status backend Lovable Cloud | `ACTIVE_HEALTHY` |
-| `index.html` (noscript dans head, etc.) | conforme |
-| SDK `@bworlds/launchkit` (esm.sh) | présent et conforme à AGENTS.md |
+- **137 edge functions** (3–5× la normale)
+- **~16 MB d'assets non optimisés** dans `src/assets` + `public/images`
+- **520 migrations**
 
-**Conclusion intermédiaire :** Le code compile parfaitement. La publication ne peut donc pas échouer à l'étape `vite build`. Les causes plausibles restantes côté Lovable sont soit :
+On va attaquer les deux leviers actionnables.
 
-1. **Étape upload/déploiement de Lovable** (timeout, taille, quota projet) — invisible côté code, le support a quand même affirmé que ce n'est pas la plateforme.
-2. **Quota Edge Functions** — le projet contient **137 edge functions**, ce qui est anormalement élevé. Si la pipeline de publication tente de redéployer toutes les functions et qu'une seule échoue, l'opération entière peut être marquée en erreur.
-3. **Une migration récente bloquante** — la pile en contient **520**. Si la pipeline rejoue/valide les migrations en publication, une migration cassée bloquerait tout.
+---
 
-## Pourquoi je ne peux pas conclure définitivement
+## Étape 1 — Nettoyage des edge functions (137 → ~110)
 
-Lovable n'expose pas (côté agent) le log d'erreur de la pipeline de publication. Sans le **message d'erreur exact** affiché dans la modale "Publish" (visible côté utilisateur uniquement), je ne peux distinguer ces 3 causes avec certitude.
+Suppression ciblée des fonctions **one-shot ou totalement orphelines** (zéro référence dans `src/` et dans les autres fonctions). Trois catégories :
 
-## Plan d'action proposé
+**A. Fonctions one-shot d'import/migration (référencées par UI admin obsolète à supprimer aussi)**
+- `admin-import-matt-l-results` + `src/components/admin/import/MattLImportSection.tsx`
+- `auction-fix-carried-over-to-draft` (aucune réf UI)
 
-### Étape 1 — Récupérer l'erreur exacte (côté utilisateur, 30 sec)
-Demander à l'utilisateur d'ouvrir la modale **Publish** dans Lovable et de cliquer **Update**. Quand l'erreur s'affiche :
-- Cliquer dessus pour voir le détail
-- Ouvrir la console du navigateur (F12 → onglet Console et Network) pendant le clic sur "Update"
-- Copier-coller le message + le code HTTP de la requête `/publish` ou `/deploy`
+**B. Fonctions orphelines (zéro référence projet)** — à valider une par une avant suppression :
+- `admin-cleanup-phantom-course`, `admin-refresh-standings`, `admin-stage-overview`
+- `arena-recaps`, `arena-recap-watchdog`
+- `compute-phases`, `course-stages`, `courses-filter-options`, `courses-leaderboard-podiums`
+- `export-course-leaderboard-csv`, `list-courses-with-results`, `manager-coureur-points-detail`
+- `results-course-meta`, `results-course-top`, `results-latest-feed`, `results-recent-races`
+- `startlist-export-csv`, `startlist-export-csv-from-text`, `startlist-save-aliases`, `startlist-upload-route-image`
+- `leagues-delete`
 
-C'est l'élément manquant qui orientera le correctif réel.
+⚠️ **À NE PAS supprimer** sans vérif : `auth-email-hook` (probable hook auth Supabase), tout ce qui contient `cron`, `watchdog`, `daily`, `nightly` (déclenché par pg_cron, donc invisible côté code).
 
-### Étape 2 — Pendant ce temps, vérifications préventives (côté agent)
-- Lancer `supabase--linter` pour détecter une migration / policy cassée qui pourrait faire échouer un re-check.
-- Lister les edge functions dont `index.ts` a été modifié récemment et tester leur déploiement isolément via `supabase--deploy_edge_functions` (notamment `arena-pronostic-standings` qui vient d'être modifié).
-- Vérifier les quotas Lovable Cloud (nombre de functions, taille DB) via `supabase--project_info`.
+Pour chaque candidat de la liste B, je vérifierai :
+1. Pas de référence dans `pg_cron` (via `supabase--read_query` sur `cron.job`)
+2. Pas de référence dans un trigger DB
+3. Pas de webhook configuré
 
-### Étape 3 — Correctif ciblé
-Selon la cause identifiée à l'étape 1 :
-- **Build error** → fix le fichier source incriminé.
-- **Edge function deploy fail** → corriger ou supprimer la function fautive (et possiblement nettoyer les 137 functions, beaucoup semblent obsolètes : `admin-import-matt-l-results`, etc.).
-- **Quota / taille** → archiver des assets (les images `mpc-logo-vertical` 880 KB, `le-pape` 1.1 MB pourraient être compressées) ou élaguer les migrations.
-- **Erreur opaque côté pipeline Lovable** → rouvrir un ticket support avec l'erreur exacte + ce diagnostic.
+Puis suppression via `supabase--delete_edge_functions` + `rm -rf supabase/functions/<nom>`.
+
+**Cible : passer de 137 à ~110 functions.** Gain attendu : -20 % de la charge de packaging.
+
+---
+
+## Étape 2 — Compression des assets (16 MB → ~4 MB)
+
+Les fichiers à traiter (par ordre de gain) :
+
+| Fichier | Taille actuelle | Action | Cible |
+|---|---|---|---|
+| `public/images/hero-roubaix.avif` | 3.0 MB | déjà des variants 1680/1280/960 — supprimer le master non utilisé | 0 |
+| `public/images/hero-roubaix.jpg` | 1.7 MB | idem | 0 |
+| `src/assets/hero-peloton-aerial.webp` | 1.8 MB | re-encoder webp q=75 | ~250 KB |
+| `src/assets/logo.png` | 1.7 MB | convertir PNG→WebP + redim | ~50 KB |
+| `src/assets/hero-handlebar.webp` | 1.3 MB | re-encoder | ~200 KB |
+| `src/assets/mpc-logo*.png` (3 fichiers) | 2.3 MB total | convertir en WebP | ~150 KB |
+| `src/assets/showcase-results.png` | 343 KB | WebP | ~80 KB |
+
+Vérifier au préalable chaque référence (`rg`) avant de supprimer un master, et mettre à jour les imports si format changé.
+
+**Gain attendu : -12 MB sur le bundle, -50 % sur le precache PWA.**
+
+---
+
+## Étape 3 — Vérification + nouvelle tentative de publication
+
+1. `bunx vite build` local pour confirmer que tout compile
+2. Vérifier que `dist/` passe sous **10 MB** (vs 18 MB actuellement)
+3. Demander à l'utilisateur de retenter **Publish → Update**
+
+---
+
+## Si Publish échoue toujours après ces étapes
+
+C'est une limite d'infrastructure Lovable Cloud, pas du code. À ce moment-là :
+- Rouvrir le ticket support avec le diagnostic complet (137→110 fns, 18 MB→6 MB dist, WS code 1006)
+- Demander explicitement un upgrade du tier sandbox de publication (l'instance backend a été passée en `ci_micro` le 6 mai mais le sandbox de build est dimensionné séparément)
+
+---
+
+## Hors-scope volontairement
+
+- **520 migrations** : ne pas y toucher. Risque de casser la chaîne de replay et aucune migration n'est rejouée à la publication (elles sont déjà appliquées à la DB live).
+- **Suppression de fonctions douteuses** (auth-email-hook, *-cron-*) : trop risqué sans inventaire pg_cron complet.
+- Refactor du code applicatif : non lié au crash.
+
+---
 
 ## Détails techniques
 
 ```text
-dist/                  18 MB
-├── assets/            7.9 MB  (chunks JS+CSS+images bundlés)
-│   ├── Dashboard      2.5 MB  (lazy, gzip 644 KB) — OK mais lourd
-│   ├── le-pape.png    1.18 MB — candidat à compression
-│   └── mpc-logo*.png  1.46 MB — candidats à compression
-├── images/            5.1 MB
-└── hero-peloton.webp  1.8 MB
-
-supabase/
-├── functions/         137 dossiers (≈ 3-5x la normale)
-└── migrations/        520 fichiers
+Avant                          Après cible
+─────────────                  ─────────────
+137 edge fns                   ~110 edge fns
+18 MB dist                     ~6 MB dist
+10.8 MB precache               ~4 MB precache
+~16 MB assets bruts            ~4 MB assets bruts
 ```
 
-Sans le message d'erreur, je ne peux pas faire mieux que ces hypothèses. **L'étape 1 est bloquante** pour un diagnostic certain.
+Outils utilisés : `supabase--read_query` (pg_cron check), `supabase--delete_edge_functions`, `rm`, `nix run nixpkgs#imagemagick` ou `nix run nixpkgs#libwebp` pour la compression.
