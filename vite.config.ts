@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import { execSync } from "node:child_process";
+
+const publishHealthSnapshot = () => ({
+  name: "publish-health-snapshot",
+  buildStart() {
+    try { execSync("node scripts/prepublish-report.mjs", { stdio: "ignore" }); } catch { /* non-blocking */ }
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -63,6 +71,7 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 500,
   },
   plugins: [
+    publishHealthSnapshot(),
     react(),
     mode === "development" && componentTagger(),
     VitePWA({

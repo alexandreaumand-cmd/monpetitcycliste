@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -21,6 +21,7 @@ import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
 import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunicationsPage";
 import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
+import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
 
 interface NavGroup {
   label: string;
@@ -68,6 +69,7 @@ const navGroups: NavGroup[] = [
       { label: "Import / Export", path: "data", icon: Database },
       { label: "Points Ledger", path: "points-ledger", icon: Database },
       { label: "Cron Jobs", path: "cron-jobs", icon: Timer },
+      { label: "État du publish", path: "publish-health", icon: Activity },
     ],
   },
 ];
@@ -159,6 +161,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="data" element={<DataManagementTabs />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
               <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
+              <Route path="publish-health" element={<SuperAdminPublishHealthPage />} />
             </Routes>
           </div>
         </main>
