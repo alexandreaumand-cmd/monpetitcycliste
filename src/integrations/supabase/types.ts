@@ -6820,6 +6820,16 @@ export type Database = {
         Args: { team_name: string }
         Returns: string
       }
+      get_arena_pronostic_standings: {
+        Args: { p_league_id: string }
+        Returns: {
+          avatar_url: string
+          correct_count: number
+          manager_id: string
+          manager_nom: string
+          total_count: number
+        }[]
+      }
       get_cron_jobs_status: {
         Args: never
         Returns: {
