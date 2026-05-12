@@ -218,11 +218,11 @@ export function usePronosticStandings(leagueId: string) {
   return useQuery({
     queryKey: ['arena-pronostic-standings', leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('arena-pronostic-standings', {
-        body: { league_id: leagueId },
+      const { data, error } = await supabase.rpc('get_arena_pronostic_standings', {
+        p_league_id: leagueId,
       });
       if (error) throw error;
-      return (data?.standings || []) as StandingsEntry[];
+      return (data ?? []) as StandingsEntry[];
     },
     enabled: !!leagueId,
     staleTime: 1000 * 60 * 2,
