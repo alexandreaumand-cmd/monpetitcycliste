@@ -1,33 +1,107 @@
-## Goal
-Resolve the Supabase linter warning `0016_materialized_view_in_api` for `public.v_manager_standings_total` while keeping its performance benefits and zero changes to frontend code.
+## Constats
 
-## Context
-- `public.v_manager_standings_total` is a **materialized view** (created by migration `20260427080500`) with `SELECT` granted to `anon` and `authenticated`, so it is exposed via PostgREST. The linter flags this because materialized views are not refreshed automatically and cannot enforce RLS.
-- It is consumed by the frontend in two places via `supabase.from("v_manager_standings_total")`:
-  - `src/hooks/useGlobalStandings.ts`
-  - `src/pages/Rankings.mobile.tsx`
-- A scheduled job already refreshes it (`REFRESH MATERIALIZED VIEW CONCURRENTLY`).
+- **Pas d’écart significatif entre TEST et LIVE** : les deux environnements backend sont joignables, sains, et ont le **même état de migration enregistré**.
+- **Version de migration atteinte dans TEST et LIVE** : `20260503153746`
+- **Historique du dépôt** : `524` fichiers de migration
+- **Historique réellement enregistré dans la base** : `498` versions
+- **Écart réel dépôt ↔ backend** : **193 migrations du dépôt ne sont pas enregistrées** dans TEST **ni** LIVE.
+- Cet écart commence très tôt (`20251002171214`) et va jusqu’à la dernière migration locale (`20260512075958`).
+- Plusieurs objets de ces migrations “manquantes” **existent déjà quand même** dans la base, ce qui montre une **dérive d’historique** : le schéma réel et le dossier `supabase/migrations` ne racontent plus la même histoire.
+- Les signaux “poids du projet” ne sont **pas** le suspect principal :
+  - Edge functions : `114 / 130`
+  - Assets : `4.44 MB / 8 MB`
+  - Migrations : `523 / 600` (beaucoup, mais pas suffisant seul pour expliquer l’échec)
+- Pas d’erreurs PostgreSQL récentes visibles dans les logs consultés.
 
-## Approach
-Move the materialized view out of the API surface, and replace it in `public` with a thin regular **view** of the same name + columns. The frontend keeps working unchanged; the linter stops flagging it.
+## Diagnostic probable
 
-Steps:
-1. Create a `private` schema (not exposed by PostgREST) and revoke `usage` from `anon`/`authenticated`.
-2. Recreate the materialized view as `private.v_manager_standings_total_mv` with the same definition + indexes.
-3. Update the cron/refresh function to refresh `private.v_manager_standings_total_mv` instead.
-4. Drop `public.v_manager_standings_total` (the matview) and recreate it as a regular `VIEW` that simply `SELECT * FROM private.v_manager_standings_total_mv`. Owned by `postgres` so it can read across schemas.
-5. Grant `SELECT` on the new public view to `anon`, `authenticated`, `service_role`. (Views inherit RLS from base tables; here the base is a matview in `private`, which is acceptable because the data is global standings already meant to be public — same access posture as today.)
-6. Re-run the Supabase linter to confirm the warning clears.
-7. Mark the security finding as fixed.
+La cause la plus probable du **"Publishing failed"** n’est **pas** une différence TEST vs LIVE, mais une **désynchronisation entre le dépôt et l’état réel du backend**.
 
-## Why this works
-- PostgREST only exposes objects in schemas listed in its config (`public` by default). Putting the matview in `private` removes it from the API while still letting a `public` view read from it.
-- Frontend queries `supabase.from("v_manager_standings_total")` resolve to the new public view → no app code changes.
-- Performance is preserved: reads still hit the materialized data; the wrapper view adds only a trivial pass-through.
+En pratique, au moment de publier, la plateforme essaie très probablement de réconcilier/appliquer un historique de migrations qui :
+- contient des fichiers non enregistrés côté backend,
+- alors que les objets correspondants existent déjà parfois,
+- ce qui peut produire des collisions du type :
+  - objet déjà existant,
+  - policy déjà existante,
+  - contrainte déjà existante,
+  - vue/fonction déjà créée sous une autre version,
+  - historique de migrations devenu non linéaire.
 
-## Files / changes
-- One SQL migration (schema + matview move + view + grants + cron function update). No frontend code changes.
+## Pourquoi c’est le meilleur suspect
 
-## Risks
-- During the migration window the view is briefly recreated; standings reads may fail for ~1s. Acceptable.
-- If any other DB function references `public.v_manager_standings_total` directly expecting a matview (e.g. for `REFRESH`), the cron function update in step 3 covers the only known caller. Will grep for other refs before running.
+- TEST et LIVE sont **alignés entre eux** → ce n’est pas un problème de “Live différent de Test”.
+- Le backend est **disponible** → ce n’est pas un backend en panne.
+- Le dépôt contient **beaucoup de migrations absentes du registre de migrations**, y compris des migrations anciennes.
+- Certaines de ces migrations absentes ont déjà leurs effets visibles dans la base → signe classique d’un **historique local cassé, dupliqué, importé, réécrit ou partiellement appliqué hors registre**.
+
+## Pistes de correction recommandées
+
+### Option recommandée : refaire une base propre de migrations
+C’est la voie la plus sûre si le backend actuel est la source de vérité.
+
+1. **Geler temporairement les nouvelles migrations** tant que l’historique n’est pas réconcilié.
+2. **Auditer les 193 migrations manquantes** pour les classer :
+   - déjà reflétées dans la base,
+   - réellement absentes,
+   - potentiellement conflictuelles.
+3. **Choisir une source de vérité** :
+   - soit le backend actuel,
+   - soit le dossier de migrations du dépôt.
+4. Si **le backend actuel est correct**, alors :
+   - archiver l’historique de migrations devenu incohérent,
+   - recréer un **baseline propre** à partir du schéma réel actuel,
+   - puis repartir avec de nouvelles migrations linéaires.
+5. Revalider ensuite un publish sur une base de migrations cohérente.
+
+### Option alternative : rendre les migrations manquantes rejouables
+Possible, mais plus risqué avec 193 écarts.
+
+1. Reprendre les migrations manquantes par ordre chronologique.
+2. Les rendre **idempotentes** quand c’est possible (`IF NOT EXISTS`, garde-fous, `DROP ... IF EXISTS`, checks sur policies/contraintes/fonctions).
+3. Tester leur exécution en lot dans TEST.
+4. Corriger chaque collision jusqu’à obtenir un historique rejouable.
+
+Cette option est plus longue et fragile si l’historique a beaucoup dérivé.
+
+## Corrections ciblées à préparer
+
+- Vérifier chaque migration manquante qui crée/modifie :
+  - tables,
+  - policies RLS,
+  - fonctions `SECURITY DEFINER`,
+  - vues / materialized views,
+  - contraintes uniques,
+  - triggers.
+- Éliminer les migrations “fantômes” dont les objets existent déjà sous une autre version.
+- Fusionner ou remplacer les migrations historiques qui ont été dupliquées ou réécrites.
+- Réduire le risque de futur blocage avec un **baseline unique** au lieu de continuer à empiler sur un historique incohérent.
+
+## Points secondaires observés
+
+- Le linter remonte encore beaucoup de sujets sécurité/DB, mais ce n’est pas le meilleur indicateur du blocage de publish actuel.
+- Le snapshot de prépublication montre un projet assez chargé en migrations, ce qui **augmente la fragilité**, sans être la cause racine la plus probable.
+
+## Plan d’action concret
+
+1. Générer un **rapport de dérive complet** entre le dossier `supabase/migrations` et l’état réel de TEST.
+2. Identifier les migrations manquantes dont les objets existent déjà.
+3. Décider si on :
+   - **reconstruit un baseline propre** (recommandé), ou
+   - **répare l’historique existant**.
+4. Préparer la correction choisie sans toucher à LIVE tant que TEST n’est pas propre.
+5. Vérifier qu’un publish passe à nouveau.
+
+## Détails techniques
+
+```text
+TEST backend: sain
+LIVE backend: sain
+TEST migration head: 20260503153746
+LIVE migration head: 20260503153746
+Repo migrations: 524
+DB migrations enregistrées: 498
+Migrations du repo absentes des deux environnements: 193
+Conclusion: dérive dépôt ↔ backend, pas dérive TEST ↔ LIVE
+```
+
+Si tu veux, l’étape suivante la plus utile est que j’**établisse le rapport de dérive exploitable et prépare une stratégie de baseline propre**, pour remettre les publications en état sans casser le backend existant.
