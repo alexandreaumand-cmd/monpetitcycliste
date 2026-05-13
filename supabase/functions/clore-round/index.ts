@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { notifyLeagueMembers } from '../_shared/notifications.ts';
+import { emailLeagueMembers } from '../_shared/email-league-members.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
