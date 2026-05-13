@@ -1,35 +1,28 @@
 ## Objectif
 
-Afficher, dans la carte "Actions rapides" du dashboard, un compteur du nombre de ligues **publiques** ayant encore des places libres (en attente de joueurs).
+Masquer automatiquement la carte "Prochaines enchères programmées" sur la `LeagueCard` du dashboard tant que l'ouverture des enchères est à plus de 10 jours. Dès que l'on passe sous le seuil de 10 jours, la carte réapparaît toute seule, sans intervention SQL.
 
-## Définition d'une ligue "ouverte qui attend des joueurs"
+## Où se trouve la logique
 
-- `visibility = 'public'`
-- `current_player_count < max_players`
-- (pas de filtre sur `status` — on garde la même règle d'éligibilité que celle déjà utilisée dans `JoinLeagueDialog`, pour rester cohérent avec ce qui s'affiche quand l'utilisateur clique sur "Rejoindre une ligue")
+La carte affichée sur la ligue (ex. "MPC 2026") est rendue par `src/components/dashboard/LeagueCard.tsx`, conditionnée par `auctionStatus` retourné par le hook `src/hooks/useLeagueAuctionStatus.tsx`.
 
-## Implémentation
+Dans ce hook, l'étape 3 récupère la prochaine enchère `scheduled` et renvoie un objet avec `isScheduled: true`. C'est exactement ce qui déclenche l'affichage de la pastille bleue "Prochain round programmé dans X jours".
 
-### 1. Nouveau hook `useOpenPublicLeaguesCount`
-Fichier : `src/hooks/useOpenPublicLeaguesCount.ts`
+## Changement à appliquer
 
-- Requête `react-query` avec `queryKey: ['open-public-leagues-count']`
-- `supabase.from('leagues').select('id, current_player_count, max_players', { count: 'exact', head: false }).eq('visibility', 'public')`
-- Filtrage côté client `current_player_count < max_players` puis `.length` (la comparaison entre 2 colonnes n'est pas exprimable en un seul filtre PostgREST simple)
-- `staleTime: 60_000`
+Dans `useLeagueAuctionStatus.tsx`, étape 3, après avoir récupéré `scheduledAuction`, ajouter un seul garde-fou :
 
-### 2. Affichage dans `QuickActions.tsx`
-- Ajouter un petit badge / compteur à côté du bouton "Rejoindre une ligue" (ou intégré au texte d'aide `joinHint`)
-- Format : `{count} ligue(s) publique(s) ouverte(s)`, masqué si `count === 0` ou pendant le chargement
-- Lecture seule, pas de logique métier ajoutée
+- calculer le nombre de jours entre `now()` et `scheduledAuction.opens_at`
+- si cet écart est strictement supérieur à **10 jours**, retourner `null` au lieu de l'objet `isScheduled`
+- sinon, comportement inchangé (la carte s'affiche normalement, avec le compte à rebours)
 
-### 3. i18n
-Ajouter une clé dans `src/i18n/locales/fr/dashboard.json` et `en/dashboard.json` :
-- `quickActions.openPublicLeagues_one`: "1 ligue publique ouverte"
-- `quickActions.openPublicLeagues_other`: "{{count}} ligues publiques ouvertes"
+Effets :
+- À J-55 → le hook renvoie `null` → la section "Section enchères" de `LeagueCard` ne se rend pas → la carte disparaît automatiquement.
+- À J-10 (et en-dessous) → le hook renvoie de nouveau l'objet `isScheduled` → la carte réapparaît toute seule, sans aucune action côté base.
+- Aucun impact sur les enchères `open`, `closed` (annonces en cours) ou `pastScheduled` : on ne touche qu'à la branche "scheduled future".
 
-## Hors scope
+## Hors-scope
 
-- Aucune modification SQL / RLS (les ligues publiques sont déjà lisibles).
-- Aucun changement du `JoinLeagueDialog`.
-- Aucun changement de design global de la carte (juste l'ajout d'un compteur discret).
+- Pas de modification SQL, pas de migration, pas de RPC.
+- Pas de changement de design ni de copie de la carte.
+- Pas de réglage configurable côté UI : le seuil de 10 jours est fixé en dur (constante `SCHEDULED_VISIBILITY_DAYS = 10` en haut du hook pour faciliter une éventuelle évolution future).

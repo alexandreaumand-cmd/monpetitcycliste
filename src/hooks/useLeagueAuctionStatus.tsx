@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Nombre de jours avant l'ouverture à partir duquel on affiche la carte "enchères programmées".
+const SCHEDULED_VISIBILITY_DAYS = 10;
+
 interface AuctionStatus {
   auctionId: string;
   phaseId: string | null;
@@ -145,7 +148,18 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         .maybeSingle();
 
       if (scheduledAuction) {
-        const isPast = scheduledAuction.opens_at ? new Date(scheduledAuction.opens_at) <= new Date() : false;
+        const opensAtDate = scheduledAuction.opens_at ? new Date(scheduledAuction.opens_at) : null;
+        const now = new Date();
+        const isPast = opensAtDate ? opensAtDate <= now : false;
+
+        // Masquer la carte tant que l'ouverture est à plus de SCHEDULED_VISIBILITY_DAYS jours.
+        if (opensAtDate && !isPast) {
+          const diffDays = (opensAtDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+          if (diffDays > SCHEDULED_VISIBILITY_DAYS) {
+            return null;
+          }
+        }
+
         return {
           auctionId: scheduledAuction.id,
           phaseId: scheduledAuction.phase_id,
