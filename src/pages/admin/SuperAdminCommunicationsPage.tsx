@@ -3,10 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TemplatesList } from "@/components/admin/communications/TemplatesList";
 import { SendCommunicationForm } from "@/components/admin/communications/SendCommunicationForm";
 import { CommunicationHistoryList } from "@/components/admin/communications/CommunicationHistoryList";
+import { TransactionalHistoryList } from "@/components/admin/communications/TransactionalHistoryList";
 import type { CommunicationTemplate } from "@/hooks/useCommunicationTemplates";
 
 export default function SuperAdminCommunicationsPage() {
   const [tab, setTab] = useState<"send" | "templates" | "history">("send");
+  const [historySubTab, setHistorySubTab] = useState<"manual" | "auto">("manual");
   const [preselected, setPreselected] = useState<CommunicationTemplate | null>(null);
 
   return (
@@ -39,8 +41,19 @@ export default function SuperAdminCommunicationsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="history" className="mt-4">
-          <CommunicationHistoryList />
+        <TabsContent value="history" className="mt-4 space-y-4">
+          <Tabs value={historySubTab} onValueChange={(v) => setHistorySubTab(v as any)}>
+            <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+              <TabsTrigger value="manual" className="text-xs sm:text-sm">Campagnes manuelles</TabsTrigger>
+              <TabsTrigger value="auto" className="text-xs sm:text-sm">Mails automatiques</TabsTrigger>
+            </TabsList>
+            <TabsContent value="manual" className="mt-4">
+              <CommunicationHistoryList />
+            </TabsContent>
+            <TabsContent value="auto" className="mt-4">
+              <TransactionalHistoryList />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
