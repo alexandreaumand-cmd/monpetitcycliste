@@ -43,30 +43,11 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, serviceKey)
-  const { data: isSuper } = await admin.rpc('is_superadmin_for', {
-    _uid: userRes.user.id,
+  const { data: hasSuper } = await admin.rpc('has_role', {
+    _user_id: userRes.user.id,
+    _role: 'superadmin',
   }).catch(() => ({ data: null }))
-
-  // Fallback: check user_roles directly
-  let allowed = !!isSuper
-  if (!allowed) {
-    const { data: roleRow } = await admin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userRes.user.id)
-      .eq('role', 'superadmin')
-      .maybeSingle()
-    allowed = !!roleRow
-  }
-  if (!allowed) {
-    // Final fallback: 'admin' role via has_role()
-    const { data: hasAdmin } = await admin.rpc('has_role', {
-      _user_id: userRes.user.id,
-      _role: 'admin',
-    }).catch(() => ({ data: null }))
-    allowed = !!hasAdmin
-  }
-  if (!allowed) {
+  if (!hasSuper) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
