@@ -24,6 +24,7 @@ interface Props {
   gameMode?: string | null
   leagueUrl?: string
   autoLaunched?: boolean
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
