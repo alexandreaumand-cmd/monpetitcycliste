@@ -8,6 +8,8 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
+  Link,
   Preview,
   Section,
   Text,
@@ -24,6 +26,7 @@ interface Props {
 }
 
 const SITE_URL = 'https://labordure.app'
+const LOGO_URL = `${SITE_URL}/logo-bordure-light.png`
 
 const formatDate = (iso?: string) => {
   if (!iso) return ''
@@ -50,79 +53,181 @@ export const PublicLeagueCreatedEmail = ({
 }: Props) => (
   <Html>
     <Head />
-    <Preview>Une nouvelle ligue publique vient d'être créée sur Labordure</Preview>
+    <Preview>{ownerName} vient de créer une ligue publique : {leagueName}</Preview>
     <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Nouvelle ligue publique</Heading>
-        <Text style={text}>
-          {ownerName} vient de créer une ligue publique : <strong>{leagueName}</strong>.
-          Rejoignez-la avant que toutes les places soient prises.
-        </Text>
-        <Section style={infoBox}>
-          {gameMode && (
-            <Text style={infoLine}>
-              <strong>Mode :</strong> {modeLabel(gameMode)}
-            </Text>
-          )}
-          {maxPlayers && (
-            <Text style={infoLine}>
-              <strong>Places :</strong> {maxPlayers} managers max
-            </Text>
-          )}
-          {firstAuctionStartsAt && (
-            <Text style={infoLine}>
-              <strong>Première enchère :</strong> {formatDate(firstAuctionStartsAt)}
-            </Text>
-          )}
+      <Container style={outer}>
+        {/* Header bandeau vert */}
+        <Section style={header}>
+          <Img src={LOGO_URL} alt="La Bordure" width="140" style={logo} />
         </Section>
-        <Section style={{ textAlign: 'center', margin: '32px 0' }}>
-          <Button style={button} href={leagueUrl}>
-            Rejoindre la ligue
-          </Button>
+
+        {/* Carte blanche */}
+        <Container style={card}>
+          <Heading style={h1}>Nouvelle ligue publique</Heading>
+          <Text style={lede}>
+            <strong style={accent}>{ownerName}</strong> vient de créer une ligue
+            publique : <strong>{leagueName}</strong>. Rejoignez-la avant que
+            toutes les places soient prises.
+          </Text>
+
+          <Section style={infoBox}>
+            {gameMode && (
+              <Text style={infoLine}>
+                <span style={infoLabel}>Mode</span>
+                <span style={infoValue}>{modeLabel(gameMode)}</span>
+              </Text>
+            )}
+            {maxPlayers && (
+              <Text style={infoLine}>
+                <span style={infoLabel}>Places</span>
+                <span style={infoValue}>{maxPlayers} managers max</span>
+              </Text>
+            )}
+            {firstAuctionStartsAt && (
+              <Text style={infoLine}>
+                <span style={infoLabel}>Première enchère</span>
+                <span style={infoValue}>{formatDate(firstAuctionStartsAt)}</span>
+              </Text>
+            )}
+          </Section>
+
+          <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
+            <Button style={button} href={leagueUrl}>
+              Rejoindre la ligue
+            </Button>
+          </Section>
+
+          <Text style={smallMuted}>
+            Ou copiez ce lien :{' '}
+            <Link href={leagueUrl} style={linkStyle}>{leagueUrl}</Link>
+          </Text>
+        </Container>
+
+        {/* Footer */}
+        <Section style={footerWrap}>
+          <Hr style={hr} />
+          <Text style={footer}>
+            La Bordure · Fantasy Cycling — vous recevez ce message car vous êtes
+            inscrit sur Labordure. Vous pouvez gérer vos préférences
+            d'emails depuis votre compte.
+          </Text>
         </Section>
-        <Hr style={hr} />
-        <Text style={footer}>
-          Vous recevez ce message car vous êtes inscrit sur Labordure.
-          Pour ne plus recevoir ces notifications, utilisez le lien de
-          désabonnement en bas de l'email.
-        </Text>
       </Container>
     </Body>
   </Html>
 )
 
+/* ---------- Styles (charte La Bordure) ---------- */
+
+const COLORS = {
+  cream: '#F6F3ED',
+  green: '#1B5E3B',
+  greenDark: '#143F28',
+  gold: '#C8963A',
+  goldLight: '#E0B65A',
+  text: '#2D3D32',
+  muted: '#8A9188',
+  border: '#EAE6DE',
+  accentPink: '#E8A0B4',
+}
+
 const main = {
-  backgroundColor: '#0b0b0f',
-  fontFamily: 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+  backgroundColor: COLORS.cream,
+  fontFamily: 'Inter, "Helvetica Neue", Arial, sans-serif',
+  color: COLORS.text,
+  margin: 0,
+  padding: 0,
 }
-const container = {
+const outer = {
   margin: '0 auto',
-  padding: '32px 24px',
-  maxWidth: '560px',
-  backgroundColor: '#15151c',
-  borderRadius: '12px',
+  padding: '24px 16px 32px',
+  maxWidth: '600px',
 }
-const h1 = { color: '#ffffff', fontSize: '24px', fontWeight: 700, margin: '0 0 16px' }
-const text = { color: '#d4d4d8', fontSize: '16px', lineHeight: '24px', margin: '0 0 16px' }
+const header = {
+  background: `linear-gradient(135deg, ${COLORS.greenDark} 0%, ${COLORS.green} 50%, ${COLORS.gold} 140%)`,
+  backgroundColor: COLORS.green,
+  borderRadius: '12px 12px 0 0',
+  padding: '28px 24px',
+  textAlign: 'center' as const,
+}
+const logo = { margin: '0 auto', display: 'block' }
+const card = {
+  backgroundColor: '#FFFFFF',
+  border: `1px solid ${COLORS.border}`,
+  borderTop: 'none',
+  borderRadius: '0 0 12px 12px',
+  padding: '32px 28px',
+  boxShadow: '0 4px 12px rgba(200, 150, 58, 0.08)',
+}
+const h1 = {
+  fontFamily: 'Montserrat, Inter, sans-serif',
+  color: COLORS.green,
+  fontSize: '24px',
+  fontWeight: 700,
+  margin: '0 0 16px',
+  letterSpacing: '-0.01em',
+}
+const lede = {
+  color: COLORS.text,
+  fontSize: '16px',
+  lineHeight: '24px',
+  margin: '0 0 20px',
+}
+const accent = { color: COLORS.gold }
 const infoBox = {
-  backgroundColor: '#1f1f29',
+  backgroundColor: COLORS.cream,
+  border: `1px solid ${COLORS.border}`,
+  borderLeft: `3px solid ${COLORS.gold}`,
   borderRadius: '8px',
-  padding: '16px 20px',
+  padding: '12px 16px',
   margin: '16px 0',
 }
-const infoLine = { color: '#e4e4e7', fontSize: '14px', margin: '4px 0' }
+const infoLine = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  color: COLORS.text,
+  fontSize: '14px',
+  margin: '6px 0',
+}
+const infoLabel = {
+  color: COLORS.muted,
+  fontWeight: 500,
+  marginRight: '12px',
+}
+const infoValue = {
+  color: COLORS.green,
+  fontWeight: 600,
+}
 const button = {
-  backgroundColor: '#facc15',
-  color: '#0b0b0f',
-  padding: '12px 24px',
-  borderRadius: '8px',
+  backgroundColor: COLORS.gold,
+  backgroundImage: `linear-gradient(135deg, ${COLORS.gold}, ${COLORS.goldLight})`,
+  color: '#FFFFFF',
+  padding: '14px 28px',
+  borderRadius: '12px',
   fontSize: '15px',
   fontWeight: 600,
+  fontFamily: 'Montserrat, Inter, sans-serif',
   textDecoration: 'none',
   display: 'inline-block',
+  letterSpacing: '0.02em',
+  boxShadow: '0 4px 12px rgba(200, 150, 58, 0.35)',
 }
-const hr = { borderColor: '#2a2a36', margin: '32px 0 16px' }
-const footer = { color: '#71717a', fontSize: '12px', lineHeight: '18px' }
+const smallMuted = {
+  color: COLORS.muted,
+  fontSize: '12px',
+  textAlign: 'center' as const,
+  margin: '12px 0 0',
+  wordBreak: 'break-all' as const,
+}
+const linkStyle = { color: COLORS.gold, textDecoration: 'underline' }
+const footerWrap = { padding: '0 8px' }
+const hr = { borderColor: COLORS.border, margin: '24px 0 12px' }
+const footer = {
+  color: COLORS.muted,
+  fontSize: '12px',
+  lineHeight: '18px',
+  textAlign: 'center' as const,
+}
 
 export const template = {
   component: PublicLeagueCreatedEmail,
