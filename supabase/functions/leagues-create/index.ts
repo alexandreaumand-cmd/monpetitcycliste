@@ -270,6 +270,56 @@ Deno.serve(async (req) => {
 
     console.log('League created:', league.id, 'mode:', gameMode);
 
+    // Notify all managers when a public league is created (fire-and-forget)
+    if (visibility === 'public') {
+      try {
+        const { data: ownerManager } = await supabase
+          .from('managers').select('nom').eq('id', manager.id).single();
+
+        const { data: recipients } = await supabase
+          .from('managers')
+          .select('email')
+          .neq('id', manager.id)
+          .not('email', 'is', null);
+
+        const leagueUrl = `https://labordure.app/dashboard`;
+        const templateData = {
+          leagueName: name,
+          ownerName: ownerManager?.nom ?? 'Un manager',
+          gameMode,
+          maxPlayers,
+          firstAuctionStartsAt,
+          leagueUrl,
+        };
+
+        const authHeader = req.headers.get('Authorization') ?? '';
+        const fnUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-transactional-email`;
+
+        await Promise.all(
+          (recipients ?? [])
+            .filter((r) => r.email)
+            .map((r) =>
+              fetch(fnUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: authHeader,
+                  apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+                },
+                body: JSON.stringify({
+                  templateName: 'public-league-created',
+                  recipientEmail: r.email,
+                  idempotencyKey: `public-league-${league.id}-${r.email}`,
+                  templateData,
+                }),
+              }).catch((e) => console.error('email send failed', r.email, e))
+            )
+        );
+      } catch (e) {
+        console.error('Failed to notify users of public league:', e);
+      }
+    }
+
     return new Response(JSON.stringify({ league }), {
       status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
