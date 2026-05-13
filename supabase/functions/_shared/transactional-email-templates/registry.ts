@@ -10,7 +10,11 @@ export type TemplateEntry = {
 }
 
 import { template as publicLeagueCreated } from './public-league-created.tsx'
+import { template as auctionRoundOpened } from './auction-round-opened.tsx'
+import { template as auctionRoundClosed } from './auction-round-closed.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'public-league-created': publicLeagueCreated,
+  'auction-round-opened': auctionRoundOpened,
+  'auction-round-closed': auctionRoundClosed,
 }
