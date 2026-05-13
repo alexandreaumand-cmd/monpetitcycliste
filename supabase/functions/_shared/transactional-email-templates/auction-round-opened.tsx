@@ -67,11 +67,15 @@ export const AuctionRoundOpenedEmail = ({
           <Heading style={h1}>
             {autoLaunched ? '🤖 ' : '🎯 '}Round {roundNumber} ouvert
           </Heading>
-          <Text style={lede}>
-            Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
-            de <strong>{leagueName}</strong> vient d'être{' '}
-            {autoLaunched ? 'lancé automatiquement' : 'ouvert'}. À vous de jouer !
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
+              de <strong>{leagueName}</strong> vient d'être{' '}
+              {autoLaunched ? 'lancé automatiquement' : 'ouvert'}. À vous de jouer !
+            </Text>
+          )}
 
           <Section style={infoBox}>
             <Text style={infoLine}>
