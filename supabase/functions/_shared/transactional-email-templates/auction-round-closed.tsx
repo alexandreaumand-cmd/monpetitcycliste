@@ -150,6 +150,7 @@ const h1 = {
   letterSpacing: '-0.01em',
 }
 const lede = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
+const ledeWrap = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
 const accent = { color: COLORS.gold }
 const infoBox = {
   backgroundColor: COLORS.cream,
