@@ -24,6 +24,7 @@ interface Props {
   gameMode?: string | null
   leagueUrl?: string
   autoLaunched?: boolean
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
@@ -49,6 +50,7 @@ export const AuctionRoundOpenedEmail = ({
   gameMode,
   leagueUrl = `${SITE_URL}/dashboard`,
   autoLaunched = false,
+  __override,
 }: Props) => (
   <Html>
     <Head />
@@ -65,11 +67,15 @@ export const AuctionRoundOpenedEmail = ({
           <Heading style={h1}>
             {autoLaunched ? '🤖 ' : '🎯 '}Round {roundNumber} ouvert
           </Heading>
-          <Text style={lede}>
-            Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
-            de <strong>{leagueName}</strong> vient d'être{' '}
-            {autoLaunched ? 'lancé automatiquement' : 'ouvert'}. À vous de jouer !
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
+              de <strong>{leagueName}</strong> vient d'être{' '}
+              {autoLaunched ? 'lancé automatiquement' : 'ouvert'}. À vous de jouer !
+            </Text>
+          )}
 
           <Section style={infoBox}>
             <Text style={infoLine}>
@@ -96,7 +102,7 @@ export const AuctionRoundOpenedEmail = ({
 
           <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
             <Button style={button} href={leagueUrl}>
-              Placer mes enchères
+              {__override?.cta_label || 'Placer mes enchères'}
             </Button>
           </Section>
 
@@ -163,6 +169,7 @@ const h1 = {
   letterSpacing: '-0.01em',
 }
 const lede = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
+const ledeWrap = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
 const accent = { color: COLORS.gold }
 const infoBox = {
   backgroundColor: COLORS.cream,

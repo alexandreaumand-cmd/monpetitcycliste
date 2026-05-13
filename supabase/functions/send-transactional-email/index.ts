@@ -3,6 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { renderTemplateString } from '../_shared/transactional-email-templates/_overrides.ts'
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
@@ -277,18 +278,37 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4. Render React Email template to HTML and plain text
+  // 4a. Look up admin overrides (subject / intro_html / cta_label) for this template.
+  const { data: overrideRow } = await supabase
+    .from('transactional_email_overrides')
+    .select('subject, intro_html, cta_label')
+    .eq('template_key', templateName)
+    .maybeSingle()
+
+  const renderedOverride = overrideRow
+    ? {
+        intro_html: renderTemplateString(overrideRow.intro_html, templateData),
+        cta_label: overrideRow.cta_label || null,
+      }
+    : null
+
+  const propsForRender = renderedOverride
+    ? { ...templateData, __override: renderedOverride }
+    : templateData
+
+  // 4b. Render React Email template to HTML and plain text
   const html = await renderAsync(
-    React.createElement(template.component, templateData)
+    React.createElement(template.component, propsForRender)
   )
   const plainText = await renderAsync(
-    React.createElement(template.component, templateData),
+    React.createElement(template.component, propsForRender),
     { plainText: true }
   )
 
-  // Resolve subject — supports static string or dynamic function
-  const resolvedSubject =
-    typeof template.subject === 'function'
+  // Resolve subject — admin override (with var subst) wins over template default
+  const resolvedSubject = overrideRow?.subject
+    ? renderTemplateString(overrideRow.subject, templateData)
+    : typeof template.subject === 'function'
       ? template.subject(templateData)
       : template.subject
 

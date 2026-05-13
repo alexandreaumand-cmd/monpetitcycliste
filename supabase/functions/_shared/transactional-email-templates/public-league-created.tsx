@@ -23,6 +23,7 @@ interface Props {
   maxPlayers?: number
   firstAuctionStartsAt?: string
   leagueUrl?: string
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
@@ -50,6 +51,7 @@ export const PublicLeagueCreatedEmail = ({
   maxPlayers,
   firstAuctionStartsAt,
   leagueUrl = `${SITE_URL}/dashboard`,
+  __override,
 }: Props) => (
   <Html>
     <Head />
@@ -64,11 +66,15 @@ export const PublicLeagueCreatedEmail = ({
         {/* Carte blanche */}
         <Container style={card}>
           <Heading style={h1}>Nouvelle ligue publique</Heading>
-          <Text style={lede}>
-            <strong style={accent}>{ownerName}</strong> vient de créer une ligue
-            publique : <strong>{leagueName}</strong>. Rejoignez-la avant que
-            toutes les places soient prises.
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              <strong style={accent}>{ownerName}</strong> vient de créer une ligue
+              publique : <strong>{leagueName}</strong>. Rejoignez-la avant que
+              toutes les places soient prises.
+            </Text>
+          )}
 
           <Section style={infoBox}>
             {gameMode && (
@@ -93,7 +99,7 @@ export const PublicLeagueCreatedEmail = ({
 
           <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
             <Button style={button} href={leagueUrl}>
-              Rejoindre la ligue
+              {__override?.cta_label || 'Rejoindre la ligue'}
             </Button>
           </Section>
 
@@ -168,6 +174,12 @@ const h1 = {
   letterSpacing: '-0.01em',
 }
 const lede = {
+  color: COLORS.text,
+  fontSize: '16px',
+  lineHeight: '24px',
+  margin: '0 0 20px',
+}
+const ledeWrap = {
   color: COLORS.text,
   fontSize: '16px',
   lineHeight: '24px',

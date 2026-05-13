@@ -5278,6 +5278,33 @@ export type Database = {
         }
         Relationships: []
       }
+      transactional_email_overrides: {
+        Row: {
+          cta_label: string | null
+          intro_html: string | null
+          subject: string | null
+          template_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cta_label?: string | null
+          intro_html?: string | null
+          subject?: string | null
+          template_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cta_label?: string | null
+          intro_html?: string | null
+          subject?: string | null
+          template_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           created_at: string

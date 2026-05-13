@@ -23,6 +23,7 @@ interface Props {
   phaseIndex?: number | null
   gameMode?: string | null
   leagueUrl?: string
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
@@ -35,6 +36,7 @@ export const AuctionRoundClosedEmail = ({
   phaseIndex,
   gameMode,
   leagueUrl = `${SITE_URL}/dashboard`,
+  __override,
 }: Props) => (
   <Html>
     <Head />
@@ -49,11 +51,15 @@ export const AuctionRoundClosedEmail = ({
 
         <Container style={card}>
           <Heading style={h1}>⏰ Round {roundNumber} clôturé</Heading>
-          <Text style={lede}>
-            Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
-            de <strong>{leagueName}</strong> est terminé. Les résultats sont
-            disponibles dans l'application.
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
+              de <strong>{leagueName}</strong> est terminé. Les résultats sont
+              disponibles dans l'application.
+            </Text>
+          )}
 
           <Section style={infoBox}>
             <Text style={infoLine}>
@@ -78,7 +84,7 @@ export const AuctionRoundClosedEmail = ({
 
           <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
             <Button style={button} href={leagueUrl}>
-              Voir les résultats
+              {__override?.cta_label || 'Voir les résultats'}
             </Button>
           </Section>
 
@@ -144,6 +150,7 @@ const h1 = {
   letterSpacing: '-0.01em',
 }
 const lede = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
+const ledeWrap = { color: COLORS.text, fontSize: '16px', lineHeight: '24px', margin: '0 0 20px' }
 const accent = { color: COLORS.gold }
 const infoBox = {
   backgroundColor: COLORS.cream,
