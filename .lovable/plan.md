@@ -1,88 +1,35 @@
-## Diagnostic confirmé
+## Objectif
 
-J'ai vérifié les données LIVE :
-- 1189 pronostics au total, dont 1120 évalués.
-- La somme des `total_count` affichés dans ton classement (179 + 189 + 173 + 174 + 165 + 106 + 13 + 1) = **exactement 1000**.
+Afficher, dans la carte "Actions rapides" du dashboard, un compteur du nombre de ligues **publiques** ayant encore des places libres (en attente de joueurs).
 
-➡️ La version déployée en LIVE de l'edge function `arena-pronostic-standings` lit `arena_pronostics` sans pagination, et PostgREST coupe à 1000 lignes. La version paginée existe dans le repo mais elle n'est pas en LIVE (publication bloquée).
+## Définition d'une ligue "ouverte qui attend des joueurs"
 
-Une simple requête `UPDATE` ne corrigera rien : les pronostics sont bien évalués en base, c'est l'agrégation qui est tronquée à la lecture.
+- `visibility = 'public'`
+- `current_player_count < max_players`
+- (pas de filtre sur `status` — on garde la même règle d'éligibilité que celle déjà utilisée dans `JoinLeagueDialog`, pour rester cohérent avec ce qui s'affiche quand l'utilisateur clique sur "Rejoindre une ligue")
 
-## Solution
+## Implémentation
 
-Déplacer l'agrégation côté Postgres via une RPC `SECURITY DEFINER`. Avantages :
-- La RPC renvoie au maximum 1 ligne par manager (≤ quelques dizaines), donc le cap de 1000 ne s'applique plus.
-- Pas besoin que l'edge function soit re-déployée : la RPC est appelable directement depuis le client Supabase, et est exposée dès la création (pas besoin de publish DB côté Lovable, les migrations s'appliquent à LIVE au publish, mais la migration peut aussi être exécutée manuellement en LIVE via le SQL Runner si le publish reste bloqué).
+### 1. Nouveau hook `useOpenPublicLeaguesCount`
+Fichier : `src/hooks/useOpenPublicLeaguesCount.ts`
 
-### Étape 1 — Créer la RPC (migration)
+- Requête `react-query` avec `queryKey: ['open-public-leagues-count']`
+- `supabase.from('leagues').select('id, current_player_count, max_players', { count: 'exact', head: false }).eq('visibility', 'public')`
+- Filtrage côté client `current_player_count < max_players` puis `.length` (la comparaison entre 2 colonnes n'est pas exprimable en un seul filtre PostgREST simple)
+- `staleTime: 60_000`
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_arena_pronostic_standings(p_league_id uuid)
-RETURNS TABLE (
-  manager_id uuid,
-  manager_nom text,
-  avatar_url text,
-  correct_count bigint,
-  total_count bigint
-)
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  WITH agg AS (
-    SELECT
-      ap.manager_id,
-      COUNT(*) FILTER (WHERE ap.is_correct = true) AS correct_count,
-      COUNT(*) AS total_count
-    FROM public.arena_pronostics ap
-    WHERE ap.league_id = p_league_id
-      AND ap.is_correct IS NOT NULL
-    GROUP BY ap.manager_id
-  )
-  SELECT
-    a.manager_id,
-    COALESCE(m.nom, 'Inconnu') AS manager_nom,
-    m.avatar_url,
-    a.correct_count,
-    a.total_count
-  FROM agg a
-  LEFT JOIN public.managers m ON m.id = a.manager_id
-  WHERE EXISTS (
-    SELECT 1 FROM public.league_members lm
-    WHERE lm.league_id = p_league_id
-      AND lm.user_id = auth.uid()
-  )
-  ORDER BY a.correct_count DESC, a.total_count ASC;
-$$;
+### 2. Affichage dans `QuickActions.tsx`
+- Ajouter un petit badge / compteur à côté du bouton "Rejoindre une ligue" (ou intégré au texte d'aide `joinHint`)
+- Format : `{count} ligue(s) publique(s) ouverte(s)`, masqué si `count === 0` ou pendant le chargement
+- Lecture seule, pas de logique métier ajoutée
 
-REVOKE ALL ON FUNCTION public.get_arena_pronostic_standings(uuid) FROM public;
-GRANT EXECUTE ON FUNCTION public.get_arena_pronostic_standings(uuid) TO authenticated;
-```
+### 3. i18n
+Ajouter une clé dans `src/i18n/locales/fr/dashboard.json` et `en/dashboard.json` :
+- `quickActions.openPublicLeagues_one`: "1 ligue publique ouverte"
+- `quickActions.openPublicLeagues_other`: "{{count}} ligues publiques ouvertes"
 
-Le contrôle d'appartenance à la ligue (`EXISTS … league_members`) reproduit la sécurité que faisait l'edge function.
+## Hors scope
 
-### Étape 2 — Brancher le hook sur la RPC
-
-Dans `src/hooks/useArenaPronostics.ts`, remplacer l'appel `supabase.functions.invoke('arena-pronostic-standings', …)` par :
-
-```ts
-const { data, error } = await supabase.rpc('get_arena_pronostic_standings', {
-  p_league_id: leagueId,
-});
-if (error) throw error;
-return (data ?? []) as StandingsEntry[];
-```
-
-Le shape retourné correspond déjà à `StandingsEntry`, donc aucun changement dans `PronosticStandings.tsx`.
-
-### Étape 3 — Déploiement en LIVE
-
-- Si la publication fonctionne à nouveau (ticket support TEST/LIVE résolu) : un publish suffit, la migration et le hook partent ensemble.
-- Si la publication reste bloquée : exécuter le SQL de l'étape 1 directement dans le **SQL Runner Cloud** en sélectionnant l'environnement **LIVE**. Le hook frontend, lui, ne pourra être livré qu'au prochain publish — mais la RPC créée à l'avance ne casse rien et sera utilisée dès que le front sera publié.
-
-## Notes
-
-- Pas besoin de toucher aux pronostics existants (`UPDATE`) : les 1120 lignes évaluées sont correctes, c'est uniquement la lecture qui était tronquée.
-- Les 69 pronostics restants (`is_correct IS NULL`) correspondent à des courses non encore évaluées et seront pris en compte automatiquement quand `arena-evaluate-pronostics` tournera sur ces courses.
-- La RPC remplace fonctionnellement l'edge function `arena-pronostic-standings` ; on pourra la supprimer plus tard pour libérer un slot (114/130 utilisés).
+- Aucune modification SQL / RLS (les ligues publiques sont déjà lisibles).
+- Aucun changement du `JoinLeagueDialog`.
+- Aucun changement de design global de la carte (juste l'ajout d'un compteur discret).
