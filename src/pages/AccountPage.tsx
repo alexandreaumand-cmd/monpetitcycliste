@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Loader2, User, Lock, Palette, Sun, Moon, Monitor, Trophy } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { EmailNotificationSettings } from "@/components/settings/EmailNotificationSettings";
 import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
 import { cn } from "@/lib/utils";
 
@@ -422,6 +423,7 @@ export default function AccountPage() {
 
       {/* Section Notifications Push */}
       <NotificationSettings />
+      <EmailNotificationSettings />
       
     </div>
   );
