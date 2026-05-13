@@ -3,13 +3,16 @@ import { useTranslation } from "react-i18next";
 import { Plus, Users, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CreateLeagueDialog } from "@/components/leagues/CreateLeagueDialog";
 import { JoinLeagueDialog } from "@/components/leagues/JoinLeagueDialog";
+import { useOpenPublicLeaguesCount } from "@/hooks/useOpenPublicLeaguesCount";
 
 export function QuickActions() {
   const { t } = useTranslation('dashboard');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const { data: openCount } = useOpenPublicLeaguesCount();
 
   return (
     <>
@@ -25,15 +28,22 @@ export function QuickActions() {
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {t('quickActions.createLeague')}
               </Button>
-              <Button onClick={() => setJoinDialogOpen(true)} variant="outline" size="sm" className="gap-1.5 text-xs sm:text-sm sm:gap-2">
+              <Button onClick={() => setJoinDialogOpen(true)} variant="outline" size="sm" className="gap-1.5 text-xs sm:text-sm sm:gap-2 relative">
                 <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {t('quickActions.join')}
+                {typeof openCount === 'number' && openCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px] font-semibold">
+                    {openCount}
+                  </Badge>
+                )}
               </Button>
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center sm:text-left font-inter flex items-center justify-center sm:justify-start gap-1">
             <Globe className="h-3 w-3 shrink-0" />
-            {t('quickActions.joinHint')}
+            {typeof openCount === 'number' && openCount > 0
+              ? t('quickActions.openPublicLeagues', { count: openCount })
+              : t('quickActions.joinHint')}
           </p>
         </div>
       </Card>
