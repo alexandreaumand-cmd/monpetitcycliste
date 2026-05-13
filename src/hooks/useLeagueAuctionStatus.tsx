@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Nombre de jours avant l'ouverture à partir duquel on affiche la carte "enchères programmées".
+const SCHEDULED_VISIBILITY_DAYS = 10;
+
 interface AuctionStatus {
   auctionId: string;
   phaseId: string | null;
