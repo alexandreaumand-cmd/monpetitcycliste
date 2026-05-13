@@ -51,6 +51,7 @@ export const PublicLeagueCreatedEmail = ({
   maxPlayers,
   firstAuctionStartsAt,
   leagueUrl = `${SITE_URL}/dashboard`,
+  __override,
 }: Props) => (
   <Html>
     <Head />
