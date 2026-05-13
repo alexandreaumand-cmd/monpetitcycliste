@@ -235,6 +235,21 @@ Deno.serve(async (req) => {
       }
     });
 
+    await emailLeagueMembers(supabase, league_id, {
+      templateName: 'auction-round-opened',
+      preferenceKey: 'auction_opened',
+      idempotencyKey: `auction-opened-${newAuction.id}`,
+      templateData: {
+        leagueName: leagueCtx2?.name || 'Votre ligue',
+        roundNumber: newRoundNumber,
+        deadlineAt: deadline_at,
+        phaseIndex: phaseCtx2?.index_dans_saison ?? null,
+        gameMode: leagueCtx2?.game_mode ?? null,
+        leagueUrl: `https://labordure.app/dashboard`,
+        autoLaunched: auto_launched || false,
+      },
+    });
+
     return new Response(
       JSON.stringify({ success: true, auction: newAuction }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
