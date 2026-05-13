@@ -2413,16 +2413,22 @@ export type Database = {
       }
       email_preferences: {
         Row: {
+          auction_closed: boolean
+          auction_opened: boolean
           marketing: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          auction_closed?: boolean
+          auction_opened?: boolean
           marketing?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          auction_closed?: boolean
+          auction_opened?: boolean
           marketing?: boolean
           updated_at?: string
           user_id?: string
