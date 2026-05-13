@@ -84,7 +84,7 @@ export const AuctionRoundClosedEmail = ({
 
           <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
             <Button style={button} href={leagueUrl}>
-              Voir les résultats
+              {__override?.cta_label || 'Voir les résultats'}
             </Button>
           </Section>
 
