@@ -66,11 +66,15 @@ export const PublicLeagueCreatedEmail = ({
         {/* Carte blanche */}
         <Container style={card}>
           <Heading style={h1}>Nouvelle ligue publique</Heading>
-          <Text style={lede}>
-            <strong style={accent}>{ownerName}</strong> vient de créer une ligue
-            publique : <strong>{leagueName}</strong>. Rejoignez-la avant que
-            toutes les places soient prises.
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              <strong style={accent}>{ownerName}</strong> vient de créer une ligue
+              publique : <strong>{leagueName}</strong>. Rejoignez-la avant que
+              toutes les places soient prises.
+            </Text>
+          )}
 
           <Section style={infoBox}>
             {gameMode && (
