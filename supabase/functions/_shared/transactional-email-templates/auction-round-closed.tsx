@@ -51,11 +51,15 @@ export const AuctionRoundClosedEmail = ({
 
         <Container style={card}>
           <Heading style={h1}>⏰ Round {roundNumber} clôturé</Heading>
-          <Text style={lede}>
-            Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
-            de <strong>{leagueName}</strong> est terminé. Les résultats sont
-            disponibles dans l'application.
-          </Text>
+          {__override?.intro_html ? (
+            <div style={ledeWrap} dangerouslySetInnerHTML={{ __html: __override.intro_html }} />
+          ) : (
+            <Text style={lede}>
+              Le round d'enchères <strong style={accent}>n°{roundNumber}</strong>{' '}
+              de <strong>{leagueName}</strong> est terminé. Les résultats sont
+              disponibles dans l'application.
+            </Text>
+          )}
 
           <Section style={infoBox}>
             <Text style={infoLine}>
