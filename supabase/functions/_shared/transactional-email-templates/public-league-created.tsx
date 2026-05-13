@@ -23,6 +23,7 @@ interface Props {
   maxPlayers?: number
   firstAuctionStartsAt?: string
   leagueUrl?: string
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
