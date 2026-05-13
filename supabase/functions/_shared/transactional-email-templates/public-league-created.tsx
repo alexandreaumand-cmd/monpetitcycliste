@@ -99,7 +99,7 @@ export const PublicLeagueCreatedEmail = ({
 
           <Section style={{ textAlign: 'center', margin: '32px 0 8px' }}>
             <Button style={button} href={leagueUrl}>
-              Rejoindre la ligue
+              {__override?.cta_label || 'Rejoindre la ligue'}
             </Button>
           </Section>
 
