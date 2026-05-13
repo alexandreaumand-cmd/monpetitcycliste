@@ -50,6 +50,7 @@ export const AuctionRoundOpenedEmail = ({
   gameMode,
   leagueUrl = `${SITE_URL}/dashboard`,
   autoLaunched = false,
+  __override,
 }: Props) => (
   <Html>
     <Head />
