@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Plus, Users, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CreateLeagueDialog } from "@/components/leagues/CreateLeagueDialog";
 import { JoinLeagueDialog } from "@/components/leagues/JoinLeagueDialog";
+import { useOpenPublicLeaguesCount } from "@/hooks/useOpenPublicLeaguesCount";
 
 export function QuickActions() {
   const { t } = useTranslation('dashboard');
