@@ -335,6 +335,20 @@ Deno.serve(async (req) => {
       }
     });
 
+    await emailLeagueMembers(supabase, league_id, {
+      templateName: 'auction-round-closed',
+      preferenceKey: 'auction_closed',
+      idempotencyKey: `auction-closed-${auction_id}`,
+      templateData: {
+        leagueName,
+        roundNumber: auction.round_number,
+        annoncesCount: annonces.length,
+        phaseIndex,
+        gameMode,
+        leagueUrl: `https://labordure.app/dashboard`,
+      },
+    });
+
     // In auto mode, automatically publish all annonces with 10s intervals
     if (auto_mode && annonces.length > 0) {
       console.log('🤖 Auto-mode: triggering automatic annonce publication...');
