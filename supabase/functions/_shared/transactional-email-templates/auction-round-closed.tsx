@@ -23,6 +23,7 @@ interface Props {
   phaseIndex?: number | null
   gameMode?: string | null
   leagueUrl?: string
+  __override?: { intro_html?: string | null; cta_label?: string | null } | null
 }
 
 const SITE_URL = 'https://labordure.app'
@@ -35,6 +36,7 @@ export const AuctionRoundClosedEmail = ({
   phaseIndex,
   gameMode,
   leagueUrl = `${SITE_URL}/dashboard`,
+  __override,
 }: Props) => (
   <Html>
     <Head />
