@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { notifyLeagueMembers } from '../_shared/notifications.ts';
+import { emailLeagueMembers } from '../_shared/email-league-members.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -149,6 +150,21 @@ Deno.serve(async (req) => {
         }
       });
 
+      await emailLeagueMembers(supabase, league_id, {
+        templateName: 'auction-round-opened',
+        preferenceKey: 'auction_opened',
+        idempotencyKey: `auction-opened-${updatedAuction.id}`,
+        templateData: {
+          leagueName: leagueCtx?.name || 'Votre ligue',
+          roundNumber: scheduledAuction.round_number,
+          deadlineAt: deadline_at,
+          phaseIndex: phaseCtx?.index_dans_saison ?? null,
+          gameMode: leagueCtx?.game_mode ?? null,
+          leagueUrl: `https://labordure.app/dashboard`,
+          autoLaunched: auto_launched || false,
+        },
+      });
+
       return new Response(
         JSON.stringify({ success: true, auction: updatedAuction }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -217,6 +233,21 @@ Deno.serve(async (req) => {
         deadline_at: deadline_at,
         auto_launched: auto_launched || false
       }
+    });
+
+    await emailLeagueMembers(supabase, league_id, {
+      templateName: 'auction-round-opened',
+      preferenceKey: 'auction_opened',
+      idempotencyKey: `auction-opened-${newAuction.id}`,
+      templateData: {
+        leagueName: leagueCtx2?.name || 'Votre ligue',
+        roundNumber: newRoundNumber,
+        deadlineAt: deadline_at,
+        phaseIndex: phaseCtx2?.index_dans_saison ?? null,
+        gameMode: leagueCtx2?.game_mode ?? null,
+        leagueUrl: `https://labordure.app/dashboard`,
+        autoLaunched: auto_launched || false,
+      },
     });
 
     return new Response(
