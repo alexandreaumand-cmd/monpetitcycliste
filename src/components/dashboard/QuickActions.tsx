@@ -12,6 +12,7 @@ export function QuickActions() {
   const { t } = useTranslation('dashboard');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const { data: openCount } = useOpenPublicLeaguesCount();
 
   return (
     <>
