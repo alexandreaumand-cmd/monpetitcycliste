@@ -278,9 +278,22 @@ Deno.serve(async (req) => {
 
         const { data: recipients } = await supabase
           .from('managers')
-          .select('email')
+          .select('email, user_id')
           .neq('id', manager.id)
           .not('email', 'is', null);
+
+        // Filter out users who opted out of marketing emails
+        const userIds = (recipients ?? []).map(r => r.user_id).filter(Boolean) as string[];
+        const { data: prefs } = await supabase
+          .from('email_preferences')
+          .select('user_id, marketing')
+          .in('user_id', userIds);
+        const optedOut = new Set(
+          (prefs ?? []).filter(p => p.marketing === false).map(p => p.user_id)
+        );
+        const allowedRecipients = (recipients ?? []).filter(
+          r => r.email && !(r.user_id && optedOut.has(r.user_id))
+        );
 
         const leagueUrl = `https://labordure.app/dashboard`;
         const templateData = {
@@ -296,9 +309,7 @@ Deno.serve(async (req) => {
         const fnUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-transactional-email`;
 
         await Promise.all(
-          (recipients ?? [])
-            .filter((r) => r.email)
-            .map((r) =>
+          allowedRecipients.map((r) =>
               fetch(fnUrl, {
                 method: 'POST',
                 headers: {
