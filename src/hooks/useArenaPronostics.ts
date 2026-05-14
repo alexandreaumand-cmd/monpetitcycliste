@@ -276,12 +276,11 @@ export function usePronosticCoursesForLeague(leagueId: string) {
   return useQuery({
     queryKey: ['arena-pronostic-courses', leagueId],
     queryFn: async () => {
-      // Get courses that have at least one deadline for this league.
-      // This includes ongoing stage races even if no pronostics have been placed yet.
+      // Deadlines are global (not per league). Get all distinct course_ids
+      // from deadlines — these are courses configured for pronostics.
       const { data: deadlines, error } = await (supabase as any)
         .from('arena_pronostic_deadlines')
-        .select('course_id')
-        .eq('league_id', leagueId);
+        .select('course_id');
       if (error) throw error;
       const rawDeadlines = (deadlines || []) as { course_id: string }[];
       const courseIds = [...new Set(rawDeadlines.map((d) => d.course_id))];
