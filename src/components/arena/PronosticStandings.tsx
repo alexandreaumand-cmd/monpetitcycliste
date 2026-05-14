@@ -17,6 +17,7 @@ import {
   usePronosticCoursesForLeague,
 } from "@/hooks/useArenaPronostics";
 import { ManagerPronosticsDialog } from "./ManagerPronosticsDialog";
+import { PronosticProgressionChart } from "./PronosticProgressionChart";
 
 interface PronosticStandingsProps {
   leagueId: string;
