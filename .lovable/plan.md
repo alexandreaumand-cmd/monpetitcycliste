@@ -1,48 +1,32 @@
-## Objectif
+## Diagnostic
 
-Améliorer le classement des pronostics dans Arène > Pronostics > Classement avec deux nouvelles fonctionnalités :
+Le récap du jeudi 14 mai n'inclut pas l'étape 6 du Giro car la fonction RPC `get_daily_points_by_manager` filtre sur `race_results.date_classement` (la date officielle de l'étape), et non sur la date d'ingestion des points.
 
-1. Cliquer sur un manager ouvre un détail listant ses pronostics gagnants.
-2. Pouvoir filtrer le classement par course (ex. Giro d'Italia, Tour de France…).
+Données vérifiées :
+- Étape 6 du Giro → `date_classement = 2026-05-13` (date réelle de la course = mercredi)
+- Mais les résultats ont été insérés en base le **2026-05-14 à 15:54 UTC** (jeudi, avant le récap de 20:30)
+- Idem pour les étapes 4 et 5 (insérées vers 19:57-19:58 UTC, après l'envoi du récap → seront ratées définitivement)
 
-## 1. Filtre par course
+Conséquence : un résultat ingéré en retard n'apparaît jamais dans aucun récap journalier (ni le jour réel de la course parce qu'il n'était pas encore en base, ni le jour de l'ingestion parce que `date_classement` est dans le passé).
 
-Au-dessus de la liste du classement (`PronosticStandings.tsx`), ajouter un sélecteur (Select shadcn) avec :
-- Option par défaut : « Toutes les courses » (comportement actuel).
-- Une option par course présente dans `arena_pronostic_deadlines` pour la ligue (jointure `courses.nom`), triée par date de début descendante.
+## Correctif
 
-Quand une course est sélectionnée, le classement recalcule `correct_count` / `total_count` uniquement sur les pronostics liés à ce `course_id`.
+Modifier la fonction SQL `public.get_daily_points_by_manager(p_league_id, p_start, p_end)` pour filtrer sur `points_ledger.created_at` (la date à laquelle les points sont entrés dans le système) au lieu de `race_results.date_classement`.
 
-Implémentation :
-- Nouveau hook `usePronosticCoursesForLeague(leagueId)` qui retourne la liste distincte des courses ayant au moins une deadline pour la ligue.
-- Étendre `usePronosticStandings(leagueId, courseId?)` :
-  - Si `courseId` est null → continuer d'appeler le RPC existant `get_arena_pronostic_standings`.
-  - Sinon → faire une requête côté client sur `arena_pronostics` filtrée par `league_id` + `course_id`, agréger par manager (count des `is_correct = true` et total des `is_correct != null`), joindre `managers(nom, avatar_url)`, trier par correct desc.
-- Aucun changement SQL nécessaire (option simple). Alternative possible : nouveau RPC `get_arena_pronostic_standings_by_course` (à décider si volume important).
+```sql
+-- Remplacer
+WHERE rr.date_classement >= p_start::date
+  AND rr.date_classement <= p_end::date
+-- Par
+WHERE pl.created_at >= p_start
+  AND pl.created_at <= p_end
+```
 
-## 2. Détail d'un manager (pronostics gagnants)
+Effets :
+- Le récap du 14 mai inclura tous les points crédités le 14 mai, y compris ceux d'étapes courues les jours précédents mais ingérées aujourd'hui (étape 6 du Giro).
+- Aucun changement nécessaire côté Edge Function `arena-recaps` ni côté UI.
+- Le filtre `bonus_points` utilise déjà `created_at`, donc cohérent.
 
-Rendre chaque ligne du classement cliquable. Au clic, ouvrir un `Dialog` shadcn « Pronostics gagnants — {nom du manager} » contenant :
-- Liste des pronostics où `is_correct = true` pour ce manager dans la ligue (et filtrée par course si un filtre est actif).
-- Chaque entrée affiche : nom de la course (+ numéro d'étape si présent), type de pronostic (Vainqueur d'étape / Général / Course d'un jour…), nom du coureur ou de l'équipe choisi, date de la deadline.
-- État vide : « Aucun pronostic gagnant pour le moment ».
+## Livrable
 
-Implémentation :
-- Nouveau hook `useManagerWinningPronostics(leagueId, managerId, courseId?)` qui sélectionne `arena_pronostics` filtrés `is_correct = true`, hydrate les noms coureur/équipe et joint `courses(nom)` + `arena_pronostic_deadlines` pour récupérer `pronostic_type`/`etape_numero` (déjà sur `arena_pronostics`).
-- Nouveau composant `ManagerPronosticsDialog.tsx`.
-
-## Fichiers à créer / modifier
-
-- `src/hooks/useArenaPronostics.ts` — ajouter `usePronosticCoursesForLeague`, `useManagerWinningPronostics`, étendre `usePronosticStandings` avec un `courseId` optionnel.
-- `src/components/arena/PronosticStandings.tsx` — ajouter le Select de filtre course, gérer l'état local sélection, rendre chaque ligne cliquable (bouton accessible), ouvrir le dialog.
-- `src/components/arena/ManagerPronosticsDialog.tsx` — nouveau, dialog liste des bons pronostics.
-- `src/i18n/locales/fr/arena.json` + `en/arena.json` — clés :
-  - `pronostics.standings.filterByCourse` / `allCourses`
-  - `pronostics.standings.managerDetailTitle`
-  - `pronostics.standings.winningEmpty`
-  - libellés types de pronostic si non présents (`stageWinner`, `gcWinner`, `oneDayWinner`).
-
-## Hors périmètre
-
-- Pas de changement du RPC SQL existant (sauf si tu veux que je crée un RPC dédié pour les perfs).
-- Pas de modification du flux de saisie ni des autres onglets de l'Arène.
+Une migration SQL `CREATE OR REPLACE FUNCTION public.get_daily_points_by_manager(...)` avec le seul changement du WHERE.
