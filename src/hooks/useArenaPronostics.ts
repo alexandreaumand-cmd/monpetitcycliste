@@ -214,17 +214,168 @@ export interface StandingsEntry {
   total_count: number;
 }
 
-export function usePronosticStandings(leagueId: string) {
+export function usePronosticStandings(leagueId: string, courseId?: string | null) {
   return useQuery({
-    queryKey: ['arena-pronostic-standings', leagueId],
+    queryKey: ['arena-pronostic-standings', leagueId, courseId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_arena_pronostic_standings', {
-        p_league_id: leagueId,
-      });
+      if (!courseId) {
+        const { data, error } = await supabase.rpc('get_arena_pronostic_standings', {
+          p_league_id: leagueId,
+        });
+        if (error) throw error;
+        return (data ?? []) as StandingsEntry[];
+      }
+
+      // Per-course aggregation, client-side
+      const { data: pronos, error } = await supabase
+        .from('arena_pronostics')
+        .select('manager_id, is_correct')
+        .eq('league_id', leagueId)
+        .eq('course_id', courseId)
+        .not('is_correct', 'is', null);
+
       if (error) throw error;
-      return (data ?? []) as StandingsEntry[];
+      if (!pronos || pronos.length === 0) return [];
+
+      const agg: Record<string, { correct: number; total: number }> = {};
+      for (const p of pronos) {
+        const a = (agg[p.manager_id] ||= { correct: 0, total: 0 });
+        a.total += 1;
+        if (p.is_correct) a.correct += 1;
+      }
+
+      const managerIds = Object.keys(agg);
+      const { data: managers } = await supabase
+        .from('managers')
+        .select('id, nom, avatar_url')
+        .in('id', managerIds);
+
+      const result: StandingsEntry[] = (managers || []).map((m) => ({
+        manager_id: m.id,
+        manager_nom: m.nom,
+        avatar_url: m.avatar_url,
+        correct_count: agg[m.id].correct,
+        total_count: agg[m.id].total,
+      }));
+
+      result.sort((a, b) => b.correct_count - a.correct_count || b.total_count - a.total_count);
+      return result;
     },
     enabled: !!leagueId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export interface PronosticCourseOption {
+  course_id: string;
+  nom: string;
+  date_debut: string | null;
+}
+
+export function usePronosticCoursesForLeague(leagueId: string) {
+  return useQuery({
+    queryKey: ['arena-pronostic-courses', leagueId],
+    queryFn: async () => {
+      // Restrict to courses that have at least one deadline AND at least one pronostic in this league
+      const { data: pronos, error } = await supabase
+        .from('arena_pronostics')
+        .select('course_id')
+        .eq('league_id', leagueId);
+      if (error) throw error;
+      const courseIds = [...new Set((pronos || []).map((p) => p.course_id))];
+      if (courseIds.length === 0) return [];
+
+      const { data: courses } = await supabase
+        .from('courses')
+        .select('id, nom, date_debut')
+        .in('id', courseIds);
+
+      return (courses || [])
+        .map((c) => ({ course_id: c.id, nom: c.nom, date_debut: c.date_debut }))
+        .sort((a, b) => {
+          const da = a.date_debut ? new Date(a.date_debut).getTime() : 0;
+          const db = b.date_debut ? new Date(b.date_debut).getTime() : 0;
+          return db - da;
+        }) as PronosticCourseOption[];
+    },
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export interface ManagerWinningPronostic {
+  id: string;
+  course_id: string;
+  course_nom: string;
+  etape_numero: number | null;
+  pronostic_type: string;
+  coureur_nom: string | null;
+  equipe_nom: string | null;
+  evaluated_at: string | null;
+}
+
+export function useManagerWinningPronostics(
+  leagueId: string,
+  managerId: string | null,
+  courseId?: string | null,
+  enabled: boolean = true,
+) {
+  return useQuery({
+    queryKey: ['arena-manager-winning-pronostics', leagueId, managerId, courseId ?? null],
+    queryFn: async () => {
+      if (!managerId) return [];
+      let query = supabase
+        .from('arena_pronostics')
+        .select('id, course_id, etape_numero, pronostic_type, coureur_id, equipe_saison_id, evaluated_at')
+        .eq('league_id', leagueId)
+        .eq('manager_id', managerId)
+        .eq('is_correct', true);
+
+      if (courseId) query = query.eq('course_id', courseId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      const courseIds = [...new Set(data.map((p) => p.course_id))];
+      const coureurIds = [...new Set(data.filter((p) => p.coureur_id).map((p) => p.coureur_id!))];
+      const equipeIds = [...new Set(data.filter((p) => p.equipe_saison_id).map((p) => p.equipe_saison_id!))];
+
+      const [coursesRes, coureursRes, equipesRes] = await Promise.all([
+        supabase.from('courses').select('id, nom').in('id', courseIds),
+        coureurIds.length
+          ? supabase.from('coureurs').select('id, nom').in('id', coureurIds)
+          : Promise.resolve({ data: [] as { id: string; nom: string }[] }),
+        equipeIds.length
+          ? supabase.from('equipes_saisons').select('id, nom_affiche').in('id', equipeIds)
+          : Promise.resolve({ data: [] as { id: string; nom_affiche: string }[] }),
+      ]);
+
+      const courseMap: Record<string, string> = {};
+      for (const c of (coursesRes.data || []) as any[]) courseMap[c.id] = c.nom;
+      const coureurMap: Record<string, string> = {};
+      for (const c of (coureursRes.data || []) as any[]) coureurMap[c.id] = c.nom;
+      const equipeMap: Record<string, string> = {};
+      for (const e of (equipesRes.data || []) as any[]) equipeMap[e.id] = e.nom_affiche;
+
+      return data
+        .map((p) => ({
+          id: p.id,
+          course_id: p.course_id,
+          course_nom: courseMap[p.course_id] || '—',
+          etape_numero: p.etape_numero,
+          pronostic_type: p.pronostic_type,
+          coureur_nom: p.coureur_id ? coureurMap[p.coureur_id] || null : null,
+          equipe_nom: p.equipe_saison_id ? equipeMap[p.equipe_saison_id] || null : null,
+          evaluated_at: p.evaluated_at,
+        }))
+        .sort((a, b) => {
+          const ta = a.evaluated_at ? new Date(a.evaluated_at).getTime() : 0;
+          const tb = b.evaluated_at ? new Date(b.evaluated_at).getTime() : 0;
+          return tb - ta;
+        }) as ManagerWinningPronostic[];
+    },
+    enabled: enabled && !!leagueId && !!managerId,
     staleTime: 1000 * 60 * 2,
   });
 }
