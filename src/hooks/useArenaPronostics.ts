@@ -283,7 +283,7 @@ export function usePronosticCoursesForLeague(leagueId: string) {
         .select('course_id')
         .eq('league_id', leagueId);
       if (error) throw error;
-      const courseIds = [...new Set((deadlines || []).map((d: { course_id: string }) => d.course_id))];
+      const courseIds: string[] = [...new Set((deadlines || []).map((d: { course_id: string }) => d.course_id))];
       if (courseIds.length === 0) return [];
 
       const { data: courses } = await supabase
