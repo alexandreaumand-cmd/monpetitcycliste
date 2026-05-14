@@ -1,58 +1,48 @@
-# Diagnostic
+## Objectif
 
-Les emails ne partent jamais : ils s'accumulent dans la file `pgmq.q_transactional_emails` sans jamais être lus.
+Améliorer le classement des pronostics dans Arène > Pronostics > Classement avec deux nouvelles fonctionnalités :
 
-**Constats :**
-- 5 messages en attente depuis le 30 avril → 13 mai. Tous ont `read_ct = 0` : aucun worker ne les a jamais consommés.
-- L'edge function `process-email-queue` est OK et déployée.
-- L'edge function `send-communication-email` enfile correctement les emails (statut `pending` créé dans `email_send_log`, message inséré dans pgmq).
-- Le cron `process-email-queue` (toutes les 5 secondes) est bien actif (`active = true`) et la condition de présence en file est bien satisfaite.
+1. Cliquer sur un manager ouvre un détail listant ses pronostics gagnants.
+2. Pouvoir filtrer le classement par course (ex. Giro d'Italia, Tour de France…).
 
-**Cause racine identifiée :**
-Le cron job appelle la mauvaise URL Supabase :
+## 1. Filtre par course
 
-```
-url := 'https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/process-email-queue'
-```
+Au-dessus de la liste du classement (`PronosticStandings.tsx`), ajouter un sélecteur (Select shadcn) avec :
+- Option par défaut : « Toutes les courses » (comportement actuel).
+- Une option par course présente dans `arena_pronostic_deadlines` pour la ligue (jointure `courses.nom`), triée par date de début descendante.
 
-Or le projet Lovable Cloud actuel a pour ref `oisfvryhpovwxaxqbmow`. L'URL pointe donc vers **un autre projet Supabase** (probablement un ancien projet ou un projet de test). Résultat : toutes les 5 secondes, le cron envoie un POST dans le vide (ou vers un projet qui n'a pas la même fonction / pas la même clé), et la file ne se vide jamais.
+Quand une course est sélectionnée, le classement recalcule `correct_count` / `total_count` uniquement sur les pronostics liés à ce `course_id`.
 
-C'est aussi la raison pour laquelle l'historique affiche systématiquement "X en attente" pour tous les envois récents.
+Implémentation :
+- Nouveau hook `usePronosticCoursesForLeague(leagueId)` qui retourne la liste distincte des courses ayant au moins une deadline pour la ligue.
+- Étendre `usePronosticStandings(leagueId, courseId?)` :
+  - Si `courseId` est null → continuer d'appeler le RPC existant `get_arena_pronostic_standings`.
+  - Sinon → faire une requête côté client sur `arena_pronostics` filtrée par `league_id` + `course_id`, agréger par manager (count des `is_correct = true` et total des `is_correct != null`), joindre `managers(nom, avatar_url)`, trier par correct desc.
+- Aucun changement SQL nécessaire (option simple). Alternative possible : nouveau RPC `get_arena_pronostic_standings_by_course` (à décider si volume important).
 
-# Plan de correction
+## 2. Détail d'un manager (pronostics gagnants)
 
-## Étape 1 — Corriger l'URL du cron job (migration SQL)
+Rendre chaque ligne du classement cliquable. Au clic, ouvrir un `Dialog` shadcn « Pronostics gagnants — {nom du manager} » contenant :
+- Liste des pronostics où `is_correct = true` pour ce manager dans la ligue (et filtrée par course si un filtre est actif).
+- Chaque entrée affiche : nom de la course (+ numéro d'étape si présent), type de pronostic (Vainqueur d'étape / Général / Course d'un jour…), nom du coureur ou de l'équipe choisi, date de la deadline.
+- État vide : « Aucun pronostic gagnant pour le moment ».
 
-Mettre à jour le cron `process-email-queue` pour qu'il pointe vers le bon projet :
+Implémentation :
+- Nouveau hook `useManagerWinningPronostics(leagueId, managerId, courseId?)` qui sélectionne `arena_pronostics` filtrés `is_correct = true`, hydrate les noms coureur/équipe et joint `courses(nom)` + `arena_pronostic_deadlines` pour récupérer `pronostic_type`/`etape_numero` (déjà sur `arena_pronostics`).
+- Nouveau composant `ManagerPronosticsDialog.tsx`.
 
-- Remplacer `khahpetvqjoyrwambaqn.supabase.co` par `oisfvryhpovwxaxqbmow.supabase.co` dans la commande du cron.
-- Conserver tout le reste à l'identique (condition d'arrêt si rate-limited, vérification de présence en file, header Authorization avec la clé service role lue depuis le vault).
-- Réalisé via `cron.unschedule` + `cron.schedule` (ou `cron.alter_job`) dans une migration.
+## Fichiers à créer / modifier
 
-## Étape 2 — Vérifier que le secret `email_queue_service_role_key` est bien la clé service role du projet actuel
+- `src/hooks/useArenaPronostics.ts` — ajouter `usePronosticCoursesForLeague`, `useManagerWinningPronostics`, étendre `usePronosticStandings` avec un `courseId` optionnel.
+- `src/components/arena/PronosticStandings.tsx` — ajouter le Select de filtre course, gérer l'état local sélection, rendre chaque ligne cliquable (bouton accessible), ouvrir le dialog.
+- `src/components/arena/ManagerPronosticsDialog.tsx` — nouveau, dialog liste des bons pronostics.
+- `src/i18n/locales/fr/arena.json` + `en/arena.json` — clés :
+  - `pronostics.standings.filterByCourse` / `allCourses`
+  - `pronostics.standings.managerDetailTitle`
+  - `pronostics.standings.winningEmpty`
+  - libellés types de pronostic si non présents (`stageWinner`, `gcWinner`, `oneDayWinner`).
 
-- Le cron lit `email_queue_service_role_key` depuis `vault.decrypted_secrets`.
-- Si cette clé correspond encore à l'ancien projet `khahpetv…`, le `process-email-queue` du bon projet renverra 401/403 et la file restera bloquée.
-- À vérifier dans une seconde requête / migration ; si nécessaire, mettre à jour le secret avec la clé service role du projet `oisfvryhpovwxaxqbmow`.
+## Hors périmètre
 
-## Étape 3 — Vider/relancer les messages déjà en attente
-
-Une fois le cron corrigé, les 5 messages historiques seront naturellement consommés au prochain tick (5 s) puisque `read_ct = 0` et `vt` est dans le passé. Aucun replay manuel n'est nécessaire.
-
-Cas particulier : le message programmé du 2 mai ("Teste envoie programmé…") sera envoyé immédiatement (date de programmation déjà passée). À confirmer avec toi : on le laisse partir, ou on le supprime de la file avant de relancer ?
-
-## Étape 4 — Vérification post-correction
-
-- Relire `pgmq.q_transactional_emails` : doit être vide en quelques secondes.
-- Relire `email_send_log` : les messages concernés doivent passer de `pending` à `sent`.
-- Consulter les logs de `process-email-queue` pour confirmer l'absence d'erreurs 401/403/429.
-
-# Hors scope
-
-- Pas de modification de `send-communication-email` ni de `process-email-queue` (le code est correct).
-- Pas de modification de l'UI Communications.
-- Pas de changement du domaine d'envoi ni du provider email.
-
-# Question à clarifier
-
-Veux-tu que j'envoie le message historique programmé du 2 mai 2026 dès la correction appliquée, ou que je le supprime de la file avant ?
+- Pas de changement du RPC SQL existant (sauf si tu veux que je crée un RPC dédié pour les perfs).
+- Pas de modification du flux de saisie ni des autres onglets de l'Arène.
