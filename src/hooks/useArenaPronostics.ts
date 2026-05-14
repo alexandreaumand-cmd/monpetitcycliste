@@ -276,13 +276,15 @@ export function usePronosticCoursesForLeague(leagueId: string) {
   return useQuery({
     queryKey: ['arena-pronostic-courses', leagueId],
     queryFn: async () => {
-      // Restrict to courses that have at least one deadline AND at least one pronostic in this league
-      const { data: pronos, error } = await supabase
-        .from('arena_pronostics')
+      // Get courses that have at least one deadline for this league.
+      // This includes ongoing stage races even if no pronostics have been placed yet.
+      const { data: deadlines, error } = await (supabase as any)
+        .from('arena_pronostic_deadlines')
         .select('course_id')
         .eq('league_id', leagueId);
       if (error) throw error;
-      const courseIds = [...new Set((pronos || []).map((p) => p.course_id))];
+      const rawDeadlines = (deadlines || []) as { course_id: string }[];
+      const courseIds = [...new Set(rawDeadlines.map((d) => d.course_id))];
       if (courseIds.length === 0) return [];
 
       const { data: courses } = await supabase
