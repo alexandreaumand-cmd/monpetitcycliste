@@ -1,14 +1,28 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Medal } from "lucide-react";
-import { usePronosticStandings, type StandingsEntry } from "@/hooks/useArenaPronostics";
+import { Trophy } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  usePronosticStandings,
+  usePronosticCoursesForLeague,
+} from "@/hooks/useArenaPronostics";
+import { ManagerPronosticsDialog } from "./ManagerPronosticsDialog";
 
 interface PronosticStandingsProps {
   leagueId: string;
 }
+
+const ALL_COURSES = "__all__";
 
 const getRankStyle = (index: number) => {
   switch (index) {
@@ -38,15 +52,37 @@ const getRankEmoji = (index: number) => {
 
 export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
   const { t } = useTranslation("arena");
-  const { data: standings, isLoading } = usePronosticStandings(leagueId);
+  const [courseFilter, setCourseFilter] = useState<string>(ALL_COURSES);
+  const [selected, setSelected] = useState<{ id: string; nom: string } | null>(
+    null,
+  );
+
+  const courseId = courseFilter === ALL_COURSES ? null : courseFilter;
+  const { data: standings, isLoading } = usePronosticStandings(leagueId, courseId);
+  const { data: courses } = usePronosticCoursesForLeague(leagueId);
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 space-y-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Trophy className="h-4 w-4" />
           {t("pronostics.standings.title")}
         </CardTitle>
+        <Select value={courseFilter} onValueChange={setCourseFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("pronostics.standings.filterByCourse")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_COURSES}>
+              {t("pronostics.standings.allCourses")}
+            </SelectItem>
+            {(courses || []).map((c) => (
+              <SelectItem key={c.course_id} value={c.course_id}>
+                {c.nom}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -62,9 +98,13 @@ export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
         ) : (
           <div className="space-y-2">
             {standings.map((entry, index) => (
-              <div
+              <button
                 key={entry.manager_id}
-                className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                type="button"
+                onClick={() =>
+                  setSelected({ id: entry.manager_id, nom: entry.manager_nom })
+                }
+                className="w-full flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors text-left"
               >
                 <span className={`w-6 text-center text-sm ${getRankStyle(index)}`}>
                   {getRankEmoji(index) || `${index + 1}.`}
@@ -81,11 +121,20 @@ export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
                 <Badge variant="secondary" className="text-xs">
                   {entry.correct_count}/{entry.total_count}
                 </Badge>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </CardContent>
+
+      <ManagerPronosticsDialog
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        leagueId={leagueId}
+        managerId={selected?.id ?? null}
+        managerNom={selected?.nom ?? ""}
+        courseId={courseId}
+      />
     </Card>
   );
 };
