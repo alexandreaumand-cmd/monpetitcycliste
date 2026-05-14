@@ -656,3 +656,113 @@ export function useStartlistTeams(courseId: string | null) {
     staleTime: 1000 * 60 * 10,
   });
 }
+
+export interface PronosticProgressionPoint {
+  label: string;
+  timestamp: number;
+  [managerName: string]: number | string;
+}
+
+export interface PronosticProgressionResult {
+  points: PronosticProgressionPoint[];
+  managers: { id: string; nom: string }[];
+}
+
+export function usePronosticProgression(
+  leagueId: string,
+  courseId?: string | null,
+  topN: number = 5,
+) {
+  return useQuery<PronosticProgressionResult>({
+    queryKey: ['arena-pronostic-progression', leagueId, courseId ?? null, topN],
+    queryFn: async () => {
+      let query = supabase
+        .from('arena_pronostics')
+        .select('manager_id, course_id, etape_numero, is_correct, evaluated_at')
+        .eq('league_id', leagueId)
+        .not('evaluated_at', 'is', null);
+      if (courseId) query = query.eq('course_id', courseId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      const rows = (data || []) as {
+        manager_id: string;
+        course_id: string;
+        etape_numero: number | null;
+        is_correct: boolean | null;
+        evaluated_at: string;
+      }[];
+      if (rows.length === 0) return { points: [], managers: [] };
+
+      // Aggregate totals per manager to pick top N
+      const totals: Record<string, number> = {};
+      for (const r of rows) {
+        if (r.is_correct) totals[r.manager_id] = (totals[r.manager_id] || 0) + 1;
+      }
+      const managerIds = Object.keys(totals).sort((a, b) => totals[b] - totals[a]).slice(0, topN);
+      const idSet = new Set(managerIds);
+
+      // Fetch manager names + course names
+      const courseIds = [...new Set(rows.map((r) => r.course_id))];
+      const [managersRes, coursesRes] = await Promise.all([
+        supabase.from('managers').select('id, nom').in('id', managerIds),
+        supabase.from('courses').select('id, nom').in('id', courseIds),
+      ]);
+      const nameMap: Record<string, string> = {};
+      for (const m of (managersRes.data || []) as any[]) nameMap[m.id] = m.nom;
+      const courseMap: Record<string, string> = {};
+      for (const c of (coursesRes.data || []) as any[]) courseMap[c.id] = c.nom;
+
+      // Group by checkpoint (course_id + etape_numero), keep latest evaluated_at as ts
+      type Bucket = {
+        key: string;
+        course_id: string;
+        etape_numero: number | null;
+        ts: number;
+        deltas: Record<string, number>;
+      };
+      const buckets = new Map<string, Bucket>();
+      for (const r of rows) {
+        const key = `${r.course_id}|${r.etape_numero ?? 'gc'}`;
+        const ts = new Date(r.evaluated_at).getTime();
+        let b = buckets.get(key);
+        if (!b) {
+          b = { key, course_id: r.course_id, etape_numero: r.etape_numero, ts, deltas: {} };
+          buckets.set(key, b);
+        }
+        if (ts > b.ts) b.ts = ts;
+        if (r.is_correct && idSet.has(r.manager_id)) {
+          b.deltas[r.manager_id] = (b.deltas[r.manager_id] || 0) + 1;
+        }
+      }
+
+      const ordered = [...buckets.values()].sort((a, b) => a.ts - b.ts);
+
+      // Cumulative
+      const running: Record<string, number> = {};
+      for (const id of managerIds) running[id] = 0;
+
+      const points: PronosticProgressionPoint[] = ordered.map((b) => {
+        for (const id of managerIds) {
+          running[id] = (running[id] || 0) + (b.deltas[id] || 0);
+        }
+        const courseNom = courseMap[b.course_id] || '—';
+        const label = b.etape_numero != null
+          ? `${courseNom.slice(0, 12)} É${b.etape_numero}`
+          : courseNom.slice(0, 18);
+        const point: PronosticProgressionPoint = { label, timestamp: b.ts };
+        for (const id of managerIds) {
+          point[nameMap[id] || id] = running[id];
+        }
+        return point;
+      });
+
+      return {
+        points,
+        managers: managerIds.map((id) => ({ id, nom: nameMap[id] || id })),
+      };
+    },
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
