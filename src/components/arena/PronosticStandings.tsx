@@ -138,5 +138,7 @@ export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
         courseId={courseId}
       />
     </Card>
+    <PronosticProgressionChart leagueId={leagueId} courseId={courseId} />
+    </div>
   );
 };
