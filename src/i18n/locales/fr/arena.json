@@ -53,7 +53,11 @@
     },
     "standings": {
       "title": "Classement Pronostics",
-      "empty": "Pas encore de résultats évalués"
+      "empty": "Pas encore de résultats évalués",
+      "filterByCourse": "Filtrer par course",
+      "allCourses": "Toutes les courses",
+      "managerDetailTitle": "Pronostics gagnants — {{name}}",
+      "winningEmpty": "Aucun pronostic gagnant pour le moment"
     },
     "tabs": {
       "inProgress": "En cours",

@@ -53,7 +53,11 @@
     },
     "standings": {
       "title": "Predictions Standings",
-      "empty": "No evaluated results yet"
+      "empty": "No evaluated results yet",
+      "filterByCourse": "Filter by race",
+      "allCourses": "All races",
+      "managerDetailTitle": "Winning predictions — {{name}}",
+      "winningEmpty": "No winning predictions yet"
     },
     "tabs": {
       "inProgress": "In Progress",
