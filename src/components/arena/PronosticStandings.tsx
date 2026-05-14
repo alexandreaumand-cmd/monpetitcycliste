@@ -63,6 +63,7 @@ export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
   const { data: courses } = usePronosticCoursesForLeague(leagueId);
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader className="pb-3 space-y-3">
         <CardTitle className="flex items-center gap-2 text-base">
