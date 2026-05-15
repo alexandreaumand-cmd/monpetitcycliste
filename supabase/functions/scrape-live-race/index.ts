@@ -297,7 +297,32 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
       console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);
     }
 
-    // Each top-level .sit-grp is a legitimate group — no merging needed
+    // ── Stage-race defensive cleanup ──
+    // For stage races, PCS shows individual GC gaps next to each rider in a breakaway.
+    // These can pollute parsing as fake single-rider groups with huge gaps.
+    // Drop any non-peloton group with a single rider AND gap > 10:00 (clearly a GC gap).
+    if (isStageRace && situationGroups.length > 1) {
+      const gapToSeconds = (g: string): number => {
+        const m = g.replace(/^\+/, "").match(/^(?:(\d+):)?(\d+):(\d+)$/);
+        if (!m) return 0;
+        return (parseInt(m[1] || "0", 10) * 3600) + (parseInt(m[2], 10) * 60) + parseInt(m[3], 10);
+      };
+      const before = situationGroups.length;
+      const cleaned = situationGroups.filter((g) => {
+        if (g.isPeloton) return true;
+        if (g.riders.length >= 2) return true;
+        if (g.riders.length === 1 && gapToSeconds(g.gap) > 600) {
+          console.log(`[PCS Live] Stage-race cleanup: drop polluted group "${g.name}" gap=${g.gap}`);
+          return false;
+        }
+        return true;
+      });
+      situationGroups.length = 0;
+      situationGroups.push(...cleaned);
+      if (situationGroups.length !== before) {
+        console.log(`[PCS Live] Stage-race cleanup: ${before} → ${situationGroups.length} groups`);
+      }
+    }
   }
 
   // ── Extract PCS slugs for matching (needed by fallback too) ──
