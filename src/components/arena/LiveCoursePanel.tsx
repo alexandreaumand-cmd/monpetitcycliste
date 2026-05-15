@@ -35,6 +35,8 @@ export const LiveCoursePanel = ({
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, courseId);
+  const { data: liveCourses } = useLiveCourses();
+  const currentEtape = liveCourses?.find((lc) => lc.course_id === courseId)?.current_etape ?? null;
 
   const {
     data: messagesData,
@@ -52,12 +54,14 @@ export const LiveCoursePanel = ({
       const etape = (msg.metadata as any)?.etape_numero;
       if (etape != null) stages.add(etape);
     });
+    if (currentEtape != null) stages.add(currentEtape);
     return Array.from(stages).sort((a, b) => a - b);
-  }, [allMessages]);
+  }, [allMessages, currentEtape]);
 
+  // Auto-select the stage currently being broadcast live (admin's choice)
   useEffect(() => {
-    setSelectedEtape(null);
-  }, [courseId]);
+    setSelectedEtape(currentEtape);
+  }, [courseId, currentEtape]);
 
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
