@@ -1,65 +1,82 @@
 ## Objectif
 
-Deux améliorations au Live Broadcast :
+Pour chaque course par étapes en cours, relire automatiquement la startlist PCS une fois par jour à 19h (Europe/Paris) afin de détecter les coureurs marqués `(DNF #n)` ou `(DNS #n)`, puis afficher cette info sur les startlists côté ligues (badge `DNF 1`, `DNS 2`, etc.).
 
-1. Permettre au superadmin de sélectionner explicitement l'étape en cours d'une course par étapes, et la rendre visible aux utilisateurs des ligues.
-2. Corriger le parsing PCS pour les courses par étapes : ne pas confondre l'écart au CG de chaque coureur avec l'écart entre groupes.
+## Étapes
 
----
+### 1. Schéma BDD (migration)
 
-## 1. Étape en cours visible côté utilisateurs
+Ajouter sur `startlist_entries` :
+- `abandon_type text` — `'DNF'` | `'DNS'` | `null`
+- `abandon_etape int` — numéro de l'étape où l'abandon est survenu
+- `abandon_checked_at timestamptz` — dernier passage du job
 
-### Stockage
-Ajouter une colonne `current_etape int null` sur `arena_live_courses` pour persister l'étape active de chaque course en direct.
+Index partiel sur `abandon_type IS NOT NULL` pour filtrage rapide.
 
-### Côté superadmin (`SuperAdminLiveBroadcastPage.tsx`)
-- L'input "Étape" déjà présent dans le composer devient la source de vérité de l'étape active.
-- Quand `isMultiStage` et `selectedEtape` change → update `arena_live_courses.current_etape`.
-- Au chargement d'une course active, lire `current_etape` depuis la DB pour pré-remplir `selectedEtape` (fallback à 1).
-- Déplacer le sélecteur d'étape dans une petite barre dédiée en haut (plus visible) avec libellé "Étape couverte en direct".
+### 2. Nouvelle edge function `scrape-startlist-abandons`
 
-### Côté ligues (`LiveCoursePanel.tsx` + `LiveCoursesTab.tsx`)
-- Lire `current_etape` via le hook `useLiveCourses` (à étendre pour exposer le champ).
-- Afficher un badge bien visible à côté du nom de la course : "🔴 Étape N en direct".
-- Pré-sélectionner automatiquement `selectedEtape = current_etape` à l'ouverture du panel pour que l'historique filtré montre directement la bonne étape.
-- Garder le sélecteur d'étapes existant pour permettre de revenir aux étapes précédentes.
+Comportement :
+1. Sélectionner les courses où `date_debut <= now() <= date_fin` ET `date_fin > date_debut` (= course par étapes en cours), avec `pcs_slug` non null et un `startlist_imports` existant (le plus récent par course).
+2. Pour chacune, fetch `https://www.procyclingstats.com/race/<pcs_slug>/startlist` (HTML).
+3. Parser chaque ligne coureur : récupérer le dossard (bib) et la mention `(DNF #N)` / `(DNS #N)` accolée au nom (regex sur le nœud `<li>` de la startlist).
+4. Pour chaque match, faire correspondre au `startlist_entries` du dernier import de la course via `bib_no` (fallback : nom). Mettre à jour `abandon_type`, `abandon_etape`, `abandon_checked_at`. Réinitialiser à `null` si la mention disparaît (rare mais possible).
+5. Logguer un résumé par course (X DNF, Y DNS détectés).
 
----
+Pas d'auth requise côté front : `verify_jwt = false` dans `supabase/config.toml` (function appelée uniquement par cron).
 
-## 2. Fix parsing situation pour courses par étapes
+### 3. Planification cron quotidienne
 
-### Problème
-Sur PCS pour une étape de Grand Tour (cf. capture) :
-- Une seule échappée (4 coureurs), avec écart `+5:33` au peloton.
-- Chaque coureur affiche en plus son **écart au classement général** (ex. `+46:22`, `+22:13`).
+Via `supabase--insert` (pas migration) :
+```sql
+select cron.schedule(
+  'scrape-startlist-abandons-daily',
+  '0 18 * * *',  -- 18:00 UTC = 19:00 Paris en hiver / 20:00 en été
+  $$ select net.http_post(
+       url:='https://<ref>.supabase.co/functions/v1/scrape-startlist-abandons',
+       headers:='{"Content-Type":"application/json","apikey":"<anon>"}'::jsonb,
+       body:='{}'::jsonb
+     ); $$
+);
+```
+Note : pg_cron tourne en UTC. Pour avoir exactement 19h Paris toute l'année, planifier deux entrées (`0 18` hiver, `0 17` été) — ou plus simple : un seul cron à `0 17 * * *` (=19h en été, 18h en hiver) puisque la saison cycliste majeure (Giro/Tour/Vuelta) tombe en horaire d'été. **Choix recommandé : `0 17 * * *` (été) avec note pour ajustement hiver.** Validation à confirmer avec l'utilisateur si besoin.
 
-Le scraper actuel (`supabase/functions/scrape-live-race/index.ts`) :
-- Crée parfois un groupe par coureur (chaque `.sit-grp` hoisté en top-level passe le filtre car il contient un nom de groupe ou un lien rider).
-- Le fallback regex `\+(\d+:\d+)` capture les écarts CG comme s'ils étaient des écarts de groupe.
+### 4. Côté backend lecture
 
-Résultat : 4 "groupes" d'1 coureur avec `+46:22`, `+22:13`, `+53:38`, `+37:49` au lieu d'1 seul groupe `Early break` avec `+5:33`.
+`supabase/functions/startlist-manager-view/index.ts` :
+- Ajouter `abandon_type, abandon_etape` au select `startlist_entries`.
+- Propager ces champs dans les objets `starters` (mode SuperAdmin) et `managers[].starters` (mode ligue).
 
-### Correction (edge function uniquement)
-- **Identifier les `.sit-grp` qui sont en réalité des lignes coureurs** (1 seul rider link, pas de mot-clé groupe `peloton|breakaway|échappée|early|head|chase|leaders|group`) et les **regrouper avec le `.sit-grp` parent** (le vrai groupe au-dessus dans le DOM) au lieu de les exposer comme groupes séparés.
-- **Écart de groupe** : extraire uniquement depuis le **header** du `.sit-grp` (texte avant le 1er rider link). Les `+M:SS` / `+H:MM:SS` lus à côté de chaque rider sont stockés comme `riderGcGaps` (déjà le cas) mais ne doivent **jamais** écraser `gap`.
-- **Détection course par étapes** : passer `is_stage_race` à la fonction (depuis le front via `course.type_course === "stage_race"` ou via `date_debut !== date_fin`). Quand vrai :
-  - Forcer la règle "1 gap par groupe = header uniquement".
-  - Ignorer le fallback regex global qui mélange GC et écarts d'étape (n'utiliser que le DOM-based parsing).
-- **Fallback texte** (lignes 320+) : appliquer la même règle — ne traiter `+M:SS` comme gap de groupe que s'il est précédé d'un libellé de groupe (`Peloton`, `Early break`, `Group N`…), sinon l'ignorer.
+### 5. Affichage UI
 
-### Garde-fou affichage
-Dans `RaceSituationDisplay.tsx`, si tous les groupes (hors peloton) ont des `gap` qui ressemblent à des écarts CG (≥ 10 minutes ET un seul rider chacun), c'est un signal que le parsing est resté pollué — logguer un warning serveur côté edge function pour faciliter le debug.
+Badge compact à droite du nom du coureur, rouge pour DNF, gris pour DNS :
+- `StartlistDesktopExport.tsx` (export image + vue desktop)
+- Vue mobile startlist (`Startlist.mobile.tsx` et composants enfants affichant les coureurs des managers)
+- `StartlistRidersManagement.tsx` (affichage SuperAdmin) — lecture seule du badge
 
----
+Format : `DNF 4` / `DNS 2` (texte court, `Badge` shadcn variant `destructive` pour DNF, `secondary` pour DNS).
+
+### 6. Déclenchement manuel (bonus utile)
+
+Bouton « Vérifier abandons PCS » dans `StartlistDetailView.tsx` (SuperAdmin uniquement) qui invoque la même edge function avec un `race_id` ciblé pour rafraîchir à la demande sans attendre 19h.
 
 ## Détails techniques
 
-- Migration SQL : `ALTER TABLE arena_live_courses ADD COLUMN current_etape int;`
-- Hook `useLiveCourses` : ajouter `current_etape` au select.
-- Nouveau hook utilitaire `useUpdateLiveCourseStage(courseId, etape)` (mutation simple) côté admin.
-- `scrape-live-race/index.ts` : refactor de la boucle `sitGroups.forEach` pour fusionner les sub-`.sit-grp` rider-only dans leur parent et enlever les writes accidentels de `gap` depuis les rider rows.
-- Aucun changement nécessaire sur le format `RaceSituation` ni sur l'éditeur — uniquement le contenu des groupes envoyés.
+**Regex parsing PCS** : la startlist PCS rend chaque coureur dans un `<li>` contenant le bib, le drapeau, puis `<a>NOM Prénom</a>` suivi éventuellement de ` (DNF #4)` ou ` (DNS #2)` en texte grisé. Regex de capture : `/\((DNF|DNS)\s*#?\s*(\d+)\)/i` appliquée sur le `textContent` du `<li>`. Bib extrait via le premier `<td>`/span numérique du bloc équipe.
 
-## Hors scope
-- Calendrier complet des 21 étapes (sujet précédent, non demandé ici).
-- Changement de l'UI de l'éditeur de situation (reste manuel si besoin).
+**Matching** : préférer le bib (`startlist_entries.bib_no`) qui est unique par course. Si bib absent côté entry, fallback sur normalisation du nom.
+
+**Idempotence** : la fonction peut tourner plusieurs fois par jour sans effet de bord ; un `UPDATE … WHERE` suffit.
+
+**Sécurité RLS** : la fonction utilise `SUPABASE_SERVICE_ROLE_KEY` donc bypass RLS. Aucune nouvelle policy nécessaire (les colonnes ajoutées héritent du SELECT public existant).
+
+## Fichiers touchés
+
+- `supabase/migrations/<timestamp>_startlist_abandons.sql` (nouvelle)
+- `supabase/functions/scrape-startlist-abandons/index.ts` (nouvelle)
+- `supabase/config.toml` (verify_jwt = false pour la nouvelle fn)
+- `supabase/functions/startlist-manager-view/index.ts` (ajout champs)
+- `src/components/startlist/StartlistDesktopExport.tsx` (badge)
+- `src/pages/Startlist.mobile.tsx` + composants enfants concernés (badge)
+- `src/components/admin/startlist/StartlistRidersManagement.tsx` (badge lecture seule)
+- `src/components/admin/StartlistDetailView.tsx` (bouton manuel)
+- `cron.schedule` via `supabase--insert` (post-déploiement)
