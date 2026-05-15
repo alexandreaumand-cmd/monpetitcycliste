@@ -99,9 +99,7 @@ async function processRace(
       return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: 'no PCS URL' };
     }
     console.log(`[abandons] Fetching ${url}`);
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LabordureBot/1.0)' },
-    });
+    const res = await fetch(url, { headers: PCS_HEADERS });
     if (!res.ok) {
       console.warn(`[abandons] PCS HTTP ${res.status} for ${race.pcs_slug}`);
       return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: `HTTP ${res.status}` };
