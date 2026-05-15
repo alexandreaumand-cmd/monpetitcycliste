@@ -41,9 +41,13 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [isScraping, setIsScraping] = useState(false);
   const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
+  const [schedule, setSchedule] = useState<ScrapeWindow[]>(DEFAULT_SCHEDULE);
+  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastScrapeAtRef = useRef<number>(0);
   const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
+  const [nextScrapeAt, setNextScrapeAt] = useState<Date | null>(null);
   const sentEventsRef = useRef<Set<string>>(new Set());
   const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
