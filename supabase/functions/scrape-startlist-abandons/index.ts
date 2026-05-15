@@ -65,12 +65,30 @@ function parsePcsStartlist(html: string): ParsedRider[] {
   return out;
 }
 
+function buildStartlistUrl(race: { pcs_slug: string | null; year: number; file_url: string | null }): string | null {
+  // Prefer the file_url stored on the import (already a PCS URL)
+  if (race.file_url && /procyclingstats\.com\/race\//i.test(race.file_url)) {
+    let u = race.file_url.trim().replace(/\/+$/, '');
+    // Strip known PCS sub-pages so we get back to /race/<slug>[/year]
+    u = u.replace(/\/(startlist|overview|route|stages?|gc|results|today|preview|history|stage-\d+)(\/.*)?$/i, '');
+    return `${u}/startlist`;
+  }
+  if (race.pcs_slug) {
+    return `${PCS_BASE}/race/${race.pcs_slug}/${race.year}/startlist`;
+  }
+  return null;
+}
+
 async function processRace(
   supabase: any,
-  race: { id: string; nom: string; pcs_slug: string; year: number; startlist_id: string }
+  race: { id: string; nom: string; pcs_slug: string | null; year: number; startlist_id: string; file_url: string | null }
 ): Promise<{ race_id: string; nom: string; dnf: number; dns: number; matched: number; total_flagged: number; error?: string }> {
   try {
-    const url = `${PCS_BASE}/race/${race.pcs_slug}/${race.year}/startlist`;
+    const url = buildStartlistUrl(race);
+    if (!url) {
+      console.warn(`[abandons] No PCS URL for ${race.nom}`);
+      return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: 'no PCS URL' };
+    }
     console.log(`[abandons] Fetching ${url}`);
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LabordureBot/1.0)' },
