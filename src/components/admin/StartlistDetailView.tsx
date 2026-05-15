@@ -219,6 +219,32 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
               SL officielle (retirer)
             </Button>
           )}
+          {isSuperAdmin && startlistViewData?.race?.id && (
+            <Button
+              onClick={async () => {
+                try {
+                  toast.loading("Vérification PCS en cours…", { id: 'abandons' });
+                  const { data, error } = await supabase.functions.invoke('scrape-startlist-abandons', {
+                    body: { race_id: startlistViewData.race.id }
+                  });
+                  if (error) throw error;
+                  const r = data?.results?.[0];
+                  toast.success(
+                    r ? `${r.dnf} DNF, ${r.dns} DNS détectés (${r.matched}/${r.total_flagged})` : 'Aucune course active',
+                    { id: 'abandons' }
+                  );
+                  queryClient.invalidateQueries({ queryKey: ['startlist-view', startlistId] });
+                } catch (e: any) {
+                  toast.error("Erreur : " + e.message, { id: 'abandons' });
+                }
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Vérifier abandons PCS
+            </Button>
+          )}
           {isSuperAdmin && startlistViewData.managers.length > 0 && (
             <Button 
               variant="outline" 
