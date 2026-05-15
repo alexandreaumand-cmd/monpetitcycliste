@@ -9,6 +9,7 @@ import {
   useMessageReactions,
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
+import { useLiveCourses } from "./LiveCourseSelector";
 import { cn } from "@/lib/utils";
 
 interface LiveCoursePanelProps {
