@@ -1,26 +1,26 @@
-## Problème
+## Trois problèmes à corriger dans `scrape-startlist-abandons`
 
-`scrape-startlist-abandons` exige `pcs_slug` sur la course, alors que la startlist a déjà été importée à partir d'une URL PCS stockée dans `startlist_imports.file_url`. Du coup le Giro (sans slug) est ignoré, alors qu'on a tout ce qu'il faut.
+### 1. Priorité d'URL inversée
+Aujourd'hui la fonction utilise `file_url` en priorité. Or les `file_url` historiques contiennent parfois :
+- d'anciens slugs PCS avec underscores (`tour_de_hongrie`) qui retournent maintenant **500**,
+- des slugs d'archive avec hash (`giro-d-italia-mj6wbnif`) qui ne sont plus servis.
 
-## Correction
+→ **Inverser la priorité** : utiliser `pcs_slug + year + /startlist` quand `pcs_slug` existe, et seulement retomber sur `file_url` (normalisé : `_`→`-`) quand il manque.
 
-Modifier `supabase/functions/scrape-startlist-abandons/index.ts` :
+### 2. User-Agent bloqué par Cloudflare
+`Mozilla/5.0 (compatible; LabordureBot/1.0)` → **403**.
+→ Utiliser un UA Chrome complet :
+`Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36`
++ headers `Accept: text/html…` et `Accept-Language: en-US,en;q=0.9`.
 
-1. **Ne plus filtrer sur `pcs_slug`** dans la requête `courses`. Sélectionner toutes les courses par étapes en cours (`date_debut <= today <= date_fin` et `date_fin > date_debut`).
+### 3. `pcs_slug` manquant pour le Giro
+La course `giro-d-italia-mj6wbnif` n'a pas de `pcs_slug`. Le bon est `giro-d-italia`.
+→ **Migration** : `UPDATE courses SET pcs_slug='giro-d-italia' WHERE id='giro-d-italia-mj6wbnif';`
 
-2. **Source d'URL = `file_url` du dernier `startlist_imports`** de la course. Si présent et qu'il pointe vers `procyclingstats.com/race/...`, on l'utilise directement.
+## Validation post-correction
+- `…/tour-de-hongrie/2026/startlist` → testé HTTP 200
+- `…/giro-d-italia/2026/startlist` → testé HTTP 200
 
-3. **Construction de l'URL de startlist** :
-   - Normaliser le `file_url` (retirer un éventuel suffixe `/startlist`, `/overview`, `/route`, etc. pour récupérer la racine `/race/<slug>` ou `/race/<slug>/<year>`).
-   - Ajouter `/startlist` à la fin.
-   - Exemple : `https://www.procyclingstats.com/race/giro-d-italia` → `https://www.procyclingstats.com/race/giro-d-italia/startlist`.
-   - Si le `file_url` contient déjà l'année (`/race/<slug>/2026`), on garde et on ajoute `/startlist`.
-
-4. **Fallback** : si `file_url` est absent mais `pcs_slug` existe, conserver l'ancien comportement (`/race/<slug>/<year>/startlist`). Si ni l'un ni l'autre, skip avec un log.
-
-5. **Bouton manuel** dans `StartlistDetailView.tsx` : aucun changement nécessaire, il appelle la fonction avec `race_id` et bénéficie automatiquement du fallback `file_url`.
-
-## Conséquences
-
-- Le Giro et toute autre course par étapes en cours dont la startlist a été importée depuis PCS seront automatiquement scannés à 19h sans aucune mise à jour manuelle de `pcs_slug`.
-- Aucune migration de schéma. Aucun changement UI. Une seule edge function éditée.
+## Fichiers touchés
+- `supabase/functions/scrape-startlist-abandons/index.ts` (priorité URL + UA)
+- nouvelle migration courte pour le slug du Giro
