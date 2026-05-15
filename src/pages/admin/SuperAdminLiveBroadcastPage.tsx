@@ -566,15 +566,15 @@ export const SuperAdminLiveBroadcastPage = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <CardTitle className="text-base">Composer</CardTitle>
                     {isMultiStage && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Étape</span>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">🔴 Étape en direct</span>
                         <input
                           type="number"
                           min={1}
                           max={21}
                           value={selectedEtape ?? 1}
-                          onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
-                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
+                          onChange={(e) => handleStageChange(parseInt(e.target.value) || 1)}
+                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center font-bold"
                         />
                       </div>
                     )}
