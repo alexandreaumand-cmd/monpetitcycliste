@@ -417,6 +417,8 @@ Deno.serve(async (req) => {
             cote: coureurData.prix_initial,
             bib_no: entry.bib_no,
             team_confirmed: entry.team_confirmed || false,
+            abandon_type: entry.abandon_type || null,
+            abandon_etape: entry.abandon_etape || null,
             recent_results: resultsMap.get(entry.coureur_id) || []
           });
           manager.starters_count++;
