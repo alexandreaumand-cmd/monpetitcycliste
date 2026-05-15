@@ -86,11 +86,12 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
 // PCS LIVE PARSER — parses procyclingstats.com /live pages
 // ============================================================
 
-function parsePCSLive(doc: any, html: string): {
+function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = {}): {
   riders: ScrapedRider[];
   events: ScrapedEvent[];
   situation: { groups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[]; kmRemaining: number; kmCovered: number; totalKm: number; speed: string };
 } {
+  const isStageRace = !!opts.isStageRace;
   const riders: ScrapedRider[] = [];
   const events: ScrapedEvent[] = [];
   const situationGroups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[] = [];
