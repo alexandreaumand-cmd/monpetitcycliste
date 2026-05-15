@@ -613,21 +613,21 @@ export const SuperAdminLiveBroadcastPage = () => {
               )}
 
               {(scrapeStats || autoScrapeEnabled) && (
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-muted-foreground sm:flex-wrap">
                   {scrapeStats && (
                     <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
                   )}
                   {scrapeStats && scrapeStats.unmatched.length > 0 && (
-                    <span className="text-destructive">
+                    <span className="text-destructive break-words">
                       Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
                     </span>
                   )}
                   {autoScrapeEnabled && (
-                    <span className="ml-auto text-primary flex items-center gap-2">
-                      {lastAutoScrapeAt && <span>⏱ Dernier : {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
+                    <span className="sm:ml-auto text-primary flex items-center gap-2 flex-wrap">
+                      {lastAutoScrapeAt && <span>⏱ {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
                       {nextScrapeAt ? (
-                        <span>→ Prochain : {format(nextScrapeAt, "HH:mm:ss")}</span>
+                        <span>→ {format(nextScrapeAt, "HH:mm:ss")}</span>
                       ) : (
                         <span className="text-muted-foreground">⏸ Hors plage</span>
                       )}
