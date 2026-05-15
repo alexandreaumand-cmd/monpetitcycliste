@@ -195,11 +195,10 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Stage races currently running
+    // Stage races currently running (no pcs_slug filter; we fall back to startlist_imports.file_url)
     let q = supabase
       .from('courses')
       .select('id, nom, pcs_slug, date_debut, date_fin')
-      .not('pcs_slug', 'is', null)
       .lte('date_debut', today)
       .gte('date_fin', today);
     if (targetRaceId) q = q.eq('id', targetRaceId);
@@ -210,26 +209,26 @@ Deno.serve(async (req) => {
     const stageRaces = (courses || []).filter((c: any) => c.date_debut !== c.date_fin || targetRaceId);
     console.log(`[abandons] ${stageRaces.length} active stage races to process`);
 
-    // Get latest startlist_imports for these races
+    // Get latest startlist_imports for these races (with file_url)
     const raceIds = stageRaces.map((c: any) => c.id);
-    const targets: { id: string; nom: string; pcs_slug: string; year: number; startlist_id: string }[] = [];
+    const targets: { id: string; nom: string; pcs_slug: string | null; year: number; startlist_id: string; file_url: string | null }[] = [];
 
     if (raceIds.length > 0) {
       const { data: imports } = await supabase
         .from('startlist_imports')
-        .select('id, race_id, parsed_at')
+        .select('id, race_id, parsed_at, file_url')
         .in('race_id', raceIds)
         .order('parsed_at', { ascending: false });
 
-      const latestByRace = new Map<string, string>();
+      const latestByRace = new Map<string, { id: string; file_url: string | null }>();
       for (const imp of imports || []) {
-        if (!latestByRace.has(imp.race_id)) latestByRace.set(imp.race_id, imp.id);
+        if (!latestByRace.has(imp.race_id)) latestByRace.set(imp.race_id, { id: imp.id, file_url: imp.file_url });
       }
 
       for (const r of stageRaces) {
-        const sid = latestByRace.get(r.id);
+        const latest = latestByRace.get(r.id);
         const year = r.date_debut ? parseInt(String(r.date_debut).slice(0, 4), 10) : new Date().getFullYear();
-        if (sid) targets.push({ id: r.id, nom: r.nom, pcs_slug: r.pcs_slug, year, startlist_id: sid });
+        if (latest) targets.push({ id: r.id, nom: r.nom, pcs_slug: r.pcs_slug, year, startlist_id: latest.id, file_url: latest.file_url });
       }
     }
 
