@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff } from "lucide-react";
+import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff, Clock } from "lucide-react";
+import { ScrapeScheduleEditor, DEFAULT_SCHEDULE, getActiveInterval, describeSchedule, type ScrapeWindow } from "@/components/arena/ScrapeScheduleEditor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,9 +41,13 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [isScraping, setIsScraping] = useState(false);
   const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
+  const [schedule, setSchedule] = useState<ScrapeWindow[]>(DEFAULT_SCHEDULE);
+  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastScrapeAtRef = useRef<number>(0);
   const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
+  const [nextScrapeAt, setNextScrapeAt] = useState<Date | null>(null);
   const sentEventsRef = useRef<Set<string>>(new Set());
   const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
@@ -91,12 +96,26 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
   }, [activeCourseId, isMultiStage, updateStage]);
 
-  // Load persisted scrape URL from DB when course changes
+  // Load persisted scrape URL from DB and schedule from localStorage when course changes
   useEffect(() => {
     if (!activeCourseId) return;
     setAutoScrapeEnabled(false);
     sentEventsRef.current = new Set();
     lastSituationRef.current = "";
+    lastScrapeAtRef.current = 0;
+    // Load schedule from localStorage
+    try {
+      const raw = localStorage.getItem(`scrape-schedule:${activeCourseId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setSchedule(parsed);
+        else setSchedule(DEFAULT_SCHEDULE);
+      } else {
+        setSchedule(DEFAULT_SCHEDULE);
+      }
+    } catch {
+      setSchedule(DEFAULT_SCHEDULE);
+    }
     supabase
       .from("arena_live_courses")
       .select("live_scrape_url")
@@ -110,31 +129,50 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
   }, [activeCourseId]);
 
+  // Persist schedule
+  useEffect(() => {
+    if (!activeCourseId) return;
+    localStorage.setItem(`scrape-schedule:${activeCourseId}`, JSON.stringify(schedule));
+  }, [activeCourseId, schedule]);
+
   // Keep handleScrapeRef in sync
   useEffect(() => {
     handleScrapeRef.current = handleScrape;
   });
 
-  // Auto-scrape every 60s when enabled
+  // Auto-scrape based on time-window schedule. Tick every 5s and decide whether to fire.
   useEffect(() => {
     if (autoScrapeRef.current) {
       clearInterval(autoScrapeRef.current);
       autoScrapeRef.current = null;
     }
+    setNextScrapeAt(null);
     if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
 
-    const doAutoScrape = () => {
-      if (isScrapingRef.current) return;
-      handleScrapeRef.current?.(true);
+    const tick = () => {
+      const now = new Date();
+      const intervalSec = getActiveInterval(schedule, now);
+      if (intervalSec == null) {
+        setNextScrapeAt(null);
+        return;
+      }
+      const elapsed = (now.getTime() - lastScrapeAtRef.current) / 1000;
+      if (elapsed >= intervalSec) {
+        if (isScrapingRef.current) return;
+        lastScrapeAtRef.current = now.getTime();
+        setNextScrapeAt(new Date(now.getTime() + intervalSec * 1000));
+        handleScrapeRef.current?.(true);
+      } else if (!nextScrapeAt) {
+        setNextScrapeAt(new Date(lastScrapeAtRef.current + intervalSec * 1000));
+      }
     };
 
-    // Fire immediately, then every 60s
-    doAutoScrape();
-    autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
+    tick();
+    autoScrapeRef.current = setInterval(tick, 5_000);
     return () => {
       if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
     };
-  }, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
+  }, [autoScrapeEnabled, scrapeUrl, activeCourseId, schedule]);
 
   // Build roster owners map from matched riders
   const rosterOwners = useMemo(() => {
@@ -520,9 +558,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       toast.error("Entrez une URL d'abord");
                       return;
                     }
+                    if (!schedule.length) {
+                      toast.error("Configurez au moins une plage horaire");
+                      setShowScheduleEditor(true);
+                      return;
+                    }
                     setAutoScrapeEnabled(!autoScrapeEnabled);
                     if (!autoScrapeEnabled) {
-                      toast.success("Auto-refresh activé (toutes les 60s)");
+                      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
                     }
                   }}
                   className="h-8 gap-1.5 shrink-0"
@@ -534,9 +577,41 @@ export const SuperAdminLiveBroadcastPage = () => {
                   )}
                   {autoScrapeEnabled ? "Auto ON" : "Auto"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowScheduleEditor((v) => !v)}
+                  className="h-8 gap-1.5 shrink-0"
+                  title="Configurer les plages horaires"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Planning
+                </Button>
               </div>
+
+              {showScheduleEditor && (
+                <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold">Plages horaires de scraping</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Définissez à quelle fréquence relire la page selon l'heure
+                    </p>
+                  </div>
+                  <ScrapeScheduleEditor
+                    schedule={schedule}
+                    onChange={setSchedule}
+                    disabled={autoScrapeEnabled}
+                  />
+                  {autoScrapeEnabled && (
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Désactivez l'auto-refresh pour modifier les plages.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {(scrapeStats || autoScrapeEnabled) && (
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                   {scrapeStats && (
                     <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
                   )}
@@ -546,9 +621,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
                     </span>
                   )}
-                  {autoScrapeEnabled && lastAutoScrapeAt && (
-                    <span className="ml-auto text-primary">
-                      ⏱ Dernier refresh : {format(lastAutoScrapeAt, "HH:mm:ss")}
+                  {autoScrapeEnabled && (
+                    <span className="ml-auto text-primary flex items-center gap-2">
+                      {lastAutoScrapeAt && <span>⏱ Dernier : {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
+                      {nextScrapeAt ? (
+                        <span>→ Prochain : {format(nextScrapeAt, "HH:mm:ss")}</span>
+                      ) : (
+                        <span className="text-muted-foreground">⏸ Hors plage</span>
+                      )}
                     </span>
                   )}
                 </div>
