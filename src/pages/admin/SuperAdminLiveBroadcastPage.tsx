@@ -532,16 +532,18 @@ export const SuperAdminLiveBroadcastPage = () => {
                 <Input
                   value={scrapeUrl}
                   onChange={(e) => setScrapeUrl(e.target.value)}
-                  placeholder="URL FirstCycling ou PCS (ex: firstcycling.com/race.php?r=13&y=2025&e=01)"
-                  className="h-8 text-sm flex-1"
+                  placeholder="URL FirstCycling ou PCS"
+                  className="h-8 text-sm flex-1 min-w-0"
                   onKeyDown={(e) => e.key === "Enter" && handleScrape()}
                 />
+              </div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap sm:flex-nowrap">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleScrape()}
                   disabled={isScraping || !scrapeUrl}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                 >
                   {isScraping ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -568,7 +570,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                       toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
                     }
                   }}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                 >
                   {autoScrapeEnabled ? (
                     <Timer className="h-3.5 w-3.5 animate-pulse" />
@@ -581,7 +583,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowScheduleEditor((v) => !v)}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                   title="Configurer les plages horaires"
                 >
                   <Clock className="h-3.5 w-3.5" />
@@ -591,7 +593,7 @@ export const SuperAdminLiveBroadcastPage = () => {
 
               {showScheduleEditor && (
                 <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div>
                     <p className="text-xs font-semibold">Plages horaires de scraping</p>
                     <p className="text-[10px] text-muted-foreground">
                       Définissez à quelle fréquence relire la page selon l'heure
@@ -611,21 +613,21 @@ export const SuperAdminLiveBroadcastPage = () => {
               )}
 
               {(scrapeStats || autoScrapeEnabled) && (
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-muted-foreground sm:flex-wrap">
                   {scrapeStats && (
                     <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
                   )}
                   {scrapeStats && scrapeStats.unmatched.length > 0 && (
-                    <span className="text-destructive">
+                    <span className="text-destructive break-words">
                       Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
                     </span>
                   )}
                   {autoScrapeEnabled && (
-                    <span className="ml-auto text-primary flex items-center gap-2">
-                      {lastAutoScrapeAt && <span>⏱ Dernier : {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
+                    <span className="sm:ml-auto text-primary flex items-center gap-2 flex-wrap">
+                      {lastAutoScrapeAt && <span>⏱ {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
                       {nextScrapeAt ? (
-                        <span>→ Prochain : {format(nextScrapeAt, "HH:mm:ss")}</span>
+                        <span>→ {format(nextScrapeAt, "HH:mm:ss")}</span>
                       ) : (
                         <span className="text-muted-foreground">⏸ Hors plage</span>
                       )}
