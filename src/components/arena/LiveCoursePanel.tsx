@@ -95,19 +95,24 @@ export const LiveCoursePanel = ({
       >
         Toutes
       </Badge>
-      {availableStages.map((stage) => (
-        <Badge
-          key={stage}
-          variant={selectedEtape === stage ? "default" : "outline"}
-          className={cn(
-            "cursor-pointer min-h-[24px] px-2 py-0.5 text-xs whitespace-nowrap",
-            "active:scale-95 transition-all"
-          )}
-          onClick={() => setSelectedEtape(stage)}
-        >
-          É{stage}
-        </Badge>
-      ))}
+      {availableStages.map((stage) => {
+        const isLive = stage === currentEtape;
+        return (
+          <Badge
+            key={stage}
+            variant={selectedEtape === stage ? "default" : "outline"}
+            className={cn(
+              "cursor-pointer min-h-[24px] px-2 py-0.5 text-xs whitespace-nowrap gap-1",
+              "active:scale-95 transition-all",
+              isLive && "border-red-500 text-red-600 dark:text-red-400"
+            )}
+            onClick={() => setSelectedEtape(stage)}
+          >
+            {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
+            É{stage}
+          </Badge>
+        );
+      })}
     </div>
   );
 
