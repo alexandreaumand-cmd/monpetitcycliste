@@ -140,26 +140,39 @@ export const SuperAdminLiveBroadcastPage = () => {
     handleScrapeRef.current = handleScrape;
   });
 
-  // Auto-scrape every 60s when enabled
+  // Auto-scrape based on time-window schedule. Tick every 5s and decide whether to fire.
   useEffect(() => {
     if (autoScrapeRef.current) {
       clearInterval(autoScrapeRef.current);
       autoScrapeRef.current = null;
     }
+    setNextScrapeAt(null);
     if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
 
-    const doAutoScrape = () => {
-      if (isScrapingRef.current) return;
-      handleScrapeRef.current?.(true);
+    const tick = () => {
+      const now = new Date();
+      const intervalSec = getActiveInterval(schedule, now);
+      if (intervalSec == null) {
+        setNextScrapeAt(null);
+        return;
+      }
+      const elapsed = (now.getTime() - lastScrapeAtRef.current) / 1000;
+      if (elapsed >= intervalSec) {
+        if (isScrapingRef.current) return;
+        lastScrapeAtRef.current = now.getTime();
+        setNextScrapeAt(new Date(now.getTime() + intervalSec * 1000));
+        handleScrapeRef.current?.(true);
+      } else if (!nextScrapeAt) {
+        setNextScrapeAt(new Date(lastScrapeAtRef.current + intervalSec * 1000));
+      }
     };
 
-    // Fire immediately, then every 60s
-    doAutoScrape();
-    autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
+    tick();
+    autoScrapeRef.current = setInterval(tick, 5_000);
     return () => {
       if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
     };
-  }, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
+  }, [autoScrapeEnabled, scrapeUrl, activeCourseId, schedule]);
 
   // Build roster owners map from matched riders
   const rosterOwners = useMemo(() => {
