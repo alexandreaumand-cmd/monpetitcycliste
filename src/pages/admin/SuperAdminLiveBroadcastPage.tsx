@@ -19,6 +19,7 @@ import {
   useLiveCourses,
   useActivateLiveCourse,
   useDeactivateLiveCourse,
+  useUpdateLiveCourseStage,
 } from "@/components/arena/LiveCourseSelector";
 import { useBroadcastLiveMessage } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
