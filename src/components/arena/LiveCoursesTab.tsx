@@ -127,11 +127,17 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   // ── MOBILE LAYOUT ── (unchanged, single-select)
   if (isMobile) {
     const courseSelector = (
-      <div className="px-4 py-3 border-b bg-muted/20">
+      <div className="px-4 py-3 border-b bg-muted/20 space-y-2">
         <LiveCourseSelector
           activeCourseId={activeCourseId}
           onSelect={setActiveCourseId}
         />
+        {activeCourseId && currentEtape != null && (
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/30 rounded-full px-2.5 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            Étape {currentEtape} en direct
+          </div>
+        )}
       </div>
     );
 
@@ -148,19 +154,24 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
         >
           Toutes
         </Badge>
-        {availableStages.map((stage) => (
-          <Badge
-            key={stage}
-            variant={selectedEtape === stage ? "default" : "outline"}
-            className={cn(
-              "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
-              "active:scale-95 transition-all"
-            )}
-            onClick={() => setSelectedEtape(stage)}
-          >
-            É{stage}
-          </Badge>
-        ))}
+        {availableStages.map((stage) => {
+          const isLive = stage === currentEtape;
+          return (
+            <Badge
+              key={stage}
+              variant={selectedEtape === stage ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap gap-1",
+                "active:scale-95 transition-all",
+                isLive && "border-red-500 text-red-600 dark:text-red-400"
+              )}
+              onClick={() => setSelectedEtape(stage)}
+            >
+              {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
+              É{stage}
+            </Badge>
+          );
+        })}
       </div>
     );
 
