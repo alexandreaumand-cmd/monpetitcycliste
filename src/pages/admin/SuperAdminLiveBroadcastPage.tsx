@@ -532,16 +532,18 @@ export const SuperAdminLiveBroadcastPage = () => {
                 <Input
                   value={scrapeUrl}
                   onChange={(e) => setScrapeUrl(e.target.value)}
-                  placeholder="URL FirstCycling ou PCS (ex: firstcycling.com/race.php?r=13&y=2025&e=01)"
-                  className="h-8 text-sm flex-1"
+                  placeholder="URL FirstCycling ou PCS"
+                  className="h-8 text-sm flex-1 min-w-0"
                   onKeyDown={(e) => e.key === "Enter" && handleScrape()}
                 />
+              </div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap sm:flex-nowrap">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleScrape()}
                   disabled={isScraping || !scrapeUrl}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                 >
                   {isScraping ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
