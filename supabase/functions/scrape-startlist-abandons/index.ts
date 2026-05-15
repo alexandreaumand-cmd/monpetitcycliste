@@ -31,35 +31,36 @@ function parsePcsStartlist(html: string): ParsedRider[] {
   // Strip scripts/styles
   const cleaned = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
 
-  // Match each <li> entry (PCS uses <li> for riders)
-  const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  // PCS marks abandoned riders with class="dropout" on the <li>. Target only those.
+  // Use a lazy non-greedy match up to the next <li or </ul (rider lists are flat per team).
+  const dropoutRegex = /<li[^>]*class="[^"]*\bdropout\b[^"]*"[^>]*>([\s\S]*?)(?=<li\b|<\/ul>)/gi;
   let m: RegExpExecArray | null;
-  while ((m = liRegex.exec(cleaned)) !== null) {
+  while ((m = dropoutRegex.exec(cleaned)) !== null) {
     const liContent = m[1];
-    const text = liContent.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!text) continue;
 
+    // Extract bib from <span class="bib">N</span>
+    const bibMatch = liContent.match(/<span[^>]*class="[^"]*\bbib\b[^"]*"[^>]*>\s*(\d{1,4})\s*<\/span>/i);
+    const bib = bibMatch ? bibMatch[1] : null;
+
+    // Extract rider name from the rider <a href="rider/...">NAME</a>
+    const nameMatch = liContent.match(/<a[^>]*href="[^"]*rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
+    let name = '';
+    if (nameMatch) {
+      name = nameMatch[1].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      name = name.replace(/\*+$/, '').trim();
+    }
+
+    // Extract abandon flag from the trailing text (after </a>)
+    const text = liContent.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     const abandonMatch = text.match(/\((DNF|DNS|OTL|DSQ)\s*#?\s*(\d+)\)/i);
     if (!abandonMatch) continue;
 
     const rawType = abandonMatch[1].toUpperCase();
-    // We only track DNF/DNS per user request; map OTL -> DNF (out of time = abandon)
     const abandon_type: 'DNF' | 'DNS' = rawType === 'DNS' ? 'DNS' : 'DNF';
     const abandon_etape = parseInt(abandonMatch[2], 10);
     if (!Number.isFinite(abandon_etape)) continue;
-
-    // Extract bib (leading number) and name
-    const bibMatch = text.match(/^\s*(\d{1,4})\s+/);
-    const bib = bibMatch ? bibMatch[1] : null;
-
-    // Name = text between bib and "(DNF/DNS"
-    let nameSection = text;
-    if (bib) nameSection = nameSection.replace(/^\s*\d{1,4}\s+/, '');
-    nameSection = nameSection.split('(')[0].trim();
-    // Strip trailing asterisks etc.
-    const name = nameSection.replace(/\*+$/, '').trim();
-
     if (!name) continue;
+
     out.push({ bib, name, abandon_type, abandon_etape });
   }
   return out;
