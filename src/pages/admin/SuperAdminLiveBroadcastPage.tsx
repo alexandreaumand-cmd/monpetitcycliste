@@ -54,6 +54,7 @@ export const SuperAdminLiveBroadcastPage = () => {
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
   const activate = useActivateLiveCourse();
   const deactivate = useDeactivateLiveCourse();
+  const updateStage = useUpdateLiveCourseStage();
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
@@ -69,9 +70,26 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
   }, [importedSituation]);
 
+  // Initialize selectedEtape from DB (current_etape) when switching course
   useEffect(() => {
-    setSelectedEtape(isMultiStage ? 1 : null);
-  }, [activeCourseId, isMultiStage]);
+    if (!activeCourseId) {
+      setSelectedEtape(null);
+      return;
+    }
+    if (isMultiStage) {
+      setSelectedEtape(selectedCourse?.current_etape ?? 1);
+    } else {
+      setSelectedEtape(null);
+    }
+  }, [activeCourseId, isMultiStage, selectedCourse?.current_etape]);
+
+  // Persist selectedEtape to DB whenever it changes (debounced via direct call)
+  const handleStageChange = useCallback((etape: number) => {
+    setSelectedEtape(etape);
+    if (activeCourseId && isMultiStage) {
+      updateStage.mutate({ courseId: activeCourseId, etape });
+    }
+  }, [activeCourseId, isMultiStage, updateStage]);
 
   // Load persisted scrape URL from DB when course changes
   useEffect(() => {
