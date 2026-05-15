@@ -593,7 +593,7 @@ export const SuperAdminLiveBroadcastPage = () => {
 
               {showScheduleEditor && (
                 <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div>
                     <p className="text-xs font-semibold">Plages horaires de scraping</p>
                     <p className="text-[10px] text-muted-foreground">
                       Définissez à quelle fréquence relire la page selon l'heure
