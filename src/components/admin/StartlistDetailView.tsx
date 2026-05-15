@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, CheckCircle2, Star, Upload } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, RefreshCw, Star, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { toPng } from "html-to-image";
@@ -217,6 +217,32 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
             >
               <CheckCircle2 className="h-3 w-3 mr-1" />
               SL officielle (retirer)
+            </Button>
+          )}
+          {isSuperAdmin && startlistViewData?.race?.id && (
+            <Button
+              onClick={async () => {
+                try {
+                  toast.loading("Vérification PCS en cours…", { id: 'abandons' });
+                  const { data, error } = await supabase.functions.invoke('scrape-startlist-abandons', {
+                    body: { race_id: startlistViewData.race.id }
+                  });
+                  if (error) throw error;
+                  const r = data?.results?.[0];
+                  toast.success(
+                    r ? `${r.dnf} DNF, ${r.dns} DNS détectés (${r.matched}/${r.total_flagged})` : 'Aucune course active',
+                    { id: 'abandons' }
+                  );
+                  queryClient.invalidateQueries({ queryKey: ['startlist-view', startlistId] });
+                } catch (e: any) {
+                  toast.error("Erreur : " + e.message, { id: 'abandons' });
+                }
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Vérifier abandons PCS
             </Button>
           )}
           {isSuperAdmin && startlistViewData.managers.length > 0 && (

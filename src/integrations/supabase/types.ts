@@ -4732,6 +4732,9 @@ export type Database = {
       }
       startlist_entries: {
         Row: {
+          abandon_checked_at: string | null
+          abandon_etape: number | null
+          abandon_type: string | null
           bib_no: string | null
           confidence: number | null
           coureur_id: string | null
@@ -4745,6 +4748,9 @@ export type Database = {
           team_confirmed: boolean
         }
         Insert: {
+          abandon_checked_at?: string | null
+          abandon_etape?: number | null
+          abandon_type?: string | null
           bib_no?: string | null
           confidence?: number | null
           coureur_id?: string | null
@@ -4758,6 +4764,9 @@ export type Database = {
           team_confirmed?: boolean
         }
         Update: {
+          abandon_checked_at?: string | null
+          abandon_etape?: number | null
+          abandon_type?: string | null
           bib_no?: string | null
           confidence?: number | null
           coureur_id?: string | null

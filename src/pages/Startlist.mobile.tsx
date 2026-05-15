@@ -559,11 +559,16 @@ export const StartlistMobile = () => {
                     
                     <AccordionContent>
                       <div className="pt-1">
-                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground flex items-center gap-1">
+                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className={`text-sm mx-[60px] flex items-center gap-1 ${starter.abandon_type ? 'line-through text-muted-foreground/60' : 'text-muted-foreground'}`}>
                             {starter.team_confirmed && (
                               <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
                             )}
-                            {starter.nom}
+                            <span className="flex-1">{starter.nom}</span>
+                            {starter.abandon_type && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 no-underline ${starter.abandon_type === 'DNF' ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-foreground'}`}>
+                                {starter.abandon_type} {starter.abandon_etape}
+                              </span>
+                            )}
                           </p>)}
                       </div>
                     </AccordionContent>
