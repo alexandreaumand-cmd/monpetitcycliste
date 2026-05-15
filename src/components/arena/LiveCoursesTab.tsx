@@ -40,6 +40,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const { data: managers = [] } = useLeagueManagers(leagueId);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, activeCourseId);
   const { data: liveCourses } = useLiveCourses();
+  const currentEtape = liveCourses?.find((lc) => lc.course_id === activeCourseId)?.current_etape ?? null;
 
   const liveChannel = channels?.find((c) => c.slug === "live-courses");
   const channelId = liveChannel?.id || null;
