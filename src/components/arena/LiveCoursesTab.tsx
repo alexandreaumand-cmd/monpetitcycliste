@@ -69,8 +69,9 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       const etape = (msg.metadata as any)?.etape_numero;
       if (etape != null) stages.add(etape);
     });
+    if (currentEtape != null) stages.add(currentEtape);
     return Array.from(stages).sort((a, b) => a - b);
-  }, [allMessages]);
+  }, [allMessages, currentEtape]);
 
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
