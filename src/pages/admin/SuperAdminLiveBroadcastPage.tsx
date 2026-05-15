@@ -243,7 +243,7 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
     try {
       const { data, error } = await supabase.functions.invoke("scrape-live-race", {
-        body: { url: scrapeUrl, course_id: activeCourseId },
+        body: { url: scrapeUrl, course_id: activeCourseId, is_stage_race: !!isMultiStage },
       });
 
       if (error) throw error;
