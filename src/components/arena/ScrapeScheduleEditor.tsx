@@ -41,34 +41,38 @@ export const ScrapeScheduleEditor = ({ schedule, onChange, disabled }: Props) =>
         <p className="text-xs text-muted-foreground italic">Aucune plage horaire — l'auto-refresh ne se déclenchera pas.</p>
       )}
       {schedule.map((w, i) => (
-        <div key={i} className="flex items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">De</span>
-          <Input
-            type="time"
-            value={w.start}
-            onChange={(e) => update(i, { start: e.target.value })}
-            className="h-7 w-[100px] text-xs"
-            disabled={disabled}
-          />
-          <span className="text-muted-foreground">à</span>
-          <Input
-            type="time"
-            value={w.end}
-            onChange={(e) => update(i, { end: e.target.value })}
-            className="h-7 w-[100px] text-xs"
-            disabled={disabled}
-          />
-          <span className="text-muted-foreground ml-1">→ toutes les</span>
-          <Input
-            type="number"
-            min={5}
-            value={w.intervalSec}
-            onChange={(e) => update(i, { intervalSec: Math.max(5, parseInt(e.target.value) || 5) })}
-            className="h-7 w-[80px] text-xs"
-            disabled={disabled}
-          />
-          <span className="text-muted-foreground">s</span>
-          <span className="text-muted-foreground/70 ml-1">({formatInterval(w.intervalSec)})</span>
+        <div key={i} className="flex items-center gap-1.5 text-xs flex-wrap rounded-md border bg-background/60 p-2 sm:border-0 sm:bg-transparent sm:p-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">De</span>
+            <Input
+              type="time"
+              value={w.start}
+              onChange={(e) => update(i, { start: e.target.value })}
+              className="h-7 w-[95px] text-xs"
+              disabled={disabled}
+            />
+            <span className="text-muted-foreground">à</span>
+            <Input
+              type="time"
+              value={w.end}
+              onChange={(e) => update(i, { end: e.target.value })}
+              className="h-7 w-[95px] text-xs"
+              disabled={disabled}
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">toutes les</span>
+            <Input
+              type="number"
+              min={5}
+              value={w.intervalSec}
+              onChange={(e) => update(i, { intervalSec: Math.max(5, parseInt(e.target.value) || 5) })}
+              className="h-7 w-[70px] text-xs"
+              disabled={disabled}
+            />
+            <span className="text-muted-foreground">s</span>
+            <span className="text-muted-foreground/70">({formatInterval(w.intervalSec)})</span>
+          </div>
           <Button
             type="button"
             variant="ghost"
