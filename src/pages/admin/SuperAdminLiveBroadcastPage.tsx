@@ -570,7 +570,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                       toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
                     }
                   }}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                 >
                   {autoScrapeEnabled ? (
                     <Timer className="h-3.5 w-3.5 animate-pulse" />
