@@ -96,12 +96,26 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
   }, [activeCourseId, isMultiStage, updateStage]);
 
-  // Load persisted scrape URL from DB when course changes
+  // Load persisted scrape URL from DB and schedule from localStorage when course changes
   useEffect(() => {
     if (!activeCourseId) return;
     setAutoScrapeEnabled(false);
     sentEventsRef.current = new Set();
     lastSituationRef.current = "";
+    lastScrapeAtRef.current = 0;
+    // Load schedule from localStorage
+    try {
+      const raw = localStorage.getItem(`scrape-schedule:${activeCourseId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setSchedule(parsed);
+        else setSchedule(DEFAULT_SCHEDULE);
+      } else {
+        setSchedule(DEFAULT_SCHEDULE);
+      }
+    } catch {
+      setSchedule(DEFAULT_SCHEDULE);
+    }
     supabase
       .from("arena_live_courses")
       .select("live_scrape_url")
@@ -114,6 +128,12 @@ export const SuperAdminLiveBroadcastPage = () => {
         }
       });
   }, [activeCourseId]);
+
+  // Persist schedule
+  useEffect(() => {
+    if (!activeCourseId) return;
+    localStorage.setItem(`scrape-schedule:${activeCourseId}`, JSON.stringify(schedule));
+  }, [activeCourseId, schedule]);
 
   // Keep handleScrapeRef in sync
   useEffect(() => {
