@@ -963,7 +963,7 @@ serve(async (req) => {
       scrapedEvents = result.events;
       liveSituation = result.situation;
     } else if (isPCSLive) {
-      const result = parsePCSLive(doc, html);
+      const result = parsePCSLive(doc, html, { isStageRace: !!is_stage_race });
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
       liveSituation = result.situation;
