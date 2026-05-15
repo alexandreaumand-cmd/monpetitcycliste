@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff } from "lucide-react";
+import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff, Clock } from "lucide-react";
+import { ScrapeScheduleEditor, DEFAULT_SCHEDULE, getActiveInterval, describeSchedule, type ScrapeWindow } from "@/components/arena/ScrapeScheduleEditor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
