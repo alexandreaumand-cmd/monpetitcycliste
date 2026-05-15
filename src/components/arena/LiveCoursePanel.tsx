@@ -169,9 +169,15 @@ export const LiveCoursePanel = ({
   return (
     <div className="flex flex-col flex-1 border rounded-xl overflow-hidden bg-background min-w-0">
       {/* Course name header */}
-      {courseName && (
-        <div className="px-3 py-2 border-b bg-primary/5">
-          <span className="text-xs font-bold text-primary truncate">{courseName}</span>
+      {(courseName || currentEtape != null) && (
+        <div className="px-3 py-2 border-b bg-primary/5 flex items-center gap-2 flex-wrap">
+          {courseName && <span className="text-xs font-bold text-primary truncate">{courseName}</span>}
+          {currentEtape != null && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/30 rounded-full px-2 py-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              Étape {currentEtape} en direct
+            </span>
+          )}
         </div>
       )}
 
