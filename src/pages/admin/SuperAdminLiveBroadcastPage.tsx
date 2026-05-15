@@ -19,6 +19,7 @@ import {
   useLiveCourses,
   useActivateLiveCourse,
   useDeactivateLiveCourse,
+  useUpdateLiveCourseStage,
 } from "@/components/arena/LiveCourseSelector";
 import { useBroadcastLiveMessage } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
@@ -53,6 +54,7 @@ export const SuperAdminLiveBroadcastPage = () => {
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
   const activate = useActivateLiveCourse();
   const deactivate = useDeactivateLiveCourse();
+  const updateStage = useUpdateLiveCourseStage();
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
@@ -68,9 +70,26 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
   }, [importedSituation]);
 
+  // Initialize selectedEtape from DB (current_etape) when switching course
   useEffect(() => {
-    setSelectedEtape(isMultiStage ? 1 : null);
-  }, [activeCourseId, isMultiStage]);
+    if (!activeCourseId) {
+      setSelectedEtape(null);
+      return;
+    }
+    if (isMultiStage) {
+      setSelectedEtape(selectedCourse?.current_etape ?? 1);
+    } else {
+      setSelectedEtape(null);
+    }
+  }, [activeCourseId, isMultiStage, selectedCourse?.current_etape]);
+
+  // Persist selectedEtape to DB whenever it changes (debounced via direct call)
+  const handleStageChange = useCallback((etape: number) => {
+    setSelectedEtape(etape);
+    if (activeCourseId && isMultiStage) {
+      updateStage.mutate({ courseId: activeCourseId, etape });
+    }
+  }, [activeCourseId, isMultiStage, updateStage]);
 
   // Load persisted scrape URL from DB when course changes
   useEffect(() => {
@@ -224,7 +243,7 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
     try {
       const { data, error } = await supabase.functions.invoke("scrape-live-race", {
-        body: { url: scrapeUrl, course_id: activeCourseId },
+        body: { url: scrapeUrl, course_id: activeCourseId, is_stage_race: !!isMultiStage },
       });
 
       if (error) throw error;
@@ -547,15 +566,15 @@ export const SuperAdminLiveBroadcastPage = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <CardTitle className="text-base">Composer</CardTitle>
                     {isMultiStage && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Étape</span>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">🔴 Étape en direct</span>
                         <input
                           type="number"
                           min={1}
                           max={21}
                           value={selectedEtape ?? 1}
-                          onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
-                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
+                          onChange={(e) => handleStageChange(parseInt(e.target.value) || 1)}
+                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center font-bold"
                         />
                       </div>
                     )}

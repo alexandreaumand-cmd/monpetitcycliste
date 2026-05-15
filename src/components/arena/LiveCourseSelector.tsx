@@ -18,6 +18,7 @@ interface LiveCourse {
   id: string;
   course_id: string;
   is_active: boolean;
+  current_etape: number | null;
   courses?: {
     nom: string;
     categorie: string | null;
@@ -33,11 +34,28 @@ export function useLiveCourses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arena_live_courses")
-        .select("id, course_id, is_active, courses(nom, categorie, date_debut, date_fin, type_course)")
+        .select("id, course_id, is_active, current_etape, courses(nom, categorie, date_debut, date_fin, type_course)")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as LiveCourse[];
+    },
+  });
+}
+
+export function useUpdateLiveCourseStage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ courseId, etape }: { courseId: string; etape: number | null }) => {
+      const { error } = await supabase
+        .from("arena_live_courses")
+        .update({ current_etape: etape } as any)
+        .eq("course_id", courseId)
+        .eq("is_active", true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["arena-live-courses"] });
     },
   });
 }

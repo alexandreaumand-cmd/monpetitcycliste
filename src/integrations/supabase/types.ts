@@ -313,6 +313,7 @@ export type Database = {
           activated_by: string
           course_id: string
           created_at: string
+          current_etape: number | null
           id: string
           is_active: boolean
           live_scrape_url: string | null
@@ -321,6 +322,7 @@ export type Database = {
           activated_by: string
           course_id: string
           created_at?: string
+          current_etape?: number | null
           id?: string
           is_active?: boolean
           live_scrape_url?: string | null
@@ -329,6 +331,7 @@ export type Database = {
           activated_by?: string
           course_id?: string
           created_at?: string
+          current_etape?: number | null
           id?: string
           is_active?: boolean
           live_scrape_url?: string | null

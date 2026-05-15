@@ -86,11 +86,12 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
 // PCS LIVE PARSER — parses procyclingstats.com /live pages
 // ============================================================
 
-function parsePCSLive(doc: any, html: string): {
+function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = {}): {
   riders: ScrapedRider[];
   events: ScrapedEvent[];
   situation: { groups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[]; kmRemaining: number; kmCovered: number; totalKm: number; speed: string };
 } {
+  const isStageRace = !!opts.isStageRace;
   const riders: ScrapedRider[] = [];
   const events: ScrapedEvent[] = [];
   const situationGroups: { name: string; gap: string; riders: string[]; riderIds: string[]; riderCount: number; isPeloton: boolean }[] = [];
@@ -296,7 +297,32 @@ function parsePCSLive(doc: any, html: string): {
       console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);
     }
 
-    // Each top-level .sit-grp is a legitimate group — no merging needed
+    // ── Stage-race defensive cleanup ──
+    // For stage races, PCS shows individual GC gaps next to each rider in a breakaway.
+    // These can pollute parsing as fake single-rider groups with huge gaps.
+    // Drop any non-peloton group with a single rider AND gap > 10:00 (clearly a GC gap).
+    if (isStageRace && situationGroups.length > 1) {
+      const gapToSeconds = (g: string): number => {
+        const m = g.replace(/^\+/, "").match(/^(?:(\d+):)?(\d+):(\d+)$/);
+        if (!m) return 0;
+        return (parseInt(m[1] || "0", 10) * 3600) + (parseInt(m[2], 10) * 60) + parseInt(m[3], 10);
+      };
+      const before = situationGroups.length;
+      const cleaned = situationGroups.filter((g) => {
+        if (g.isPeloton) return true;
+        if (g.riders.length >= 2) return true;
+        if (g.riders.length === 1 && gapToSeconds(g.gap) > 600) {
+          console.log(`[PCS Live] Stage-race cleanup: drop polluted group "${g.name}" gap=${g.gap}`);
+          return false;
+        }
+        return true;
+      });
+      situationGroups.length = 0;
+      situationGroups.push(...cleaned);
+      if (situationGroups.length !== before) {
+        console.log(`[PCS Live] Stage-race cleanup: ${before} → ${situationGroups.length} groups`);
+      }
+    }
   }
 
   // ── Extract PCS slugs for matching (needed by fallback too) ──
@@ -317,7 +343,8 @@ function parsePCSLive(doc: any, html: string): {
   }
 
   // Fallback: parse from text if no DOM groups found
-  if (situationGroups.length === 0) {
+  // Skipped for stage races — text fallback's regex confuses individual GC gaps with group gaps.
+  if (situationGroups.length === 0 && !isStageRace) {
     console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
 
     // Look for "Situation" section in text
@@ -892,7 +919,7 @@ serve(async (req) => {
       });
     }
 
-    const { url, course_id } = await req.json();
+    const { url, course_id, is_stage_race } = await req.json();
     if (!url || !course_id) {
       return new Response(JSON.stringify({ error: "url and course_id required" }), {
         status: 400,
@@ -962,7 +989,7 @@ serve(async (req) => {
       scrapedEvents = result.events;
       liveSituation = result.situation;
     } else if (isPCSLive) {
-      const result = parsePCSLive(doc, html);
+      const result = parsePCSLive(doc, html, { isStageRace: !!is_stage_race });
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
       liveSituation = result.situation;
