@@ -67,10 +67,10 @@ function parsePcsStartlist(html: string): ParsedRider[] {
 
 async function processRace(
   supabase: any,
-  race: { id: string; nom: string; pcs_slug: string; startlist_id: string }
+  race: { id: string; nom: string; pcs_slug: string; year: number; startlist_id: string }
 ): Promise<{ race_id: string; nom: string; dnf: number; dns: number; matched: number; total_flagged: number; error?: string }> {
   try {
-    const url = `${PCS_BASE}/race/${race.pcs_slug}/startlist`;
+    const url = `${PCS_BASE}/race/${race.pcs_slug}/${race.year}/startlist`;
     console.log(`[abandons] Fetching ${url}`);
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LabordureBot/1.0)' },
