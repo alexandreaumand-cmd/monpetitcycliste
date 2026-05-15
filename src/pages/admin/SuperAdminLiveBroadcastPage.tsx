@@ -583,7 +583,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowScheduleEditor((v) => !v)}
-                  className="h-8 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 flex-1 sm:flex-none"
                   title="Configurer les plages horaires"
                 >
                   <Clock className="h-3.5 w-3.5" />
