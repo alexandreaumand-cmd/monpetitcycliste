@@ -73,6 +73,11 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     return Array.from(stages).sort((a, b) => a - b);
   }, [allMessages, currentEtape]);
 
+  // Auto-select the stage being broadcast live whenever it changes
+  useEffect(() => {
+    setSelectedEtape(currentEtape);
+  }, [activeCourseId, currentEtape]);
+
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
     return allMessages.filter(
