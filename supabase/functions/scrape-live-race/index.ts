@@ -893,7 +893,7 @@ serve(async (req) => {
       });
     }
 
-    const { url, course_id } = await req.json();
+    const { url, course_id, is_stage_race } = await req.json();
     if (!url || !course_id) {
       return new Response(JSON.stringify({ error: "url and course_id required" }), {
         status: 400,
