@@ -1,0 +1,1 @@
+UPDATE public.courses SET pcs_slug = 'giro-d-italia' WHERE id = 'giro-d-italia-mj6wbnif' AND (pcs_slug IS NULL OR pcs_slug = '');
