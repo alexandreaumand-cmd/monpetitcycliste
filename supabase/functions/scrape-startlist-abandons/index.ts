@@ -66,18 +66,27 @@ function parsePcsStartlist(html: string): ParsedRider[] {
 }
 
 function buildStartlistUrl(race: { pcs_slug: string | null; year: number; file_url: string | null }): string | null {
-  // Prefer the file_url stored on the import (already a PCS URL)
+  // Prefer pcs_slug (canonical) — file_url may contain stale archive slugs (e.g. "giro-d-italia-mj6wbnif")
+  // or legacy underscore slugs (e.g. "tour_de_hongrie") that PCS no longer serves.
+  if (race.pcs_slug) {
+    return `${PCS_BASE}/race/${race.pcs_slug}/${race.year}/startlist`;
+  }
   if (race.file_url && /procyclingstats\.com\/race\//i.test(race.file_url)) {
     let u = race.file_url.trim().replace(/\/+$/, '');
     // Strip known PCS sub-pages so we get back to /race/<slug>[/year]
     u = u.replace(/\/(startlist|overview|route|stages?|gc|results|today|preview|history|stage-\d+)(\/.*)?$/i, '');
+    // Normalize underscores to hyphens (PCS canonical slug format)
+    u = u.replace(/\/race\/([^/]+)/i, (_m, slug) => `/race/${slug.replace(/_/g, '-')}`);
     return `${u}/startlist`;
-  }
-  if (race.pcs_slug) {
-    return `${PCS_BASE}/race/${race.pcs_slug}/${race.year}/startlist`;
   }
   return null;
 }
+
+const PCS_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
 
 async function processRace(
   supabase: any,
