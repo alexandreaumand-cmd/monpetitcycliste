@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
 
     // Get latest startlist_imports for these races
     const raceIds = stageRaces.map((c: any) => c.id);
-    const targets: { id: string; nom: string; pcs_slug: string; startlist_id: string }[] = [];
+    const targets: { id: string; nom: string; pcs_slug: string; year: number; startlist_id: string }[] = [];
 
     if (raceIds.length > 0) {
       const { data: imports } = await supabase
@@ -210,7 +210,8 @@ Deno.serve(async (req) => {
 
       for (const r of stageRaces) {
         const sid = latestByRace.get(r.id);
-        if (sid) targets.push({ id: r.id, nom: r.nom, pcs_slug: r.pcs_slug, startlist_id: sid });
+        const year = r.date_debut ? parseInt(String(r.date_debut).slice(0, 4), 10) : new Date().getFullYear();
+        if (sid) targets.push({ id: r.id, nom: r.nom, pcs_slug: r.pcs_slug, year, startlist_id: sid });
       }
     }
 
