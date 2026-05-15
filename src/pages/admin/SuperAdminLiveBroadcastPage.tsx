@@ -558,9 +558,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       toast.error("Entrez une URL d'abord");
                       return;
                     }
+                    if (!schedule.length) {
+                      toast.error("Configurez au moins une plage horaire");
+                      setShowScheduleEditor(true);
+                      return;
+                    }
                     setAutoScrapeEnabled(!autoScrapeEnabled);
                     if (!autoScrapeEnabled) {
-                      toast.success("Auto-refresh activé (toutes les 60s)");
+                      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
                     }
                   }}
                   className="h-8 gap-1.5 shrink-0"
@@ -572,9 +577,41 @@ export const SuperAdminLiveBroadcastPage = () => {
                   )}
                   {autoScrapeEnabled ? "Auto ON" : "Auto"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowScheduleEditor((v) => !v)}
+                  className="h-8 gap-1.5 shrink-0"
+                  title="Configurer les plages horaires"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Planning
+                </Button>
               </div>
+
+              {showScheduleEditor && (
+                <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold">Plages horaires de scraping</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Définissez à quelle fréquence relire la page selon l'heure
+                    </p>
+                  </div>
+                  <ScrapeScheduleEditor
+                    schedule={schedule}
+                    onChange={setSchedule}
+                    disabled={autoScrapeEnabled}
+                  />
+                  {autoScrapeEnabled && (
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Désactivez l'auto-refresh pour modifier les plages.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {(scrapeStats || autoScrapeEnabled) && (
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                   {scrapeStats && (
                     <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
                   )}
@@ -584,9 +621,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
                     </span>
                   )}
-                  {autoScrapeEnabled && lastAutoScrapeAt && (
-                    <span className="ml-auto text-primary">
-                      ⏱ Dernier refresh : {format(lastAutoScrapeAt, "HH:mm:ss")}
+                  {autoScrapeEnabled && (
+                    <span className="ml-auto text-primary flex items-center gap-2">
+                      {lastAutoScrapeAt && <span>⏱ Dernier : {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
+                      {nextScrapeAt ? (
+                        <span>→ Prochain : {format(nextScrapeAt, "HH:mm:ss")}</span>
+                      ) : (
+                        <span className="text-muted-foreground">⏸ Hors plage</span>
+                      )}
                     </span>
                   )}
                 </div>
