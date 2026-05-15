@@ -1,0 +1,1 @@
+ALTER TABLE public.arena_live_courses ADD COLUMN IF NOT EXISTS current_etape integer;
