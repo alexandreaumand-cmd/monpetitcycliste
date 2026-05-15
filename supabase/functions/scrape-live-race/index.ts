@@ -343,7 +343,8 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
   }
 
   // Fallback: parse from text if no DOM groups found
-  if (situationGroups.length === 0) {
+  // Skipped for stage races — text fallback's regex confuses individual GC gaps with group gaps.
+  if (situationGroups.length === 0 && !isStageRace) {
     console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
 
     // Look for "Situation" section in text
