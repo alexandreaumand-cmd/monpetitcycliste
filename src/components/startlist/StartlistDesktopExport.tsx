@@ -257,7 +257,12 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                           {starter.team_confirmed && (
                             <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />
                           )}
-                          <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
+                          <span className={`font-medium truncate flex-1 min-w-0 ${starter.abandon_type ? 'line-through text-muted-foreground' : ''}`}>{starter.nom}</span>
+                          {starter.abandon_type && (
+                            <span className={`text-[9px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${starter.abandon_type === 'DNF' ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-foreground'}`}>
+                              {starter.abandon_type} {starter.abandon_etape}
+                            </span>
+                          )}
                         </div>
                       ))}
                   </div>
