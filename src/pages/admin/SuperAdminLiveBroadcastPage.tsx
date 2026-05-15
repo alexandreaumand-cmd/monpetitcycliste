@@ -590,7 +590,6 @@ export const SuperAdminLiveBroadcastPage = () => {
                   Planning
                 </Button>
               </div>
-              <div className="hidden">{/* spacer */}</div>
 
               {showScheduleEditor && (
                 <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
