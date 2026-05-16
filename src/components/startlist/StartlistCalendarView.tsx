@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Coffee } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useStageDates } from "@/hooks/useStageDates";
 
 interface Course {
   id: string;
@@ -56,40 +57,50 @@ export const StartlistCalendarView = ({
     return 4; // Others last
   };
 
-  // Map courses to days
-  const coursesByDay = useMemo(() => {
-    const map = new Map<string, Course[]>();
-    
+  // Stage dates for stage races visible this month
+  const stageRaceIds = useMemo(
+    () => courses.filter(c => c.type_course === 'stage_race').map(c => c.id),
+    [courses],
+  );
+  const { isRestDay } = useStageDates(stageRaceIds);
+
+  // Map courses to days (and rest days for stage races)
+  type DayEntry = { course: Course; isRest: boolean };
+  const entriesByDay = useMemo(() => {
+    const map = new Map<string, DayEntry[]>();
+
     courses.forEach(course => {
-      // Parse dates and normalize to start of day for proper comparison
       const startDate = new Date(course.date_debut + 'T00:00:00');
       const endDate = new Date(course.date_fin + 'T23:59:59');
-      
-      // Add course to each day it spans
+
       daysInMonth.forEach(day => {
-        // Normalize the day for comparison
         const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
         const courseStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
         const courseEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        
+
         if (dayStart >= courseStart && dayStart <= courseEnd) {
           const key = format(day, 'yyyy-MM-dd');
           const existing = map.get(key) || [];
-          // Avoid duplicates
-          if (!existing.find(c => c.id === course.id)) {
-            map.set(key, [...existing, course]);
+          if (!existing.find(e => e.course.id === course.id)) {
+            const rest = course.type_course === 'stage_race'
+              ? isRestDay(course.id, key, course.date_debut, course.date_fin)
+              : false;
+            map.set(key, [...existing, { course, isRest: rest }]);
           }
         }
       });
     });
-    
-    // Sort courses by category priority for each day
-    map.forEach((dayCourses, key) => {
-      map.set(key, dayCourses.sort((a, b) => getCategoryPriority(a) - getCategoryPriority(b)));
+
+    // Sort entries by category priority (rest days last)
+    map.forEach((entries, key) => {
+      map.set(key, entries.sort((a, b) => {
+        if (a.isRest !== b.isRest) return a.isRest ? 1 : -1;
+        return getCategoryPriority(a.course) - getCategoryPriority(b.course);
+      }));
     });
-    
+
     return map;
-  }, [courses, daysInMonth]);
+  }, [courses, daysInMonth, isRestDay]);
 
   const navigatePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const navigateNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
