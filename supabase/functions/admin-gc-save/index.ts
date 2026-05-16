@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
       .eq('id', course_id)
       .single();
 
+    // GC = end of race
     const date_classement = course?.date_fin || course?.date_debut || new Date().toISOString().split('T')[0];
 
     // Get manager_id for audit

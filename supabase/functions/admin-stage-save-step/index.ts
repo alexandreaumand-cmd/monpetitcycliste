@@ -82,7 +82,24 @@ Deno.serve(async (req) => {
       .eq('id', course_id)
       .single();
 
-    const date_classement = course?.date_fin || course?.date_debut || new Date().toISOString().split('T')[0];
+    // Resolve stage date: explicit stage_date > date_debut + (etape-1) > date_fin > today
+    const { data: stageCfg } = await supabase
+      .from('course_stage_config')
+      .select('stage_date')
+      .eq('course_id', course_id)
+      .eq('etape_numero', etape_numero)
+      .maybeSingle();
+
+    let date_classement: string;
+    if (stageCfg?.stage_date) {
+      date_classement = stageCfg.stage_date as string;
+    } else if (course?.date_debut && etape_numero) {
+      const d = new Date(course.date_debut as string);
+      d.setUTCDate(d.getUTCDate() + (Number(etape_numero) - 1));
+      date_classement = d.toISOString().split('T')[0];
+    } else {
+      date_classement = course?.date_fin || course?.date_debut || new Date().toISOString().split('T')[0];
+    }
 
     // Get manager_id for audit
     const { data: manager } = await supabase
