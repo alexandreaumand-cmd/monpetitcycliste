@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff } from "lucide-react";
+import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff, Coffee } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ import { fr, enUS } from "date-fns/locale";
 import { CalendarCourseDialog } from "@/components/calendar/CalendarCourseDialog";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useStageDates } from "@/hooks/useStageDates";
 import { ChipGroup } from "@/components/mobile/ChipGroup";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
