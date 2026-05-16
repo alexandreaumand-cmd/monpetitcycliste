@@ -209,9 +209,11 @@ export const StartlistCalendarMobile = ({
           
           {days.map((day, i) => {
             const key = format(day, "yyyy-MM-dd");
-            const dayCourses = coursesByDay.get(key) || [];
+            const dayEntries = entriesByDay.get(key) || [];
+            const dayCourses = dayEntries.filter(e => !e.isRest).map(e => e.course);
+            const restEntries = dayEntries.filter(e => e.isRest);
             const hasRaces = dayCourses.length > 0;
-            const coursesWithSL = dayCourses.filter(c => hasStartlist(c.id));
+            const hasRest = restEntries.length > 0;
             const validatedCount = dayCourses.filter(c => isPcsValidated(c.id)).length;
             const allValidated = hasRaces && validatedCount === dayCourses.length;
             const someValidated = validatedCount > 0 && !allValidated;
@@ -222,7 +224,7 @@ export const StartlistCalendarMobile = ({
                 className={cn(
                   "aspect-square border-b border-r p-0.5 relative cursor-pointer transition-colors",
                   !isSameMonth(day, currentMonth) && "opacity-30",
-                  hasRaces && "hover:bg-muted/50",
+                  (hasRaces || hasRest) && "hover:bg-muted/50",
                   isToday(day) && "bg-primary/5"
                 )}
                 onClick={() => handleDayClick(day)}
@@ -236,9 +238,9 @@ export const StartlistCalendarMobile = ({
                 </div>
                 
                 {/* Course indicators (dots) */}
-                {hasRaces && (
-                  <div className="flex flex-wrap justify-center gap-0.5">
-                    {dayCourses.slice(0, 3).map((course, idx) => (
+                {(hasRaces || hasRest) && (
+                  <div className="flex flex-wrap justify-center items-center gap-0.5">
+                    {dayCourses.slice(0, 3).map((course) => (
                       <div
                         key={course.id}
                         className={cn(
@@ -247,6 +249,9 @@ export const StartlistCalendarMobile = ({
                         )}
                       />
                     ))}
+                    {hasRest && (
+                      <Coffee className="h-2.5 w-2.5 text-muted-foreground" />
+                    )}
                     {dayCourses.length > 3 && (
                       <span className="text-[8px] text-muted-foreground">+{dayCourses.length - 3}</span>
                     )}
