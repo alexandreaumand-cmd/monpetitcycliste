@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
+import { useStageDates } from "@/hooks/useStageDates";
+import { Coffee } from "lucide-react";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
