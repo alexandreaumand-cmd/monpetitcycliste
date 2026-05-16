@@ -691,11 +691,21 @@ export default function CalendarPage() {
                     >
                       <TableCell className="font-medium">{course.nom}</TableCell>
                       <TableCell>
-                        {course.categorie ? (
-                          <Badge variant="outline">{course.categorie}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {course.categorie ? (
+                            <Badge variant="outline">{course.categorie}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                          {course.type_course === 'stage_race' && (() => {
+                            const n = restDayCount(course.course_id, course.date_debut, course.date_fin);
+                            return n > 0 ? (
+                              <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                <Coffee className="h-3 w-3" /> {n} {n > 1 ? 'jrs' : 'jr'} repos
+                              </Badge>
+                            ) : null;
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {getDaysUntilBadge(course.date_debut, course.date_fin)}
