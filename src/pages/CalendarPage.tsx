@@ -39,6 +39,7 @@ interface CourseWithPoints {
   course_id: string;
   nom: string;
   categorie: string | null;
+  type_course: string | null;
   date_debut: string | null;
   date_fin: string | null;
   phase_id: string | null;
@@ -124,7 +125,7 @@ export default function CalendarPage() {
 
       const { data: coursesWithPoints, error: coursesError } = await supabase
         .from("v_course_points_theoriques")
-        .select("course_id, nom, categorie, date_debut, date_fin, phase_id, phase_index, points_total")
+        .select("course_id, nom, categorie, type_course, date_debut, date_fin, phase_id, phase_index, points_total")
         .in("phase_id", phaseIds)
         .order("date_debut", { ascending: true });
 
@@ -192,6 +193,7 @@ export default function CalendarPage() {
           course_id: course.course_id || '',
           nom: course.nom || '',
           categorie: course.categorie,
+          type_course: (course as any).type_course ?? null,
           date_debut: course.date_debut,
           date_fin: course.date_fin,
           phase_id: course.phase_id,
