@@ -115,105 +115,186 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
   console.log(`[PCS Live] km remaining: ${kmRemaining}, km done: ${kmCovered}, speed: ${speed}`);
 
   // ── Parse situation groups ──
-  // PCS structure: div.sit-grp contains groups, each with:
-  //   - span with rider count
-  //   - group name text
-  //   - gap text (e.g., "+0:10")
-  //   - nested rider rows with bib, rider link, GC time
+  // PCS DOM (Nov 2025+):
+  //   ul.situ5b > li.group
+  //     ├ div.bol            → <font>rank</font> <span data-nr="N">N</span>   (N = rider count)
+  //     ├ div.groupname      → group name (often empty for breakaway/peloton)
+  //     ├ div.time[data-sec] → "+M:SS" (group gap to leader)
+  //     └ ul > li            → one rider per <li>
+  //         ├ span.nr        → rank within group
+  //         ├ span.shirt_icon20 teamXXXX[title="..."]   → team name
+  //         ├ div.bib        → bib number
+  //         ├ a[href*='rider/'] → name (e.g. "BJERG Mikkel")
+  //         └ div.gc         → "+H:MM:SS" GC gap
+  //
+  // Legacy DOM (pre-Nov 2025) used .sit-grp — kept as fallback.
 
-  // Strategy: Use markdown-like structure from the text since PCS HTML is consistent
-  // Look for the "Situation" section and parse groups
-
-  // Try DOM-based parsing first (more reliable)
-  const allSitGrps = Array.from(doc.querySelectorAll(".sit-grp"));
-  console.log(`[PCS Live] Found ${allSitGrps.length} .sit-grp elements`);
-
-  // PCS structure: each "real" group is a .sit-grp at the top level (no .sit-grp ancestor)
-  // and contains nested .sit-grp children that represent individual rider rows.
-  // A .sit-grp that is itself nested inside another .sit-grp is a rider row, not a group.
-  const topLevelSitGrps = allSitGrps.filter((el: any) => {
-    let parent = el.parentElement;
-    while (parent) {
-      if (parent.classList?.contains("sit-grp")) return false;
-      parent = parent.parentElement;
-    }
-    return true;
-  });
-  console.log(`[PCS Live] Top-level .sit-grp count: ${topLevelSitGrps.length}`);
-
-  // Helper: count direct rider links (links not inside a nested .sit-grp)
-  const countDirectRiderLinks = (el: any): number => {
-    const all = el.querySelectorAll("a[href*='rider/']");
-    const nested = new Set(Array.from(el.querySelectorAll(".sit-grp")));
-    let count = 0;
-    for (const link of all) {
-      let p = (link as any).parentElement;
-      let inNested = false;
-      while (p && p !== el) {
-        if (nested.has(p)) { inNested = true; break; }
-        p = p.parentElement;
-      }
-      if (!inNested) count++;
-    }
-    return count;
+  type RawGroup = {
+    name: string;
+    gap: string;
+    riders: string[];
+    pcsSlugs: string[];
+    bibs: string[];
+    teams: string[];
+    gcGaps: string[];
+    riderCount: number;
   };
 
-  // Filter: keep top-level .sit-grp that look like real groups
-  // - Either contain ≥2 direct rider links (multi-rider group)
-  // - Or contain an explicit group-name keyword (Peloton, Group, Head of...)
-  // - Single-rider .sit-grp with no group header are rider rows mistakenly hoisted to top level
-  const groupNameRx = /(peloton|^group\b|^groupe\b|head of|chase|leaders?|breakaway|échappée|echappee)/i;
-  let sitGroups = topLevelSitGrps.filter((el: any) => {
-    const direct = countDirectRiderLinks(el);
-    if (direct >= 2) return true;
-    const text = (el.textContent || "").trim();
-    if (groupNameRx.test(text)) return true;
-    return false;
-  });
+  const rawGroups: RawGroup[] = [];
 
-  // Fallback: if filtering removed everything but we did have top-level groups, keep them all
-  if (sitGroups.length === 0 && topLevelSitGrps.length > 0) {
-    console.log(`[PCS Live] Filter kept 0 groups, falling back to all top-level .sit-grp`);
-    sitGroups = topLevelSitGrps;
-  }
-  console.log(`[PCS Live] Real groups retained: ${sitGroups.length}`);
+  const newGroupEls = Array.from(doc.querySelectorAll("ul.situ5b > li.group"));
+  console.log(`[PCS Live] Using ul.situ5b parser, found ${newGroupEls.length} li.group`);
 
-  if (sitGroups.length > 0) {
-    for (const grp of sitGroups) {
+  if (newGroupEls.length > 0) {
+    for (const grp of newGroupEls as any[]) {
+      // gap
+      const timeEl = grp.querySelector(":scope > div.time, div.time");
+      let gap = "0:00";
+      if (timeEl) {
+        const dataSec = timeEl.getAttribute?.("data-sec");
+        if (dataSec && /^\d+$/.test(dataSec)) {
+          const s = parseInt(dataSec, 10);
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          gap = h > 0
+            ? `+${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+            : `+${m}:${String(sec).padStart(2, "0")}`;
+        } else {
+          // strip any nested <font>??</font>
+          const clone = timeEl.cloneNode(true);
+          clone.querySelectorAll?.("font").forEach((f: any) => f.remove());
+          const t = (clone.textContent || "").trim();
+          if (t) gap = t.startsWith("+") ? t : `+${t}`;
+        }
+      }
+
+      // rider count from .bol span[data-nr]
+      let riderCount = 0;
+      const countSpan = grp.querySelector("div.bol span[data-nr]");
+      if (countSpan) {
+        const n = parseInt(countSpan.getAttribute("data-nr") || "0", 10);
+        if (!Number.isNaN(n)) riderCount = n;
+      }
+
+      // group name (often empty)
+      const nameEl = grp.querySelector("div.groupname");
+      let groupName = (nameEl?.textContent || "").trim();
+
+      // riders
+      const riderLis = Array.from(grp.querySelectorAll(":scope > ul > li, ul > li"));
+      const seenSlugs = new Set<string>();
+      const names: string[] = [];
+      const slugs: string[] = [];
+      const bibs: string[] = [];
+      const teams: string[] = [];
+      const gcGaps: string[] = [];
+
+      for (const li of riderLis as any[]) {
+        const link = li.querySelector("a[href*='rider/']");
+        if (!link) continue;
+        const href = link.getAttribute("href") || "";
+        const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
+        if (slug && seenSlugs.has(slug)) continue;
+        if (slug) seenSlugs.add(slug);
+
+        const fullText = (link.textContent || "").trim();
+        let name = fullText;
+        if ((!name || name.length < 2) && slug) {
+          name = slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+        }
+        if (!name || name.length < 2) continue;
+
+        const bib = (li.querySelector("div.bib")?.textContent || "").trim();
+        const teamIcon = li.querySelector("span[class*='shirt_icon']");
+        const team = (teamIcon?.getAttribute?.("title") || "").trim();
+        const gcGap = (li.querySelector("div.gc")?.textContent || "").trim();
+
+        names.push(name);
+        slugs.push(slug);
+        bibs.push(bib);
+        teams.push(team);
+        gcGaps.push(gcGap);
+
+        riders.push({ name, team, position: undefined, gap });
+      }
+
+      if (riderCount === 0) riderCount = names.length;
+
+      rawGroups.push({
+        name: groupName,
+        gap,
+        riders: names,
+        pcsSlugs: slugs,
+        bibs,
+        teams,
+        gcGaps,
+        riderCount,
+      });
+    }
+  } else {
+    // ── Legacy fallback: .sit-grp parser ──
+    const allSitGrps = Array.from(doc.querySelectorAll(".sit-grp"));
+    console.log(`[PCS Live] Legacy fallback: found ${allSitGrps.length} .sit-grp elements`);
+
+    const topLevelSitGrps = allSitGrps.filter((el: any) => {
+      let parent = el.parentElement;
+      while (parent) {
+        if (parent.classList?.contains("sit-grp")) return false;
+        parent = parent.parentElement;
+      }
+      return true;
+    });
+
+    const countDirectRiderLinks = (el: any): number => {
+      const all = el.querySelectorAll("a[href*='rider/']");
+      const nested = new Set(Array.from(el.querySelectorAll(".sit-grp")));
+      let count = 0;
+      for (const link of all) {
+        let p = (link as any).parentElement;
+        let inNested = false;
+        while (p && p !== el) {
+          if (nested.has(p)) { inNested = true; break; }
+          p = p.parentElement;
+        }
+        if (!inNested) count++;
+      }
+      return count;
+    };
+
+    const groupNameRx = /(peloton|^group\b|^groupe\b|head of|chase|leaders?|breakaway|échappée|echappee)/i;
+    let sitGroups = topLevelSitGrps.filter((el: any) => {
+      const direct = countDirectRiderLinks(el);
+      if (direct >= 2) return true;
+      const text = (el.textContent || "").trim();
+      if (groupNameRx.test(text)) return true;
+      return false;
+    });
+    if (sitGroups.length === 0 && topLevelSitGrps.length > 0) sitGroups = topLevelSitGrps;
+
+    for (const grp of sitGroups as any[]) {
       const grpText = grp.textContent?.trim() || "";
-      
       let groupName = "";
       let gap = "0:00";
-      let riderCount = 0;
       const groupRiders: string[] = [];
       const groupPcsSlugs: string[] = [];
+      const groupBibs: string[] = [];
+      const groupGcGaps: string[] = [];
 
-      // Extract gap and group name ONLY from header text (before the first rider link)
-      // This avoids confusing individual GC gaps with the group gap
       const firstRiderLink = grp.querySelector("a[href*='rider/']");
       const firstRiderText = firstRiderLink?.textContent || "";
       const headerText = firstRiderText && grpText.includes(firstRiderText)
         ? grpText.substring(0, grpText.indexOf(firstRiderText))
-        : grpText.split('\n').slice(0, 3).join('\n'); // fallback: first 3 lines only
-      
-      const headerLines = headerText.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-      
+        : grpText.split("\n").slice(0, 3).join("\n");
+      const headerLines = headerText.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
       for (const line of headerLines) {
-        if (/^\d+$/.test(line)) continue; // skip pure numbers (bib numbers)
-        if (/^\+?\d+:\d+/.test(line)) {
-          gap = line.startsWith('+') ? line : `+${line}`;
-          break; // Take only the first time match = group gap
-        }
-        if (!groupName && !/^\d/.test(line) && line.length > 2 && line.length < 60) {
-          groupName = line;
-        }
+        if (/^\d+$/.test(line)) continue;
+        if (/^\+?\d+:\d+/.test(line)) { gap = line.startsWith("+") ? line : `+${line}`; break; }
+        if (!groupName && !/^\d/.test(line) && line.length > 2 && line.length < 60) groupName = line;
       }
 
-      // Extract riders from links with bib + GC gap
-      // Filter out links that belong to nested .sit-grp children to avoid duplication
-      const allRiderLinksInGroup = grp.querySelectorAll("a[href*='rider/']");
       const nestedSitGrps = new Set(Array.from(grp.querySelectorAll(".sit-grp")));
-      const riderLinks = Array.from(allRiderLinksInGroup).filter((link: any) => {
+      const riderLinks = Array.from(grp.querySelectorAll("a[href*='rider/']")).filter((link: any) => {
         let parent = link.parentElement;
         while (parent && parent !== grp) {
           if (nestedSitGrps.has(parent)) return false;
@@ -221,14 +302,11 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         }
         return true;
       });
-      const groupBibs: string[] = [];
-      const groupGcGaps: string[] = [];
-      for (const link of riderLinks) {
+
+      for (const link of riderLinks as any[]) {
         const href = link.getAttribute("href") || "";
         const slug = href.match(/rider\/([^/]+)/)?.[1] || "";
         const fullText = (link.textContent || "").trim();
-        
-        // Try to extract last name from uppercase span, but fall back to full text
         const uppercaseSpan = link.querySelector("span");
         let name = fullText;
         if (uppercaseSpan) {
@@ -238,72 +316,83 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
             name = firstName ? `${firstName} ${lastName}` : fullText;
           }
         }
-        // Also try slug-based name as fallback for special chars
         if ((!name || name.length < 2) && slug) {
-          name = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          name = slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
         }
-        
-        if (name && name.length >= 2) {
-          groupRiders.push(name);
-          groupPcsSlugs.push(slug);
+        if (!name || name.length < 2) continue;
 
-          // Extract bib and GC gap from parent text
-          // Format: "rank [flag] bib RIDER_NAME +GC_gap"
-          // The rank is the first number, the bib is the last number before the rider name
-          const parentEl = link.parentElement;
-          let bib = "";
-          let gcGap = "";
-          if (parentEl) {
-            const parentText = parentEl.textContent || "";
-            // Find text before rider name to extract bib (last number before name)
-            const riderLastName = name.split(' ').pop() || name;
-            const nameIdx = parentText.indexOf(riderLastName);
-            if (nameIdx > 0) {
-              const beforeName = parentText.substring(0, nameIdx).trim();
-              const allNumbers = beforeName.match(/\d+/g);
-              if (allNumbers && allNumbers.length >= 2) {
-                bib = allNumbers[allNumbers.length - 1]; // Last number = bib (first = rank)
-              } else if (allNumbers && allNumbers.length === 1) {
-                bib = allNumbers[0];
-              }
-            }
-            // GC gap is typically after the rider name, format +H:MM:SS or +MM:SS
-            const gcMatch = parentText.match(/(\+\d+:\d{2}(?::\d{2})?)\s*$/);
-            if (gcMatch) gcGap = gcMatch[1];
+        groupRiders.push(name);
+        groupPcsSlugs.push(slug);
+
+        const parentEl = link.parentElement;
+        let bib = "";
+        let gcGap = "";
+        if (parentEl) {
+          const parentText = parentEl.textContent || "";
+          const riderLastName = name.split(" ").pop() || name;
+          const nameIdx = parentText.indexOf(riderLastName);
+          if (nameIdx > 0) {
+            const beforeName = parentText.substring(0, nameIdx).trim();
+            const allNumbers = beforeName.match(/\d+/g);
+            if (allNumbers && allNumbers.length >= 2) bib = allNumbers[allNumbers.length - 1];
+            else if (allNumbers && allNumbers.length === 1) bib = allNumbers[0];
           }
-          groupBibs.push(bib);
-          groupGcGaps.push(gcGap);
-
-          riders.push({ name, team: "", position: undefined, gap });
+          const gcMatch = parentText.match(/(\+\d+:\d{2}(?::\d{2})?)\s*$/);
+          if (gcMatch) gcGap = gcMatch[1];
         }
+        groupBibs.push(bib);
+        groupGcGaps.push(gcGap);
+
+        riders.push({ name, team: "", position: undefined, gap });
       }
 
-      riderCount = groupRiders.length;
-      if (!groupName) groupName = riderCount > 20 ? "Peloton" : `Groupe`;
+      rawGroups.push({
+        name: groupName,
+        gap,
+        riders: groupRiders,
+        pcsSlugs: groupPcsSlugs,
+        bibs: groupBibs,
+        teams: groupRiders.map(() => ""),
+        gcGaps: groupGcGaps,
+        riderCount: groupRiders.length,
+      });
+    }
+  }
 
-      const isPeloton = groupName.toLowerCase().includes("peloton");
+  // ── Normalize raw groups into situationGroups ──
+  if (rawGroups.length > 0) {
+    // Peloton = largest group by riderCount, OR group with ≥20 riders, OR explicit name
+    let maxCount = 0;
+    for (const g of rawGroups) if (g.riderCount > maxCount) maxCount = g.riderCount;
+
+    rawGroups.forEach((g, idx) => {
+      let groupName = g.name;
+      const explicitPeloton = /peloton/i.test(groupName);
+      const isPeloton = explicitPeloton || g.riderCount >= 20 || (rawGroups.length > 1 && g.riderCount === maxCount && maxCount >= 10);
+      if (!groupName) {
+        if (isPeloton) groupName = "Peloton";
+        else if (idx === 0) groupName = "Tête de course";
+        else groupName = `Groupe ${idx + 1}`;
+      }
 
       situationGroups.push({
         name: groupName,
-        gap,
-        riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
+        gap: g.gap,
+        riders: isPeloton ? g.riders.slice(0, 5) : g.riders.slice(0, 15),
         riderIds: [],
-        riderCount,
+        riderCount: g.riderCount,
         isPeloton,
-        riderBibs: isPeloton ? [] : groupBibs.slice(0, 15),
-        riderGcGaps: isPeloton ? [] : groupGcGaps.slice(0, 15),
-      });
+        riderBibs: isPeloton ? [] : g.bibs.slice(0, 15),
+        riderGcGaps: isPeloton ? [] : g.gcGaps.slice(0, 15),
+      } as any);
 
-      console.log(`[PCS Live] Group "${groupName}": ${riderCount} riders, gap=${gap}, peloton=${isPeloton}`);
-    }
+      console.log(`[PCS Live] Group "${groupName}": ${g.riderCount} riders, gap=${g.gap}, peloton=${isPeloton}`);
+    });
 
     // ── Stage-race defensive cleanup ──
-    // For stage races, PCS shows individual GC gaps next to each rider in a breakaway.
-    // These can pollute parsing as fake single-rider groups with huge gaps.
-    // Drop any non-peloton group with a single rider AND gap > 10:00 (clearly a GC gap).
     if (isStageRace && situationGroups.length > 1) {
-      const gapToSeconds = (g: string): number => {
-        const m = g.replace(/^\+/, "").match(/^(?:(\d+):)?(\d+):(\d+)$/);
+      const gapToSeconds = (s: string): number => {
+        const m = s.replace(/^\+/, "").match(/^(?:(\d+):)?(\d+):(\d+)$/);
         if (!m) return 0;
         return (parseInt(m[1] || "0", 10) * 3600) + (parseInt(m[2], 10) * 60) + parseInt(m[3], 10);
       };
