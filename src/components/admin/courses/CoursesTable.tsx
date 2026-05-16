@@ -336,6 +336,12 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
           {courses.length} course{courses.length > 1 ? 's' : ''} affichée{courses.length > 1 ? 's' : ''}
         </p>
       )}
+
+      <StageDatesDialog
+        open={!!stageDatesCourse}
+        onOpenChange={(o) => { if (!o) setStageDatesCourse(null); }}
+        course={stageDatesCourse}
+      />
     </div>
   );
 };
