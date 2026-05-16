@@ -1,70 +1,67 @@
-## Objectif
+# Réparer l'import Live Broadcast
 
-Simplifier la page `SuperAdminLiveBroadcastPage` pour que le workflow soit : **coller une URL → cliquer Importer → voir la situation de course → activer l'auto-refresh**. La situation et la timeline deviennent les éléments centraux. Le composer manuel disparaît. Tout est lisible aussi bien sur desktop que sur mobile.
+## Diagnostic
 
-## Nouveau layout
+L'import retourne `0/0 coureurs matchés`. Les logs de la fonction `scrape-live-race` confirment :
 
-### Desktop (lg+)
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  ◉ Course active : Giro d'Italia      [Étape 12]   [Archiver]│
-│  Sélecteur courses live + ajouter (repliable, compact)        │
-├──────────────────────────────────────────────────────────────┤
-│  🔗 [URL FirstCycling/PCS ……………………]  [Importer]  [Auto ON]  │
-│  ⏱ Dernier : 14:32:05 → Prochain : 14:33:05  · 145/150 ✓    │
-├──────────────────────────┬───────────────────────────────────┤
-│  SITUATION DE COURSE     │   TIMELINE                        │
-│  (grande, focus visuel)  │   (events chronologiques)         │
-│  — groupes, écarts, km   │   — chute, échappée, abandon…     │
-│                          │                                   │
-│  [Diffuser la situation] │   (auto-broadcast actif)          │
-└──────────────────────────┴───────────────────────────────────┘
+```
+[PCS Live] km remaining: 63, km done: 92.8, speed: 50.4 km/h   ← OK
+[PCS Live] Found 0 .sit-grp elements                           ← KO
+[PCS Live] Real groups retained: 0
+[scrape-live-race] Parsed 0 riders, 0 events
 ```
 
-### Mobile
-- Une seule colonne, ordre vertical :
-  1. Barre course active (collapsible : tap pour changer)
-  2. Barre import URL + boutons Importer/Auto (sticky en haut quand on scrolle)
-  3. Situation de course (pleine largeur)
-  4. Timeline (pleine largeur)
-- Onglets en haut "Situation | Timeline" si besoin pour éviter le scroll fleuve (à valider à la première itération desktop d'abord).
+Le parser cherche `.sit-grp`. **procyclingstats.com a changé la structure du DOM de ses pages /live**. En récupérant la vraie page (`https://www.procyclingstats.com/race/giro-d-italia/2026/stage-8/live`) on voit :
 
-## Éléments retirés
+```text
+ul.situ5b
+└── li.group               ← un groupe
+    ├── div.bol            → font = rang, span[data-nr=N] = nb coureurs
+    ├── div.groupname      → nom (souvent vide)
+    ├── div.time[data-sec] → écart, ex "+0:42"
+    └── ul
+        └── li             ← un coureur
+            ├── span.nr               → rang dans le groupe
+            ├── span.shirt_icon20 teamXXX  (title = équipe)
+            ├── div.bib               → dossard
+            ├── a[href*='rider/']     → nom (BJERG Mikkel)
+            ├── span.flag c16 xx      → pays
+            └── div.gc                → temps GC (+54:42)
+```
 
-- **Composer de message manuel** (`MessageInput` + carte Composer) → supprimé.
-- **Carte Historique** des messages diffusés → supprimée de la page (on garde quand même l'auto-broadcast en arrière-plan).
-- **Planning des plages horaires** → déplacé derrière un bouton ⚙️ discret (popover/sheet), conserve la logique existante.
+La capture n°2 (BJERG, NARVÁEZ, LEKNESSUND + Peloton +0:50) correspond exactement à cette structure et doit redevenir visible dès que le parser est aligné.
 
-## Éléments conservés / déplacés
+## Changements
 
-- Sélecteur de course active + ajout/archivage → repliés dans une barre d'en-tête compacte (par défaut fermée si une course est active).
-- Sélecteur d'étape (multi-stage) → badge inline dans la barre course active.
-- Auto-scrape avec planning → bouton principal "Auto ON/OFF" + lien réglages.
-- Stats matching (X/Y) + non matchés → ligne discrète sous la barre d'import.
-- Auto-broadcast des événements et de la situation → conservé en arrière-plan (logique inchangée).
+### 1. `supabase/functions/scrape-live-race/index.ts`
 
-## Composants
+Réécrire la section "Parse situation groups" de `parsePCSLive` :
 
-- Refactor `SuperAdminLiveBroadcastPage.tsx` (desktop par défaut).
-- Nouveau `SuperAdminLiveBroadcastPage.mobile.tsx` (même logique, layout mobile).
-- Wrapper `SuperAdminLiveBroadcastPage.tsx` qui choisit selon `useIsMobile()` (pattern déjà utilisé ailleurs : `UpcomingCourses.tsx`, `SuperAdminPage.tsx`).
-- Extraction d'un sous-composant `LiveImportBar` (URL + Importer + Auto + stats) partagé entre desktop et mobile.
-- Extraction d'un sous-composant `ActiveCourseHeader` (course active + étape + switcher repliable).
+- Remplacer `doc.querySelectorAll(".sit-grp")` par `doc.querySelectorAll("ul.situ5b > li.group")`.
+- Pour chaque `li.group` :
+  - **gap** : lire `.time` (utiliser `data-sec` si présent pour fiabilité, sinon textContent en virant le `<font>??</font>`).
+  - **riderCount** : `.bol span[data-nr]` → `parseInt(data-nr)` (fiable, plus besoin de compter les liens).
+  - **groupName** : `.groupname` textContent ; si vide, déduire (`Peloton` si `riderCount` ≥ 20 ou si c'est le plus gros groupe restant, sinon `Échappée` / `Groupe N`).
+  - **isPeloton** : `riderCount` ≥ 20 OU plus grand groupe.
+  - **coureurs** : `ul > li` enfants directs ; pour chacun extraire :
+    - nom : `a[href*='rider/']` textContent
+    - slug : `href` après `rider/`
+    - dossard : `.bib` textContent
+    - équipe : `span[class*='shirt_icon'][title]` attribut `title`
+    - écart GC : `.gc` textContent
+- Conserver la logique aval : `riders.push(...)`, troncature à 15 (5 si peloton), nettoyage stage-race pour groupes parasites.
+- Garder un **fallback** sur l'ancien sélecteur `.sit-grp` si jamais PCS revient en arrière (pour ne pas re-casser).
+- Logs : `[PCS Live] Using ul.situ5b parser, found N li.group` pour pouvoir confirmer dans les logs.
 
-## Détails techniques
+### 2. Hors scope
 
-- Fichiers touchés :
-  - `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` (wrapper responsive)
-  - `src/pages/admin/SuperAdminLiveBroadcastPage.desktop.tsx` (nouveau, contient l'essentiel de la logique actuelle, layout 2 colonnes situation/timeline)
-  - `src/pages/admin/SuperAdminLiveBroadcastPage.mobile.tsx` (nouveau, layout vertical + barre import sticky)
-  - `src/components/admin/live/LiveImportBar.tsx` (nouveau)
-  - `src/components/admin/live/ActiveCourseHeader.tsx` (nouveau)
-- Aucune modification de logique métier : `handleScrape`, `broadcastMessage`, `RaceSituationEditor`, `RaceTimeline` restent identiques.
-- Aucune modification d'edge function ni de DB.
-- Le composer `MessageInput` n'est plus rendu mais `handleSend` reste utilisé par `RaceSituationEditor` (bouton "Diffuser la situation") et l'auto-broadcast.
-- Tokens semantic Tailwind uniquement (pas de couleurs en dur).
+- Pas de modification UI (`SuperAdminLiveBroadcastPage.tsx`, `LiveImportBar.tsx`, `ActiveCourseHeader.tsx`).
+- Pas de modification DB, RLS, ou logique métier.
+- Pas de modification du parser L'Équipe ni du parser PCS "results" (table.results) — uniquement le parser PCS **Live**.
 
 ## Validation
 
-- Test desktop : importer une URL Giro → vérifier 2 colonnes situation/timeline visibles, auto ON met à jour la situation toutes les X secondes.
-- Test mobile (393px) : import bar sticky, situation puis timeline empilées, sélecteur de course replié.
+1. Coller l'URL `https://www.procyclingstats.com/race/giro-d-italia/2026/stage-8/live`, cliquer **Importer**.
+2. Vérifier dans les logs edge : `Parsed >0 riders`, `Real groups retained: ≥2`.
+3. Vérifier dans l'UI : "Situation de course" affiche au moins 2 groupes (tête + peloton) avec les noms BJERG / NARVÁEZ / LEKNESSUND et un Peloton avec écart `+0:50`.
+4. Vérifier que les compteurs "X/Y coureurs matchés" sont > 0.
