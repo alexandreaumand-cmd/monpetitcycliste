@@ -1,42 +1,70 @@
-## Problème
+## Objectif
 
-Dans la fiche coureur (RiderPointsDetail) de Mathys Rondel ouverte par Max en ligue **MPC 2026**, on voit "Bonus 30 pts". Ces 30 pts (22,50 + 7,50) correspondent en réalité à des bonus `coureur_bonuse` (+25 %) attribués dans une **autre ligue** (CopaGIRO, `2b08ea2c-...`). Rondel n'est pas le coureur bonusé de Max en MPC 2026 — c'est bien un bug d'affichage.
+Simplifier la page `SuperAdminLiveBroadcastPage` pour que le workflow soit : **coller une URL → cliquer Importer → voir la situation de course → activer l'auto-refresh**. La situation et la timeline deviennent les éléments centraux. Le composer manuel disparaît. Tout est lisible aussi bien sur desktop que sur mobile.
 
-## Cause racine
+## Nouveau layout
 
-Dans `supabase/functions/get-rider-points-table/index.ts`, la requête bonus utilise ce filtre OR :
-
-```ts
-// Pseudo
-course_id IN (courses de la ligue)
-OR (course_id IS NULL AND league_id = current_league)
-```
-
-Cette logique a été conçue pour les bonus de type `first_win` qui n'ont pas de `league_id` (globaux). Mais les bonus `coureur_bonuse` ont **à la fois** un `course_id` (étape concernée) **et** un `league_id` (le coureur bonusé est lié à une ligue + phase + manager). La première branche du OR les laisse donc passer sans filtrage par ligue, et un coureur bonusé dans la ligue A est visible dans la ligue B dès que la course est dans le scope des deux ligues.
-
-## Correctif
-
-Resserrer le filtre dans `get-rider-points-table` : un bonus avec `league_id` non null doit toujours être filtré par la ligue courante, qu'il porte un `course_id` ou non. Les bonus avec `league_id` null restent globaux (visibles dans toute ligue dont le scope contient la course).
-
-Nouveau filtre :
-
+### Desktop (lg+)
 ```text
-( course_id IN league_courses AND (league_id IS NULL OR league_id = current_league) )
-OR
-( course_id IS NULL AND league_id = current_league )
+┌──────────────────────────────────────────────────────────────┐
+│  ◉ Course active : Giro d'Italia      [Étape 12]   [Archiver]│
+│  Sélecteur courses live + ajouter (repliable, compact)        │
+├──────────────────────────────────────────────────────────────┤
+│  🔗 [URL FirstCycling/PCS ……………………]  [Importer]  [Auto ON]  │
+│  ⏱ Dernier : 14:32:05 → Prochain : 14:33:05  · 145/150 ✓    │
+├──────────────────────────┬───────────────────────────────────┤
+│  SITUATION DE COURSE     │   TIMELINE                        │
+│  (grande, focus visuel)  │   (events chronologiques)         │
+│  — groupes, écarts, km   │   — chute, échappée, abandon…     │
+│                          │                                   │
+│  [Diffuser la situation] │   (auto-broadcast actif)          │
+└──────────────────────────┴───────────────────────────────────┘
 ```
 
-Et quand aucun `league_id` n'est passé (vue hors ligue), on garde le comportement legacy (pas de filtrage par ligue, mais on n'expose pas les bonus à `league_id` non null d'une autre ligue : on ne renverra que les bonus globaux `league_id IS NULL`).
+### Mobile
+- Une seule colonne, ordre vertical :
+  1. Barre course active (collapsible : tap pour changer)
+  2. Barre import URL + boutons Importer/Auto (sticky en haut quand on scrolle)
+  3. Situation de course (pleine largeur)
+  4. Timeline (pleine largeur)
+- Onglets en haut "Situation | Timeline" si besoin pour éviter le scroll fleuve (à valider à la première itération desktop d'abord).
 
-## Étapes
+## Éléments retirés
 
-1. Mettre à jour la construction du `bonusQuery` dans `supabase/functions/get-rider-points-table/index.ts` avec la nouvelle expression OR.
-2. Mettre à jour le commentaire d'intention au-dessus pour refléter la règle.
-3. Déployer la fonction et vérifier en base :
-   - Max (MPC 2026) sur Rondel ne voit plus de bonus.
-   - Le manager qui a réellement bonusé Rondel en CopaGIRO voit toujours ses 30 pts.
-   - Les bonus `first_win` (course_id rempli, league_id null) restent visibles dans toutes les ligues éligibles.
+- **Composer de message manuel** (`MessageInput` + carte Composer) → supprimé.
+- **Carte Historique** des messages diffusés → supprimée de la page (on garde quand même l'auto-broadcast en arrière-plan).
+- **Planning des plages horaires** → déplacé derrière un bouton ⚙️ discret (popover/sheet), conserve la logique existante.
 
-## Hors scope
+## Éléments conservés / déplacés
 
-Pas de changement UI, pas de modification du calcul de classement (`calculate-standings` est indépendant et applique déjà le bon scope). Pas de migration de données : les bonus existants restent corrects côté écriture.
+- Sélecteur de course active + ajout/archivage → repliés dans une barre d'en-tête compacte (par défaut fermée si une course est active).
+- Sélecteur d'étape (multi-stage) → badge inline dans la barre course active.
+- Auto-scrape avec planning → bouton principal "Auto ON/OFF" + lien réglages.
+- Stats matching (X/Y) + non matchés → ligne discrète sous la barre d'import.
+- Auto-broadcast des événements et de la situation → conservé en arrière-plan (logique inchangée).
+
+## Composants
+
+- Refactor `SuperAdminLiveBroadcastPage.tsx` (desktop par défaut).
+- Nouveau `SuperAdminLiveBroadcastPage.mobile.tsx` (même logique, layout mobile).
+- Wrapper `SuperAdminLiveBroadcastPage.tsx` qui choisit selon `useIsMobile()` (pattern déjà utilisé ailleurs : `UpcomingCourses.tsx`, `SuperAdminPage.tsx`).
+- Extraction d'un sous-composant `LiveImportBar` (URL + Importer + Auto + stats) partagé entre desktop et mobile.
+- Extraction d'un sous-composant `ActiveCourseHeader` (course active + étape + switcher repliable).
+
+## Détails techniques
+
+- Fichiers touchés :
+  - `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` (wrapper responsive)
+  - `src/pages/admin/SuperAdminLiveBroadcastPage.desktop.tsx` (nouveau, contient l'essentiel de la logique actuelle, layout 2 colonnes situation/timeline)
+  - `src/pages/admin/SuperAdminLiveBroadcastPage.mobile.tsx` (nouveau, layout vertical + barre import sticky)
+  - `src/components/admin/live/LiveImportBar.tsx` (nouveau)
+  - `src/components/admin/live/ActiveCourseHeader.tsx` (nouveau)
+- Aucune modification de logique métier : `handleScrape`, `broadcastMessage`, `RaceSituationEditor`, `RaceTimeline` restent identiques.
+- Aucune modification d'edge function ni de DB.
+- Le composer `MessageInput` n'est plus rendu mais `handleSend` reste utilisé par `RaceSituationEditor` (bouton "Diffuser la situation") et l'auto-broadcast.
+- Tokens semantic Tailwind uniquement (pas de couleurs en dur).
+
+## Validation
+
+- Test desktop : importer une URL Giro → vérifier 2 colonnes situation/timeline visibles, auto ON met à jour la situation toutes les X secondes.
+- Test mobile (393px) : import bar sticky, situation puis timeline empilées, sélecteur de course replié.
