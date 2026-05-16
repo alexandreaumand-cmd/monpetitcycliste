@@ -1,21 +1,15 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff, Clock } from "lucide-react";
-import { ScrapeScheduleEditor, DEFAULT_SCHEDULE, getActiveInterval, describeSchedule, type ScrapeWindow } from "@/components/arena/ScrapeScheduleEditor";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { MessageCircle, Radio, Loader2 } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+  DEFAULT_SCHEDULE,
+  getActiveInterval,
+  describeSchedule,
+  type ScrapeWindow,
+} from "@/components/arena/ScrapeScheduleEditor";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   useLiveCourses,
   useActivateLiveCourse,
@@ -23,17 +17,22 @@ import {
   useUpdateLiveCourseStage,
 } from "@/components/arena/LiveCourseSelector";
 import { useBroadcastLiveMessage } from "@/hooks/useArenaMessages";
-import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
-import { MessageInput } from "@/components/arena/MessageInput";
-import { RaceSituationEditor, type RaceSituation } from "@/components/arena/RaceSituationEditor";
-import { RaceSituationDisplay } from "@/components/arena/RaceSituationDisplay";
+import {
+  useCurrentManagerId,
+  useStartlistRiders,
+} from "@/hooks/useArenaPronostics";
+import {
+  RaceSituationEditor,
+  type RaceSituation,
+} from "@/components/arena/RaceSituationEditor";
 import { RaceTimeline, type TimelineEvent } from "@/components/arena/RaceTimeline";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
+import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
 
 export const SuperAdminLiveBroadcastPage = () => {
-  const { t } = useTranslation("arena");
+  const isMobile = useIsMobile();
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedNewCourseId, setSelectedNewCourseId] = useState("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
@@ -42,7 +41,6 @@ export const SuperAdminLiveBroadcastPage = () => {
   const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
   const [schedule, setSchedule] = useState<ScrapeWindow[]>(DEFAULT_SCHEDULE);
-  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastScrapeAtRef = useRef<number>(0);
   const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
@@ -51,9 +49,17 @@ export const SuperAdminLiveBroadcastPage = () => {
   const sentEventsRef = useRef<Set<string>>(new Set());
   const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
-  const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
-  const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
-  const [scrapeStats, setScrapeStats] = useState<{ total: number; matched: number; unmatched: string[] } | null>(null);
+  const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(
+    null
+  );
+  const [matchedRiders, setMatchedRiders] = useState<
+    Record<string, { manager_name: string; rider_nom: string }>
+  >({});
+  const [scrapeStats, setScrapeStats] = useState<{
+    total: number;
+    matched: number;
+    unmatched: string[];
+  } | null>(null);
 
   const { data: managerId } = useCurrentManagerId();
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
@@ -63,19 +69,15 @@ export const SuperAdminLiveBroadcastPage = () => {
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
-  const selectedCourse = liveCourses?.find((lc) => lc.course_id === activeCourseId);
-  const isMultiStage = selectedCourse?.courses?.type_course === "stage_race" ||
-    (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
-     selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
+  const selectedCourse = liveCourses?.find(
+    (lc) => lc.course_id === activeCourseId
+  );
+  const isMultiStage =
+    selectedCourse?.courses?.type_course === "stage_race" ||
+    (selectedCourse?.courses?.date_debut &&
+      selectedCourse?.courses?.date_fin &&
+      selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
 
-  // Auto-scroll to top when imported situation changes
-  useEffect(() => {
-    if (importedSituation) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [importedSituation]);
-
-  // Initialize selectedEtape from DB (current_etape) when switching course
   useEffect(() => {
     if (!activeCourseId) {
       setSelectedEtape(null);
@@ -88,22 +90,22 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
   }, [activeCourseId, isMultiStage, selectedCourse?.current_etape]);
 
-  // Persist selectedEtape to DB whenever it changes (debounced via direct call)
-  const handleStageChange = useCallback((etape: number) => {
-    setSelectedEtape(etape);
-    if (activeCourseId && isMultiStage) {
-      updateStage.mutate({ courseId: activeCourseId, etape });
-    }
-  }, [activeCourseId, isMultiStage, updateStage]);
+  const handleStageChange = useCallback(
+    (etape: number) => {
+      setSelectedEtape(etape);
+      if (activeCourseId && isMultiStage) {
+        updateStage.mutate({ courseId: activeCourseId, etape });
+      }
+    },
+    [activeCourseId, isMultiStage, updateStage]
+  );
 
-  // Load persisted scrape URL from DB and schedule from localStorage when course changes
   useEffect(() => {
     if (!activeCourseId) return;
     setAutoScrapeEnabled(false);
     sentEventsRef.current = new Set();
     lastSituationRef.current = "";
     lastScrapeAtRef.current = 0;
-    // Load schedule from localStorage
     try {
       const raw = localStorage.getItem(`scrape-schedule:${activeCourseId}`);
       if (raw) {
@@ -129,18 +131,18 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
   }, [activeCourseId]);
 
-  // Persist schedule
   useEffect(() => {
     if (!activeCourseId) return;
-    localStorage.setItem(`scrape-schedule:${activeCourseId}`, JSON.stringify(schedule));
+    localStorage.setItem(
+      `scrape-schedule:${activeCourseId}`,
+      JSON.stringify(schedule)
+    );
   }, [activeCourseId, schedule]);
 
-  // Keep handleScrapeRef in sync
   useEffect(() => {
     handleScrapeRef.current = handleScrape;
   });
 
-  // Auto-scrape based on time-window schedule. Tick every 5s and decide whether to fire.
   useEffect(() => {
     if (autoScrapeRef.current) {
       clearInterval(autoScrapeRef.current);
@@ -174,15 +176,6 @@ export const SuperAdminLiveBroadcastPage = () => {
     };
   }, [autoScrapeEnabled, scrapeUrl, activeCourseId, schedule]);
 
-  // Build roster owners map from matched riders
-  const rosterOwners = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const [id, info] of Object.entries(matchedRiders)) {
-      if (info.manager_name) map[id] = info.manager_name;
-    }
-    return map;
-  }, [matchedRiders]);
-
   const { data: upcomingCourses } = useQuery({
     queryKey: ["admin-upcoming-courses-live"],
     queryFn: async () => {
@@ -196,29 +189,6 @@ export const SuperAdminLiveBroadcastPage = () => {
       if (error) throw error;
       return data;
     },
-  });
-
-  const { data: broadcastHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: ["admin-broadcast-history", activeCourseId],
-    queryFn: async () => {
-      if (!activeCourseId) return [];
-      const { data, error } = await supabase
-        .from("arena_messages")
-        .select("id, content, created_at, metadata, author_manager_id")
-        .eq("message_type", "admin_broadcast")
-        .eq("course_id", activeCourseId)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      const seen = new Set<string>();
-      return (data || []).filter((m) => {
-        const key = `${m.content}|${m.created_at}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    },
-    enabled: !!activeCourseId,
   });
 
   const handleActivate = async () => {
@@ -270,7 +240,6 @@ export const SuperAdminLiveBroadcastPage = () => {
     setIsScraping(true);
     isScrapingRef.current = true;
 
-    // Persist URL to DB
     if (!isAuto) {
       supabase
         .from("arena_live_courses")
@@ -281,20 +250,21 @@ export const SuperAdminLiveBroadcastPage = () => {
     }
     try {
       const { data, error } = await supabase.functions.invoke("scrape-live-race", {
-        body: { url: scrapeUrl, course_id: activeCourseId, is_stage_race: !!isMultiStage },
+        body: {
+          url: scrapeUrl,
+          course_id: activeCourseId,
+          is_stage_race: !!isMultiStage,
+        },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Set timeline events
       const events = data.timeline || [];
       setTimelineEvents(events);
 
-      // Set imported situation — enrich with riderIds from matched_riders
       const matched = data.matched_riders || {};
       if (data.situation?.groups?.length > 0) {
-        // Build reverse lookup: scraped name → coureur_id
         const nameToId: Record<string, string> = {};
         for (const [coueurId, info] of Object.entries(matched)) {
           const m = info as any;
@@ -304,44 +274,70 @@ export const SuperAdminLiveBroadcastPage = () => {
 
         const enrichedGroups = data.situation.groups.map((g: any) => ({
           ...g,
-          riderIds: (g.riders || []).map((name: string) => nameToId[name.toLowerCase()] || ""),
+          riderIds: (g.riders || []).map(
+            (name: string) => nameToId[name.toLowerCase()] || ""
+          ),
         }));
-        setImportedSituation({ groups: enrichedGroups, kmRemaining: data.situation.kmRemaining || 0 });
+        setImportedSituation({
+          groups: enrichedGroups,
+          kmRemaining: data.situation.kmRemaining || 0,
+        });
       }
 
-      // Set matched riders
       setMatchedRiders(data.matched_riders || {});
 
-      // Stats
       setScrapeStats({
         total: data.total_scraped || 0,
         matched: data.total_matched || 0,
         unmatched: data.unmatched_names || [],
       });
 
-      // Auto-broadcast all timeline events (reversed so oldest first)
       const cleanText = (text: string): string => {
         return text
-          .replace(/;/g, ', ')
-          .replace(/\s{2,}/g, ' ')
-          .replace(/,\s*,/g, ',')
+          .replace(/;/g, ", ")
+          .replace(/\s{2,}/g, " ")
+          .replace(/,\s*,/g, ",")
           .trim();
       };
 
-      const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
+      const eventKey = (evt: TimelineEvent) =>
+        `${evt.time}|${(evt.title || "").substring(0, 30)}|${evt.text.substring(0, 50)}`;
       if (events.length > 0 && managerId) {
         const reversedEvents = [...events].reverse();
-        const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
+        const newEvents = reversedEvents.filter(
+          (evt) => !sentEventsRef.current.has(eventKey(evt))
+        );
         if (newEvents.length > 0) {
           let sent = 0;
           for (const evt of newEvents) {
-            const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
+            const typeEmoji =
+              evt.type === "crash"
+                ? "💥"
+                : evt.type === "breakaway"
+                ? "🚴"
+                : evt.type === "gap"
+                ? "⏱️"
+                : evt.type === "dropped"
+                ? "📉"
+                : evt.type === "intermediate"
+                ? "🏁"
+                : evt.type === "abandon"
+                ? "🚑"
+                : "📢";
             const titlePart = evt.title ? `**${cleanText(evt.title)}**\n` : "";
             const content = `${typeEmoji} ${evt.time} — ${titlePart}${cleanText(evt.text)}`;
             try {
               await new Promise<void>((resolve, reject) => {
                 broadcastMessage.mutate(
-                  { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
+                  {
+                    content,
+                    courseId: activeCourseId,
+                    managerId,
+                    metadata:
+                      selectedEtape != null
+                        ? { etape_numero: selectedEtape }
+                        : {},
+                  },
                   { onSuccess: () => resolve(), onError: (e) => reject(e) }
                 );
               });
@@ -352,22 +348,29 @@ export const SuperAdminLiveBroadcastPage = () => {
             }
           }
           toast.success(`${sent} nouveaux événements diffusés`);
-        } else {
-          console.log("[auto-scrape] Pas de nouveaux événements");
         }
       } else if (events.length === 0) {
-        toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
+        toast.success(
+          `Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`
+        );
       }
 
-      // Auto-broadcast situation de course if available (with deduplication)
       if (data.situation?.groups?.length > 0 && managerId) {
         const enrichedSitGroups = data.situation.groups.map((g: any) => ({
           ...g,
           riderIds: g.riderIds || [],
         }));
-        const situation = { groups: enrichedSitGroups, kmRemaining: data.situation.kmRemaining || 0 };
-        const sitKey = JSON.stringify(situation.groups.map((g: any) => g.name + g.gap + (g.riders?.length || 0))) + situation.kmRemaining;
-        
+        const situation = {
+          groups: enrichedSitGroups,
+          kmRemaining: data.situation.kmRemaining || 0,
+        };
+        const sitKey =
+          JSON.stringify(
+            situation.groups.map(
+              (g: any) => g.name + g.gap + (g.riders?.length || 0)
+            )
+          ) + situation.kmRemaining;
+
         if (sitKey !== lastSituationRef.current) {
           const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
           for (const g of situation.groups) {
@@ -380,17 +383,25 @@ export const SuperAdminLiveBroadcastPage = () => {
           try {
             await new Promise<void>((resolve, reject) => {
               broadcastMessage.mutate(
-                { content: sitContent, courseId: activeCourseId, managerId, metadata: { race_situation: situation, rider_mentions: riderMentions, ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}) } },
+                {
+                  content: sitContent,
+                  courseId: activeCourseId,
+                  managerId,
+                  metadata: {
+                    race_situation: situation,
+                    rider_mentions: riderMentions,
+                    ...(selectedEtape != null
+                      ? { etape_numero: selectedEtape }
+                      : {}),
+                  },
+                },
                 { onSuccess: () => resolve(), onError: (e) => reject(e) }
               );
             });
             lastSituationRef.current = sitKey;
-            console.log("[auto-scrape] Situation de course diffusée (mise à jour)");
           } catch (e) {
             console.error("Failed to broadcast situation:", e);
           }
-        } else {
-          console.log("[auto-scrape] Situation inchangée, skip");
         }
       }
     } catch (err: any) {
@@ -407,384 +418,165 @@ export const SuperAdminLiveBroadcastPage = () => {
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
 
-  const filteredHistory = useMemo(() => {
-    if (!isMultiStage || selectedEtape == null) return broadcastHistory;
-    return broadcastHistory.filter(
-      (msg) => (msg.metadata as any)?.etape_numero === selectedEtape
-    );
-  }, [broadcastHistory, isMultiStage, selectedEtape]);
+  const handleToggleAuto = () => {
+    if (!scrapeUrl) {
+      toast.error("Entrez une URL d'abord");
+      return;
+    }
+    if (!schedule.length) {
+      toast.error("Configurez au moins une plage horaire");
+      return;
+    }
+    setAutoScrapeEnabled(!autoScrapeEnabled);
+    if (!autoScrapeEnabled) {
+      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
+    }
+  };
+
+  const situationPanel = (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Radio className="h-4 w-4 text-primary" />
+          Situation de course
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {importedSituation ? (
+          <RaceSituationEditor
+            onBroadcast={(situation: RaceSituation) => {
+              const riderMentions: { rider_nom: string; coureur_id: string }[] =
+                [];
+              for (const g of situation.groups) {
+                g.riders.forEach((name, ri) => {
+                  const id = g.riderIds?.[ri];
+                  if (id)
+                    riderMentions.push({ rider_nom: name, coureur_id: id });
+                });
+              }
+              const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+              handleSend(content, {
+                race_situation: situation,
+                rider_mentions: riderMentions,
+              });
+            }}
+            disabled={broadcastMessage.isPending || !managerId}
+            startlistRiders={startlistRiders}
+            importedSituation={importedSituation}
+          />
+        ) : (
+          <div className="text-center py-10 text-muted-foreground">
+            <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">
+              Importez une URL pour afficher la situation.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const timelinePanel = (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Timeline</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {timelineEvents.length > 0 ? (
+          <RaceTimeline
+            events={timelineEvents}
+            onBroadcast={(text) => handleSend(text)}
+            disabled={broadcastMessage.isPending || !managerId}
+            matchedRiders={matchedRiders}
+          />
+        ) : (
+          <div className="text-center py-10 text-muted-foreground">
+            <p className="text-sm">Aucun événement importé.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Live Broadcast</h2>
         <p className="text-sm text-muted-foreground">
-          Diffusez des messages en direct dans toutes les ligues
+          Importez une URL, visualisez la situation, diffusez en direct.
         </p>
       </div>
 
-      {/* Section 1: Manage live courses */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Courses en direct</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {liveCoursesLoading ? (
-            <div className="flex items-center gap-2 py-2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Chargement...</span>
-            </div>
-          ) : liveCourses && liveCourses.length > 0 ? (
-            <div className="space-y-2">
-              {liveCourses.map((lc) => (
-                <div
-                  key={lc.course_id}
-                  className={cn(
-                    "flex items-center justify-between gap-2 p-3 border rounded-lg transition-colors cursor-pointer",
-                    activeCourseId === lc.course_id
-                      ? "bg-primary/10 border-primary/30"
-                      : "hover:bg-muted/50"
-                  )}
-                  onClick={() =>
-                    setActiveCourseId(
-                      activeCourseId === lc.course_id ? null : lc.course_id
-                    )
-                  }
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Radio
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        activeCourseId === lc.course_id
-                          ? "text-primary animate-pulse"
-                          : "text-muted-foreground"
-                      )}
-                    />
-                    <span className="text-sm font-medium truncate">
-                      {lc.courses?.nom || lc.course_id}
-                    </span>
-                    {lc.courses?.categorie && (
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {lc.courses.categorie}
-                      </Badge>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Archiver "${lc.courses?.nom || lc.course_id}" ?`)) {
-                        handleDeactivate(lc.course_id);
-                      }
-                    }}
-                    disabled={deactivate.isPending}
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    Archiver
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-2">
-              Aucune course en direct
-            </p>
-          )}
+      <ActiveCourseHeader
+        liveCourses={liveCourses}
+        liveCoursesLoading={liveCoursesLoading}
+        activeCourseId={activeCourseId}
+        onSelectCourse={(id) =>
+          setActiveCourseId(activeCourseId === id ? null : id)
+        }
+        availableCourses={availableCourses}
+        selectedNewCourseId={selectedNewCourseId}
+        onSelectedNewCourseIdChange={setSelectedNewCourseId}
+        onActivate={handleActivate}
+        activatePending={activate.isPending}
+        canActivate={!!managerId}
+        onDeactivate={handleDeactivate}
+        deactivatePending={deactivate.isPending}
+        isMultiStage={!!isMultiStage}
+        selectedEtape={selectedEtape}
+        onStageChange={handleStageChange}
+      />
 
-          <div className="flex gap-2">
-            <Select value={selectedNewCourseId} onValueChange={setSelectedNewCourseId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Ajouter une course..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {availableCourses?.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.nom} {course.categorie ? `(${course.categorie})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              onClick={handleActivate}
-              disabled={!selectedNewCourseId || activate.isPending || !managerId}
-            >
-              {activate.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active course content: 2-column layout */}
       {activeCourseId && (
         <>
-          {/* URL Import bar */}
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                <Input
-                  value={scrapeUrl}
-                  onChange={(e) => setScrapeUrl(e.target.value)}
-                  placeholder="URL FirstCycling ou PCS"
-                  className="h-8 text-sm flex-1 min-w-0"
-                  onKeyDown={(e) => e.key === "Enter" && handleScrape()}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-2 flex-wrap sm:flex-nowrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleScrape()}
-                  disabled={isScraping || !scrapeUrl}
-                  className="h-8 gap-1.5 flex-1 sm:flex-none"
-                >
-                  {isScraping ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Importer
-                </Button>
-                <Button
-                  size="sm"
-                  variant={autoScrapeEnabled ? "default" : "outline"}
-                  onClick={() => {
-                    if (!scrapeUrl) {
-                      toast.error("Entrez une URL d'abord");
-                      return;
-                    }
-                    if (!schedule.length) {
-                      toast.error("Configurez au moins une plage horaire");
-                      setShowScheduleEditor(true);
-                      return;
-                    }
-                    setAutoScrapeEnabled(!autoScrapeEnabled);
-                    if (!autoScrapeEnabled) {
-                      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
-                    }
-                  }}
-                  className="h-8 gap-1.5 flex-1 sm:flex-none"
-                >
-                  {autoScrapeEnabled ? (
-                    <Timer className="h-3.5 w-3.5 animate-pulse" />
-                  ) : (
-                    <TimerOff className="h-3.5 w-3.5" />
-                  )}
-                  {autoScrapeEnabled ? "Auto ON" : "Auto"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowScheduleEditor((v) => !v)}
-                  className="h-8 gap-1.5 flex-1 sm:flex-none"
-                  title="Configurer les plages horaires"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  Planning
-                </Button>
-              </div>
+          <LiveImportBar
+            scrapeUrl={scrapeUrl}
+            onScrapeUrlChange={setScrapeUrl}
+            onImport={() => handleScrape()}
+            isScraping={isScraping}
+            autoScrapeEnabled={autoScrapeEnabled}
+            onToggleAuto={handleToggleAuto}
+            schedule={schedule}
+            onScheduleChange={setSchedule}
+            lastAutoScrapeAt={lastAutoScrapeAt}
+            nextScrapeAt={nextScrapeAt}
+            scrapeStats={scrapeStats}
+            sticky={isMobile}
+          />
 
-              {showScheduleEditor && (
-                <div className="mt-3 p-3 rounded-md border bg-muted/30 space-y-2">
-                  <div>
-                    <p className="text-xs font-semibold">Plages horaires de scraping</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Définissez à quelle fréquence relire la page selon l'heure
-                    </p>
-                  </div>
-                  <ScrapeScheduleEditor
-                    schedule={schedule}
-                    onChange={setSchedule}
-                    disabled={autoScrapeEnabled}
-                  />
-                  {autoScrapeEnabled && (
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Désactivez l'auto-refresh pour modifier les plages.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {(scrapeStats || autoScrapeEnabled) && (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-muted-foreground sm:flex-wrap">
-                  {scrapeStats && (
-                    <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
-                  )}
-                  {scrapeStats && scrapeStats.unmatched.length > 0 && (
-                    <span className="text-destructive break-words">
-                      Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
-                      {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
+          {isMobile ? (
+            <Tabs defaultValue="situation" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="situation">Situation</TabsTrigger>
+                <TabsTrigger value="timeline">
+                  Timeline
+                  {timelineEvents.length > 0 && (
+                    <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">
+                      {timelineEvents.length}
                     </span>
                   )}
-                  {autoScrapeEnabled && (
-                    <span className="sm:ml-auto text-primary flex items-center gap-2 flex-wrap">
-                      {lastAutoScrapeAt && <span>⏱ {format(lastAutoScrapeAt, "HH:mm:ss")}</span>}
-                      {nextScrapeAt ? (
-                        <span>→ {format(nextScrapeAt, "HH:mm:ss")}</span>
-                      ) : (
-                        <span className="text-muted-foreground">⏸ Hors plage</span>
-                      )}
-                    </span>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 2-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Left column: Composer + Timeline + History */}
-            <div className="space-y-4">
-              {/* Composer */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CardTitle className="text-base">Composer</CardTitle>
-                    {isMultiStage && (
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30">
-                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">🔴 Étape en direct</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={21}
-                          value={selectedEtape ?? 1}
-                          onChange={(e) => handleStageChange(parseInt(e.target.value) || 1)}
-                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center font-bold"
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
-                      <Radio className="h-3 w-3 text-primary animate-pulse" />
-                      <span className="text-[11px] font-medium text-primary">
-                        Broadcast global
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-lg overflow-hidden">
-                    <MessageInput
-                      onSend={handleSend}
-                      managers={[]}
-                      riders={startlistRiders}
-                      disabled={broadcastMessage.isPending}
-                      readOnly={false}
-                    />
-                  </div>
-                  {startlistRiders.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      💡 Tapez <code className="bg-muted px-1 rounded">#</code> pour mentionner un coureur
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Timeline */}
-              {timelineEvents.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Timeline</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <RaceTimeline
-                      events={timelineEvents}
-                      onBroadcast={(text) => handleSend(text)}
-                      disabled={broadcastMessage.isPending || !managerId}
-                      matchedRiders={matchedRiders}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* History */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">
-                    Historique
-                    {isMultiStage && selectedEtape && (
-                      <span className="text-sm font-normal text-muted-foreground ml-2">
-                        — Étape {selectedEtape}
-                      </span>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {historyLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : filteredHistory.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <MessageCircle className="h-6 w-6 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Aucun message diffusé</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                      {filteredHistory.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border"
-                        >
-                          <Radio className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {msg.content}
-                            </p>
-                             {(msg.metadata as any)?.race_situation && (
-                              <div className="mt-2 -mx-1">
-                                <RaceSituationDisplay
-                                  groups={(msg.metadata as any).race_situation.groups}
-                                  kmRemaining={(msg.metadata as any).race_situation.kmRemaining}
-                                  rosterOwners={rosterOwners}
-                                />
-                              </div>
-                            )}
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                              {format(new Date(msg.created_at), "d MMM HH:mm", { locale: fr })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="situation" className="mt-3">
+                {situationPanel}
+              </TabsContent>
+              <TabsContent value="timeline" className="mt-3">
+                {timelinePanel}
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4 items-start">
+              {situationPanel}
+              {timelinePanel}
             </div>
+          )}
 
-            {/* Right column: Situation de course */}
-            <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Situation de course</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RaceSituationEditor
-                    onBroadcast={(situation: RaceSituation) => {
-                      const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
-                      for (const g of situation.groups) {
-                        g.riders.forEach((name, ri) => {
-                          const id = g.riderIds?.[ri];
-                          if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
-                        });
-                      }
-                      const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
-                      handleSend(content, { race_situation: situation, rider_mentions: riderMentions });
-                    }}
-                    disabled={broadcastMessage.isPending || !managerId}
-                    startlistRiders={startlistRiders}
-                    importedSituation={importedSituation}
-                  />
-                </CardContent>
-              </Card>
+          {isScraping && (
+            <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-md bg-background border shadow-lg text-xs">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              Import en cours…
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
