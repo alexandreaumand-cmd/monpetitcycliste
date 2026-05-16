@@ -156,7 +156,7 @@ export const StartlistCalendarView = ({
           {/* Day cells */}
           {daysInMonth.map(day => {
             const dayKey = format(day, 'yyyy-MM-dd');
-            const dayCourses = coursesByDay.get(dayKey) || [];
+            const dayEntries = entriesByDay.get(dayKey) || [];
             const isDayToday = isToday(day);
 
             return (
@@ -177,7 +177,20 @@ export const StartlistCalendarView = ({
                 </div>
                 
                 <div className="space-y-0.5 overflow-hidden">
-                  {dayCourses.slice(0, 3).map(course => {
+                  {dayEntries.slice(0, 3).map(({ course, isRest }) => {
+                    if (isRest) {
+                      return (
+                        <div
+                          key={course.id}
+                          onClick={() => onSelectRace(course)}
+                          className="text-xs px-1 py-0.5 rounded border border-dashed border-muted-foreground/40 bg-muted/40 text-muted-foreground cursor-pointer truncate flex items-center gap-1 hover:opacity-80 transition-opacity"
+                          title={`Jour de repos – ${course.nom}`}
+                        >
+                          <Coffee className="h-3 w-3 shrink-0" />
+                          <span className="truncate italic">Repos · {course.nom}</span>
+                        </div>
+                      );
+                    }
                     const hasStartlistBadge = hasStartlist(course.id);
                     const isValidated = isPcsValidated(course.id);
 
@@ -204,11 +217,11 @@ export const StartlistCalendarView = ({
                       </div>
                     );
                   })}
-                  {dayCourses.length > 3 && (
+                  {dayEntries.length > 3 && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="text-xs text-muted-foreground text-center w-full hover:text-foreground hover:underline transition-colors cursor-pointer">
-                          +{dayCourses.length - 3} autres
+                          +{dayEntries.length - 3} autres
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-72 p-2" align="start">
@@ -216,7 +229,7 @@ export const StartlistCalendarView = ({
                           {format(day, 'd MMMM yyyy', { locale: fr })}
                         </div>
                         <div className="space-y-1 max-h-60 overflow-y-auto">
-                          {dayCourses.map(course => {
+                          {dayEntries.map(({ course, isRest }) => {
                             const hasStartlistBadge = hasStartlist(course.id);
                             const isValidated = isPcsValidated(course.id);
                             return (
@@ -224,18 +237,21 @@ export const StartlistCalendarView = ({
                                 key={course.id}
                                 onClick={() => onSelectRace(course)}
                                 className={cn(
-                                  "text-xs px-2 py-1.5 rounded border cursor-pointer flex items-center gap-1",
-                                  getCourseColor(course),
-                                  "hover:opacity-80 transition-opacity"
+                                  "text-xs px-2 py-1.5 rounded border cursor-pointer flex items-center gap-1 hover:opacity-80 transition-opacity",
+                                  isRest
+                                    ? "border-dashed border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+                                    : getCourseColor(course),
                                 )}
                               >
-                                {hasStartlistBadge && (
+                                {isRest ? (
+                                  <Coffee className="h-3 w-3 shrink-0" />
+                                ) : hasStartlistBadge && (
                                   <CheckCircle2 className={cn(
                                     "h-3 w-3 shrink-0",
                                     isValidated ? "text-primary" : "text-muted-foreground"
                                   )} />
                                 )}
-                                <span className="truncate">{course.nom}</span>
+                                <span className="truncate">{isRest ? `Repos · ${course.nom}` : course.nom}</span>
                               </div>
                             );
                           })}
