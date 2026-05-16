@@ -287,6 +287,10 @@ export const StartlistCalendarView = ({
             <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
             <span>SL disponible</span>
           </div>
+          <div className="flex items-center gap-1">
+            <Coffee className="h-3 w-3 text-muted-foreground" />
+            <span>Jour de repos</span>
+          </div>
         </div>
       </CardContent>
     </Card>
