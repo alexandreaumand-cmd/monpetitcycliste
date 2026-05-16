@@ -2282,6 +2282,7 @@ export type Database = {
           etape_numero: number | null
           id: string
           is_ttt: boolean | null
+          stage_date: string | null
           ttt_riders_per_team: number | null
           updated_at: string | null
         }
@@ -2291,6 +2292,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_ttt?: boolean | null
+          stage_date?: string | null
           ttt_riders_per_team?: number | null
           updated_at?: string | null
         }
@@ -2300,6 +2302,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_ttt?: boolean | null
+          stage_date?: string | null
           ttt_riders_per_team?: number | null
           updated_at?: string | null
         }
