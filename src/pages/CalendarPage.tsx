@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff } from "lucide-react";
+import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff, Coffee } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ import { fr, enUS } from "date-fns/locale";
 import { CalendarCourseDialog } from "@/components/calendar/CalendarCourseDialog";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useStageDates } from "@/hooks/useStageDates";
 import { ChipGroup } from "@/components/mobile/ChipGroup";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -39,6 +40,7 @@ interface CourseWithPoints {
   course_id: string;
   nom: string;
   categorie: string | null;
+  type_course: string | null;
   date_debut: string | null;
   date_fin: string | null;
   phase_id: string | null;
@@ -124,7 +126,7 @@ export default function CalendarPage() {
 
       const { data: coursesWithPoints, error: coursesError } = await supabase
         .from("v_course_points_theoriques")
-        .select("course_id, nom, categorie, date_debut, date_fin, phase_id, phase_index, points_total")
+        .select("course_id, nom, categorie, type_course, date_debut, date_fin, phase_id, phase_index, points_total")
         .in("phase_id", phaseIds)
         .order("date_debut", { ascending: true });
 
@@ -192,6 +194,7 @@ export default function CalendarPage() {
           course_id: course.course_id || '',
           nom: course.nom || '',
           categorie: course.categorie,
+          type_course: (course as any).type_course ?? null,
           date_debut: course.date_debut,
           date_fin: course.date_fin,
           phase_id: course.phase_id,
@@ -275,6 +278,13 @@ export default function CalendarPage() {
       return 0;
     });
   }, [filteredCourses, sortColumn, sortDirection]);
+
+  // Rest days for stage races in the current list
+  const stageRaceIds = useMemo(
+    () => sortedCourses.filter(c => c.type_course === 'stage_race').map(c => c.course_id),
+    [sortedCourses],
+  );
+  const { restDayCount } = useStageDates(stageRaceIds);
 
   const resetFilters = () => {
     setSearch("");
@@ -586,6 +596,14 @@ export default function CalendarPage() {
                               {course.categorie}
                             </Badge>
                           )}
+                          {course.type_course === 'stage_race' && (() => {
+                            const n = restDayCount(course.course_id, course.date_debut, course.date_fin);
+                            return n > 0 ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1 text-muted-foreground">
+                                <Coffee className="h-3 w-3" /> {n} {n > 1 ? 'jrs' : 'jr'} repos
+                              </Badge>
+                            ) : null;
+                          })()}
                           {course.phase_index !== null && (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                               P{course.phase_index}
@@ -673,11 +691,21 @@ export default function CalendarPage() {
                     >
                       <TableCell className="font-medium">{course.nom}</TableCell>
                       <TableCell>
-                        {course.categorie ? (
-                          <Badge variant="outline">{course.categorie}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {course.categorie ? (
+                            <Badge variant="outline">{course.categorie}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                          {course.type_course === 'stage_race' && (() => {
+                            const n = restDayCount(course.course_id, course.date_debut, course.date_fin);
+                            return n > 0 ? (
+                              <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                <Coffee className="h-3 w-3" /> {n} {n > 1 ? 'jrs' : 'jr'} repos
+                              </Badge>
+                            ) : null;
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {getDaysUntilBadge(course.date_debut, course.date_fin)}

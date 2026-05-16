@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useStageDates } from "@/hooks/useStageDates";
 import {
   Sheet,
   SheetContent,
@@ -52,36 +53,55 @@ export const StartlistCalendarMobile = ({
     return 4;
   };
 
-  // Group courses by day
-  const coursesByDay = useMemo(() => {
-    const map = new Map<string, Course[]>();
-    
+  // Stage dates for stage races
+  const stageRaceIds = useMemo(
+    () => courses.filter(c => c.type_course === 'stage_race').map(c => c.id),
+    [courses],
+  );
+  const { isRestDay } = useStageDates(stageRaceIds);
+
+  // Group courses by day, with optional rest-day flag
+  type DayEntry = { course: Course; isRest: boolean };
+  const entriesByDay = useMemo(() => {
+    const map = new Map<string, DayEntry[]>();
+
     courses.forEach((course) => {
       if (!course.date_debut) return;
-      
+
       const startDate = startOfDay(new Date(course.date_debut));
       const endDate = course.date_fin ? startOfDay(new Date(course.date_fin)) : startDate;
-      
-      // Add course to each day of its duration
+
       const days = eachDayOfInterval({ start: startDate, end: endDate });
       days.forEach((day) => {
         const key = format(day, "yyyy-MM-dd");
         const existing = map.get(key) || [];
-        // Avoid duplicates
-        if (!existing.find(c => c.id === course.id)) {
-          existing.push(course);
+        if (!existing.find(e => e.course.id === course.id)) {
+          const rest = course.type_course === 'stage_race'
+            ? isRestDay(course.id, key, course.date_debut, course.date_fin)
+            : false;
+          existing.push({ course, isRest: rest });
         }
         map.set(key, existing);
       });
     });
-    
-    // Sort courses within each day by priority
-    map.forEach((dayCourses, key) => {
-      map.set(key, dayCourses.sort((a, b) => getCategoryPriority(a) - getCategoryPriority(b)));
+
+    map.forEach((entries, key) => {
+      map.set(key, entries.sort((a, b) => {
+        if (a.isRest !== b.isRest) return a.isRest ? 1 : -1;
+        return getCategoryPriority(a.course) - getCategoryPriority(b.course);
+      }));
     });
-    
+
     return map;
-  }, [courses]);
+  }, [courses, isRestDay]);
+
+  const coursesByDay = useMemo(() => {
+    const m = new Map<string, Course[]>();
+    entriesByDay.forEach((entries, key) => {
+      m.set(key, entries.filter(e => !e.isRest).map(e => e.course));
+    });
+    return m;
+  }, [entriesByDay]);
 
   // Get today's courses for quick access
   const todayCourses = useMemo(() => {
@@ -189,9 +209,11 @@ export const StartlistCalendarMobile = ({
           
           {days.map((day, i) => {
             const key = format(day, "yyyy-MM-dd");
-            const dayCourses = coursesByDay.get(key) || [];
+            const dayEntries = entriesByDay.get(key) || [];
+            const dayCourses = dayEntries.filter(e => !e.isRest).map(e => e.course);
+            const restEntries = dayEntries.filter(e => e.isRest);
             const hasRaces = dayCourses.length > 0;
-            const coursesWithSL = dayCourses.filter(c => hasStartlist(c.id));
+            const hasRest = restEntries.length > 0;
             const validatedCount = dayCourses.filter(c => isPcsValidated(c.id)).length;
             const allValidated = hasRaces && validatedCount === dayCourses.length;
             const someValidated = validatedCount > 0 && !allValidated;
@@ -202,7 +224,7 @@ export const StartlistCalendarMobile = ({
                 className={cn(
                   "aspect-square border-b border-r p-0.5 relative cursor-pointer transition-colors",
                   !isSameMonth(day, currentMonth) && "opacity-30",
-                  hasRaces && "hover:bg-muted/50",
+                  (hasRaces || hasRest) && "hover:bg-muted/50",
                   isToday(day) && "bg-primary/5"
                 )}
                 onClick={() => handleDayClick(day)}
@@ -216,9 +238,9 @@ export const StartlistCalendarMobile = ({
                 </div>
                 
                 {/* Course indicators (dots) */}
-                {hasRaces && (
-                  <div className="flex flex-wrap justify-center gap-0.5">
-                    {dayCourses.slice(0, 3).map((course, idx) => (
+                {(hasRaces || hasRest) && (
+                  <div className="flex flex-wrap justify-center items-center gap-0.5">
+                    {dayCourses.slice(0, 3).map((course) => (
                       <div
                         key={course.id}
                         className={cn(
@@ -227,6 +249,9 @@ export const StartlistCalendarMobile = ({
                         )}
                       />
                     ))}
+                    {hasRest && (
+                      <Coffee className="h-2.5 w-2.5 text-muted-foreground" />
+                    )}
                     {dayCourses.length > 3 && (
                       <span className="text-[8px] text-muted-foreground">+{dayCourses.length - 3}</span>
                     )}
@@ -271,6 +296,10 @@ export const StartlistCalendarMobile = ({
         <div className="flex items-center gap-1">
           <CheckCircle2 className="h-3 w-3 text-amber-500" />
           <span>SL partielles</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Coffee className="h-3 w-3 text-muted-foreground" />
+          <span>Repos</span>
         </div>
       </div>
 

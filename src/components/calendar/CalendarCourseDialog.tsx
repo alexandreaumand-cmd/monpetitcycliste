@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
+import { useStageDates } from "@/hooks/useStageDates";
+import { Coffee } from "lucide-react";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
@@ -191,6 +193,31 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
     },
     enabled: open && !!course?.course_id,
   });
+
+  // Stage dates (rest days) — only useful for stage races
+  const stageRaceIds = useMemo(
+    () => (course?.course_id && isStageRace(courseDetails?.type_course || "")) ? [course.course_id] : [],
+    [course?.course_id, courseDetails?.type_course],
+  );
+  const { getStageDates, isRestDay } = useStageDates(stageRaceIds);
+  const programme = useMemo(() => {
+    if (!course?.course_id || !course.date_debut || !course.date_fin) return null;
+    if (!isStageRace(courseDetails?.type_course || "")) return null;
+    const set = getStageDates(course.course_id);
+    if (set.size === 0) return null;
+    const out: { date: string; etape: number | null }[] = [];
+    const start = new Date(course.date_debut + "T00:00:00Z");
+    const end = new Date(course.date_fin + "T00:00:00Z");
+    const sortedDates = Array.from(set).sort();
+    const dateToEtape = new Map<string, number>();
+    sortedDates.forEach((d, i) => dateToEtape.set(d, i + 1));
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const iso = d.toISOString().split("T")[0];
+      const rest = isRestDay(course.course_id, iso, course.date_debut, course.date_fin);
+      out.push({ date: iso, etape: rest ? null : (dateToEtape.get(iso) ?? null) });
+    }
+    return out;
+  }, [course?.course_id, course?.date_debut, course?.date_fin, courseDetails?.type_course, getStageDates, isRestDay]);
 
   // Fetch latest startlist import for this course
   const { data: startlistImport } = useQuery({
@@ -496,6 +523,35 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                   )}
                 </div>
               </div>
+
+              {/* Programme (stage races with configured dates) */}
+              {programme && programme.length > 0 && (
+                <div className="rounded-lg border bg-card">
+                  <div className="px-3 py-2 border-b text-sm font-medium">Programme</div>
+                  <div className="max-h-56 overflow-y-auto divide-y">
+                    {programme.map((p) => (
+                      <div
+                        key={p.date}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-1.5 text-sm",
+                          p.etape === null && "text-muted-foreground italic bg-muted/30"
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          {p.etape === null ? (
+                            <><Coffee className="h-3.5 w-3.5" />Repos</>
+                          ) : (
+                            <>Étape {p.etape}</>
+                          )}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(p.date), "EEE d MMM", { locale: fr })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Points Breakdown - Collapsible */}
               {!loadingDetails && pointsData.filter(p => p.points > 0).length > 0 && (
