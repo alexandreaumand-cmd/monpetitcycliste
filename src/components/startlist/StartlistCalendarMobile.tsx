@@ -297,6 +297,10 @@ export const StartlistCalendarMobile = ({
           <CheckCircle2 className="h-3 w-3 text-amber-500" />
           <span>SL partielles</span>
         </div>
+        <div className="flex items-center gap-1">
+          <Coffee className="h-3 w-3 text-muted-foreground" />
+          <span>Repos</span>
+        </div>
       </div>
 
       {/* Today's races - quick access */}
