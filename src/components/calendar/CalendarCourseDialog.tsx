@@ -524,6 +524,35 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                 </div>
               </div>
 
+              {/* Programme (stage races with configured dates) */}
+              {programme && programme.length > 0 && (
+                <div className="rounded-lg border bg-card">
+                  <div className="px-3 py-2 border-b text-sm font-medium">Programme</div>
+                  <div className="max-h-56 overflow-y-auto divide-y">
+                    {programme.map((p) => (
+                      <div
+                        key={p.date}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-1.5 text-sm",
+                          p.etape === null && "text-muted-foreground italic bg-muted/30"
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          {p.etape === null ? (
+                            <><Coffee className="h-3.5 w-3.5" />Repos</>
+                          ) : (
+                            <>Étape {p.etape}</>
+                          )}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(p.date), "EEE d MMM", { locale: fr })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Points Breakdown - Collapsible */}
               {!loadingDetails && pointsData.filter(p => p.points > 0).length > 0 && (
                 <Collapsible open={pointsBreakdownOpen} onOpenChange={setPointsBreakdownOpen}>
