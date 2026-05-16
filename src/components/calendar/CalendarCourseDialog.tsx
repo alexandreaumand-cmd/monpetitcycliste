@@ -194,6 +194,31 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
     enabled: open && !!course?.course_id,
   });
 
+  // Stage dates (rest days) — only useful for stage races
+  const stageRaceIds = useMemo(
+    () => (course?.course_id && isStageRace(courseDetails?.type_course || "")) ? [course.course_id] : [],
+    [course?.course_id, courseDetails?.type_course],
+  );
+  const { getStageDates, isRestDay } = useStageDates(stageRaceIds);
+  const programme = useMemo(() => {
+    if (!course?.course_id || !course.date_debut || !course.date_fin) return null;
+    if (!isStageRace(courseDetails?.type_course || "")) return null;
+    const set = getStageDates(course.course_id);
+    if (set.size === 0) return null;
+    const out: { date: string; etape: number | null }[] = [];
+    const start = new Date(course.date_debut + "T00:00:00Z");
+    const end = new Date(course.date_fin + "T00:00:00Z");
+    const sortedDates = Array.from(set).sort();
+    const dateToEtape = new Map<string, number>();
+    sortedDates.forEach((d, i) => dateToEtape.set(d, i + 1));
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const iso = d.toISOString().split("T")[0];
+      const rest = isRestDay(course.course_id, iso, course.date_debut, course.date_fin);
+      out.push({ date: iso, etape: rest ? null : (dateToEtape.get(iso) ?? null) });
+    }
+    return out;
+  }, [course?.course_id, course?.date_debut, course?.date_fin, courseDetails?.type_course, getStageDates, isRestDay]);
+
   // Fetch latest startlist import for this course
   const { data: startlistImport } = useQuery({
     queryKey: ["calendar-startlist-import", course?.course_id],
