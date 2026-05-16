@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { StageDatesDialog } from "./StageDatesDialog";
 
 interface CoursesTableProps {
   courses: any[];
@@ -24,6 +25,7 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
   const [isSaving, setIsSaving] = useState(false);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [stageDatesCourse, setStageDatesCourse] = useState<any | null>(null);
 
   // Fetch phases pour le dropdown
   const { data: phases } = useQuery({
@@ -299,14 +301,27 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
 
                     {/* Actions */}
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(course.id, course.nom)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {course.type_course === 'stage_race' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setStageDatesCourse(course)}
+                            title="Dates des étapes"
+                            className="h-8 w-8 p-0"
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(course.id, course.nom)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
