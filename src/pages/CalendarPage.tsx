@@ -596,6 +596,14 @@ export default function CalendarPage() {
                               {course.categorie}
                             </Badge>
                           )}
+                          {course.type_course === 'stage_race' && (() => {
+                            const n = restDayCount(course.course_id, course.date_debut, course.date_fin);
+                            return n > 0 ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1 text-muted-foreground">
+                                <Coffee className="h-3 w-3" /> {n} {n > 1 ? 'jrs' : 'jr'} repos
+                              </Badge>
+                            ) : null;
+                          })()}
                           {course.phase_index !== null && (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                               P{course.phase_index}
