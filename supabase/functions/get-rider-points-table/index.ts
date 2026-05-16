@@ -233,19 +233,27 @@ Deno.serve(async (req) => {
     }
 
     // Bonus visibility rules:
-    // - Bonus with course_id filled (e.g. first_win attached to a race) → visible in any league
-    //   whose scope includes that course. Single source of truth, no per-league duplication.
-    // - Bonus with course_id = NULL (e.g. coureur_bonuse +25% by phase, ttt, scoreurs) → league-specific,
-    //   filtered by league_id.
+    // - Bonus with league_id NULL = global (e.g. first_win): visible in any league whose scope
+    //   includes the related course (or unconditionally if course_id is also null).
+    // - Bonus with league_id set (e.g. coureur_bonuse +25%, ttt, scoreurs) = league-scoped: visible
+    //   only when called from that same league, regardless of course_id.
+    // Without a league context, only show global bonuses (league_id NULL) to avoid leaking
+    // league-specific bonuses across leagues.
     const orFilters: string[] = [];
-    if (leagueCourseIds && leagueCourseIds.length > 0) {
-      orFilters.push(`course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')})`);
-    }
     if (league_id) {
-      orFilters.push(`and(course_id.is.null,league_id.eq.${league_id})`);
+      // Course-attached global bonuses limited to league scope
+      if (leagueCourseIds && leagueCourseIds.length > 0) {
+        orFilters.push(
+          `and(league_id.is.null,course_id.in.(${leagueCourseIds.map(id => `"${id}"`).join(',')}))`
+        );
+      }
+      // Global bonuses with no course attachment
+      orFilters.push(`and(league_id.is.null,course_id.is.null)`);
+      // League-specific bonuses (course_id may be set or null)
+      orFilters.push(`league_id.eq.${league_id}`);
     } else {
-      // No league context: keep NULL-course bonuses as-is (legacy behavior)
-      orFilters.push(`course_id.is.null`);
+      // No league context: only globals
+      orFilters.push(`league_id.is.null`);
     }
     if (orFilters.length > 0) {
       bonusQuery = bonusQuery.or(orFilters.join(','));
