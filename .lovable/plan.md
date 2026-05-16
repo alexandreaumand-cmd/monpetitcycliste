@@ -1,23 +1,42 @@
-## Objectif
-Corriger la fonction de lecture des abandons pour que tous les DNF/DNS du Giro soient détectés, y compris Santiago Buitrago et Arnaud De Lie.
+## Problème
 
-## Diagnostic
-La source PCS contient bien 15 abandons sur le Giro, mais seulement 11 sont enregistrés en base.
-Les 4 manquants suivent le même motif : ce sont les premiers abandons de certains blocs équipe.
+Dans la fiche coureur (RiderPointsDetail) de Mathys Rondel ouverte par Max en ligue **MPC 2026**, on voit "Bonus 30 pts". Ces 30 pts (22,50 + 7,50) correspondent en réalité à des bonus `coureur_bonuse` (+25 %) attribués dans une **autre ligue** (CopaGIRO, `2b08ea2c-...`). Rondel n'est pas le coureur bonusé de Max en MPC 2026 — c'est bien un bug d'affichage.
 
-Cause racine : le parseur actuel utilise une regex globale sur `<li>...</li>`, alors que le HTML PCS imbrique des listes d’équipes et des listes de coureurs. Sur le premier coureur abandonné d’un bloc, le texte récupéré contient aussi le nom de l’équipe (`Bahrain - Victorious`, `Lotto Intermarché`, etc.), ce qui casse l’extraction du nom du coureur et empêche le matching.
+## Cause racine
 
-## Plan
-1. Refaire le parsing HTML des abandons pour cibler uniquement les `<li class="dropout">` des coureurs, au lieu de parser tous les `<li>`.
-2. Extraire le dossard et le nom depuis les balises internes (`<span class="bib">`, lien coureur) afin d’éviter que le nom d’équipe pollue la chaîne analysée.
-3. Conserver le matching existant par dossard puis par nom normalisé, mais l’appliquer sur les données corrigées du parseur.
-4. Tester la fonction sur le Giro pour vérifier qu’on remonte bien les 15 abandons PCS et que les 4 manquants sont désormais enregistrés.
-5. Vérifier qu’aucune régression n’apparaît sur l’autre course en cours concernée (Tour de Hongrie).
+Dans `supabase/functions/get-rider-points-table/index.ts`, la requête bonus utilise ce filtre OR :
 
-## Détails techniques
-- Fichier principal : `supabase/functions/scrape-startlist-abandons/index.ts`
-- Le correctif restera limité à la fonction de scraping, sans changement UI.
-- Validation attendue :
-  - PCS Giro : 15 abandons détectés
-  - Base Giro : Buitrago, De Lie, Groves et Adam Yates présents avec leur bon statut/étape
-  - Tour de Hongrie toujours fonctionnel
+```ts
+// Pseudo
+course_id IN (courses de la ligue)
+OR (course_id IS NULL AND league_id = current_league)
+```
+
+Cette logique a été conçue pour les bonus de type `first_win` qui n'ont pas de `league_id` (globaux). Mais les bonus `coureur_bonuse` ont **à la fois** un `course_id` (étape concernée) **et** un `league_id` (le coureur bonusé est lié à une ligue + phase + manager). La première branche du OR les laisse donc passer sans filtrage par ligue, et un coureur bonusé dans la ligue A est visible dans la ligue B dès que la course est dans le scope des deux ligues.
+
+## Correctif
+
+Resserrer le filtre dans `get-rider-points-table` : un bonus avec `league_id` non null doit toujours être filtré par la ligue courante, qu'il porte un `course_id` ou non. Les bonus avec `league_id` null restent globaux (visibles dans toute ligue dont le scope contient la course).
+
+Nouveau filtre :
+
+```text
+( course_id IN league_courses AND (league_id IS NULL OR league_id = current_league) )
+OR
+( course_id IS NULL AND league_id = current_league )
+```
+
+Et quand aucun `league_id` n'est passé (vue hors ligue), on garde le comportement legacy (pas de filtrage par ligue, mais on n'expose pas les bonus à `league_id` non null d'une autre ligue : on ne renverra que les bonus globaux `league_id IS NULL`).
+
+## Étapes
+
+1. Mettre à jour la construction du `bonusQuery` dans `supabase/functions/get-rider-points-table/index.ts` avec la nouvelle expression OR.
+2. Mettre à jour le commentaire d'intention au-dessus pour refléter la règle.
+3. Déployer la fonction et vérifier en base :
+   - Max (MPC 2026) sur Rondel ne voit plus de bonus.
+   - Le manager qui a réellement bonusé Rondel en CopaGIRO voit toujours ses 30 pts.
+   - Les bonus `first_win` (course_id rempli, league_id null) restent visibles dans toutes les ligues éligibles.
+
+## Hors scope
+
+Pas de changement UI, pas de modification du calcul de classement (`calculate-standings` est indépendant et applique déjà le bon scope). Pas de migration de données : les bonus existants restent corrects côté écriture.
