@@ -279,6 +279,13 @@ export default function CalendarPage() {
     });
   }, [filteredCourses, sortColumn, sortDirection]);
 
+  // Rest days for stage races in the current list
+  const stageRaceIds = useMemo(
+    () => sortedCourses.filter(c => c.type_course === 'stage_race').map(c => c.course_id),
+    [sortedCourses],
+  );
+  const { restDayCount } = useStageDates(stageRaceIds);
+
   const resetFilters = () => {
     setSearch("");
     setSelectedCategorie("all");
