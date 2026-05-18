@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, Radio, Loader2 } from "lucide-react";
 import {
   DEFAULT_SCHEDULE,
-  getActiveInterval,
   describeSchedule,
   type ScrapeWindow,
 } from "@/components/arena/ScrapeScheduleEditor";
@@ -41,11 +40,9 @@ export const SuperAdminLiveBroadcastPage = () => {
   const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
   const [schedule, setSchedule] = useState<ScrapeWindow[]>(DEFAULT_SCHEDULE);
-  const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastScrapeAtRef = useRef<number>(0);
-  const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
   const [nextScrapeAt, setNextScrapeAt] = useState<Date | null>(null);
+
   const sentEventsRef = useRef<Set<string>>(new Set());
   const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
