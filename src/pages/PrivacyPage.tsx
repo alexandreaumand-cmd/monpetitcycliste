@@ -1,8 +1,10 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 const PrivacyPage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="Politique de confidentialité – La Bordure" description="Politique de protection des données personnelles de La Bordure." path="/privacy" />
       <article className="prose prose-green max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-8">
           Politique de confidentialité

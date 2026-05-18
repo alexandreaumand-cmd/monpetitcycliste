@@ -1,4 +1,5 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 import { motion } from "framer-motion";
 import {
   Gavel,
@@ -81,6 +82,7 @@ const pressQuotes: PressQuote[] = [
 const TeamPage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="L'équipe – La Bordure" description="Découvre les fondateurs et l'équipe derrière La Bordure, le fantasy cycling entre amis." path="/team" />
       <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

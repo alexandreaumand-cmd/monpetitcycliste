@@ -1,8 +1,10 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 const AboutPage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="À propos – La Bordure" description="Découvrez La Bordure : fantasy cycling entre amis avec enchères, vraies courses UCI et chambrage garanti." path="/about" />
       <article className="prose prose-green max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-8">
           À propos de La Bordure

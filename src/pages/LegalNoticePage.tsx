@@ -1,8 +1,10 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 const LegalNoticePage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="Mentions légales – La Bordure" description="Mentions légales et informations sur l'éditeur de La Bordure." path="/legal" />
       <article className="prose prose-green max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-8">
           Mentions légales
