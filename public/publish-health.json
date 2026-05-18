@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-18T07:52:20.203Z",
+  "generatedAt": "2026-05-18T09:00:55.957Z",
   "thresholds": {
     "edgeFunctions": 130,
     "assetsMB": 8,
@@ -10,8 +10,8 @@
   "edgeFunctions": 120,
   "migrations": 537,
   "assets": {
-    "count": 52,
-    "totalMB": 4.44,
+    "count": 55,
+    "totalMB": 4.73,
     "top": [
       {
         "path": "src/assets/showcase-results.png",
@@ -28,6 +28,10 @@
       {
         "path": "public/screenshots/encheres.png",
         "kb": 258.7
+      },
+      {
+        "path": "public/images/peloton-finish-2000.webp",
+        "kb": 179
       },
       {
         "path": "public/pwa-192x192-v2.png",
@@ -47,10 +51,6 @@
       },
       {
         "path": "public/apple-touch-icon-180x180-v2.png",
-        "kb": 122.4
-      },
-      {
-        "path": "public/apple-touch-icon-180x180.png",
         "kb": 122.4
       }
     ]
