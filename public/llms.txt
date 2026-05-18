@@ -1,0 +1,21 @@
+# La Bordure
+
+> Fantasy cycling entre amis. Système d'enchères, vraies courses UCI, suis les courses différemment. Crée ta ligue et domine tes potes !
+
+La Bordure est un jeu de fantasy cycling où les amis s'affrontent sur les courses cyclistes réelles du calendrier UCI. Chaque manager constitue son équipe via un système d'enchères, gère ses coureurs au fil de la saison et enchaîne les points pour dominer son classement. Le jeu couvre les grands tours (Tour de France, Giro, Vuelta), les classiques monument et les courses WorldTour.
+
+## Pages
+
+- [Accueil](/): Page d'accueil présentant le concept, les fonctionnalités et le processus d'inscription.
+- [Comment jouer](/how-to-play): Guide pas à pas expliquant les règles du jeu, le système d'enchères, la composition d'équipe et le déroulement d'une saison.
+- [Règles](/rules): Règlement complet du jeu, barèmes de points et fonctionnement des classements.
+- [L'équipe](/team): Présentation des fondateurs et de l'équipe derrière le projet.
+- [À propos](/about): Vision, histoire et ambitions du projet La Bordure.
+- [Contact](/contact): Formulaire de contact et informations pour rejoindre la communauté.
+- [Installer l'app](/install): Instructions d'installation de l'application web progressive (PWA) sur mobile et desktop.
+
+## Légal
+
+- [Mentions légales](/legal): Informations juridiques sur l'éditeur du site.
+- [Conditions d'utilisation](/terms): Conditions générales d'utilisation du service.
+- [Politique de confidentialité](/privacy): Politique de protection des données personnelles.
