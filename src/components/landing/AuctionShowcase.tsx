@@ -12,10 +12,15 @@ const AuctionShowcase = () => {
       {/* Background — cyclist close-up */}
       <div className="absolute inset-0">
         <img
-          src="/images/peloton-finish.jpg"
+          src="/images/peloton-finish-1280.webp"
+          srcSet="/images/peloton-finish-640.webp 640w, /images/peloton-finish-1280.webp 1280w, /images/peloton-finish-2000.webp 2000w"
+          sizes="100vw"
+          width="2000"
+          height="1333"
           alt="Cycliste en effort"
           className="w-full h-full object-cover object-[center_10%] sm:object-center"
           loading="lazy"
+          decoding="async"
         />
         <div
           className="absolute inset-0"
