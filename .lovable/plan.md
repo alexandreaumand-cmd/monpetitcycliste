@@ -1,52 +1,81 @@
 ## Objectif
 
-Rendre les jours de repos visibles partout où le calendrier affiche les courses par étapes, en s'appuyant sur les `stage_date` saisis dans `course_stage_config`.
+Remplacer l'auto-scrape client (`setInterval` dans `SuperAdminLiveBroadcastPage`) par un cron Postgres côté serveur. Le cron ne déclenche réellement un scrape que si **au moins un live-broadcast est actif** avec l'auto activé — sinon il sort immédiatement (coût quasi nul).
 
-## Définition d'un jour de repos
+## Comportement attendu
 
-Pour une course `type_course = 'stage_race'` :
-- jour de repos = date comprise entre `course.date_debut` et `course.date_fin` qui **n'apparaît pas** dans `course_stage_config.stage_date` pour ce `course_id`.
-- Si aucune `stage_date` n'est configurée pour la course → on ne déduit aucun jour de repos (fallback silencieux), on garde le rendu actuel.
+- Le superadmin active un live, colle l'URL, configure les plages horaires, clique **Auto ON**.
+- Le toggle persiste maintenant en base (plus seulement en mémoire navigateur).
+- Le cron tourne toutes les minutes côté serveur, sans navigateur ouvert.
+- Pour chaque course active+auto, il vérifie la plage horaire courante et l'intervalle écoulé depuis le dernier scrape, puis appelle la logique de `scrape-live-race` si dû.
+- Quand le superadmin désactive le live ou met **Auto OFF**, plus aucun scrape n'a lieu (le cron s'exécute mais ne fait rien).
 
-Un petit hook partagé `useStageDatesByCourse(courseIds: string[])` (`src/hooks/useStageDates.ts`) charge en un seul `select` `course_id, etape_numero, stage_date` pour tous les ids visibles et expose deux helpers :
-- `getStageDates(courseId)` → `Set<string>` des dates d'étapes (yyyy-MM-dd)
-- `isRestDay(courseId, dayIso, dateDebut, dateFin)` → `boolean`
+## Changements
 
-## 1. Vue calendrier de la Startlist (desktop + mobile)
+### 1. Schéma DB — `arena_live_courses`
 
-Fichiers :
-- `src/components/startlist/StartlistCalendarView.tsx`
-- `src/components/startlist/StartlistCalendarMobile.tsx`
+Ajouter les colonnes :
+- `auto_scrape_enabled boolean not null default false`
+- `scrape_schedule jsonb` — plages horaires (mêmes `ScrapeWindow[]` que côté UI)
+- `last_auto_scrape_at timestamptz`
+- `next_auto_scrape_at timestamptz` (informatif pour la barre UI)
 
-Changements :
-- Charger les `stage_date` pour toutes les courses `stage_race` du mois affiché via le hook ci-dessus.
-- Quand on construit `coursesByDay`, pour chaque jour d'un grand tour qui n'est ni dans `stage_date` ni le `date_debut`/`date_fin`, **ne pas** ajouter la course comme pill colorée standard, mais ajouter à la place une marque "Repos" (objet léger `{ kind: 'rest', course }`).
-- Rendu cellule desktop : pill grise/striée `Coffee  Repos · <nom court course>`, non cliquable (ou cliquable et ouvre le dialog course comme aujourd'hui).
-- Rendu cellule mobile : un petit point gris + tooltip / bottom sheet "Jour de repos – Giro".
-- Légende ajoutée (sous le calendrier) : "🍵 Repos".
+RLS : les policies existantes (`is_superadmin()` pour ALL, lecture publique) couvrent déjà ces colonnes.
 
-## 2. Page Calendrier (`/calendar`)
+### 2. Nouvelle edge function `live-broadcast-auto-scrape`
 
-Fichier : `src/pages/CalendarPage.tsx` + `src/components/calendar/CalendarCourseDialog.tsx`
+- Pas d'auth côté appelant (cron interne) : vérifier un secret partagé (header `x-cron-secret`) pour bloquer tout autre appel.
+- Utilise la `service_role` key.
+- SELECT `arena_live_courses` où `is_active=true AND auto_scrape_enabled=true AND live_scrape_url IS NOT NULL`.
+- Si aucune ligne → retourne `{ ran: 0 }` immédiatement (no-op, c'est le cas par défaut).
+- Pour chaque course :
+  - Calcule l'intervalle actif depuis `scrape_schedule` + l'heure courante (porter `getActiveInterval` côté Deno dans `_shared/scrapeSchedule.ts`).
+  - Si `now - last_auto_scrape_at >= intervalSec`, appelle la même logique que `scrape-live-race` (réutiliser en l'extrayant dans `_shared/`, ou invoquer la fonction existante en interne).
+  - Met à jour `last_auto_scrape_at` et `next_auto_scrape_at`.
+- Retourne un résumé `{ ran, skipped, errors }` pour les logs.
 
-C'est une vue **tableau**, donc on n'ajoute pas de ligne "Repos" séparée. À la place :
+### 3. Cron Postgres (via tool `supabase--insert`, pas migration)
 
-a. Sur la ligne (et la card mobile) d'un grand tour : nouveau badge gris discret `🍵 N jr repos` à côté de la catégorie quand au moins une `stage_date` est définie et qu'il existe au moins un jour de repos.
+```sql
+select cron.schedule(
+  'live-broadcast-auto-scrape',
+  '* * * * *',  -- chaque minute
+  $$
+  select net.http_post(
+    url := 'https://oisfvryhpovwxaxqbmow.supabase.co/functions/v1/live-broadcast-auto-scrape',
+    headers := jsonb_build_object(
+      'Content-Type','application/json',
+      'x-cron-secret', '<secret>'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
 
-b. Dans le `CalendarCourseDialog`, nouvelle petite section "Programme" (visible uniquement pour `stage_race`) qui liste, du `date_debut` au `date_fin` :
-   - chaque étape (`Étape N — date`) si `stage_date` connue ;
-   - les jours sans étape sont rendus en gris avec libellé `Repos — <date>`.
+Extensions `pg_cron` et `pg_net` (déjà actives d'après les autres crons du projet — à confirmer).
 
-Si aucune `stage_date` n'est encore configurée pour la course, on n'affiche pas la section et le badge n'apparaît pas (rétrocompatibilité).
+Note sur "le cron ne tourne que si un live est en cours" : le cron Postgres s'exécute toutes les minutes, mais la fonction edge sort en ~10ms si aucune course active+auto n'existe. C'est l'approche standard et la moins fragile. Variante possible si tu préfères : `cron.schedule` au moment de l'activation et `cron.unschedule` à la désactivation — plus complexe, je le déconseille sauf demande explicite.
 
-## Hors scope
+### 4. UI `SuperAdminLiveBroadcastPage.tsx`
 
-- Édition des dates depuis ces vues (déjà disponible dans le superadmin).
-- Re-calcul des `date_classement` historiques.
-- Affichage des jours de repos dans la page Course publique (`Upcoming`, etc.) — à voir séparément si besoin.
+- Le toggle **Auto ON/OFF** écrit `auto_scrape_enabled` dans `arena_live_courses` (et hydrate son état depuis la DB au chargement).
+- L'éditeur de plages écrit `scrape_schedule` en DB (au lieu de `localStorage`).
+- Supprimer le `setInterval` qui pilotait `handleScrape(true)`.
+- La barre `LiveImportBar` continue d'afficher `lastAutoScrapeAt` / `nextScrapeAt` en lisant `last_auto_scrape_at` / `next_auto_scrape_at` (réaliste via realtime sur la ligne, ou refetch toutes les 10s).
+- Le bouton **Importer** manuel reste inchangé.
+
+### 5. Secret
+
+Ajouter `LIVE_BROADCAST_CRON_SECRET` via l'outil `secrets` avant le déploiement.
 
 ## Détails techniques
 
-- Le hook `useStageDates` accepte un tableau d'ids et retourne `{ data, isLoading }`. Cache `react-query` clé `['stage-dates', sortedIds.join(',')]`.
-- Les composants existants reçoivent `type_course` déjà dans leurs données (déjà sélectionné via `select('*')` ou champ explicite à ajouter pour la startlist calendar view si manquant).
-- Aucune nouvelle dépendance ; on réutilise l'icône `Coffee` (lucide), déjà importée ailleurs.
+- Réutilisation du code de `scrape-live-race` : refactor minimal en exportant la fonction principale dans `supabase/functions/_shared/liveScrape.ts`, importée par `scrape-live-race` (chemin manuel) et `live-broadcast-auto-scrape` (chemin cron).
+- `getActiveInterval` / `DEFAULT_SCHEDULE` portés dans `_shared/scrapeSchedule.ts` pour partage front/back (ou dupliqués côté Deno si import depuis `src/` impossible).
+- Visibilité : page **Cron Jobs** du superadmin affichera automatiquement le nouveau job avec son statut.
+
+## Hors scope
+
+- Pas de changement à la logique de matching coureurs, ni au format des messages diffusés.
+- Pas de modification de `scrape-pcs-results` ni de `scrape-startlist-abandons`.
