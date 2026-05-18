@@ -193,7 +193,7 @@ const BaremePreviewSection = () => {
                 ))}
               </div>
               {current.jerseyNote && (
-                <p className="text-white/40 text-xs mt-4 font-inter italic">
+                <p className="text-white/70 text-xs mt-4 font-inter italic">
                   {current.jerseyNote}
                 </p>
               )}

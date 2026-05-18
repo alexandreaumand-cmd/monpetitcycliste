@@ -44,12 +44,12 @@ const ScoringSection = () => {
                   {t("scoring.stageName")}
                 </span>
               </div>
-              <Bike className="w-5 h-5 text-white/30" />
+              <Bike className="w-5 h-5 text-white/60" />
             </div>
 
             <div className="p-6 space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4 font-montserrat">
+                <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4 font-montserrat">
                   {t("scoring.stageResults")}
                 </h3>
                 <div className="space-y-3">
@@ -72,7 +72,7 @@ const ScoringSection = () => {
                           {result.position}
                         </span>
                         <div className="flex items-center gap-2">
-                          <Bike className="w-4 h-4 text-white/30" />
+                          <Bike className="w-4 h-4 text-white/60" />
                           <span className="text-white font-medium font-inter">{result.rider}</span>
                         </div>
                       </div>
@@ -80,7 +80,7 @@ const ScoringSection = () => {
                         <span className={`font-bold ${result.highlight ? "text-bordure-gold" : "text-white/70"}`}>
                           +{result.points}
                         </span>
-                        <span className="text-white/40 text-sm font-inter">{t("scoring.points")}</span>
+                        <span className="text-white/70 text-sm font-inter">{t("scoring.points")}</span>
                         {result.highlight && (
                           <span className="text-bordure-gold animate-pulse">✨</span>
                         )}
@@ -93,7 +93,7 @@ const ScoringSection = () => {
               <div className="border-t border-white/10" />
 
               <div>
-                <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4 font-montserrat">
+                <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4 font-montserrat">
                   {t("scoring.jerseyBonus")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -106,7 +106,7 @@ const ScoringSection = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-medium truncate font-inter">{jersey.name}</p>
-                        <p className="text-white/40 text-xs truncate font-inter">{jersey.rider}</p>
+                        <p className="text-white/70 text-xs truncate font-inter">{jersey.rider}</p>
                       </div>
                       <span className="text-bordure-gold font-bold text-sm whitespace-nowrap">
                         +{jersey.points}{t("scoring.jerseys.perDay")}
