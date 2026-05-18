@@ -26,8 +26,27 @@ const HowToPlayPage = () => {
     },
   ];
 
+  const howToJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: "Comment jouer à La Bordure",
+    description:
+      "Rejoindre La Bordure en 4 étapes : crée ta ligue, invite tes amis, enchéris sur les coureurs et suis les courses.",
+    step: steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.title,
+      text: s.desc,
+      url: `https://labordure.app/how-to-play#step-${i + 1}`,
+    })),
+  };
+
   return (
     <StaticPageLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+      />
       <article className="prose prose-green max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-8">
           Comment jouer
