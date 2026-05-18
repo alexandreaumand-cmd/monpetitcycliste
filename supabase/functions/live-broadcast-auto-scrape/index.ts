@@ -31,7 +31,7 @@ function getActiveInterval(schedule: ScrapeWindow[] | null, now: Date): number |
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const expected = Deno.env.get("LIVE_BROADCAST_CRON_SECRET");
+  const expected = Deno.env.get("CRON_SECRET") ?? Deno.env.get("LIVE_BROADCAST_CRON_SECRET");
   const provided = req.headers.get("x-cron-secret");
   if (!expected || provided !== expected) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
