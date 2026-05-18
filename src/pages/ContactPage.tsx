@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageSeo } from "@/components/seo/PageSeo";
 import { useTranslation } from "react-i18next";
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ const ContactPage = () => {
   if (isSubmitted) {
     return (
       <StaticPageLayout>
+      <PageSeo title="Contact – La Bordure" description="Une question, une idée ? Contacte l'équipe La Bordure et rejoins la communauté fantasy cycling." path="/contact" />
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <CheckCircle2 className="h-16 w-16 text-bordure-green mb-6" />
           <h1 className="text-3xl font-montserrat font-bold text-bordure-green mb-4">

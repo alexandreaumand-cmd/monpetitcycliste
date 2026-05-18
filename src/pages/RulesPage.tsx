@@ -1,4 +1,5 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 import BordureStripes from "@/components/landing/BordureStripes";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -424,6 +425,7 @@ const faqJsonLd = {
 const RulesPage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="Règles du jeu – La Bordure" description="Le règlement complet de La Bordure : enchères, composition d'équipe, barème de points et classements." path="/rules" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

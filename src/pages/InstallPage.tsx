@@ -1,4 +1,5 @@
 import React from 'react';
+import { PageSeo } from "@/components/seo/PageSeo";
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -16,6 +17,8 @@ const InstallPage: React.FC = () => {
   };
 
   return (
+    <>
+      <PageSeo title="Installer l'app – La Bordure" description="Installe La Bordure sur ton mobile ou ton ordinateur en quelques secondes." path="/install" />
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex flex-col">
       {/* Header with logo */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">

@@ -1,8 +1,10 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 const TermsPage = () => {
   return (
     <StaticPageLayout>
+      <PageSeo title="Conditions d'utilisation – La Bordure" description="Conditions générales d'utilisation du service La Bordure." path="/terms" />
       <article className="prose prose-green max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-8">
           Conditions Générales d'Utilisation

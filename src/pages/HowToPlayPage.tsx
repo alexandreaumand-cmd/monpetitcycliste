@@ -1,4 +1,5 @@
 import StaticPageLayout from "@/components/layout/StaticPageLayout";
+import { PageSeo } from "@/components/seo/PageSeo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -43,6 +44,7 @@ const HowToPlayPage = () => {
 
   return (
     <StaticPageLayout>
+      <PageSeo title="Comment jouer – La Bordure" description="Crée ta ligue, invite tes amis, enchéris sur les coureurs et marque des points sur les courses UCI." path="/how-to-play" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
