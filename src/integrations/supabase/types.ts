@@ -311,30 +311,42 @@ export type Database = {
       arena_live_courses: {
         Row: {
           activated_by: string
+          auto_scrape_enabled: boolean
           course_id: string
           created_at: string
           current_etape: number | null
           id: string
           is_active: boolean
+          last_auto_scrape_at: string | null
           live_scrape_url: string | null
+          next_auto_scrape_at: string | null
+          scrape_schedule: Json | null
         }
         Insert: {
           activated_by: string
+          auto_scrape_enabled?: boolean
           course_id: string
           created_at?: string
           current_etape?: number | null
           id?: string
           is_active?: boolean
+          last_auto_scrape_at?: string | null
           live_scrape_url?: string | null
+          next_auto_scrape_at?: string | null
+          scrape_schedule?: Json | null
         }
         Update: {
           activated_by?: string
+          auto_scrape_enabled?: boolean
           course_id?: string
           created_at?: string
           current_etape?: number | null
           id?: string
           is_active?: boolean
+          last_auto_scrape_at?: string | null
           live_scrape_url?: string | null
+          next_auto_scrape_at?: string | null
+          scrape_schedule?: Json | null
         }
         Relationships: [
           {
