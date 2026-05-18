@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageSeo } from "@/components/seo/PageSeo";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import logoCarreTexte from "@/assets/logo-carre-texte.png";
@@ -237,6 +238,11 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+      <PageSeo
+        title="Connexion – La Bordure"
+        description="Connecte-toi à La Bordure pour rejoindre ou créer ta ligue de fantasy cycling entre amis."
+        path="/auth"
+      />
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
