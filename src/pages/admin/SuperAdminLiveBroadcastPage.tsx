@@ -406,18 +406,39 @@ export const SuperAdminLiveBroadcastPage = () => {
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
 
-  const handleToggleAuto = () => {
-    if (!scrapeUrl) {
-      toast.error("Entrez une URL d'abord");
+  const handleToggleAuto = async () => {
+    if (!activeCourseId) return;
+    const next = !autoScrapeEnabled;
+    if (next) {
+      if (!scrapeUrl) {
+        toast.error("Entrez une URL d'abord");
+        return;
+      }
+      if (!schedule.length) {
+        toast.error("Configurez au moins une plage horaire");
+        return;
+      }
+    }
+    setAutoScrapeEnabled(next);
+    const { error } = await supabase
+      .from("arena_live_courses")
+      .update({
+        auto_scrape_enabled: next,
+        live_scrape_url: scrapeUrl,
+        scrape_schedule: schedule,
+      } as any)
+      .eq("course_id", activeCourseId)
+      .eq("is_active", true);
+    if (error) {
+      setAutoScrapeEnabled(!next);
+      toast.error("Erreur : " + error.message);
       return;
     }
-    if (!schedule.length) {
-      toast.error("Configurez au moins une plage horaire");
-      return;
-    }
-    setAutoScrapeEnabled(!autoScrapeEnabled);
-    if (!autoScrapeEnabled) {
-      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
+    if (next) {
+      toast.success(`Auto-import serveur activé — ${describeSchedule(schedule)}`);
+    } else {
+      toast.success("Auto-import désactivé");
+      setNextScrapeAt(null);
     }
   };
 
