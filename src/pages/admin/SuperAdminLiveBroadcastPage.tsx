@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, Radio, Loader2 } from "lucide-react";
 import {
   DEFAULT_SCHEDULE,
-  getActiveInterval,
   describeSchedule,
   type ScrapeWindow,
 } from "@/components/arena/ScrapeScheduleEditor";
@@ -41,11 +40,9 @@ export const SuperAdminLiveBroadcastPage = () => {
   const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
   const [schedule, setSchedule] = useState<ScrapeWindow[]>(DEFAULT_SCHEDULE);
-  const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastScrapeAtRef = useRef<number>(0);
-  const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
   const [nextScrapeAt, setNextScrapeAt] = useState<Date | null>(null);
+
   const sentEventsRef = useRef<Set<string>>(new Set());
   const lastSituationRef = useRef<string>("");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
@@ -100,81 +97,69 @@ export const SuperAdminLiveBroadcastPage = () => {
     [activeCourseId, isMultiStage, updateStage]
   );
 
+  // Hydrate URL + schedule + auto-enabled from DB when course changes
   useEffect(() => {
     if (!activeCourseId) return;
-    setAutoScrapeEnabled(false);
     sentEventsRef.current = new Set();
     lastSituationRef.current = "";
-    lastScrapeAtRef.current = 0;
-    try {
-      const raw = localStorage.getItem(`scrape-schedule:${activeCourseId}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setSchedule(parsed);
-        else setSchedule(DEFAULT_SCHEDULE);
-      } else {
-        setSchedule(DEFAULT_SCHEDULE);
-      }
-    } catch {
-      setSchedule(DEFAULT_SCHEDULE);
-    }
     supabase
       .from("arena_live_courses")
-      .select("live_scrape_url")
+      .select(
+        "live_scrape_url, scrape_schedule, auto_scrape_enabled, last_auto_scrape_at, next_auto_scrape_at"
+      )
       .eq("course_id", activeCourseId)
       .eq("is_active", true)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.live_scrape_url) {
-          setScrapeUrl(data.live_scrape_url);
+        if (!data) return;
+        const d = data as any;
+        if (d.live_scrape_url) setScrapeUrl(d.live_scrape_url);
+        if (Array.isArray(d.scrape_schedule) && d.scrape_schedule.length > 0) {
+          setSchedule(d.scrape_schedule as ScrapeWindow[]);
+        } else {
+          setSchedule(DEFAULT_SCHEDULE);
         }
+        setAutoScrapeEnabled(!!d.auto_scrape_enabled);
+        setLastAutoScrapeAt(d.last_auto_scrape_at ? new Date(d.last_auto_scrape_at) : null);
+        setNextScrapeAt(d.next_auto_scrape_at ? new Date(d.next_auto_scrape_at) : null);
       });
   }, [activeCourseId]);
 
+  // Persist schedule changes to DB (debounced)
   useEffect(() => {
     if (!activeCourseId) return;
-    localStorage.setItem(
-      `scrape-schedule:${activeCourseId}`,
-      JSON.stringify(schedule)
-    );
+    const t = setTimeout(() => {
+      supabase
+        .from("arena_live_courses")
+        .update({ scrape_schedule: schedule } as any)
+        .eq("course_id", activeCourseId)
+        .eq("is_active", true)
+        .then(() => {});
+    }, 400);
+    return () => clearTimeout(t);
   }, [activeCourseId, schedule]);
 
+  // Poll DB for cron-updated timestamps while auto is ON
   useEffect(() => {
-    handleScrapeRef.current = handleScrape;
-  });
-
-  useEffect(() => {
-    if (autoScrapeRef.current) {
-      clearInterval(autoScrapeRef.current);
-      autoScrapeRef.current = null;
-    }
-    setNextScrapeAt(null);
-    if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
-
-    const tick = () => {
-      const now = new Date();
-      const intervalSec = getActiveInterval(schedule, now);
-      if (intervalSec == null) {
-        setNextScrapeAt(null);
-        return;
-      }
-      const elapsed = (now.getTime() - lastScrapeAtRef.current) / 1000;
-      if (elapsed >= intervalSec) {
-        if (isScrapingRef.current) return;
-        lastScrapeAtRef.current = now.getTime();
-        setNextScrapeAt(new Date(now.getTime() + intervalSec * 1000));
-        handleScrapeRef.current?.(true);
-      } else if (!nextScrapeAt) {
-        setNextScrapeAt(new Date(lastScrapeAtRef.current + intervalSec * 1000));
+    if (!activeCourseId || !autoScrapeEnabled) return;
+    const fetchTs = async () => {
+      const { data } = await supabase
+        .from("arena_live_courses")
+        .select("last_auto_scrape_at, next_auto_scrape_at")
+        .eq("course_id", activeCourseId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (data) {
+        const d = data as any;
+        setLastAutoScrapeAt(d.last_auto_scrape_at ? new Date(d.last_auto_scrape_at) : null);
+        setNextScrapeAt(d.next_auto_scrape_at ? new Date(d.next_auto_scrape_at) : null);
       }
     };
+    fetchTs();
+    const id = setInterval(fetchTs, 10_000);
+    return () => clearInterval(id);
+  }, [activeCourseId, autoScrapeEnabled]);
 
-    tick();
-    autoScrapeRef.current = setInterval(tick, 5_000);
-    return () => {
-      if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
-    };
-  }, [autoScrapeEnabled, scrapeUrl, activeCourseId, schedule]);
 
   const { data: upcomingCourses } = useQuery({
     queryKey: ["admin-upcoming-courses-live"],
@@ -418,18 +403,39 @@ export const SuperAdminLiveBroadcastPage = () => {
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
 
-  const handleToggleAuto = () => {
-    if (!scrapeUrl) {
-      toast.error("Entrez une URL d'abord");
+  const handleToggleAuto = async () => {
+    if (!activeCourseId) return;
+    const next = !autoScrapeEnabled;
+    if (next) {
+      if (!scrapeUrl) {
+        toast.error("Entrez une URL d'abord");
+        return;
+      }
+      if (!schedule.length) {
+        toast.error("Configurez au moins une plage horaire");
+        return;
+      }
+    }
+    setAutoScrapeEnabled(next);
+    const { error } = await supabase
+      .from("arena_live_courses")
+      .update({
+        auto_scrape_enabled: next,
+        live_scrape_url: scrapeUrl,
+        scrape_schedule: schedule,
+      } as any)
+      .eq("course_id", activeCourseId)
+      .eq("is_active", true);
+    if (error) {
+      setAutoScrapeEnabled(!next);
+      toast.error("Erreur : " + error.message);
       return;
     }
-    if (!schedule.length) {
-      toast.error("Configurez au moins une plage horaire");
-      return;
-    }
-    setAutoScrapeEnabled(!autoScrapeEnabled);
-    if (!autoScrapeEnabled) {
-      toast.success(`Auto-refresh activé — ${describeSchedule(schedule)}`);
+    if (next) {
+      toast.success(`Auto-import serveur activé — ${describeSchedule(schedule)}`);
+    } else {
+      toast.success("Auto-import désactivé");
+      setNextScrapeAt(null);
     }
   };
 
