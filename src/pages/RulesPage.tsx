@@ -382,9 +382,52 @@ const TourBaremeBlock = ({
 
 /* ──────────── page ──────────── */
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Comment fonctionne une ligue La Bordure ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Chaque manager dispose d'un budget fictif identique pour recruter des coureurs via un système d'enchères, puis marque des points selon leurs résultats sur les courses UCI.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Comment recrute-t-on les coureurs ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Les coureurs sont attribués via des enchères. À chaque tour, le manager le plus offrant remporte le coureur mis aux enchères, dans la limite de son budget.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Comment marque-t-on des points ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Les coureurs marquent des points selon un barème basé sur les classements d'étape et général des courses UCI, avec des bonus pour les maillots distinctifs.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Combien de managers faut-il pour lancer une ligue ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Il faut au minimum 2 managers pour lancer une ligue, mais l'expérience est optimale à 6, 8 ou 10 participants.",
+      },
+    },
+  ],
+};
+
 const RulesPage = () => {
   return (
     <StaticPageLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <article className="max-w-none">
         <h1 className="text-bordure-green font-montserrat text-3xl md:text-4xl font-bold mb-3">
           Règles du jeu
