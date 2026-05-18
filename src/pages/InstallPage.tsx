@@ -191,6 +191,7 @@ const InstallPage: React.FC = () => {
         </Link>
       </div>
     </div>
+    </>
   );
 };
 
