@@ -297,7 +297,7 @@ const BrowserMockup = ({ children }: { children: React.ReactNode }) => (
           <div className="w-3 h-3 rounded-full bg-[#28C840]" />
         </div>
         <div className="flex-1 mx-8">
-          <div className="bg-white/10 rounded-md px-3 py-1 text-[10px] text-white/40 font-inter text-center truncate">
+          <div className="bg-white/10 rounded-md px-3 py-1 text-[10px] text-white/70 font-inter text-center truncate">
             labordure.app
           </div>
         </div>

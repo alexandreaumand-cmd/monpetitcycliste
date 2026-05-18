@@ -47,7 +47,7 @@ const WhyPlaySection = () => {
               <div className="text-4xl md:text-5xl font-montserrat font-bold text-bordure-gold mb-2">
                 <AnimatedCounter value={stat.value} suffix={stat.suffix} isVisible={isVisible} delay={index * 100} />
               </div>
-              <p className="text-white/50 text-sm font-medium uppercase tracking-wider font-montserrat">
+              <p className="text-white/80 text-sm font-medium uppercase tracking-wider font-montserrat">
                 {stat.label}
               </p>
             </div>

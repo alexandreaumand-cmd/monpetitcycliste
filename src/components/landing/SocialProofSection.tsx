@@ -60,7 +60,7 @@ const SocialProofSection = () => {
         </div>
         <div>
           <p className="text-white font-inter text-sm font-medium">{quote.author}</p>
-          <p className="text-white/40 text-xs font-inter">{quote.location}</p>
+          <p className="text-white/70 text-xs font-inter">{quote.location}</p>
         </div>
       </div>
     </motion.div>
@@ -106,7 +106,7 @@ const SocialProofSection = () => {
               <p className="text-5xl sm:text-6xl lg:text-7xl font-montserrat font-bold text-white/90 tabular-nums">
                 {stat.value}
               </p>
-              <p className="text-white/40 text-sm font-inter mt-2 uppercase tracking-[0.15em]">
+              <p className="text-white/70 text-sm font-inter mt-2 uppercase tracking-[0.15em]">
                 {stat.label}
               </p>
             </div>

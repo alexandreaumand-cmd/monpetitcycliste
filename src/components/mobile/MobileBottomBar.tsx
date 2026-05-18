@@ -82,7 +82,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
                   "active:scale-95",
                   active
                     ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
-                    : "text-white/50 hover:text-bordure-gold"
+                    : "text-white/80 hover:text-bordure-gold"
                 )}
                 aria-current={active ? "page" : undefined}
               >
@@ -101,7 +101,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
               "active:scale-95",
               isMoreActive
                 ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
-                : "text-white/50 hover:text-bordure-gold"
+                : "text-white/80 hover:text-bordure-gold"
             )}
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
