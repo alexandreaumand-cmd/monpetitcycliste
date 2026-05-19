@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
           slug: inj.rider_slug,
           injury: inj.injury,
           injury_date: inj.injury_date,
+          weeks_out: inj.weeks_out,
           reason: "Coureur introuvable dans la base",
         });
         continue;
