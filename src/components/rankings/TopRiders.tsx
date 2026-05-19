@@ -18,6 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { MultiSelect } from "@/components/ui/multi-select";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
 
 type TopRidersProps = {
