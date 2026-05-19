@@ -654,7 +654,7 @@ export const RankingsMobile = () => {
                   return (
                     <MobileCard
                       key={rider.coureur_id}
-                      title={rider.coureur_nom}
+                      title={<span className="inline-flex items-center gap-1">{rider.coureur_nom}<InjuryBadge coureurId={rider.coureur_id} /></span>}
                       subtitle={
                         <div className="flex flex-col gap-0.5">
                           <span>{rider.coureur_equipe || t('topRiders.unknownTeam')}</span>
