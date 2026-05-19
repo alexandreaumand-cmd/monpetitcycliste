@@ -4519,6 +4519,54 @@ export type Database = {
           },
         ]
       }
+      rider_injuries: {
+        Row: {
+          coureur_id: string
+          created_at: string
+          estimated_return_date: string | null
+          first_seen_at: string
+          id: string
+          injury: string
+          injury_context: string | null
+          injury_date: string
+          last_seen_at: string
+          rider_name_pcs: string
+          source_url: string | null
+          updated_at: string
+          weeks_out: number
+        }
+        Insert: {
+          coureur_id: string
+          created_at?: string
+          estimated_return_date?: string | null
+          first_seen_at?: string
+          id?: string
+          injury: string
+          injury_context?: string | null
+          injury_date: string
+          last_seen_at?: string
+          rider_name_pcs: string
+          source_url?: string | null
+          updated_at?: string
+          weeks_out?: number
+        }
+        Update: {
+          coureur_id?: string
+          created_at?: string
+          estimated_return_date?: string | null
+          first_seen_at?: string
+          id?: string
+          injury?: string
+          injury_context?: string | null
+          injury_date?: string
+          last_seen_at?: string
+          rider_name_pcs?: string
+          source_url?: string | null
+          updated_at?: string
+          weeks_out?: number
+        }
+        Relationships: []
+      }
       rosters: {
         Row: {
           coureur_id: string | null
