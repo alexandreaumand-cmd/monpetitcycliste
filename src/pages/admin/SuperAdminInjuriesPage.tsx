@@ -35,7 +35,9 @@ type Row = {
 
 export default function SuperAdminInjuriesPage() {
   const qc = useQueryClient();
+  const { selectedSeason } = useSeasonContext();
   const [showHistory, setShowHistory] = useState(false);
+  const [matchTarget, setMatchTarget] = useState<SkippedInjury | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-rider-injuries", showHistory],
