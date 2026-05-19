@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
       slug: string | null;
       injury: string;
       injury_date: string;
+      weeks_out: number;
       reason: string;
     }> = [];
     const now = new Date().toISOString();
