@@ -56,13 +56,7 @@ export default function SuperAdminInjuriesPage() {
     },
   });
 
-  type SkipDetail = {
-    name: string;
-    slug: string | null;
-    injury: string;
-    injury_date: string;
-    reason: string;
-  };
+  type SkipDetail = SkippedInjury;
   type ScrapeResult = {
     scraped: number;
     matched: number;
