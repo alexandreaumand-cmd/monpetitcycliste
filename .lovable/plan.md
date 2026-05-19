@@ -1,44 +1,26 @@
+# Fix : la page Super Admin > Blessés est vide
+
 ## Diagnostic
-Le problème ne vient pas du backend ni du déclenchement manuel : la fonction `scrape-rider-injuries` s’exécute bien.
 
-## Cause exacte
-Le parseur des blessures cherche uniquement des liens au format :
-```text
-href="/rider/..."
+- Les 5 blessures sont bien scrappées et stockées (Christen, Laporte, Kelderman, Yates, Vendrame), toutes encore actives.
+- Les RLS autorisent bien la lecture (`Everyone can view rider injuries`).
+- La requête de `SuperAdminInjuriesPage` utilise un join PostgREST `coureur:coureurs(nom, equipe)`, mais **aucune foreign key n'existe** entre `rider_injuries.coureur_id` et `coureurs.coureur_id`. PostgREST échoue → la liste reste vide.
+
+## Correctif
+
+### 1. Migration : ajouter la FK
+```sql
+ALTER TABLE public.rider_injuries
+  ADD CONSTRAINT rider_injuries_coureur_id_fkey
+  FOREIGN KEY (coureur_id) REFERENCES public.coureurs(coureur_id)
+  ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_rider_injuries_coureur_id
+  ON public.rider_injuries(coureur_id);
 ```
-Or la page PCS des blessures renvoie actuellement des liens au format :
-```text
-href="rider/..."
-```
-Sans slash initial.
 
-Résultat :
-- le HTML est bien récupéré
-- les noms attendus sont bien présents (`CHRISTEN Fabio`, `LAPORTE Christophe`, `VANHOUCKE Harm`)
-- mais la regex ne matche aucun bloc
-- donc `parseInjuries()` retourne `0`
-- et l’écran affiche `0 blessures trouvées`
+### 2. Aucune autre modification
+Le composant `SuperAdminInjuriesPage.tsx`, le hook `useActiveInjuries`, et l'edge function restent inchangés. Une fois la FK ajoutée, le join `coureur:coureurs(nom, equipe)` fonctionnera et les 5 blessés s'afficheront.
 
-## Ce que j’ai vérifié
-- La page PCS renvoie bien du contenu exploitable
-- Les deux User-Agent testés renvoient le même HTML utile
-- Le backend est sain
-- La regex actuelle retourne `0` match
-- Une version avec slash optionnel retourne `67` matches, dont les 3 coureurs cités
-
-## Correctif proposé
-1. Modifier la regex de `scrape-rider-injuries` pour accepter :
-   - `href="rider/..."`
-   - `href="/rider/..."`
-2. Aligner les headers HTTP sur ceux déjà utilisés par le scraper startlist pour éviter les écarts futurs
-3. Ajouter un peu de log backend (`html length`, `match count`, premiers noms`) pour diagnostiquer rapidement si PCS change encore sa structure
-4. Redéployer puis tester depuis Super Admin > Blessés
-
-## Impact
-- Aucun changement de base de données
-- Aucun changement UI
-- Aucun changement cron
-- Correction limitée à la fonction `scrape-rider-injuries`
-
-## Détail technique
-La regex actuelle de découpe des blocs est trop stricte sur le début du `href`. Le bug est donc dans le parsing HTML, pas dans le matching des noms ni dans l’upsert en base.
+## Vérification
+Après la migration, ouvrir Super Admin > Blessés : les 5 coureurs blessés doivent apparaître avec leur nom et équipe.
