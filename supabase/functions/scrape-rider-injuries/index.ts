@@ -61,12 +61,15 @@ type ParsedInjury = {
 
 function parseInjuries(html: string): ParsedInjury[] {
   const results: ParsedInjury[] = [];
-  // Each rider block contains a /rider/<slug> link. Use it as a splitter.
+  // Each rider block contains a rider/<slug> link (PCS serves it without a leading slash
+  // on the latest-injuries page, but historically with one — accept both).
   const blockRegex =
-    /<a[^>]*href="\/rider\/([a-z0-9\-]+)"[^>]*>([^<]+)<\/a>([\s\S]*?)(?=<a[^>]*href="\/rider\/|$)/gi;
+    /<a[^>]*href="\/?rider\/([a-z0-9\-]+)"[^>]*>([^<]+)<\/a>([\s\S]*?)(?=<a[^>]*href="\/?rider\/|$)/gi;
 
   let m: RegExpExecArray | null;
+  let rawMatches = 0;
   while ((m = blockRegex.exec(html)) !== null) {
+    rawMatches++;
     const slug = m[1];
     const rawName = stripHtml(m[2]);
     const tail = m[3];
@@ -95,8 +98,15 @@ function parseInjuries(html: string): ParsedInjury[] {
       weeks_out: parseInt(weeksMatch[1], 10),
     });
   }
+  console.log(
+    `[injuries] parse: html=${html.length}b rawBlocks=${rawMatches} parsed=${results.length} sample=${results
+      .slice(0, 3)
+      .map((r) => r.rider_name_pcs)
+      .join(" | ")}`,
+  );
   return results;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -137,10 +147,12 @@ Deno.serve(async (req) => {
     const res = await fetch(PCS_URL, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; LaBordureBot/1.0; +https://labordure.app)",
-        Accept: "text/html",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
       },
     });
+
     if (!res.ok) {
       return new Response(
         JSON.stringify({ error: `PCS fetch failed: ${res.status}` }),
