@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
       slug: string | null;
       injury: string;
       injury_date: string;
+      weeks_out: number;
       reason: string;
     }> = [];
     const now = new Date().toISOString();
@@ -187,6 +188,7 @@ Deno.serve(async (req) => {
           slug: inj.rider_slug,
           injury: inj.injury,
           injury_date: inj.injury_date,
+          weeks_out: inj.weeks_out,
           reason: "Convalescence terminée",
         });
         continue;
@@ -208,6 +210,7 @@ Deno.serve(async (req) => {
           slug: inj.rider_slug,
           injury: inj.injury,
           injury_date: inj.injury_date,
+          weeks_out: inj.weeks_out,
           reason: "Coureur introuvable dans la base",
         });
         continue;
