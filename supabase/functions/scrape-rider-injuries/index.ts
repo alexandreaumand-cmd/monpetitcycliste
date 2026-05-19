@@ -166,15 +166,36 @@ Deno.serve(async (req) => {
 
     let matched = 0;
     let upserted = 0;
-    const skipped: string[] = [];
+    const skipped_details: Array<{
+      name: string;
+      slug: string | null;
+      injury: string;
+      injury_date: string;
+      reason: string;
+    }> = [];
     const now = new Date().toISOString();
+    const today = new Date().toISOString().slice(0, 10);
 
     for (const inj of parsed) {
+      // Skip injuries already finished (return date in the past)
+      const returnDate = new Date(inj.injury_date);
+      returnDate.setDate(returnDate.getDate() + inj.weeks_out * 7);
+      const returnIso = returnDate.toISOString().slice(0, 10);
+      if (returnIso < today) {
+        skipped_details.push({
+          name: inj.rider_name_pcs,
+          slug: inj.rider_slug,
+          injury: inj.injury,
+          injury_date: inj.injury_date,
+          reason: "Convalescence terminée",
+        });
+        continue;
+      }
+
       const norm = reformatPcsName(inj.rider_name_pcs);
       let coureurId = byNorm.get(norm);
 
       if (!coureurId) {
-        // Try last word as surname
         const parts = norm.split(" ");
         const surname = parts[parts.length - 1];
         const candidates = bySurname.get(surname) ?? [];
@@ -182,7 +203,13 @@ Deno.serve(async (req) => {
       }
 
       if (!coureurId) {
-        skipped.push(inj.rider_name_pcs);
+        skipped_details.push({
+          name: inj.rider_name_pcs,
+          slug: inj.rider_slug,
+          injury: inj.injury,
+          injury_date: inj.injury_date,
+          reason: "Coureur introuvable dans la base",
+        });
         continue;
       }
       matched++;
