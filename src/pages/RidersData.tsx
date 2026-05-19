@@ -36,6 +36,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { CourseMultiSelect, type CourseOption } from "@/components/data/CourseMultiSelect";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
