@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useSeasonContext } from "@/contexts/SeasonContext";
+import { MatchSkippedInjuryDialog, type SkippedInjury } from "@/components/admin/MatchSkippedInjuryDialog";
 
 type Row = {
   id: string;
