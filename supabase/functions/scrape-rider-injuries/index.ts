@@ -239,8 +239,8 @@ Deno.serve(async (req) => {
         scraped: parsed.length,
         matched,
         upserted,
-        skipped_count: skipped.length,
-        skipped_sample: skipped.slice(0, 10),
+        skipped_count: skipped_details.length,
+        skipped_details,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
