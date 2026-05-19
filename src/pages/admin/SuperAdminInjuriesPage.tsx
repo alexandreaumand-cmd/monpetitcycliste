@@ -52,20 +52,32 @@ export default function SuperAdminInjuriesPage() {
     },
   });
 
+  type SkipDetail = {
+    name: string;
+    slug: string | null;
+    injury: string;
+    injury_date: string;
+    reason: string;
+  };
+  type ScrapeResult = {
+    scraped: number;
+    matched: number;
+    upserted: number;
+    skipped_count: number;
+    skipped_details: SkipDetail[];
+  };
+  const [lastRun, setLastRun] = useState<ScrapeResult | null>(null);
+
   const scrapeMut = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("scrape-rider-injuries", {
         body: {},
       });
       if (error) throw error;
-      return data as {
-        scraped: number;
-        matched: number;
-        upserted: number;
-        skipped_count: number;
-      };
+      return data as ScrapeResult;
     },
     onSuccess: (r) => {
+      setLastRun(r);
       toast({
         title: "Scraping terminé",
         description: `${r.scraped} blessures trouvées · ${r.matched} coureurs reconnus · ${r.upserted} enregistrés · ${r.skipped_count} ignorés`,
