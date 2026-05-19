@@ -212,6 +212,58 @@ export default function SuperAdminInjuriesPage() {
           </Table>
         )}
       </Card>
+
+      {lastRun && lastRun.skipped_details.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <div>
+            <h2 className="font-semibold">Coureurs ignorés au dernier scraping ({lastRun.skipped_details.length})</h2>
+            <p className="text-xs text-muted-foreground">
+              Soit absents de la base, soit déjà revenus de convalescence.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom PCS</TableHead>
+                  <TableHead>Blessure</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Raison</TableHead>
+                  <TableHead>Slug</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lastRun.skipped_details.map((s, i) => (
+                  <TableRow key={`${s.slug ?? s.name}-${i}`}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-sm">{s.injury}</TableCell>
+                    <TableCell className="text-sm">{s.injury_date}</TableCell>
+                    <TableCell>
+                      <Badge variant={s.reason.includes("introuvable") ? "destructive" : "secondary"}>
+                        {s.reason}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {s.slug ? (
+                        <a
+                          href={`https://www.procyclingstats.com/rider/${s.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          {s.slug}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
