@@ -803,6 +803,7 @@ export const MyTeamDesktop = () => {
                           <Star className="h-4 w-4 text-bordure-gold fill-bordure-gold" />
                         )}
                         {coureur.nom}
+                        <InjuryBadge coureurId={coureur.coureur_id} />
                         <RiderRaceIcons 
                           currentRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
                           upcomingRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
