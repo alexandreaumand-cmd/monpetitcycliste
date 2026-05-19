@@ -1006,7 +1006,7 @@ export default function RidersData() {
                       </TableCell>
                       <TableCell className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
                         onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
-                      >{rider.coureur_nom}</TableCell>
+                      ><span className="inline-flex items-center gap-1">{rider.coureur_nom}<InjuryBadge coureurId={rider.coureur_id} /></span></TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
                       <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>
