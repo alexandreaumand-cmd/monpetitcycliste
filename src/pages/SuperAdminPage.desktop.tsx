@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
       { label: "Coureurs", path: "coureurs", icon: UserCircle },
       { label: "Équipes", path: "equipes", icon: Users },
       { label: "Startlists", path: "startlists", icon: FileText },
+      { label: "Blessés", path: "injuries", icon: HeartPulse },
     ],
   },
   {
