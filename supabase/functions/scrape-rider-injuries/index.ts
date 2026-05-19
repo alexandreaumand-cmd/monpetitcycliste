@@ -61,47 +61,32 @@ type ParsedInjury = {
 
 function parseInjuries(html: string): ParsedInjury[] {
   const results: ParsedInjury[] = [];
-  // Each rider block contains a rider/<slug> link (PCS serves it without a leading slash
-  // on the latest-injuries page, but historically with one — accept both).
-  const blockRegex =
-    /<a[^>]*href="\/?rider\/([a-z0-9\-]+)"[^>]*>([^<]+)<\/a>([\s\S]*?)(?=<a[^>]*href="\/?rider\/|$)/gi;
+  // PCS latest-injuries is a flat table:
+  // <td>YYYY-MM-DD</td><td>... <a href="rider/SLUG">NAME</a> ...</td><td>INJURY</td><td>WEEKS</td>
+  const rowRegex =
+    /<td[^>]*>\s*(\d{4}-\d{2}-\d{2})\s*<\/td>\s*<td[^>]*>[\s\S]*?<a[^>]*href="\/?rider\/([a-z0-9\-]+)"[^>]*>([^<]+)<\/a>[\s\S]*?<\/td>\s*<td[^>]*>\s*([^<]+?)\s*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>/gi;
 
   let m: RegExpExecArray | null;
-  let rawMatches = 0;
-  while ((m = blockRegex.exec(html)) !== null) {
-    rawMatches++;
-    const slug = m[1];
-    const rawName = stripHtml(m[2]);
-    const tail = m[3];
-
-    // Skip thumbnail image-only anchors: the visible name link contains uppercase letters and space
-    if (!/[A-Z]/.test(rawName) || rawName.length < 3) continue;
-
-    const injuryMatch = tail.match(/Injury:\s*<\/b>\s*([^<]+)</i) ||
-      tail.match(/Injury:\s*([^<\n]+?)(?:<|\n)/i);
-    const dateMatch = tail.match(/Date of injury:\s*<\/b>\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i) ||
-      tail.match(/Date of injury:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
-    const weeksMatch = tail.match(/Estimated weeks out:\s*<\/b>\s*([0-9]+)/i) ||
-      tail.match(/Estimated weeks out:\s*([0-9]+)/i);
-    if (!injuryMatch || !dateMatch || !weeksMatch) continue;
-
-    // Context: text between the </a> closing tag of the name and the first <b>Injury
-    const contextMatch = tail.match(/^([\s\S]*?)(?=<b[^>]*>\s*Injury:)/i);
-    const injury_context = contextMatch ? stripHtml(contextMatch[1]) : "";
-
+  while ((m = rowRegex.exec(html)) !== null) {
+    const injury_date = m[1];
+    const slug = m[2];
+    const rawName = stripHtml(m[3]);
+    const injury = stripHtml(m[4]);
+    const weeks_out = parseInt(m[5], 10);
+    if (!rawName || !injury || !Number.isFinite(weeks_out)) continue;
     results.push({
       rider_name_pcs: rawName,
       rider_slug: slug,
-      injury_context,
-      injury: stripHtml(injuryMatch[1]),
-      injury_date: dateMatch[1],
-      weeks_out: parseInt(weeksMatch[1], 10),
+      injury_context: "",
+      injury,
+      injury_date,
+      weeks_out,
     });
   }
   console.log(
-    `[injuries] parse: html=${html.length}b rawBlocks=${rawMatches} parsed=${results.length} sample=${results
+    `[injuries] parse: html=${html.length}b rows=${results.length} sample=${results
       .slice(0, 3)
-      .map((r) => r.rider_name_pcs)
+      .map((r) => `${r.rider_name_pcs} (${r.injury})`)
       .join(" | ")}`,
   );
   return results;
@@ -181,15 +166,36 @@ Deno.serve(async (req) => {
 
     let matched = 0;
     let upserted = 0;
-    const skipped: string[] = [];
+    const skipped_details: Array<{
+      name: string;
+      slug: string | null;
+      injury: string;
+      injury_date: string;
+      reason: string;
+    }> = [];
     const now = new Date().toISOString();
+    const today = new Date().toISOString().slice(0, 10);
 
     for (const inj of parsed) {
+      // Skip injuries already finished (return date in the past)
+      const returnDate = new Date(inj.injury_date);
+      returnDate.setDate(returnDate.getDate() + inj.weeks_out * 7);
+      const returnIso = returnDate.toISOString().slice(0, 10);
+      if (returnIso < today) {
+        skipped_details.push({
+          name: inj.rider_name_pcs,
+          slug: inj.rider_slug,
+          injury: inj.injury,
+          injury_date: inj.injury_date,
+          reason: "Convalescence terminée",
+        });
+        continue;
+      }
+
       const norm = reformatPcsName(inj.rider_name_pcs);
       let coureurId = byNorm.get(norm);
 
       if (!coureurId) {
-        // Try last word as surname
         const parts = norm.split(" ");
         const surname = parts[parts.length - 1];
         const candidates = bySurname.get(surname) ?? [];
@@ -197,7 +203,13 @@ Deno.serve(async (req) => {
       }
 
       if (!coureurId) {
-        skipped.push(inj.rider_name_pcs);
+        skipped_details.push({
+          name: inj.rider_name_pcs,
+          slug: inj.rider_slug,
+          injury: inj.injury,
+          injury_date: inj.injury_date,
+          reason: "Coureur introuvable dans la base",
+        });
         continue;
       }
       matched++;
@@ -227,8 +239,8 @@ Deno.serve(async (req) => {
         scraped: parsed.length,
         matched,
         upserted,
-        skipped_count: skipped.length,
-        skipped_sample: skipped.slice(0, 10),
+        skipped_count: skipped_details.length,
+        skipped_details,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
