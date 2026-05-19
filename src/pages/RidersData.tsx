@@ -36,6 +36,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { CourseMultiSelect, type CourseOption } from "@/components/data/CourseMultiSelect";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -935,7 +936,10 @@ export default function RidersData() {
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
                     >
-                      <p className="font-semibold text-sm leading-tight truncate">{rider.coureur_nom}</p>
+                      <p className="font-semibold text-sm leading-tight truncate flex items-center gap-1">
+                        <span className="truncate">{rider.coureur_nom}</span>
+                        <InjuryBadge coureurId={rider.coureur_id} />
+                      </p>
                       <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}{rider.equipe_categorie ? ` · ${rider.equipe_categorie}` : ""}</p>
                     </div>
                     <div className="text-right shrink-0">
@@ -1002,7 +1006,7 @@ export default function RidersData() {
                       </TableCell>
                       <TableCell className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
                         onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
-                      >{rider.coureur_nom}</TableCell>
+                      ><span className="inline-flex items-center gap-1">{rider.coureur_nom}<InjuryBadge coureurId={rider.coureur_id} /></span></TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
                       <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>

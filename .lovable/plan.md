@@ -1,55 +1,98 @@
-## Diagnostic
+## Fonctionnalité : Suivi des blessures coureurs
 
-Le tableau "Points par semaine" calcule la semaine à partir de `race_results.date_classement` (via `EXTRACT(WEEK FROM rr.date_classement)` dans la fonction `get_weekly_points_heatmap`).
+Scraping quotidien de https://www.procyclingstats.com/statistics/start/latest-injuries, stockage en base, affichage d'un emoji 🤕 dans l'app, page d'administration dédiée.
 
-Or pour le Giro d'Italia (`giro-d-italia-mj6wbnif`), les `date_classement` enregistrées dans `race_results` sont séquentielles à partir de `date_debut` (8/05 + n-1), sans tenir compte du jour de repos du lundi 18/05 :
+---
 
-| Étape | `date_classement` (race_results) | `stage_date` (course_stage_config — référence calendrier) |
+### 1. Base de données
+
+Nouvelle table `rider_injuries` :
+
+| Colonne | Type | Description |
 |---|---|---|
-| 9 | 16/05 | 17/05 |
-| 10 | **17/05 (S20)** | **19/05 (S21)** |
-| 11 | — | 20/05 |
+| `id` | uuid PK | |
+| `coureur_id` | text (FK logique vers `coureurs.id`) | Coureur concerné — uniquement ceux déjà connus en base |
+| `rider_name_pcs` | text | Nom tel qu'affiché sur PCS (audit/debug) |
+| `injury` | text | Type de blessure (ex. « Fractured collarbone ») |
+| `injury_context` | text | « Moment de la blessure » (ex. « Crash in Giro d'Italia \| Stage 2 ») |
+| `injury_date` | date | Date de la blessure |
+| `weeks_out` | integer | Semaines estimées d'absence |
+| `estimated_return_date` | date généré | `injury_date + weeks_out * 7 jours` |
+| `source_url` | text | URL PCS source |
+| `first_seen_at` / `last_seen_at` | timestamptz | Suivi du scraping |
+| `created_at` / `updated_at` | timestamptz | |
 
-Conséquence : les points de l'étape 10 tombent en S20 au lieu de S21, ce qui explique la colonne S21 quasi-vide dans la capture.
+- Index unique sur `(coureur_id, injury_date, injury)` pour éviter les doublons à chaque scrape.
+- **RLS** : lecture publique (`SELECT true`), écriture réservée aux superadmins via `is_superadmin()` (le scraping côté serveur utilise la service role, qui bypass la RLS).
+- Vue (ou simple filtre côté hook) `active_rider_injuries` = `estimated_return_date >= CURRENT_DATE` → c'est cette condition qui détermine si l'emoji s'affiche.
 
-La table `course_stage_config` contient la bonne date (19/05 pour l'étape 10), mais elle n'a pas été utilisée au moment de l'enregistrement des résultats. La fonction `admin-stage-save-step` consulte bien `course_stage_config.stage_date` en priorité, mais les étapes 1‑10 du Giro ont été sauvegardées **avant** que `course_stage_config` soit peuplée (la config date du 16/05 20:40, après le début de la course), donc c'est le fallback `date_debut + (etape-1)` qui a été appliqué.
+### 2. Edge function `scrape-rider-injuries`
 
-## Correctif proposé
+- Fetch HTML brut de la page PCS (pas d'API).
+- Parse chaque bloc rider :
+  - Nom (ex. `KELDERMAN Wilco`) → normalisation `wilco kelderman` → match sur `coureurs.nom` (LOWER + unaccent).
+  - Si aucun match → on ignore (filtre hommes/femmes implicite : les femmes ne sont pas dans `coureurs`).
+  - Extraction : contexte (ligne sous le nom), `Injury:`, `Date of injury:`, `Estimated weeks out:`.
+- UPSERT dans `rider_injuries` sur la clé `(coureur_id, injury_date, injury)` (met à jour `weeks_out`, `last_seen_at`, etc.).
+- Retourne `{ scraped, matched, inserted, updated, skipped }`.
+- Sécurité : header `x-cron-secret` (CRON_SECRET déjà configuré) **OU** appel authentifié par un superadmin (pour le bouton manuel).
+- `verify_jwt = false` dans `supabase/config.toml`, validation faite en code.
 
-### 1. Resynchroniser les `date_classement` existantes sur `course_stage_config`
+### 3. Cron quotidien 21h
 
-Pour toutes les `race_results` dont la course a une `course_stage_config` avec une `stage_date` différente, recaler `date_classement = stage_date`. Cela corrige immédiatement le Giro (étapes décalées par le jour de repos) et toute course future où le calendrier serait modifié après import.
+Via `pg_cron` + `pg_net` (insert SQL exécuté en `supabase--insert`, pas migration, car contient l'URL projet + clé) :
 
-```sql
-UPDATE race_results rr
-SET date_classement = csc.stage_date
-FROM course_stage_config csc
-WHERE rr.course_id = csc.course_id
-  AND rr.etape_numero = csc.etape_numero
-  AND rr.date_classement <> csc.stage_date;
+```
+cron.schedule('scrape-rider-injuries-daily', '0 21 * * *', net.http_post(...))
 ```
 
-Effet attendu sur la capture : l'étape 10 du Giro (et donc les points associés du 19/05) bascule de S20 vers S21.
+### 4. UI Super Admin
 
-### 2. Robustifier la fonction `get_weekly_points_heatmap`
+Nouveau lien dans `SuperAdminPage.desktop.tsx` (et `.mobile.tsx`) sous le groupe **Données & Maintenance** : « Blessés » (icône `HeartPulse` ou `Bandage`).
 
-Faire en sorte que la fonction n'ait plus à faire confiance à `race_results.date_classement` quand un `stage_date` est disponible :
+Nouvelle page `src/pages/admin/SuperAdminInjuriesPage.tsx` :
+- Bouton **« Scraper maintenant »** → invoque `scrape-rider-injuries` et affiche un toast avec le résumé.
+- Tableau triable des blessures **actives** (par défaut) avec : photo/nom, équipe, blessure, contexte, date blessure, semaines, date retour estimée, statut (actif / terminé).
+- Toggle pour afficher l'historique complet.
+- Permettre suppression manuelle d'une entrée (au cas où PCS soit faux).
 
-```sql
-EXTRACT(WEEK FROM COALESCE(csc.stage_date, rr.date_classement))::int
+### 5. Emoji 🤕 dans l'app
+
+Petit composant `<InjuryBadge coureurId={...} />` :
+- Hook `useActiveInjuries()` (un seul fetch global, cache react-query) → renvoie `Map<coureur_id, injury>` des blessures où `estimated_return_date >= today`.
+- Affiche 🤕 cliquable → ouvre un `Popover`/`Dialog` avec : blessure, contexte, date de blessure, semaines d'absence, date estimée de retour.
+- Insertion dans 3 emplacements :
+  1. **Data coureurs** — `src/components/data/RiderResultsPanel.tsx` (à côté du nom du coureur sélectionné, et dans la liste).
+  2. **Équipes** — composants de roster (`MyTeam.tsx`, `MyTeam.mobile.tsx`, `LeagueRostersOverviewDialog.tsx`) à côté du nom de chaque coureur.
+  3. **Classement top coureurs** — `src/components/rankings/...` (la page « top coureurs » de la ligue), à côté du nom dans la ligne du classement.
+
+Dès que `CURRENT_DATE > estimated_return_date`, la ligne n'est plus renvoyée par le hook → l'emoji disparaît automatiquement sans cron de nettoyage.
+
+### 6. Détails techniques
+
+- Matching nom PCS → `coureurs` : SQL `LOWER(unaccent(nom)) = LOWER(unaccent($1))` ; fallback sur `LIKE '%lastname%'` pour les noms composés (ex. Buitrago Sanchez vs Buitrago). En cas d'ambiguïté on log et on skip.
+- Parsing HTML : regex sur les blocs (le markdown ci-dessus montre une structure très répétitive « **Injury:** … **Date of injury:** … **Estimated weeks out:** … ») ; pas besoin de DOM parser lourd.
+- Pas de notif push à ce stade (peut être ajouté plus tard).
+- i18n : nouvelles clés ajoutées dans `admin.json` et un namespace `injuries.json` pour le composant `InjuryBadge`.
+
+### 7. Livrable
+
+```text
+supabase/migrations/<ts>_rider_injuries.sql     # table + RLS + index
+supabase/functions/scrape-rider-injuries/       # edge function
+src/pages/admin/SuperAdminInjuriesPage.tsx      # page admin
+src/components/shared/InjuryBadge.tsx           # emoji + popover
+src/hooks/useActiveInjuries.ts                  # hook global
+SuperAdminPage.desktop.tsx / .mobile.tsx        # nav + route
+RiderResultsPanel / MyTeam(*) / TopRiders(*)    # insertion du badge
++ cron job (via supabase--insert)
 ```
 
-via un `LEFT JOIN course_stage_config csc ON csc.course_id = rr.course_id AND csc.etape_numero = rr.etape_numero`. Même logique dans la sous-requête `latest_week` de `manager_bonus_weekly`.
+---
 
-Ainsi, même si une `date_classement` redevient incorrecte, le calendrier officiel reste la source de vérité.
+### Questions / hypothèses retenues sans confirmation
 
-### 3. Vérification
-
-- Recharger la page Statistiques → onglet Hebdo, vérifier que la S21 contient bien les points de l'étape 10 pour tous les managers, et que la S20 est réduite d'autant.
-- Vérifier que le total par manager reste identique (les points ne sont pas dupliqués, juste rangés dans la bonne colonne).
-
-## Détails techniques
-
-- Migration: `UPDATE` ciblé sur `race_results` + `CREATE OR REPLACE FUNCTION get_weekly_points_heatmap(...)` avec le `LEFT JOIN course_stage_config`.
-- Aucun changement côté frontend (`WeeklyHeatmap.tsx` consomme la RPC telle quelle).
-- Pas d'impact sur `points_ledger` ni sur les totaux saison : seule la ventilation par semaine ISO change.
+- Emoji utilisé : **🤕** (modifiable facilement).
+- Heure 21h = **Europe/Paris** (cron en UTC → `0 19 * * *` été / `0 20 * * *` hiver). Je propose `0 19 * * *` (heure d'été, on est en mai) ; on pourra ajuster.
+- Les blessures concernant un coureur **inconnu** de notre base (féminines ou hors WT/PCT) sont **ignorées et non stockées**.
+- Pas de notification utilisateur lors d'une nouvelle blessure (peut être ajouté en v2).

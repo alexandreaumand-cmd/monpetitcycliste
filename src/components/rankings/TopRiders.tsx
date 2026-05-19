@@ -18,6 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { MultiSelect } from "@/components/ui/multi-select";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
 
 type TopRidersProps = {
@@ -550,7 +551,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                           {idx + 1}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-semibold">{rider.rider_nom}</TableCell>
+                      <TableCell className="font-semibold"><span className="inline-flex items-center gap-1">{rider.rider_nom}<InjuryBadge coureurId={rider.rider_id} /></span></TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {rider.rider_equipe || '—'}
                       </TableCell>

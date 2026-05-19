@@ -9,6 +9,7 @@ import {
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
@@ -527,6 +528,7 @@ export const MyTeamMobile = () => {
                     <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   )}
                   <span className="truncate">{coureur.nom}</span>
+                  <InjuryBadge coureurId={coureur.coureur_id} />
                   <RiderRaceIcons 
                     currentRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
                     upcomingRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}

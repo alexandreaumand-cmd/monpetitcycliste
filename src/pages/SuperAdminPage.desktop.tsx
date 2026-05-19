@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity, HeartPulse } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -22,6 +22,7 @@ import { SuperAdminAuctionsPage } from "@/pages/admin/SuperAdminAuctionsPage";
 import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunicationsPage";
 import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
 import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
+import SuperAdminInjuriesPage from "@/pages/admin/SuperAdminInjuriesPage";
 
 interface NavGroup {
   label: string;
@@ -47,6 +48,7 @@ const navGroups: NavGroup[] = [
       { label: "Coureurs", path: "coureurs", icon: UserCircle },
       { label: "Équipes", path: "equipes", icon: Users },
       { label: "Startlists", path: "startlists", icon: FileText },
+      { label: "Blessés", path: "injuries", icon: HeartPulse },
     ],
   },
   {
@@ -162,6 +164,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="points-ledger" element={<PointsLedgerTable />} />
               <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
               <Route path="publish-health" element={<SuperAdminPublishHealthPage />} />
+              <Route path="injuries" element={<SuperAdminInjuriesPage />} />
             </Routes>
           </div>
         </main>
