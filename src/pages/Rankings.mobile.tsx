@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
