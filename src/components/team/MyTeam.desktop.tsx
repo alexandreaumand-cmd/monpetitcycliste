@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
