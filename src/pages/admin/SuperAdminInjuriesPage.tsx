@@ -228,39 +228,78 @@ export default function SuperAdminInjuriesPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Raison</TableHead>
                   <TableHead>Slug</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lastRun.skipped_details.map((s, i) => (
-                  <TableRow key={`${s.slug ?? s.name}-${i}`}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell className="text-sm">{s.injury}</TableCell>
-                    <TableCell className="text-sm">{s.injury_date}</TableCell>
-                    <TableCell>
-                      <Badge variant={s.reason.includes("introuvable") ? "destructive" : "secondary"}>
-                        {s.reason}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {s.slug ? (
-                        <a
-                          href={`https://www.procyclingstats.com/rider/${s.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline"
-                        >
-                          {s.slug}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {lastRun.skipped_details.map((s, i) => {
+                  const canMatch = s.reason.includes("introuvable");
+                  return (
+                    <TableRow key={`${s.slug ?? s.name}-${i}`}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell className="text-sm">{s.injury}</TableCell>
+                      <TableCell className="text-sm">{s.injury_date}</TableCell>
+                      <TableCell>
+                        <Badge variant={canMatch ? "destructive" : "secondary"}>
+                          {s.reason}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {s.slug ? (
+                          <a
+                            href={`https://www.procyclingstats.com/rider/${s.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            {s.slug}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {canMatch && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setMatchTarget(s)}
+                          >
+                            <Link2 className="h-3.5 w-3.5 mr-1" />
+                            Matcher
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         </Card>
+      )}
+
+      {matchTarget && (
+        <MatchSkippedInjuryDialog
+          skipped={matchTarget}
+          saisonId={selectedSeason?.id ?? null}
+          onClose={() => setMatchTarget(null)}
+          onSuccess={() => {
+            const matched = matchTarget;
+            setLastRun((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    skipped_details: prev.skipped_details.filter((x) => x !== matched),
+                    skipped_count: Math.max(0, prev.skipped_count - 1),
+                  }
+                : prev,
+            );
+            setMatchTarget(null);
+            qc.invalidateQueries({ queryKey: ["admin-rider-injuries"] });
+            qc.invalidateQueries({ queryKey: ["active-rider-injuries"] });
+          }}
+        />
       )}
     </div>
   );
