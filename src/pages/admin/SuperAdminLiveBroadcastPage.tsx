@@ -31,6 +31,18 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
 import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
 
+function hydrateSituationFromMessage(message: any): RaceSituation | null {
+  const situation = message?.metadata?.race_situation;
+  if (!situation?.groups?.length) return null;
+  return {
+    groups: situation.groups.map((group: any) => ({
+      ...group,
+      riderIds: group.riderIds || [],
+    })),
+    kmRemaining: situation.kmRemaining || 0,
+  };
+}
+
 export const SuperAdminLiveBroadcastPage = () => {
   const isMobile = useIsMobile();
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -160,6 +172,46 @@ export const SuperAdminLiveBroadcastPage = () => {
     const id = setInterval(fetchTs, 10_000);
     return () => clearInterval(id);
   }, [activeCourseId, autoScrapeEnabled]);
+
+  useEffect(() => {
+    if (!activeCourseId) {
+      setImportedSituation(null);
+      return;
+    }
+
+    setImportedSituation(null);
+
+    let cancelled = false;
+
+    const fetchLatestSituation = async () => {
+      const { data, error } = await supabase
+        .from("arena_messages")
+        .select("metadata, created_at")
+        .eq("course_id", activeCourseId)
+        .eq("message_type", "admin_broadcast")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      if (error || cancelled) return;
+
+      const latest = (data || []).find((msg: any) => {
+        const situation = msg?.metadata?.race_situation;
+        if (!situation?.groups?.length) return false;
+        const stage = msg?.metadata?.etape_numero;
+        return selectedEtape == null || stage == null || stage === selectedEtape;
+      });
+
+      const hydrated = hydrateSituationFromMessage(latest);
+      setImportedSituation(hydrated);
+    };
+
+    fetchLatestSituation();
+    const id = setInterval(fetchLatestSituation, autoScrapeEnabled ? 10_000 : 20_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [activeCourseId, selectedEtape, autoScrapeEnabled]);
 
 
   const { data: upcomingCourses } = useQuery({
