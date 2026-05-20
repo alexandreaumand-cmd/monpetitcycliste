@@ -1,53 +1,28 @@
-# Fix Auto-import live broadcast
+# Réparer l'envoi des emails de communication
 
 ## Diagnostic
 
-Le cron `live-broadcast-auto-scrape` tourne bien toutes les minutes, mais **chaque appel échoue avec 401 Unauthorized** lorsqu'il invoque `scrape-live-race`. Extrait des logs (Giro étape 11, course active, plage 11:00–17:30 OK) :
+Le dernier envoi (batch `e47e57dc…` du 20 mai 16:26) a produit 2 entrées `email_send_log` qui sont passées de `pending` → `dlq` en quelques secondes, avec l'erreur :
 
-```text
-2026-05-20T12:46:01Z ERROR [auto-scrape] error for giro-d-italia-mj6wbnif
-Error: scrape-live-race 401: {"error":"Unauthorized"}
-```
+> **Emails disabled for this project**
 
-Cause : `scrape-live-race` impose une auth « superadmin uniquement » (vérifie le JWT utilisateur + RPC `is_superadmin`). Le cron, lui, s'authentifie avec la **service-role key**, qui n'a pas de `user_id` ni de rôle superadmin → rejet 401.
+C'est le worker `process-email-queue` de Lovable Cloud qui refuse d'expédier. Le domaine `labordure.app` est bien `Verified` côté workspace, mais le **toggle d'envoi d'emails au niveau du projet** est sur OFF. Ce toggle est indépendant de la vérification DNS : tant qu'il n'est pas activé, tous les jobs partent en DLQ immédiatement, sans même tenter d'appeler le fournisseur SMTP.
 
-Conséquences :
-- L'auto-import ne déclenche jamais de scrape (rien n'est mis à jour côté course).
-- `last_auto_scrape_at` / `next_auto_scrape_at` restent `NULL` en base → l'UI affiche **« Hors plage »** alors que l'heure courante est bien dans la plage configurée. Le badge ne se base que sur `next_auto_scrape_at` renvoyé par la DB.
+Les anciennes erreurs « TTL exceeded (60 minutes) » du 13 mai sont un autre symptôme du même blocage : les messages ont stagné en queue puis ont été purgés.
 
-## Corrections
+## Correctif
 
-### 1. Autoriser le cron à appeler `scrape-live-race`
-
-Dans `supabase/functions/scrape-live-race/index.ts`, avant la vérification superadmin :
-
-- Lire `x-cron-secret` (ou comparer le Bearer au `SUPABASE_SERVICE_ROLE_KEY`).
-- Si l'un correspond, **bypasser** la vérification `is_superadmin` et continuer en mode service-role.
-- Sinon, conserver l'auth superadmin actuelle pour les appels UI.
-
-Dans `supabase/functions/live-broadcast-auto-scrape/index.ts`, ajouter le header `x-cron-secret: <CRON_SECRET>` lors du `fetch` vers `scrape-live-race`, en plus de l'`Authorization: Bearer <service-role>` déjà présent.
-
-### 2. Rendre le badge « Hors plage » correct côté UI
-
-Dans `SuperAdminLiveBroadcastPage.tsx` (état `nextScrapeAt`), calculer une valeur **fallback côté client** lorsque `auto_scrape_enabled` est ON :
-
-- Utiliser `getActiveInterval(schedule, now)` (déjà exporté par `ScrapeScheduleEditor`).
-- Si l'heure courante est dans une plage et que `next_auto_scrape_at` DB est null/dépassé, afficher `now + intervalSec` au lieu de « Hors plage ».
-- Si aucune plage ne couvre l'instant, garder le comportement actuel (« Hors plage »).
-
-Cela élimine le faux « Hors plage » au premier chargement et tant que le cron n'a pas encore tourné.
-
-### 3. Vérification
-
-- Recharger la page Live Broadcast superadmin sur l'étape 11 : badge passe en `→ HH:MM:SS`.
-- Attendre une minute : logs de `live-broadcast-auto-scrape` doivent montrer un succès (`ran: 1`) au lieu du 401, et la situation de course se met à jour sans intervention manuelle.
+1. **Activer l'envoi d'emails du projet** via le toggle Lovable Cloud (outil `toggle_project_emails`, équivalent à Cloud → Emails → Enable sending).
+2. **Vérifier la santé de la file** : confirmer qu'il ne reste pas de job bloqué et que `process-email-queue` tourne.
+3. **Re-tester** en relançant le batch existant via le bouton « Renvoyer » de l'historique, puis contrôler que les lignes passent à `sent` au lieu de `dlq`.
+4. **Purger / requalifier les DLQ** des 2 messages du 20 mai pour qu'ils n'apparaissent plus comme « en attente » dans l'UI (statut UI = pending tant qu'ils ne sont pas `sent`/`failed` propres).
 
 ## Détails techniques
 
-- `CRON_SECRET` est déjà disponible (utilisé par d'autres fonctions cron) ; on réutilise le même secret.
-- Aucun changement de schéma DB requis.
-- Aucun changement RLS requis.
-- Fichiers modifiés :
-  - `supabase/functions/scrape-live-race/index.ts` (bypass cron-secret / service-role)
-  - `supabase/functions/live-broadcast-auto-scrape/index.ts` (envoi du header)
-  - `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` (fallback `nextScrapeAt`)
+- Table observée : `email_send_log`, colonne `error_message = 'Emails disabled for this project'`, `status = 'dlq'`.
+- Le toggle est porté par l'outil interne `email_domain--toggle_project_emails` (côté Lovable). Aucun changement de code applicatif n'est requis.
+- Aucun fichier du repo n'est modifié dans ce plan.
+
+## Fichiers modifiés
+
+Aucun — l'action est purement une bascule de configuration côté Lovable Cloud, suivie d'un re-test depuis l'UI.
