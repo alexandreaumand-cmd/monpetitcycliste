@@ -361,14 +361,28 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
 
   // ── Normalize raw groups into situationGroups ──
   if (rawGroups.length > 0) {
-    // Peloton = largest group by riderCount, OR group with ≥20 riders, OR explicit name
-    let maxCount = 0;
-    for (const g of rawGroups) if (g.riderCount > maxCount) maxCount = g.riderCount;
+    // Peloton detection:
+    //  - explicit name containing "peloton"
+    //  - OR riderCount >= 20 (true bunch)
+    //  - OR (multi-group case) last group with the largest gap and no/few listed riders
+    //    → matches PCS Live which marks "P PELOTON" without enumerating riders
+    let lastIdx = -1;
+    let lastSec = -1;
+    const gapToSec = (s: string): number => {
+      const m = s.replace(/^\+/, "").match(/^(?:(\d+):)?(\d+):(\d+)$/);
+      if (!m) return 0;
+      return (parseInt(m[1] || "0", 10) * 3600) + (parseInt(m[2], 10) * 60) + parseInt(m[3], 10);
+    };
+    rawGroups.forEach((g, idx) => {
+      const sec = gapToSec(g.gap);
+      if (sec > lastSec) { lastSec = sec; lastIdx = idx; }
+    });
 
     rawGroups.forEach((g, idx) => {
       let groupName = g.name;
       const explicitPeloton = /peloton/i.test(groupName);
-      const isPeloton = explicitPeloton || g.riderCount >= 20 || (rawGroups.length > 1 && g.riderCount === maxCount && maxCount >= 10);
+      const trailingEmpty = rawGroups.length > 1 && idx === lastIdx && g.riders.length <= 2 && lastSec > 0;
+      const isPeloton = explicitPeloton || g.riderCount >= 20 || trailingEmpty;
       if (!groupName) {
         if (isPeloton) groupName = "Peloton";
         else if (idx === 0) groupName = "Tête de course";
