@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const ROOT_DOMAIN = Deno.env.get('EMAIL_ROOT_DOMAIN') || 'labordure.app';
 const FROM_DOMAIN = Deno.env.get('EMAIL_FROM_DOMAIN') || ROOT_DOMAIN;
-const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') || FROM_DOMAIN;
+const DEFAULT_SENDER_DOMAIN = `notify.${ROOT_DOMAIN}`;
+const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') || DEFAULT_SENDER_DOMAIN;
 const SITE_NAME = Deno.env.get('EMAIL_SITE_NAME') || 'La Bordure';
 
 function escapeHtml(s: string): string {
