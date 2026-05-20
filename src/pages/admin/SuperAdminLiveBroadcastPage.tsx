@@ -174,7 +174,10 @@ export const SuperAdminLiveBroadcastPage = () => {
   }, [activeCourseId, autoScrapeEnabled]);
 
   useEffect(() => {
-    if (!activeCourseId || importedSituation) return;
+    if (!activeCourseId) {
+      setImportedSituation(null);
+      return;
+    }
 
     let cancelled = false;
 
@@ -206,7 +209,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [activeCourseId, selectedEtape, autoScrapeEnabled, importedSituation]);
+  }, [activeCourseId, selectedEtape, autoScrapeEnabled]);
 
 
   const { data: upcomingCourses } = useQuery({
