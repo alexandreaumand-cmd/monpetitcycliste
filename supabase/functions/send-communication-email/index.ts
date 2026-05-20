@@ -300,7 +300,7 @@ serve(async (req) => {
         message_id: messageId,
         idempotency_key: messageId,
         to: r.email,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        from: `${SITE_NAME} <contact@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject: personalizedSubject,
         html: finalHtml,
