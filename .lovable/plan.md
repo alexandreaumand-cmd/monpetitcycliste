@@ -1,48 +1,46 @@
-## Objectif
+# Corriger la situation de course du Live Broadcast
 
-Sur la page Super Admin > Blessés, ajouter un bouton "Matcher" sur chaque ligne de la table "Coureurs ignorés" (raison "Coureur introuvable dans la base") pour associer manuellement le nom PCS à un coureur de la base, sur le même principe que le matching des startlists.
+## Diagnostic
 
-## Comportement
+Sur l'étape 11 du Giro, la page PCS Live affiche deux groupes :
 
-- Pour les lignes avec raison **"Coureur introuvable dans la base"** : afficher un bouton **Matcher** dans la dernière colonne.
-- Pour les lignes **"Convalescence terminée"** : pas de bouton (rien à faire).
-- Clic sur **Matcher** → ouvre une `Dialog` avec :
-  - champ de recherche pré-rempli avec le nom PCS reformaté (`Prénom NOM`),
-  - liste de candidats via le RPC existant `search_riders_for_matching(p_saison_id, p_query, p_limit)` (déjà utilisé par `MatchRiderDialog`),
-  - bouton **Confirmer le match**.
-- À la confirmation :
-  1. **Insert** dans `rider_injuries` (upsert sur `coureur_id,injury_date,injury`) avec `coureur_id` choisi, `rider_name_pcs`, `injury`, `injury_date`, `weeks_out` (déjà présent dans `skipped_details` côté front — voir section technique), `source_url` PCS et `last_seen_at = now()`.
-  2. Toast de succès.
-  3. La ligne est retirée de la liste locale `lastRun.skipped_details` (mise à jour immédiate, pas besoin de relancer le scraping).
-  4. Invalidation de `admin-rider-injuries` et `active-rider-injuries` pour faire apparaître la blessure dans le tableau du haut.
+- "Situation" en tête : 12 coureurs nommés (PLANCKAERT, HARPER, DENZ, VLASOV, STUYVEN, NABERMAN, BAIS, CRESCIOLI, HOELGAARD, LEKNESSUND, BETTIOL, ULISSI), gap +0:00.
+- "PELOTON" : sans coureurs listés individuellement, gap +1:23.
 
-Aucun alias créé (le scraper ne consulte pas `name_aliases` pour les blessures). Pour qu'un futur scraping reconnaisse automatiquement le coureur, la solution propre serait d'ajuster `coureurs.nom` ou d'ajouter un champ dédié — hors scope de cette demande. Le matching manuel reste rejouable.
+Dans le parser `supabase/functions/scrape-live-race/index.ts` (fonction `parsePCSLive`), la détection du peloton suit cette règle :
 
-## Détails techniques
+```text
+isPeloton = explicitPeloton
+         || riderCount >= 20
+         || (rawGroups.length > 1 && riderCount === maxCount && maxCount >= 10)
+```
 
-### 1. Edge function `scrape-rider-injuries`
+Comme le peloton PCS n'a pas de coureurs listés, son `riderCount` (lu via `data-nr`) est nul ou faible. Le groupe de tête (12) devient donc le `maxCount` et la troisième condition le classe à tort comme peloton.
 
-Le payload `skipped_details` actuel n'inclut pas `weeks_out`. **Ajouter** `weeks_out: number` au type et à chaque `push` (les deux : "Convalescence terminée" et "Coureur introuvable").
+Conséquences observées :
 
-### 2. Nouveau composant `src/components/admin/MatchSkippedInjuryDialog.tsx`
+1. Super admin (capture 2) : le groupe de tête est libellé "Peloton", tronqué à 5 coureurs clés (PLANCKAERT, HARPER, DENZ, VLASOV, STUYVEN). Les 7 autres disparaissent du panneau Situation.
+2. Live de la ligue MPC (capture 3) : `RaceSituationDisplay` masque les coureurs des groupes marqués `isPeloton` (`showRiders = !group.isPeloton`). Le message diffusé ne montre donc que le label "PELOTON" sans aucun coureur.
 
-Calqué sur `src/components/admin/startlist-data/MatchRiderDialog.tsx` mais simplifié :
-- Props : `skipped: SkipDetail` (avec `weeks_out`), `saisonId: string`, `onClose()`, `onSuccess()`.
-- Utilise `useQuery` + `supabase.rpc('search_riders_for_matching', { p_saison_id, p_query, p_limit: 20 })`.
-- Au confirme : `supabase.from('rider_injuries').upsert({ coureur_id, rider_name_pcs: skipped.name, injury: skipped.injury, injury_date: skipped.injury_date, weeks_out: skipped.weeks_out, source_url: 'https://www.procyclingstats.com/statistics/latest-injuries.php', last_seen_at: new Date().toISOString() }, { onConflict: 'coureur_id,injury_date,injury' })`.
-- Pas de création d'alias.
+Le matching côté DB fonctionne (les 12 coureurs sont scrappés et matchés), c'est uniquement la classification "peloton" qui casse l'affichage.
 
-### 3. `src/pages/admin/SuperAdminInjuriesPage.tsx`
+## Correction
 
-- Étendre le type `SkipDetail` avec `weeks_out: number`.
-- Ajouter colonne **Action** dans la table des ignorés.
-- Bouton `Matcher` (variant outline, taille sm) visible uniquement si `reason.includes("introuvable")`.
-- État local `matchTarget: SkipDetail | null` pour piloter le dialog.
-- Récupérer la saison courante via `useSeasonContext()` pour passer `saisonId` au dialog (la RPC l'exige).
-- Sur `onSuccess` du dialog : `setLastRun(prev => ({ ...prev, skipped_details: prev.skipped_details.filter(s => s !== matched) }))` et invalider les queries d'injuries.
+Dans `parsePCSLive` (supabase/functions/scrape-live-race/index.ts), ajuster la règle :
 
-## Fichiers touchés
+- Garder `explicitPeloton` (nom contenant "peloton").
+- Garder le seuil dur `riderCount >= 20`.
+- Supprimer la branche "plus gros groupe ≥ 10".
+- Quand plusieurs groupes existent sans peloton explicite, considérer comme peloton le dernier groupe (gap le plus grand) si son `riderCount` est nul ou très petit comparé à `maxCount` — c'est le comportement réel de PCS Live qui n'énumère pas le peloton.
+- Le premier groupe non-peloton (gap le plus petit) prend le nom "Tête de course" et conserve jusqu'à 15 coureurs (déjà en place).
 
-- `supabase/functions/scrape-rider-injuries/index.ts` — ajouter `weeks_out` dans `skipped_details`.
-- `src/components/admin/MatchSkippedInjuryDialog.tsx` — **nouveau**.
-- `src/pages/admin/SuperAdminInjuriesPage.tsx` — colonne action + dialog + retrait local après match.
+Avec cette logique, l'étape 11 du Giro produira :
+
+- "Tête de course" (12 coureurs, +0:00) — tous visibles.
+- "Peloton" (gap +1:23) — pas de liste, affiché en label P.
+
+Aucune modification UI n'est nécessaire : `RaceSituationDisplay` et `RaceSituationEditor` afficheront automatiquement les 12 coureurs (avec leurs propriétaires côté ligue via `rosterOwners`) une fois le groupe correctement étiqueté.
+
+## Fichier modifié
+
+- `supabase/functions/scrape-live-race/index.ts` — règle `isPeloton` dans `parsePCSLive`.
