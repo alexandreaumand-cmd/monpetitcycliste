@@ -1,46 +1,53 @@
-# Corriger la situation de course du Live Broadcast
+# Fix Auto-import live broadcast
 
 ## Diagnostic
 
-Sur l'étape 11 du Giro, la page PCS Live affiche deux groupes :
-
-- "Situation" en tête : 12 coureurs nommés (PLANCKAERT, HARPER, DENZ, VLASOV, STUYVEN, NABERMAN, BAIS, CRESCIOLI, HOELGAARD, LEKNESSUND, BETTIOL, ULISSI), gap +0:00.
-- "PELOTON" : sans coureurs listés individuellement, gap +1:23.
-
-Dans le parser `supabase/functions/scrape-live-race/index.ts` (fonction `parsePCSLive`), la détection du peloton suit cette règle :
+Le cron `live-broadcast-auto-scrape` tourne bien toutes les minutes, mais **chaque appel échoue avec 401 Unauthorized** lorsqu'il invoque `scrape-live-race`. Extrait des logs (Giro étape 11, course active, plage 11:00–17:30 OK) :
 
 ```text
-isPeloton = explicitPeloton
-         || riderCount >= 20
-         || (rawGroups.length > 1 && riderCount === maxCount && maxCount >= 10)
+2026-05-20T12:46:01Z ERROR [auto-scrape] error for giro-d-italia-mj6wbnif
+Error: scrape-live-race 401: {"error":"Unauthorized"}
 ```
 
-Comme le peloton PCS n'a pas de coureurs listés, son `riderCount` (lu via `data-nr`) est nul ou faible. Le groupe de tête (12) devient donc le `maxCount` et la troisième condition le classe à tort comme peloton.
+Cause : `scrape-live-race` impose une auth « superadmin uniquement » (vérifie le JWT utilisateur + RPC `is_superadmin`). Le cron, lui, s'authentifie avec la **service-role key**, qui n'a pas de `user_id` ni de rôle superadmin → rejet 401.
 
-Conséquences observées :
+Conséquences :
+- L'auto-import ne déclenche jamais de scrape (rien n'est mis à jour côté course).
+- `last_auto_scrape_at` / `next_auto_scrape_at` restent `NULL` en base → l'UI affiche **« Hors plage »** alors que l'heure courante est bien dans la plage configurée. Le badge ne se base que sur `next_auto_scrape_at` renvoyé par la DB.
 
-1. Super admin (capture 2) : le groupe de tête est libellé "Peloton", tronqué à 5 coureurs clés (PLANCKAERT, HARPER, DENZ, VLASOV, STUYVEN). Les 7 autres disparaissent du panneau Situation.
-2. Live de la ligue MPC (capture 3) : `RaceSituationDisplay` masque les coureurs des groupes marqués `isPeloton` (`showRiders = !group.isPeloton`). Le message diffusé ne montre donc que le label "PELOTON" sans aucun coureur.
+## Corrections
 
-Le matching côté DB fonctionne (les 12 coureurs sont scrappés et matchés), c'est uniquement la classification "peloton" qui casse l'affichage.
+### 1. Autoriser le cron à appeler `scrape-live-race`
 
-## Correction
+Dans `supabase/functions/scrape-live-race/index.ts`, avant la vérification superadmin :
 
-Dans `parsePCSLive` (supabase/functions/scrape-live-race/index.ts), ajuster la règle :
+- Lire `x-cron-secret` (ou comparer le Bearer au `SUPABASE_SERVICE_ROLE_KEY`).
+- Si l'un correspond, **bypasser** la vérification `is_superadmin` et continuer en mode service-role.
+- Sinon, conserver l'auth superadmin actuelle pour les appels UI.
 
-- Garder `explicitPeloton` (nom contenant "peloton").
-- Garder le seuil dur `riderCount >= 20`.
-- Supprimer la branche "plus gros groupe ≥ 10".
-- Quand plusieurs groupes existent sans peloton explicite, considérer comme peloton le dernier groupe (gap le plus grand) si son `riderCount` est nul ou très petit comparé à `maxCount` — c'est le comportement réel de PCS Live qui n'énumère pas le peloton.
-- Le premier groupe non-peloton (gap le plus petit) prend le nom "Tête de course" et conserve jusqu'à 15 coureurs (déjà en place).
+Dans `supabase/functions/live-broadcast-auto-scrape/index.ts`, ajouter le header `x-cron-secret: <CRON_SECRET>` lors du `fetch` vers `scrape-live-race`, en plus de l'`Authorization: Bearer <service-role>` déjà présent.
 
-Avec cette logique, l'étape 11 du Giro produira :
+### 2. Rendre le badge « Hors plage » correct côté UI
 
-- "Tête de course" (12 coureurs, +0:00) — tous visibles.
-- "Peloton" (gap +1:23) — pas de liste, affiché en label P.
+Dans `SuperAdminLiveBroadcastPage.tsx` (état `nextScrapeAt`), calculer une valeur **fallback côté client** lorsque `auto_scrape_enabled` est ON :
 
-Aucune modification UI n'est nécessaire : `RaceSituationDisplay` et `RaceSituationEditor` afficheront automatiquement les 12 coureurs (avec leurs propriétaires côté ligue via `rosterOwners`) une fois le groupe correctement étiqueté.
+- Utiliser `getActiveInterval(schedule, now)` (déjà exporté par `ScrapeScheduleEditor`).
+- Si l'heure courante est dans une plage et que `next_auto_scrape_at` DB est null/dépassé, afficher `now + intervalSec` au lieu de « Hors plage ».
+- Si aucune plage ne couvre l'instant, garder le comportement actuel (« Hors plage »).
 
-## Fichier modifié
+Cela élimine le faux « Hors plage » au premier chargement et tant que le cron n'a pas encore tourné.
 
-- `supabase/functions/scrape-live-race/index.ts` — règle `isPeloton` dans `parsePCSLive`.
+### 3. Vérification
+
+- Recharger la page Live Broadcast superadmin sur l'étape 11 : badge passe en `→ HH:MM:SS`.
+- Attendre une minute : logs de `live-broadcast-auto-scrape` doivent montrer un succès (`ran: 1`) au lieu du 401, et la situation de course se met à jour sans intervention manuelle.
+
+## Détails techniques
+
+- `CRON_SECRET` est déjà disponible (utilisé par d'autres fonctions cron) ; on réutilise le même secret.
+- Aucun changement de schéma DB requis.
+- Aucun changement RLS requis.
+- Fichiers modifiés :
+  - `supabase/functions/scrape-live-race/index.ts` (bypass cron-secret / service-role)
+  - `supabase/functions/live-broadcast-auto-scrape/index.ts` (envoi du header)
+  - `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` (fallback `nextScrapeAt`)
