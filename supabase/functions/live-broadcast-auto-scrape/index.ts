@@ -99,7 +99,9 @@ serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${SERVICE_KEY}`,
+          "x-cron-secret": expected,
         },
+
         body: JSON.stringify({
           url: row.live_scrape_url,
           course_id: row.course_id,

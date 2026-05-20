@@ -3,6 +3,7 @@ import { MessageCircle, Radio, Loader2 } from "lucide-react";
 import {
   DEFAULT_SCHEDULE,
   describeSchedule,
+  getActiveInterval,
   type ScrapeWindow,
 } from "@/components/arena/ScrapeScheduleEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -545,7 +546,18 @@ export const SuperAdminLiveBroadcastPage = () => {
             schedule={schedule}
             onScheduleChange={setSchedule}
             lastAutoScrapeAt={lastAutoScrapeAt}
-            nextScrapeAt={nextScrapeAt}
+            nextScrapeAt={(() => {
+              if (!autoScrapeEnabled) return nextScrapeAt;
+              const now = new Date();
+              if (nextScrapeAt && nextScrapeAt.getTime() > now.getTime()) return nextScrapeAt;
+              const interval = getActiveInterval(schedule, now);
+              if (interval == null) return null;
+              const base = lastAutoScrapeAt ?? now;
+              const fromBase = new Date(base.getTime() + interval * 1000);
+              return fromBase.getTime() > now.getTime()
+                ? fromBase
+                : new Date(now.getTime() + interval * 1000);
+            })()}
             scrapeStats={scrapeStats}
             sticky={isMobile}
           />
