@@ -993,34 +993,48 @@ serve(async (req) => {
   }
 
   try {
-    // --- Auth: superadmin only ---
+    // --- Auth: superadmin OR cron (service-role + x-cron-secret) ---
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const cronSecret = req.headers.get("x-cron-secret");
+    const expectedCronSecret =
+      Deno.env.get("CRON_SECRET") ?? Deno.env.get("LIVE_BROADCAST_CRON_SECRET");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const bearer = authHeader?.startsWith("Bearer ")
+      ? authHeader.replace("Bearer ", "")
+      : null;
+    const isCron =
+      (!!expectedCronSecret && cronSecret === expectedCronSecret) ||
+      (!!serviceRoleKey && bearer === serviceRoleKey);
+
+    if (!isCron) {
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isSuperAdmin, error: roleErr } = await userClient.rpc("is_superadmin");
+      if (roleErr || !isSuperAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const { data: isSuperAdmin, error: roleErr } = await userClient.rpc("is_superadmin");
-    if (roleErr || !isSuperAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+
 
     const { url, course_id, is_stage_race } = await req.json();
     if (!url || !course_id) {
