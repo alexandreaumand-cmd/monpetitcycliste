@@ -3,6 +3,7 @@ import { MessageCircle, Radio, Loader2 } from "lucide-react";
 import {
   DEFAULT_SCHEDULE,
   describeSchedule,
+  getActiveInterval,
   type ScrapeWindow,
 } from "@/components/arena/ScrapeScheduleEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
