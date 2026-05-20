@@ -179,6 +179,8 @@ export const SuperAdminLiveBroadcastPage = () => {
       return;
     }
 
+    setImportedSituation(null);
+
     let cancelled = false;
 
     const fetchLatestSituation = async () => {
@@ -200,7 +202,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
 
       const hydrated = hydrateSituationFromMessage(latest);
-      if (hydrated) setImportedSituation(hydrated);
+      setImportedSituation(hydrated);
     };
 
     fetchLatestSituation();
