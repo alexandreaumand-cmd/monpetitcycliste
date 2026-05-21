@@ -155,6 +155,7 @@ export function LeagueBonusRidersDialog({
         const { data: bonusData } = await supabase
           .from("bonus_points")
           .select("coureur_id, points")
+          .eq("league_id", leagueId)
           .eq("phase_id", phaseId)
           .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
           .in("coureur_id", coureurIds)
