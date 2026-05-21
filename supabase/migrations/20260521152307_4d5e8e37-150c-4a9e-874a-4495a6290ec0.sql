@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.admin_result_save_lot(text, public.type_classement, integer, jsonb);
