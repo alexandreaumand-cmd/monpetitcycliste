@@ -1,8 +1,9 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
+import { Loader2, MessageCircle, Radio, MapPin, Route, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
@@ -209,6 +210,31 @@ export const LiveCoursePanel = ({
 
       {stageFilter}
 
+      {stageImage && (
+        <Collapsible defaultOpen className="border-b bg-background shrink-0">
+          <CollapsibleTrigger className="w-full px-3 py-1.5 flex items-center justify-between bg-muted/20">
+            <div className="flex items-center gap-1.5">
+              <Route className="h-3.5 w-3.5 text-primary" />
+              <h3 className="text-xs font-semibold">Profil</h3>
+              {stageImage.etape_numero != null && (
+                <span className="text-[10px] text-muted-foreground">Étape {stageImage.etape_numero}</span>
+              )}
+            </div>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-2">
+              <img
+                src={stageImage.image_url}
+                alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+                className="w-full h-auto max-h-56 object-contain rounded-md border"
+                loading="lazy"
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Content: timeline + situation side by side */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Timeline column */}
@@ -220,16 +246,6 @@ export const LiveCoursePanel = ({
             </div>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
-            {stageImage && (
-              <div className="p-2 border-b bg-muted/10">
-                <img
-                  src={stageImage.image_url}
-                  alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                  className="w-full h-auto max-h-48 object-contain rounded-md border"
-                  loading="lazy"
-                />
-              </div>
-            )}
             {messagesContent}
           </div>
         </div>
