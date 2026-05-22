@@ -41,7 +41,6 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
   const secondaryPaths = [
     "/dashboard/encheres",
     "/dashboard/courses",
-    "/dashboard/live",
     "/dashboard/statistiques",
     "/dashboard/compte",
     "/dashboard/admin",
@@ -52,6 +51,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
     { label: t("navigation.teams"), path: "/dashboard/mon-equipe", icon: Users },
     { label: t("navigation.startlist"), path: "/dashboard/startlist", icon: ListChecks },
     { label: t("navigation.results"), path: "/dashboard/resultats", icon: Trophy },
+    { label: "Live", path: "/dashboard/live", icon: Radio },
     { label: t("navigation.arena"), path: "/dashboard/arene", icon: Swords },
   ];
 
