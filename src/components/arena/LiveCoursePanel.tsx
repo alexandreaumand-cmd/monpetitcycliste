@@ -1,8 +1,9 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
+import { Loader2, MessageCircle, Radio, MapPin, Route, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
