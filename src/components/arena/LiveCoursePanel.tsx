@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MessageBubble } from "./MessageBubble";
@@ -10,6 +11,7 @@ import {
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
 import { useLiveCourses } from "./LiveCourseSelector";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface LiveCoursePanelProps {
