@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MessageBubble } from "./MessageBubble";
@@ -10,6 +11,7 @@ import {
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
 import { useLiveCourses } from "./LiveCourseSelector";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface LiveCoursePanelProps {
@@ -42,6 +44,30 @@ export const LiveCoursePanel = ({
     data: messagesData,
     isLoading: messagesLoading,
   } = useArenaMessages(channelId, leagueId, courseId);
+
+  const { data: routeImages } = useQuery({
+    queryKey: ["course-route-images", courseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("course_route_images")
+        .select("etape_numero, image_url, label")
+        .eq("course_id", courseId);
+      return data ?? [];
+    },
+    enabled: !!courseId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const activeEtape = selectedEtape ?? currentEtape;
+  const stageImage = useMemo(() => {
+    if (!routeImages || routeImages.length === 0) return null;
+    if (activeEtape != null) {
+      const match = routeImages.find((img) => img.etape_numero === activeEtape);
+      if (match) return match;
+    }
+    const overview = routeImages.find((img) => img.etape_numero == null);
+    return overview ?? null;
+  }, [routeImages, activeEtape]);
 
   const allMessages = useMemo(() => {
     if (!messagesData?.pages) return [];
@@ -194,6 +220,16 @@ export const LiveCoursePanel = ({
             </div>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
+            {stageImage && (
+              <div className="p-2 border-b bg-muted/10">
+                <img
+                  src={stageImage.image_url}
+                  alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+                  className="w-full h-auto max-h-48 object-contain rounded-md border"
+                  loading="lazy"
+                />
+              </div>
+            )}
             {messagesContent}
           </div>
         </div>
