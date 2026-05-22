@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Users, BarChart3, ListChecks, Trophy, Swords, MoreHorizontal } from "lucide-react";
+import { Users, BarChart3, ListChecks, Trophy, Swords, MoreHorizontal, Radio } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { MobileMoreSheet } from "./MobileMoreSheet";
 
