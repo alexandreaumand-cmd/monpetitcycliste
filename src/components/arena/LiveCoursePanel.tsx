@@ -220,6 +220,16 @@ export const LiveCoursePanel = ({
             </div>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
+            {stageImage && (
+              <div className="p-2 border-b bg-muted/10">
+                <img
+                  src={stageImage.image_url}
+                  alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+                  className="w-full h-auto max-h-48 object-contain rounded-md border"
+                  loading="lazy"
+                />
+              </div>
+            )}
             {messagesContent}
           </div>
         </div>
