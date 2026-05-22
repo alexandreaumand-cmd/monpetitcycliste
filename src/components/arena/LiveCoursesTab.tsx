@@ -258,13 +258,47 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
     return (
       <div className="flex flex-col gap-3 min-h-[400px]">
-        <div className="border rounded-xl overflow-hidden bg-background">
-          {courseSelector}
-          {stageFilter}
-        </div>
+        <Collapsible defaultOpen={!activeCourseId} className="border rounded-xl overflow-hidden bg-background">
+          <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Choisir une course</h3>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {courseSelector}
+            {stageFilter}
+          </CollapsibleContent>
+        </Collapsible>
 
         {activeCourseId && (
           <>
+            {stageImage && (
+              <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background">
+                <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
+                  <div className="flex items-center gap-2">
+                    <Route className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold">Profil</h3>
+                    {stageImage.etape_numero != null && (
+                      <span className="text-[11px] text-muted-foreground">Étape {stageImage.etape_numero}</span>
+                    )}
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-3">
+                    <img
+                      src={stageImage.image_url}
+                      alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
+                      className="w-full h-auto rounded-md border"
+                      loading="lazy"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background">
               <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
                 <div className="flex items-center gap-2">
