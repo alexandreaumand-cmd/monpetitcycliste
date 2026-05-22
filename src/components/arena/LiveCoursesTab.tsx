@@ -346,17 +346,29 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   return (
     <div className="flex flex-col gap-2 h-[calc(100vh-160px)] min-h-[400px]">
       {/* Course selector — multi-select on desktop */}
-      <div className="border rounded-xl overflow-hidden bg-background shrink-0">
-        <div className="px-3 py-2 bg-muted/20">
-          <LiveCourseSelector
-            activeCourseId={activeCourseIds[0] || null}
-            onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
-            multiSelect
-            activeCourseIds={activeCourseIds}
-            onSelectMulti={setActiveCourseIds}
-          />
-        </div>
-      </div>
+      <Collapsible defaultOpen={activeCourseIds.length === 0} className="border rounded-xl overflow-hidden bg-background shrink-0">
+        <CollapsibleTrigger className="w-full px-3 py-2 flex items-center justify-between bg-muted/20 border-b">
+          <div className="flex items-center gap-2">
+            <Radio className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Choisir une course</h3>
+            {activeCourseIds.length > 0 && (
+              <span className="text-[11px] text-muted-foreground">{activeCourseIds.length} sélectionnée{activeCourseIds.length > 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 py-2 bg-muted/20">
+            <LiveCourseSelector
+              activeCourseId={activeCourseIds[0] || null}
+              onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
+              multiSelect
+              activeCourseIds={activeCourseIds}
+              onSelectMulti={setActiveCourseIds}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Panels */}
       {activeCourseIds.length === 0 ? (
