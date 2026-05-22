@@ -101,6 +101,30 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
+  const { data: routeImages } = useQuery({
+    queryKey: ["course-route-images", activeCourseId],
+    queryFn: async () => {
+      if (!activeCourseId) return [];
+      const { data } = await supabase
+        .from("course_route_images")
+        .select("etape_numero, image_url, label")
+        .eq("course_id", activeCourseId);
+      return data ?? [];
+    },
+    enabled: !!activeCourseId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const activeEtape = selectedEtape ?? currentEtape;
+  const stageImage = useMemo(() => {
+    if (!routeImages || routeImages.length === 0) return null;
+    if (activeEtape != null) {
+      const match = routeImages.find((img) => img.etape_numero === activeEtape);
+      if (match) return match;
+    }
+    return routeImages.find((img) => img.etape_numero == null) ?? null;
+  }, [routeImages, activeEtape]);
+
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
       if (!managerId) return;
