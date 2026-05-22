@@ -45,6 +45,30 @@ export const LiveCoursePanel = ({
     isLoading: messagesLoading,
   } = useArenaMessages(channelId, leagueId, courseId);
 
+  const { data: routeImages } = useQuery({
+    queryKey: ["course-route-images", courseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("course_route_images")
+        .select("etape_numero, image_url, label")
+        .eq("course_id", courseId);
+      return data ?? [];
+    },
+    enabled: !!courseId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const activeEtape = selectedEtape ?? currentEtape;
+  const stageImage = useMemo(() => {
+    if (!routeImages || routeImages.length === 0) return null;
+    if (activeEtape != null) {
+      const match = routeImages.find((img) => img.etape_numero === activeEtape);
+      if (match) return match;
+    }
+    const overview = routeImages.find((img) => img.etape_numero == null);
+    return overview ?? null;
+  }, [routeImages, activeEtape]);
+
   const allMessages = useMemo(() => {
     if (!messagesData?.pages) return [];
     return messagesData.pages.flatMap((p) => p.messages);
