@@ -86,7 +86,7 @@ function GroupRow({
     return { name, ownerName, bib, gcGap };
   });
 
-  const showRiders = !group.isPeloton && riderItems.length > 0;
+  const showRiders = riderItems.length > 0;
   const showCollapsible = riderItems.length > 5;
   const visibleRiders = showCollapsible ? riderItems.slice(0, 5) : riderItems;
   const hiddenRiders = showCollapsible ? riderItems.slice(5) : [];

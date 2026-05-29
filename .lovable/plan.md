@@ -1,28 +1,26 @@
-# Fix: bonus des coureurs bonusés non filtré par ligue
+## Diagnostic
 
-## Problème
+Il n'y a **aucune limite** sur le nombre de coureurs côté code (ni broadcast, ni RPC, ni stockage). J'ai vérifié le dernier broadcast en base : les coureurs sont bien stockés (`riderCount: 23`, 5 noms listés, payload jsonb intact, dupliqué dans chaque ligue).
 
-Dans le dialogue « Coureurs bonusés de la ligue », le bonus affiché agrège les `bonus_points` de **toutes les ligues** pour un même coureur/phase/course. Pour le coureur Alessandro PINARELLO en CopaGiro, on voit `+60.0 bonus` au lieu de `+30` parce que le bonus d'une autre ligue (probablement MPC2026) est additionné.
-
-## Cause
-
-Dans `src/components/team/LeagueBonusRidersDialog.tsx`, la requête sur `bonus_points` filtre par `phase_id`, `bonus_type`, `coureur_id`, `course_id` — mais **pas par `league_id`**, alors que la table possède bien cette colonne.
-
-## Correction
-
-Ajouter `.eq("league_id", leagueId)` à la requête `bonus_points` (vers la ligne 155-161). Aucun autre changement nécessaire — la requête `points_ledger` est déjà scopée correctement via `scopedCourseIds`.
+La cause est dans `src/components/arena/RaceSituationDisplay.tsx` :
 
 ```ts
-const { data: bonusData } = await supabase
-  .from("bonus_points")
-  .select("coureur_id, points")
-  .eq("league_id", leagueId)   // ← ajouter
-  .eq("phase_id", phaseId)
-  .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
-  .in("coureur_id", coureurIds)
-  .in("course_id", scopedCourseIds);
+const showRiders = !group.isPeloton && riderItems.length > 0;
 ```
 
-## Vérification
+Le groupe diffusé est nommé « Peloton » et flaggé `isPeloton: true` (l'échappée a été marquée comme peloton dans l'éditeur — les deux groupes du dernier broadcast le sont). Du coup, la liste de coureurs est volontairement masquée à l'affichage, alors que les données sont bien là.
 
-Rouvrir le dialogue dans CopaGiro et confirmer que PINARELLO affiche `+30.0 bonus` (et non `+60.0`).
+## Plan
+
+1. **`RaceSituationDisplay.tsx`** : changer la règle pour afficher les coureurs dès qu'il y en a, peu importe `isPeloton` :
+   ```ts
+   const showRiders = riderItems.length > 0;
+   ```
+   Le badge « P » et le compteur `(n)` restent gérés par `isPeloton`, mais la liste nominale s'affiche si l'admin a saisi des coureurs (typique : leaders dans le peloton, ou breakaway taggé peloton par erreur).
+
+2. **`RaceSituationEditor.tsx`** : aucune modification fonctionnelle — l'éditeur permet déjà de saisir > 5 coureurs sans cap. Le collapsible « +N autres » de l'affichage gère déjà les listes longues (au-delà de 5 visibles).
+
+## Notes
+
+- À plus long terme, on pourrait aussi forcer un seul groupe `isPeloton` à la fois dans l'éditeur (actuellement `setPeloton` le fait, mais l'import depuis broadcast existant peut en avoir plusieurs). À traiter séparément si tu veux.
+- Aucun changement de schéma, ni RLS, ni edge function.
