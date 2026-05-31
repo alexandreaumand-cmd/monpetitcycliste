@@ -1,26 +1,30 @@
 ## Diagnostic
 
-Il n'y a **aucune limite** sur le nombre de coureurs côté code (ni broadcast, ni RPC, ni stockage). J'ai vérifié le dernier broadcast en base : les coureurs sont bien stockés (`riderCount: 23`, 5 noms listés, payload jsonb intact, dupliqué dans chaque ligue).
+Sur la page PCS du Tour de Wallonie 2026, la startlist est marquée **"Preliminary startlist"**. PCS affiche 119 coureurs (le compteur officiel : `<b>119</b> riders`), mais le HTML contient **136 entrées** car certaines équipes annoncent **plusieurs candidats pour un même dossard** en attendant la confirmation finale.
 
-La cause est dans `src/components/arena/RaceSituationDisplay.tsx` :
+Exemple Red Bull - BORA - hansgrohe :
+- bib 54 → MEEUS Jordi
+- bib 54 → **MARTÍNEZ Daniel Felipe** ← le coureur "fantôme"
 
-```ts
-const showRiders = !group.isPeloton && riderItems.length > 0;
-```
+Chaque équipe a un dossard dédoublé (1 coureur de réserve), d'où l'écart 17 équipes × 1 = **17 coureurs en trop** (119 + 17 = 136).
 
-Le groupe diffusé est nommé « Peloton » et flaggé `isPeloton: true` (l'échappée a été marquée comme peloton dans l'éditeur — les deux groupes du dernier broadcast le sont). Du coup, la liste de coureurs est volontairement masquée à l'affichage, alors que les données sont bien là.
+La fonction `parseStartlistHtml` (`supabase/functions/startlist-tracker/index.ts`, l. 975) lit tous les `<a href="rider/...">` sans aucun filtre, donc inclut les réserves. Aucune classe CSS ne distingue le titulaire du réserviste — les deux sont des `<li class=" ">`.
 
-## Plan
+## Fix proposé
 
-1. **`RaceSituationDisplay.tsx`** : changer la règle pour afficher les coureurs dès qu'il y en a, peu importe `isPeloton` :
-   ```ts
-   const showRiders = riderItems.length > 0;
-   ```
-   Le badge « P » et le compteur `(n)` restent gérés par `isPeloton`, mais la liste nominale s'affiche si l'admin a saisi des coureurs (typique : leaders dans le peloton, ou breakaway taggé peloton par erreur).
+Dans `parseStartlistHtml` (et le fallback) :
 
-2. **`RaceSituationEditor.tsx`** : aucune modification fonctionnelle — l'éditeur permet déjà de saisir > 5 coureurs sans cap. Le collapsible « +N autres » de l'affichage gère déjà les listes longues (au-delà de 5 visibles).
+1. **Extraire le dossard** de chaque `<li>` via `li > span.bib`.
+2. **Dédupliquer par (équipe, bib)** : pour chaque équipe, ne conserver que le **premier coureur** rencontré pour un bib donné (les réservistes apparaissent toujours après le titulaire dans le HTML PCS).
+3. **Optionnel — garde-fou** : lire le total déclaré par PCS (`div.right.fs11 b` = "119") ; logguer un warning et activer le déduplicate seulement si `parsed > declared`. Sinon comportement inchangé pour les startlists finales sans doublon.
+4. **Logs** : indiquer combien de réservistes ont été filtrés et lesquels (nom + bib + équipe), pour traçabilité.
 
-## Notes
+## Comportement côté `syncStartlist`
 
-- À plus long terme, on pourrait aussi forcer un seul groupe `isPeloton` à la fois dans l'éditeur (actuellement `setPeloton` le fait, mais l'import depuis broadcast existant peut en avoir plusieurs). À traiter séparément si tu veux.
-- Aucun changement de schéma, ni RLS, ni edge function.
+Aucun changement nécessaire — il recevra 119 coureurs au lieu de 136 et fera son diff normalement. Si l'équipe confirme plus tard un autre titulaire, le tracker détectera l'ajout/retrait au prochain run.
+
+## Fichiers touchés
+
+- `supabase/functions/startlist-tracker/index.ts` — fonction `parseStartlistHtml` uniquement.
+
+Aucune migration, aucun changement UI.

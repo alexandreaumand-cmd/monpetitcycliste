@@ -982,6 +982,24 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   const title = doc.querySelector("title")?.textContent || "unknown";
   console.log(`Page title: "${title}"`);
 
+  // PCS displays a declared official rider total, e.g. <div class="right fs11"><b>119</b> riders</div>
+  let declaredTotal: number | null = null;
+  const totalNodes = doc.querySelectorAll("div.right.fs11 b, div.right b");
+  for (const n of totalNodes) {
+    const txt = (n.textContent || "").trim();
+    const m = txt.match(/^(\d{2,4})$/);
+    if (m) {
+      const parent = ((n as any).parentNode?.textContent as string | undefined) || "";
+      if (/rider/i.test(parent)) {
+        declaredTotal = parseInt(m[1], 10);
+        break;
+      }
+    }
+  }
+  if (declaredTotal != null) {
+    console.log(`PCS declared total: ${declaredTotal} riders`);
+  }
+
   const startlist = doc.querySelector(".startlist_v4");
   if (!startlist) {
     console.warn("parseStartlistHtml: No .startlist_v4 found");
@@ -1001,7 +1019,9 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   }
 
   const riders: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
-  
+  let totalParsed = 0;
+  const filteredReserves: { name: string; bib: string; team: string }[] = [];
+
   // Iterate over team blocks (li children of startlist_v4)
   const teamBlocks = startlist.querySelectorAll(":scope > li");
   let teamCount = 0;
@@ -1016,13 +1036,28 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     const teamName = teamLink?.textContent?.trim() || "Unknown Team";
     teamCount++;
 
-    // Get riders from this team block
-    const riderLinks = teamBlock.querySelectorAll("ul li a[href*='rider/']");
-    for (const riderLink of riderLinks) {
+    // Get rider <li> rows from this team block. Dedupe by bib number within a team:
+    // PCS "preliminary" startlists list multiple candidates for a same bib (titular + reserve).
+    // The first occurrence is the titular; subsequent ones are reserves.
+    const riderLis = teamBlock.querySelectorAll("ul li");
+    const seenBibs = new Set<string>();
+    for (const li of riderLis) {
+      const riderLink = (li as any).querySelector?.("a[href*='rider/']");
+      if (!riderLink) continue;
       const riderName = riderLink.textContent?.trim() || "";
-      if (riderName.length > 2) {
-        riders.push({ rider_name: riderName, team_name: teamName, team_confirmed: isConfirmed });
+      if (riderName.length <= 2) continue;
+      totalParsed++;
+
+      const bibEl = (li as any).querySelector?.("span.bib");
+      const bib = (bibEl?.textContent || "").trim();
+
+      if (bib && seenBibs.has(bib)) {
+        filteredReserves.push({ name: riderName, bib, team: teamName });
+        continue;
       }
+      if (bib) seenBibs.add(bib);
+
+      riders.push({ rider_name: riderName, team_name: teamName, team_confirmed: isConfirmed });
     }
   }
 
@@ -1048,6 +1083,15 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
 
   const confirmedCount = new Set(riders.filter(r => r.team_confirmed).map(r => r.team_name)).size;
   console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams (${confirmedCount} confirmed)`);
+  if (filteredReserves.length > 0) {
+    console.log(`[DEDUPE] Filtered ${filteredReserves.length} reserve rider(s) sharing a bib with a titular (preliminary startlist):`);
+    for (const r of filteredReserves) {
+      console.log(`  - bib ${r.bib} | ${r.team} | ${r.name}`);
+    }
+  }
+  if (declaredTotal != null && riders.length !== declaredTotal) {
+    console.warn(`[DEDUPE] After dedupe: ${riders.length} riders vs PCS declared ${declaredTotal} (parsed raw: ${totalParsed})`);
+  }
   if (riders.length > 0) {
     console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name}) ${r.team_confirmed ? '✓' : ''}`).join(", ")}`);
   }
