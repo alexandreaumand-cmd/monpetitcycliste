@@ -1118,6 +1118,98 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
   }
 }
 
+// Normalize a rider name for cross-source matching. The PCS PDF strips accents
+// and uses "LASTNAME Firstname"; the HTML keeps accents. We compare on the
+// normalized uppercase ASCII form.
+function normalizeRiderName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+// Fetches the PCS official startlist text endpoint (/pdf/startlist.php?id=<pcsId>)
+// and returns the set of canonical normalized rider names. The PDF endpoint
+// matches the "X riders" badge and excludes speculative/rumored riders that
+// PCS leaves in the HTML DOM but hides via client-side JS.
+//
+// The PDF text format is multi-column ("col1.. col2.. col3.. col4"), so we
+// cannot rely on column position to assign teams. We use it only as a name
+// whitelist — team assignment stays based on the HTML scrape.
+async function fetchPcsPdfWhitelist(pcsRaceId: string, referer: string): Promise<Set<string> | null> {
+  try {
+    const pdfUrl = `https://www.procyclingstats.com/pdf/startlist.php?id=${pcsRaceId}`;
+    const resp = await fetch(pdfUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": referer,
+        "Accept": "application/pdf,text/html,*/*",
+      },
+    });
+    if (!resp.ok) {
+      console.warn(`[PDF] fetch failed: ${resp.status} for ${pdfUrl}`);
+      return null;
+    }
+    // PCS returns a binary PDF. The content stream uses (string) Tj operators
+    // with strings encoded as UTF-16BE (each char prefixed by a null byte).
+    // We decode the bytes as latin-1 (preserves all 256 values), extract each
+    // text string from "(...) Tj" operators, then drop the null bytes to get
+    // ASCII text.
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    let raw = "";
+    for (let i = 0; i < buf.length; i++) raw += String.fromCharCode(buf[i]);
+
+    // Match all (...) Tj operators. PDF strings can span newlines so we use
+    // a non-greedy match against an opening "(" and closing ") Tj".
+    const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
+    const tokens: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = tjRegex.exec(raw)) !== null) {
+      // Drop null bytes (UTF-16BE high byte for ASCII range) and unescape PDF
+      // escape sequences (\(, \), \\, \n, \r, \t).
+      const decoded = m[1]
+        .replace(/\\([()\\nrt])/g, (_, c) => (c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c))
+        .replace(/\x00/g, "")
+        .replace(/[\u0001-\u0008\u000B\u000E-\u001F]/g, "");
+      tokens.push(decoded);
+    }
+
+    if (tokens.length === 0) {
+      console.warn(`[PDF] No Tj tokens found at ${pdfUrl}`);
+      return null;
+    }
+
+    // PCS PDF tokens come in the order:
+    //   "1", "UAE Team Emirates - XRG", "..", "SIVAKOV Pavel", "..", "WELLENS Tim",
+    //   ..., "2", "TotalEnergies", "..", "BOUCHARD Geoffrey", ...
+    // A rider name token is always preceded by ".." and contains an uppercase
+    // last name followed by a Title-Case first name.
+    const namePattern = /^([A-ZÀ-Ý][A-ZÀ-Ý'\-]+(?:\s+[A-ZÀ-Ý][A-ZÀ-Ý'\-]+){0,3})\s+([A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý'\-]+(?:\s+[A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý'\-]+){0,2})$/;
+    const whitelist = new Set<string>();
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i].trim().replace(/\s+/g, " ");
+      if (!t) continue;
+      // Must come right after a ".." separator
+      if (i > 0 && tokens[i - 1].trim() !== "..") continue;
+      const nm = t.match(namePattern);
+      if (nm) whitelist.add(normalizeRiderName(`${nm[1]} ${nm[2]}`));
+    }
+
+    if (whitelist.size === 0) {
+      console.warn(`[PDF] No rider names parsed from ${pdfUrl} (${tokens.length} Tj tokens scanned)`);
+      return null;
+    }
+    console.log(`[PDF] Whitelist built: ${whitelist.size} canonical riders from ${pdfUrl}`);
+    return whitelist;
+  } catch (e) {
+    console.warn(`[PDF] Error fetching/parsing whitelist:`, e);
+    return null;
+  }
+}
+
 async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string; team_confirmed: boolean }[]> {
   const response = await fetch(raceUrl, {
     headers: {
@@ -1132,8 +1224,41 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: strin
   const html = await response.text();
   console.log(`Fetched race HTML: ${html.length} characters`);
 
-  const parsedRiders = parseStartlistHtml(html);
-  console.log(`Parsed ${parsedRiders.length} riders`);
+  let parsedRiders = parseStartlistHtml(html);
+  console.log(`Parsed ${parsedRiders.length} riders from HTML`);
+
+  // Apply PDF whitelist filter to drop the speculative riders PCS leaves in
+  // the HTML DOM but hides client-side. Keep the HTML's team assignment.
+  const pcsIdMatch = html.match(/pdf\/startlist\.php\?id=(\d+)/);
+  const pcsRaceId = pcsIdMatch?.[1];
+  if (pcsRaceId) {
+    const whitelist = await fetchPcsPdfWhitelist(pcsRaceId, raceUrl);
+    if (whitelist && whitelist.size > 0) {
+      const before = parsedRiders.length;
+      const dropped: string[] = [];
+      const filtered = parsedRiders.filter((r) => {
+        const key = normalizeRiderName(r.rider_name);
+        const keep = whitelist.has(key);
+        if (!keep) dropped.push(`${r.rider_name} (${r.team_name})`);
+        return keep;
+      });
+      // Safety net: if the whitelist would drop >40% of HTML riders, treat the
+      // PDF parse as unreliable and keep the full HTML result.
+      if (before > 20 && filtered.length < before * 0.6) {
+        console.warn(`[PDF] Filter would drop ${before - filtered.length}/${before} riders (>40%) — likely PDF parsing failure, keeping HTML-only result.`);
+      } else {
+        parsedRiders = filtered;
+        console.log(`[PDF] Filter applied: ${before} HTML riders → ${parsedRiders.length} after whitelist (dropped ${dropped.length})`);
+        if (dropped.length > 0) {
+          console.log(`[PDF] Dropped rumored riders: ${dropped.slice(0, 20).join(", ")}${dropped.length > 20 ? "..." : ""}`);
+        }
+      }
+    } else {
+      console.log(`[PDF] No whitelist available, keeping HTML-only result`);
+    }
+  } else {
+    console.log(`[PDF] No PCS race ID found in HTML, keeping HTML-only result`);
+  }
 
   if (parsedRiders.length > 0) {
     console.log(`Sample riders: ${parsedRiders.slice(0, 5).map(r => r.rider_name).join(", ")}...`);
