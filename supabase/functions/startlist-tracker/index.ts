@@ -1139,47 +1139,67 @@ function normalizeRiderName(name: string): string {
 // The PDF text format is multi-column ("col1.. col2.. col3.. col4"), so we
 // cannot rely on column position to assign teams. We use it only as a name
 // whitelist — team assignment stays based on the HTML scrape.
-async function fetchPcsPdfWhitelist(pcsRaceId: string): Promise<Set<string> | null> {
+async function fetchPcsPdfWhitelist(pcsRaceId: string, referer: string): Promise<Set<string> | null> {
   try {
     const pdfUrl = `https://www.procyclingstats.com/pdf/startlist.php?id=${pcsRaceId}`;
     const resp = await fetch(pdfUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": referer,
+        "Accept": "application/pdf,text/html,*/*",
       },
     });
     if (!resp.ok) {
       console.warn(`[PDF] fetch failed: ${resp.status} for ${pdfUrl}`);
       return null;
     }
-    const text = await resp.text();
-    const stripped = text
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n")
-      .replace(/<[^>]+>/g, "");
+    // PCS returns a binary PDF. The content stream uses (string) Tj operators
+    // with strings encoded as UTF-16BE (each char prefixed by a null byte).
+    // We decode the bytes as latin-1 (preserves all 256 values), extract each
+    // text string from "(...) Tj" operators, then drop the null bytes to get
+    // ASCII text.
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    let raw = "";
+    for (let i = 0; i < buf.length; i++) raw += String.fromCharCode(buf[i]);
 
-    // Each rider token is introduced by ".." in the column-aligned text dump,
-    // e.g. ".. SIVAKOV Pavel.. BOUCHARD Geoffrey..". Split the whole document
-    // on ".." then validate each chunk against a rider name shape:
-    // UPPERCASE last name (optionally compound like "VAN AERT" / "DEL TORO")
-    // followed by a Title-Case first name (optionally compound).
-    const namePattern = /^([A-Z][A-Z'\-]+(?:\s+[A-Z][A-Z'\-]+){0,3})\s+([A-Z][a-zA-Z'\-]+(?:\s+[A-Z][a-zA-Z'\-]+){0,2})$/;
+    // Match all (...) Tj operators. PDF strings can span newlines so we use
+    // a non-greedy match against an opening "(" and closing ") Tj".
+    const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
+    const tokens: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = tjRegex.exec(raw)) !== null) {
+      // Drop null bytes (UTF-16BE high byte for ASCII range) and unescape PDF
+      // escape sequences (\(, \), \\, \n, \r, \t).
+      const decoded = m[1]
+        .replace(/\\([()\\nrt])/g, (_, c) => (c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c))
+        .replace(/\x00/g, "")
+        .replace(/[\u0001-\u0008\u000B\u000E-\u001F]/g, "");
+      tokens.push(decoded);
+    }
+
+    if (tokens.length === 0) {
+      console.warn(`[PDF] No Tj tokens found at ${pdfUrl}`);
+      return null;
+    }
+
+    // PCS PDF tokens come in the order:
+    //   "1", "UAE Team Emirates - XRG", "..", "SIVAKOV Pavel", "..", "WELLENS Tim",
+    //   ..., "2", "TotalEnergies", "..", "BOUCHARD Geoffrey", ...
+    // A rider name token is always preceded by ".." and contains an uppercase
+    // last name followed by a Title-Case first name.
+    const namePattern = /^([A-ZÀ-Ý][A-ZÀ-Ý'\-]+(?:\s+[A-ZÀ-Ý][A-ZÀ-Ý'\-]+){0,3})\s+([A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý'\-]+(?:\s+[A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý'\-]+){0,2})$/;
     const whitelist = new Set<string>();
-
-    for (const rawToken of stripped.split("..")) {
-      for (const line of rawToken.split(/\r?\n/)) {
-        const trimmed = line.trim().replace(/\s+/g, " ");
-        if (!trimmed) continue;
-        // Skip team header lines like "5 Decathlon CMA CGM Team"
-        if (/^\d+\s+[A-Z]/.test(trimmed)) continue;
-        const m = trimmed.match(namePattern);
-        if (m) {
-          whitelist.add(normalizeRiderName(`${m[1]} ${m[2]}`));
-        }
-      }
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i].trim().replace(/\s+/g, " ");
+      if (!t) continue;
+      // Must come right after a ".." separator
+      if (i > 0 && tokens[i - 1].trim() !== "..") continue;
+      const nm = t.match(namePattern);
+      if (nm) whitelist.add(normalizeRiderName(`${nm[1]} ${nm[2]}`));
     }
 
     if (whitelist.size === 0) {
-      console.warn(`[PDF] No riders parsed from ${pdfUrl}`);
+      console.warn(`[PDF] No rider names parsed from ${pdfUrl} (${tokens.length} Tj tokens scanned)`);
       return null;
     }
     console.log(`[PDF] Whitelist built: ${whitelist.size} canonical riders from ${pdfUrl}`);
