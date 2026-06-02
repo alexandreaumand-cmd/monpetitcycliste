@@ -38,25 +38,29 @@ export function getTemplates(): LeagueTemplate[] {
 }
 
 /**
+ * Detect Grand Tours by name (Tour de France, Giro d'Italia, La Vuelta).
+ * The `wt_tier` column in DB is inconsistent and cannot be trusted for this.
+ */
+export function isGrandTour(nom: string | null | undefined): boolean {
+  const n = (nom || '').toLowerCase();
+  if (n.includes('tour de france')) return true;
+  if (n.includes("giro d'italia") || n.includes('giro d italia')) return true;
+  if (n.includes('vuelta') && n.includes('espa')) return true;
+  return false;
+}
+
+/**
  * For "per_course" mode, compute budget and maxRiders based on selected courses.
  * Rules:
- * - 1 one_day only → 8 riders / 650 budget
- * - N one_day only → 10 riders / 800 budget
- * - Any stage_race present → 15 riders / 1100 budget
+ * - At least one Grand Tour (TdF / Giro / Vuelta) → 15 riders / 1100 budget
+ * - Otherwise (one-day or non-GT stage races) → 10 riders / 1100 budget
  */
-export function computePerCourseSettings(courses: Array<{ type_course: string | null }>): { budget: number; maxRiders: number } {
-  const hasStageRace = courses.some(c => c.type_course === 'stage_race');
-  
-  if (hasStageRace) {
+export function computePerCourseSettings(courses: Array<{ nom?: string | null; type_course?: string | null }>): { budget: number; maxRiders: number } {
+  const hasGrandTour = courses.some(c => isGrandTour(c.nom));
+  if (hasGrandTour) {
     return { budget: 1100, maxRiders: 15 };
   }
-  
-  // All one-day
-  if (courses.length === 1) {
-    return { budget: 650, maxRiders: 8 };
-  }
-  
-  return { budget: 800, maxRiders: 10 };
+  return { budget: 1100, maxRiders: 10 };
 }
 
 /**
