@@ -1036,11 +1036,12 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     const teamName = teamLink?.textContent?.trim() || "Unknown Team";
     teamCount++;
 
-    // Get rider <li> rows from this team block. Dedupe by bib number within a team:
-    // PCS "preliminary" startlists list multiple candidates for a same bib (titular + reserve).
-    // The first occurrence is the titular; subsequent ones are reserves.
+    // Get rider <li> rows from this team block. Dedupe within a team:
+    // - by REAL numeric bib: filters preliminary startlist reserves sharing a bib with a titular
+    // - by rider href slug: filters exact duplicate riders when bibs are placeholders ("-", "", "?")
     const riderLis = teamBlock.querySelectorAll("ul li");
     const seenBibs = new Set<string>();
+    const seenRiders = new Set<string>();
     for (const li of riderLis) {
       const riderLink = (li as any).querySelector?.("a[href*='rider/']");
       if (!riderLink) continue;
@@ -1050,12 +1051,19 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
 
       const bibEl = (li as any).querySelector?.("span.bib");
       const bib = (bibEl?.textContent || "").trim();
+      const isRealBib = /^\d+$/.test(bib);
+      const riderKey = (riderLink.getAttribute?.("href") || riderName).trim();
 
-      if (bib && seenBibs.has(bib)) {
+      if (isRealBib && seenBibs.has(bib)) {
         filteredReserves.push({ name: riderName, bib, team: teamName });
         continue;
       }
-      if (bib) seenBibs.add(bib);
+      if (seenRiders.has(riderKey)) {
+        filteredReserves.push({ name: riderName, bib: bib || "-", team: teamName });
+        continue;
+      }
+      if (isRealBib) seenBibs.add(bib);
+      seenRiders.add(riderKey);
 
       riders.push({ rider_name: riderName, team_name: teamName, team_confirmed: isConfirmed });
     }
