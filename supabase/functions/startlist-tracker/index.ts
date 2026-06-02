@@ -1121,8 +1121,15 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
 // Normalize a rider name for cross-source matching. The PCS PDF strips accents
 // and uses "LASTNAME Firstname"; the HTML keeps accents. We compare on the
 // normalized uppercase ASCII form.
+const SPECIAL_LETTER_MAP: Record<string, string> = {
+  'ł': 'l', 'Ł': 'L', 'đ': 'd', 'Đ': 'D', 'ø': 'o', 'Ø': 'O',
+  'ß': 'ss', 'æ': 'ae', 'Æ': 'AE', 'œ': 'oe', 'Œ': 'OE',
+  'þ': 'th', 'Þ': 'TH', 'ð': 'd', 'Ð': 'D',
+};
+
 function normalizeRiderName(name: string): string {
   return name
+    .replace(/[łŁđĐøØßæÆœŒþÞðÐ]/g, (c) => SPECIAL_LETTER_MAP[c] ?? c)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z\s'-]/g, " ")
