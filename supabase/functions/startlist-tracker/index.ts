@@ -1118,6 +1118,78 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
   }
 }
 
+// Normalize a rider name for cross-source matching. The PCS PDF strips accents
+// and uses "LASTNAME Firstname"; the HTML keeps accents. We compare on the
+// normalized uppercase ASCII form.
+function normalizeRiderName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+// Fetches the PCS official startlist text endpoint (/pdf/startlist.php?id=<pcsId>)
+// and returns the set of canonical normalized rider names. The PDF endpoint
+// matches the "X riders" badge and excludes speculative/rumored riders that
+// PCS leaves in the HTML DOM but hides via client-side JS.
+//
+// The PDF text format is multi-column ("col1.. col2.. col3.. col4"), so we
+// cannot rely on column position to assign teams. We use it only as a name
+// whitelist — team assignment stays based on the HTML scrape.
+async function fetchPcsPdfWhitelist(pcsRaceId: string): Promise<Set<string> | null> {
+  try {
+    const pdfUrl = `https://www.procyclingstats.com/pdf/startlist.php?id=${pcsRaceId}`;
+    const resp = await fetch(pdfUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+    if (!resp.ok) {
+      console.warn(`[PDF] fetch failed: ${resp.status} for ${pdfUrl}`);
+      return null;
+    }
+    const text = await resp.text();
+    const stripped = text
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<[^>]+>/g, "");
+
+    // Each rider token is introduced by ".." in the column-aligned text dump,
+    // e.g. ".. SIVAKOV Pavel.. BOUCHARD Geoffrey..". Split the whole document
+    // on ".." then validate each chunk against a rider name shape:
+    // UPPERCASE last name (optionally compound like "VAN AERT" / "DEL TORO")
+    // followed by a Title-Case first name (optionally compound).
+    const namePattern = /^([A-Z][A-Z'\-]+(?:\s+[A-Z][A-Z'\-]+){0,3})\s+([A-Z][a-zA-Z'\-]+(?:\s+[A-Z][a-zA-Z'\-]+){0,2})$/;
+    const whitelist = new Set<string>();
+
+    for (const rawToken of stripped.split("..")) {
+      for (const line of rawToken.split(/\r?\n/)) {
+        const trimmed = line.trim().replace(/\s+/g, " ");
+        if (!trimmed) continue;
+        // Skip team header lines like "5 Decathlon CMA CGM Team"
+        if (/^\d+\s+[A-Z]/.test(trimmed)) continue;
+        const m = trimmed.match(namePattern);
+        if (m) {
+          whitelist.add(normalizeRiderName(`${m[1]} ${m[2]}`));
+        }
+      }
+    }
+
+    if (whitelist.size === 0) {
+      console.warn(`[PDF] No riders parsed from ${pdfUrl}`);
+      return null;
+    }
+    console.log(`[PDF] Whitelist built: ${whitelist.size} canonical riders from ${pdfUrl}`);
+    return whitelist;
+  } catch (e) {
+    console.warn(`[PDF] Error fetching/parsing whitelist:`, e);
+    return null;
+  }
+}
+
 async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string; team_confirmed: boolean }[]> {
   const response = await fetch(raceUrl, {
     headers: {
@@ -1132,8 +1204,41 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: strin
   const html = await response.text();
   console.log(`Fetched race HTML: ${html.length} characters`);
 
-  const parsedRiders = parseStartlistHtml(html);
-  console.log(`Parsed ${parsedRiders.length} riders`);
+  let parsedRiders = parseStartlistHtml(html);
+  console.log(`Parsed ${parsedRiders.length} riders from HTML`);
+
+  // Apply PDF whitelist filter to drop the speculative riders PCS leaves in
+  // the HTML DOM but hides client-side. Keep the HTML's team assignment.
+  const pcsIdMatch = html.match(/pdf\/startlist\.php\?id=(\d+)/);
+  const pcsRaceId = pcsIdMatch?.[1];
+  if (pcsRaceId) {
+    const whitelist = await fetchPcsPdfWhitelist(pcsRaceId);
+    if (whitelist && whitelist.size > 0) {
+      const before = parsedRiders.length;
+      const dropped: string[] = [];
+      const filtered = parsedRiders.filter((r) => {
+        const key = normalizeRiderName(r.rider_name);
+        const keep = whitelist.has(key);
+        if (!keep) dropped.push(`${r.rider_name} (${r.team_name})`);
+        return keep;
+      });
+      // Safety net: if the whitelist would drop >40% of HTML riders, treat the
+      // PDF parse as unreliable and keep the full HTML result.
+      if (before > 20 && filtered.length < before * 0.6) {
+        console.warn(`[PDF] Filter would drop ${before - filtered.length}/${before} riders (>40%) — likely PDF parsing failure, keeping HTML-only result.`);
+      } else {
+        parsedRiders = filtered;
+        console.log(`[PDF] Filter applied: ${before} HTML riders → ${parsedRiders.length} after whitelist (dropped ${dropped.length})`);
+        if (dropped.length > 0) {
+          console.log(`[PDF] Dropped rumored riders: ${dropped.slice(0, 20).join(", ")}${dropped.length > 20 ? "..." : ""}`);
+        }
+      }
+    } else {
+      console.log(`[PDF] No whitelist available, keeping HTML-only result`);
+    }
+  } else {
+    console.log(`[PDF] No PCS race ID found in HTML, keeping HTML-only result`);
+  }
 
   if (parsedRiders.length > 0) {
     console.log(`Sample riders: ${parsedRiders.slice(0, 5).map(r => r.rider_name).join(", ")}...`);
