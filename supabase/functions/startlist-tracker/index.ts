@@ -1232,7 +1232,7 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: strin
   const pcsIdMatch = html.match(/pdf\/startlist\.php\?id=(\d+)/);
   const pcsRaceId = pcsIdMatch?.[1];
   if (pcsRaceId) {
-    const whitelist = await fetchPcsPdfWhitelist(pcsRaceId);
+    const whitelist = await fetchPcsPdfWhitelist(pcsRaceId, raceUrl);
     if (whitelist && whitelist.size > 0) {
       const before = parsedRiders.length;
       const dropped: string[] = [];
