@@ -1,59 +1,70 @@
-## Cause
+## Diagnostic
 
-Le scraping PCS dans `supabase/functions/startlist-tracker/index.ts` (`parseStartlistHtml`, ligne ~1054) déduplique les coureurs par numéro de dossard à l'intérieur d'une équipe :
+PCS expose **deux versions** de la startlist pour la même course :
 
-```ts
-if (bib && seenBibs.has(bib)) {
-  filteredReserves.push(...);
-  continue;
-}
-if (bib) seenBibs.add(bib);
-```
+### 1. Page HTML — `…/startlist/startlist` (celle qu'on scrape aujourd'hui)
+- Badge affiché : « 79 riders »
+- Liens `<a href="rider/…">` dans le DOM : **87**
+- UAE listé avec **9 coureurs** (POGAČAR inclus)
+- TotalEnergies listé avec **8 coureurs** (BOULAHOITE inclus)
+- **Aucun marqueur HTML** ne distingue les 8 extras : tous les `<li class=" ">` sont identiques, pas de classe `reserve`, pas de `style="display:none"`, pas de `data-*`.
+- PCS les cache visuellement côté navigateur via JavaScript, à partir d'une source externe qu'on ne voit pas dans le HTML brut.
 
-Cette logique sert à filtrer les remplaçants d'une startlist préliminaire (titulaire + réserve sur le même dossard). Mais sur PCS, quand les dossards ne sont pas encore attribués, **tous les coureurs ont `bib = "-"`** (placeholder). Exemple TotalEnergies sur la page AuRA :
+### 2. PDF officiel — `…/pdf/startlist.php?id=<race_id>`
+Vérifié sur `https://www.procyclingstats.com/pdf/startlist.php?id=59839` :
+- UAE : Sivakov, Wellens, Oliveira, Del Toro, Torres, Almeida, Vermaerke, Cosnefroy → **8 coureurs, pas de POGAČAR**
+- TotalEnergies : Bouchard, Vercher, Le Berre, Jousseaume, Grellier, Breuillard, Jegat → **7 coureurs, pas de BOULAHOITE**
+- **Correspond exactement à ta capture d'écran et au compte « 79 riders »**
 
-```html
-<li><span class="bib">-</span><a href="rider/geoffrey-bouchard">BOUCHARD Geoffrey</a></li>
-<li><span class="bib">-</span><a href="rider/matheo-vercher">VERCHER Mattéo</a></li>
-<li><span class="bib">-</span><a href="rider/mathis-le-berre">LE BERRE Mathis</a></li>
-... (7 coureurs au total)
-```
+Le PDF est donc la **source canonique**. La page HTML contient des bruits (joueurs ajoutés à titre spéculatif que PCS n'a pas encore retirés du DOM).
 
-Comme `"-"` est truthy, le premier coureur ajoute `"-"` à `seenBibs` et **tous les autres sont éjectés comme « reserves »**. D'où 1 coureur par équipe au lieu de 7-8 pour les équipes dont les dossards ne sont pas figés. Cela explique les 65/79 et les équipes truncated dans la table `startlist_entries`.
+## Correction proposée
 
-(Les 2 entrées Bouchard viennent probablement d'un double passage du tracker — un seul restera après le re-scrape.)
+**`supabase/functions/startlist-tracker/index.ts`**
 
-## Correction
+Modifier le pipeline de scraping en 3 étapes :
 
-**`supabase/functions/startlist-tracker/index.ts` — `parseStartlistHtml`**
+1. **Extraire l'ID PCS de la course** depuis le HTML déjà téléchargé.
+   Pattern simple :
+   ```ts
+   const pcsIdMatch = html.match(/pdf\/startlist\.php\?id=(\d+)/);
+   const pcsRaceId = pcsIdMatch?.[1];
+   ```
 
-Remplacer la dédup naïve par dossard par une dédup qui :
-1. Ignore les valeurs placeholder (`"-"`, vide, `"?"`, non numériques) — on ne déduplique que sur des dossards réellement numériques.
-2. Pour les startlists sans dossards attribués, déduplique par **nom de coureur** (via le href `rider/<slug>` qui est unique) pour éviter d'introduire des doublons accidentels.
+2. **Récupérer la version PDF** quand un ID est trouvé :
+   ```ts
+   const pdfUrl = `https://www.procyclingstats.com/pdf/startlist.php?id=${pcsRaceId}`;
+   const pdfResp = await fetch(pdfUrl, { headers: { "User-Agent": "…" } });
+   const pdfText = await pdfResp.text();
+   ```
 
-Pseudocode du bloc modifié :
+3. **Parser le PDF (en réalité du texte HTML/plain)** : extraire les noms par équipe à partir des lignes type `.. NOM Prénom`, regrouper sous les titres d'équipe numérotés (`1 UAE Team Emirates`, `2 Cofidis`, …).
 
-```ts
-const isRealBib = bib && /^\d+$/.test(bib);
-const riderKey = riderLink.getAttribute("href") || riderName;
+   Le format est ligne par ligne, équipes en colonnes de 4, riders préfixés par `..`. Cf. la sortie observée :
+   ```
+   1 UAE Team Emirates  2 TotalEnergies  3 Netcompany INEOS  4 Decathlon CMA CGM Team
+   .. SIVAKOV Pavel    .. BOUCHARD Geoffrey  .. THOMAS Benjamin  .. VAUQUELIN Kevin
+   …
+   ```
 
-if (isRealBib && seenBibs.has(bib)) {
-  filteredReserves.push({ name: riderName, bib, team: teamName });
-  continue;
-}
-if (seenRiders.has(riderKey)) continue; // doublon exact dans la même équipe
-if (isRealBib) seenBibs.add(bib);
-seenRiders.add(riderKey);
-```
+4. **Fallback** : si le PDF est indisponible (404, format inattendu, ID introuvable), retomber sur le scraping HTML actuel (comportement présent), avec un log explicite `[FALLBACK] PDF unavailable, using HTML scrape`.
 
-Le log `[DEDUPE]` reste pour traçabilité.
+5. **Conserver** la dédup par href slug appliquée précédemment (utile pour le fallback HTML).
 
-## Re-import des données existantes pour la course AuRA
+## Re-import des données pour AuRA
 
 Après le correctif :
-1. Supprimer les 2 entrées erronées (`startlist_entries` du startlist_id `f9bd123b-...`) ou supprimer l'import lui-même.
-2. Laisser le `startlist-tracker` re-scraper automatiquement (ou déclencher manuellement) pour repeupler avec les ~79 coureurs réels.
+1. Supprimer les entries de l'import actuel `a2661a65-1b59-4b30-9be8-69140de771d6` (87 riders) et l'import lui-même.
+2. Reset `last_tracker_check = NULL` sur la course `tour-auvergne-rhone-alpes-mj6w48yf` pour forcer un re-scrape immédiat qui produira les 79 coureurs corrects.
 
-## Aucune autre modification
+## Hors scope
 
-`startlist-import` (parsing texte collé) n'est pas touché — le bug est uniquement côté scraper PCS HTML.
+Pas de modification de `startlist-import` (import de texte collé), pas de changement d'UI, pas de modification de la logique de matching ou de scoring.
+
+## Test de validation
+
+Après déploiement :
+1. Le tracker re-scrape AuRA → log `[PDF] Parsed 79 riders from PDF`
+2. Vérifier en SQL : `SELECT count(*) FROM startlist_entries WHERE startlist_id = '<new_id>'` → **79**
+3. Vérifier l'absence de POGAČAR et BOULAHOITE pour cette course
+4. Vérifier qu'une course aux dossards attribués (ex. Heistse Pijl déjà scrapée correctement) continue à fonctionner — le PDF doit aussi rendre les 165 coureurs ; sinon, le fallback HTML prend le relais.
