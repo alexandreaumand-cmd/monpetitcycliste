@@ -495,16 +495,20 @@ const RulesPage = () => {
                 </p>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-inter">
+                    <span className="text-bordure-pink font-bold">🟡</span>
+                    <span className="text-bordure-green/80">Grand Tour (TdF, Giro, Vuelta) : <strong className="text-bordure-green">1 100 / 15 coureurs</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-inter">
+                    <span className="text-bordure-pink font-bold">🏔️</span>
+                    <span className="text-bordure-green/80">Course par étapes (non-GT) : <strong className="text-bordure-green">1 100 / 10 coureurs</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-inter">
                     <span className="text-bordure-pink font-bold">🚴</span>
                     <span className="text-bordure-green/80">1 classique : <strong className="text-bordure-green">650 / 8 coureurs</strong></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-inter">
                     <span className="text-bordure-pink font-bold">🚴‍♂️</span>
                     <span className="text-bordure-green/80">Plusieurs classiques : <strong className="text-bordure-green">800 / 10 coureurs</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm font-inter">
-                    <span className="text-bordure-pink font-bold">🏔️</span>
-                    <span className="text-bordure-green/80">Course par étapes : <strong className="text-bordure-green">1 100 / 15 coureurs</strong></span>
                   </div>
                 </div>
                 <p className="text-bordure-green/50 font-inter text-xs mt-3 italic">

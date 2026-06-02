@@ -153,8 +153,16 @@ Deno.serve(async (req) => {
         return false;
       };
       const hasGrandTour = courses.some((c: any) => isGrandTour(c.nom));
-      budget = 1100;
-      maxRiders = hasGrandTour ? 15 : 10;
+      const hasStageRace = courses.some((c: any) => c.type_course === 'stage_race');
+      if (hasGrandTour) {
+        budget = 1100; maxRiders = 15;
+      } else if (hasStageRace) {
+        budget = 1100; maxRiders = 10;
+      } else if (courses.length <= 1) {
+        budget = 650; maxRiders = 8;
+      } else {
+        budget = 800; maxRiders = 10;
+      }
 
       byPhase = false;
       wtOnly = false;

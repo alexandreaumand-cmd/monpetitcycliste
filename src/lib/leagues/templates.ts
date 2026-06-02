@@ -51,16 +51,23 @@ export function isGrandTour(nom: string | null | undefined): boolean {
 
 /**
  * For "per_course" mode, compute budget and maxRiders based on selected courses.
- * Rules:
- * - At least one Grand Tour (TdF / Giro / Vuelta) → 15 riders / 1100 budget
- * - Otherwise (one-day or non-GT stage races) → 10 riders / 1100 budget
+ * Priorité : GT > CPE non-GT > classiques (1 ou plusieurs).
+ * - Au moins 1 Grand Tour → 1100 / 15
+ * - Au moins 1 course par étapes non-GT → 1100 / 10
+ * - 1 seule classique (one_day) → 650 / 8
+ * - Plusieurs classiques (one_day) → 800 / 10
  */
 export function computePerCourseSettings(courses: Array<{ nom?: string | null; type_course?: string | null }>): { budget: number; maxRiders: number } {
-  const hasGrandTour = courses.some(c => isGrandTour(c.nom));
-  if (hasGrandTour) {
+  if (courses.some(c => isGrandTour(c.nom))) {
     return { budget: 1100, maxRiders: 15 };
   }
-  return { budget: 1100, maxRiders: 10 };
+  if (courses.some(c => c.type_course === 'stage_race')) {
+    return { budget: 1100, maxRiders: 10 };
+  }
+  if (courses.length <= 1) {
+    return { budget: 650, maxRiders: 8 };
+  }
+  return { budget: 800, maxRiders: 10 };
 }
 
 /**

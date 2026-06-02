@@ -231,10 +231,10 @@
     "alaCourse": {
       "title": "Per-Race Mode",
       "subtitle": "The express format",
-      "description": "A single auction for a given race. Dynamic budget based on category (650 to 1,100 M€) and reduced squads (8 to 15 riders). Perfect for Classics or Grand Tours.",
+      "description": "A single auction for a given race. Budget and squad adapt to your selection: Grand Tour 1,100 / 15, non-GT stage race 1,100 / 10, 1 classic 650 / 8, multiple classics 800 / 10.",
       "specs": {
-        "roster": "8 to 15 riders depending on category",
-        "budget": "650 to 1,100 M€ depending on race",
+        "roster": "8 to 15 riders depending on selection",
+        "budget": "650 to 1,100 M€ depending on selection",
         "auctions": "1 single auction before the race"
       }
     },
