@@ -143,7 +143,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
 
   const fivePhasesSettings = computeFivePhasesSettings();
   const perCourseSettings = useMemo(
-    () => computePerCourseSettings(selectedCoursesData.map(c => ({ type_course: c.type_course }))),
+    () => computePerCourseSettings(selectedCoursesData.map(c => ({ nom: c.nom, type_course: c.type_course }))),
     [selectedCoursesData]
   );
 
