@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       // Get selected courses to determine type
       const { data: courses } = await supabase
         .from('courses')
-        .select('id, type_course, phase_id')
+        .select('id, nom, type_course, phase_id')
         .in('id', selectedCourseIds);
 
       if (!courses?.length) {
@@ -145,14 +145,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      const hasStageRace = courses.some(c => c.type_course === 'stage_race');
-      if (hasStageRace) {
-        budget = 1100; maxRiders = 15;
-      } else if (courses.length === 1) {
-        budget = 650; maxRiders = 8;
-      } else {
-        budget = 800; maxRiders = 10;
-      }
+      const isGrandTour = (nom: string | null) => {
+        const n = (nom || '').toLowerCase();
+        if (n.includes('tour de france')) return true;
+        if (n.includes("giro d'italia") || n.includes('giro d italia')) return true;
+        if (n.includes('vuelta') && n.includes('espa')) return true;
+        return false;
+      };
+      const hasGrandTour = courses.some((c: any) => isGrandTour(c.nom));
+      budget = 1100;
+      maxRiders = hasGrandTour ? 15 : 10;
 
       byPhase = false;
       wtOnly = false;

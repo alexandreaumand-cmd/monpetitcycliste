@@ -24,7 +24,7 @@ const RulesHighlightsSection = () => {
       icon: LayoutGrid,
       accent: "pink" as const,
       q: "Quels modes de ligue existent ?",
-      a: "Deux modes : « 5 Phases » (saison complète, 30 coureurs / 2 200 budget, enchères par phase, variante World Tour uniquement) et « À la course » (sélection libre, budget et effectif s'adaptent automatiquement de 8/650 à 15/1100).",
+      a: "Deux modes : « 5 Phases » (saison complète, 30 coureurs / 2 200 budget, enchères par phase, variante World Tour uniquement) et « À la course » (sélection libre : 10 coureurs / 1 100 budget, ou 15 coureurs / 1 100 budget si un Grand Tour est sélectionné).",
     },
     {
       icon: Trophy,
