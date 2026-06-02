@@ -1175,12 +1175,42 @@ async function fetchPcsPdfWhitelist(pcsRaceId: string, referer: string): Promise
     const tokens: string[] = [];
     let m: RegExpExecArray | null;
     while ((m = tjRegex.exec(raw)) !== null) {
-      // Drop null bytes (UTF-16BE high byte for ASCII range) and unescape PDF
-      // escape sequences (\(, \), \\, \n, \r, \t).
-      const decoded = m[1]
-        .replace(/\\([()\\nrt])/g, (_, c) => (c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c))
-        .replace(/\x00/g, "")
-        .replace(/[\u0001-\u0008\u000B\u000E-\u001F]/g, "");
+      // 1. Unescape PDF string escapes on the raw latin-1 bytes
+      const unescaped = m[1].replace(/\\([()\\nrt])/g, (_, c) =>
+        c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : c,
+      );
+      // 2. Detect UTF-16BE encoding: either explicit BOM (FE FF) or even length
+      //    with most even-indexed bytes being either 0x00 or low Latin-Extended.
+      let decoded: string;
+      if (unescaped.length >= 2 && unescaped.charCodeAt(0) === 0xfe && unescaped.charCodeAt(1) === 0xff) {
+        // Skip BOM, pair high/low bytes
+        decoded = "";
+        for (let j = 2; j + 1 < unescaped.length; j += 2) {
+          decoded += String.fromCharCode((unescaped.charCodeAt(j) << 8) | unescaped.charCodeAt(j + 1));
+        }
+      } else if (unescaped.length >= 2 && unescaped.length % 2 === 0) {
+        // Heuristic: PCS PDFs encode strings as UTF-16BE without explicit BOM.
+        // If at least one even-indexed byte is non-zero and many are small (<0x10),
+        // treat the string as UTF-16BE pair-decoded.
+        let looksLikeUtf16 = true;
+        for (let j = 0; j < unescaped.length; j += 2) {
+          const hi = unescaped.charCodeAt(j);
+          if (hi > 0x1f) { looksLikeUtf16 = false; break; }
+        }
+        if (looksLikeUtf16) {
+          decoded = "";
+          for (let j = 0; j + 1 < unescaped.length; j += 2) {
+            decoded += String.fromCharCode((unescaped.charCodeAt(j) << 8) | unescaped.charCodeAt(j + 1));
+          }
+        } else {
+          decoded = unescaped;
+        }
+      } else {
+        decoded = unescaped;
+      }
+      // 3. Strip residual control bytes (after correct decoding these shouldn't
+      //    affect real characters).
+      decoded = decoded.replace(/[\u0000-\u0008\u000B\u000E-\u001F]/g, "");
       tokens.push(decoded);
     }
 
