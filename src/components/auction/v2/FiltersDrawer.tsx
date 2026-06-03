@@ -34,6 +34,18 @@ export function FiltersDrawer({
 }: FiltersDrawerProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [collapsed, setCollapsed] = useState({
+    cotes: selectedCotes.length === 0,
+    categories: selectedCategories.length === 0,
+    teams: selectedTeams.length === 0,
+    courses: false,
+  });
+  const toggleSection = (key: 'cotes' | 'categories' | 'teams' | 'courses') =>
+    setCollapsed((c) => ({ ...c, [key]: !c[key] }));
+
+  const SectionChevron = ({ open }: { open: boolean }) =>
+    open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />;
+
 
   const categoryOptions = [
     { value: "WT", label: "WT" },
