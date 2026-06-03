@@ -169,97 +169,123 @@ export function FiltersDrawer({
           <div className="space-y-4 px-1 pb-24">
             {/* Price Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Côtes {selectedCotes.length > 0 && `(${selectedCotes.length})`}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {coteOptions.map((cote) => (
-                  <Badge
-                    key={cote}
-                    variant={selectedCotes.includes(cote) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
-                    onClick={() => toggleCote(cote)}
-                  >
-                    {getCoteLabel(cote)}
-                  </Badge>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleSection('cotes')}
+                className="flex items-center gap-2 text-sm font-medium w-full text-left"
+              >
+                <SectionChevron open={!collapsed.cotes} />
+                <span>Côtes {selectedCotes.length > 0 && `(${selectedCotes.length})`}</span>
+              </button>
+              {!collapsed.cotes && (
+                <div className="flex flex-wrap gap-2">
+                  {coteOptions.map((cote) => (
+                    <Badge
+                      key={cote}
+                      variant={selectedCotes.includes(cote) ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
+                      onClick={() => toggleCote(cote)}
+                    >
+                      {getCoteLabel(cote)}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Category Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Catégories {selectedCategories.length > 0 && `(${selectedCategories.length})`}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {categoryOptions.map((cat) => (
-                  <Badge
-                    key={cat.value}
-                    variant={selectedCategories.includes(cat.value) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
-                    onClick={() => toggleCategory(cat.value)}
-                  >
-                    {cat.label}
-                  </Badge>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleSection('categories')}
+                className="flex items-center gap-2 text-sm font-medium w-full text-left"
+              >
+                <SectionChevron open={!collapsed.categories} />
+                <span>Catégories {selectedCategories.length > 0 && `(${selectedCategories.length})`}</span>
+              </button>
+              {!collapsed.categories && (
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map((cat) => (
+                    <Badge
+                      key={cat.value}
+                      variant={selectedCategories.includes(cat.value) ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
+                      onClick={() => toggleCategory(cat.value)}
+                    >
+                      {cat.label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Team Filter */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
-                  Équipes {selectedTeams.length > 0 && `(${selectedTeams.length})`}
-                </label>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={selectAllTeams}
-                    className="h-6 text-xs"
-                  >
-                    Tout
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllTeams}
-                    className="h-6 text-xs"
-                  >
-                    Aucun
-                  </Button>
-                </div>
-              </div>
-              <Input
-                type="text"
-                placeholder="Rechercher une équipe..."
-                value={teamSearchQuery}
-                onChange={(e) => setTeamSearchQuery(e.target.value)}
-                className="h-9 text-sm"
-              />
-              <div className="border rounded-md p-2 space-y-1 max-h-[400px] overflow-y-auto">
-                {filteredTeams.map((team) => (
-                  <div
-                    key={team.id}
-                    className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                    onClick={() => toggleTeam(team.id)}
-                  >
-                    <Checkbox
-                      checked={selectedTeams.includes(team.id)}
-                      onCheckedChange={() => toggleTeam(team.id)}
-                    />
-                    <label className="flex-1 text-sm cursor-pointer">
-                      {team.name}
-                    </label>
-                  </div>
-                ))}
-                {filteredTeams.length === 0 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Aucune équipe trouvée
+                <button
+                  type="button"
+                  onClick={() => toggleSection('teams')}
+                  className="flex items-center gap-2 text-sm font-medium text-left"
+                >
+                  <SectionChevron open={!collapsed.teams} />
+                  <span>Équipes {selectedTeams.length > 0 && `(${selectedTeams.length})`}</span>
+                </button>
+                {!collapsed.teams && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllTeams}
+                      className="h-6 text-xs"
+                    >
+                      Tout
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllTeams}
+                      className="h-6 text-xs"
+                    >
+                      Aucun
+                    </Button>
                   </div>
                 )}
               </div>
+              {!collapsed.teams && (
+                <>
+                  <Input
+                    type="text"
+                    placeholder="Rechercher une équipe..."
+                    value={teamSearchQuery}
+                    onChange={(e) => setTeamSearchQuery(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                  <div className="border rounded-md p-2 space-y-1 max-h-[400px] overflow-y-auto">
+                    {filteredTeams.map((team) => (
+                      <div
+                        key={team.id}
+                        className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                        onClick={() => toggleTeam(team.id)}
+                      >
+                        <Checkbox
+                          checked={selectedTeams.includes(team.id)}
+                          onCheckedChange={() => toggleTeam(team.id)}
+                        />
+                        <label className="flex-1 text-sm cursor-pointer">
+                          {team.name}
+                        </label>
+                      </div>
+                    ))}
+                    {filteredTeams.length === 0 && (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        Aucune équipe trouvée
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
+
 
             {/* Courses Filter */}
             {onCoursesChange && (
