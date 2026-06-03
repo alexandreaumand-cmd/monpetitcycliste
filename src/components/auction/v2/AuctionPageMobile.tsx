@@ -734,8 +734,14 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         </TabsContent>
 
         <TabsContent value="teams" className="flex-1 mt-0 pt-2">
-          <div className="px-3 pb-4">
-            <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />
+          <div className="px-3 pb-4 space-y-2">
+            <button
+              onClick={() => setHideTeams(!hideTeams)}
+              className="w-full py-2 text-xs font-medium text-muted-foreground border rounded-md hover:bg-muted flex items-center justify-center gap-2"
+            >
+              {hideTeams ? '👁️ Afficher les équipes' : '🙈 Masquer les équipes'}
+            </button>
+            {!hideTeams && <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />}
           </div>
         </TabsContent>
 
