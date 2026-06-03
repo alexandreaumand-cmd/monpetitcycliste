@@ -64,6 +64,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [showPastAnnouncements, setShowPastAnnouncements] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [hideTeams, setHideTeams] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
