@@ -650,29 +650,30 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
 
       {/* Tabs: Mes Enchères / Recherche / Équipes / Historique / Annonces */}
       <Tabs defaultValue="search" className="flex-1 flex flex-col">
-        <div className="overflow-x-auto scrollbar-hide mx-3 mt-2">
-          <TabsList className="inline-flex w-auto min-w-full h-9 gap-1">
-            <TabsTrigger value="my-bids" className="text-xs shrink-0 whitespace-nowrap">
+        <div className="mx-3 mt-2">
+          <TabsList className="grid grid-cols-3 w-full h-auto gap-1 p-1">
+            <TabsTrigger value="my-bids" className="text-xs w-full whitespace-nowrap">
               📝 {t('tabs.myBids', 'Enchères')} ({context.totals.draft_count})
             </TabsTrigger>
-            <TabsTrigger value="search" className="text-xs shrink-0 whitespace-nowrap">
+            <TabsTrigger value="search" className="text-xs w-full whitespace-nowrap">
               🔎 {t('tabs.search', 'Chercher')}
             </TabsTrigger>
-            <TabsTrigger value="teams" className="text-xs shrink-0 whitespace-nowrap">
+            <TabsTrigger value="teams" className="text-xs w-full whitespace-nowrap">
               👥 {t('tabs.teams', 'Équipes')}
             </TabsTrigger>
             {closedRounds.length > 0 && (
-              <TabsTrigger value="history" className="text-xs shrink-0 whitespace-nowrap">
+              <TabsTrigger value="history" className="text-xs w-full whitespace-nowrap">
                 📜 {t('tabs.history', 'Historique')}
               </TabsTrigger>
             )}
             {closedRounds.length > 0 && (
-              <TabsTrigger value="announcements" className="text-xs shrink-0 whitespace-nowrap">
+              <TabsTrigger value="announcements" className="text-xs w-full whitespace-nowrap">
                 📢 {t('tabs.announcements', 'Annonces')}
               </TabsTrigger>
             )}
           </TabsList>
         </div>
+
 
         <TabsContent value="my-bids" className="flex-1 mt-0 pt-2 flex flex-col">
           <div className="flex-1 overflow-y-auto pb-4">
