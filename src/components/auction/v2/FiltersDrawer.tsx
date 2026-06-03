@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Filter } from "lucide-react";
+import { Filter, ChevronDown, ChevronRight } from "lucide-react";
 
 
 interface FiltersDrawerProps {
