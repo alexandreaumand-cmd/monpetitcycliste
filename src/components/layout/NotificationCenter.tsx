@@ -73,6 +73,15 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
           message: notification.message
         };
       }
+
+      // For auction_validation, prefix the title with the manager name if available
+      if (type === 'auction_validation') {
+        const managerName = notification.metadata?.manager_name;
+        const title = managerName
+          ? `✅ ${managerName} a validé ses enchères`
+          : notification.title;
+        return { title, message: notification.message };
+      }
       
       // For other types (auction_*), translate with metadata
       const round = notification.metadata?.round_number;
