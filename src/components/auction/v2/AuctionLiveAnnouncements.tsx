@@ -134,9 +134,10 @@ export function AuctionLiveAnnouncements({
           if (count >= allAnnonces.length) {
             if (replayTimerRef.current) clearInterval(replayTimerRef.current);
             replayTimerRef.current = null;
-            setIsReplaying(false);
+            // Laisser la dernière annonce visible 5s avant de basculer
+            setTimeout(() => setIsReplaying(false), 5000);
           }
-        }, 5000);
+        }, 1000);
       } else {
         // Live mode: show all as they come
         setReplayVisibleCount(allAnnonces.length);
@@ -326,7 +327,7 @@ export function AuctionLiveAnnouncements({
 
               {isReplaying ? (
                 <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
-                  🎬 Replay en cours... prochaine annonce dans 5s
+                  🎬 Replay en cours... prochaine annonce dans 1s
                 </p>
               ) : isComplete ? (
                 <p className="text-xs sm:text-sm text-muted-foreground">
