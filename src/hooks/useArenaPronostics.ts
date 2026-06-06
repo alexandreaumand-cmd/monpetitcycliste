@@ -526,7 +526,7 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
             .select('course_id, etape_numero, type_classement')
             .eq('course_id', courseId)
             .eq('position', 1)
-            .in('type_classement', classements);
+            .in('type_classement', classements as any);
 
           if (hasNullEtape && numericEtapes.length === 0) {
             query = query.is('etape_numero', null);
