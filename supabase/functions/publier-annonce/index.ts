@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Use 10s intervals in auto mode, 1s in manual mode
-    const intervalMs = auto_mode ? 10000 : 1000;
+    // Interval uniforme entre annonces : 1s
+    const intervalMs = 1000;
 
     // Translations for announcement text
     const translations = {
