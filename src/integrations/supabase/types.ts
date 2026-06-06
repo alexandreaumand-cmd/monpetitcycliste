@@ -2785,6 +2785,45 @@ export type Database = {
           },
         ]
       }
+      league_size_changes: {
+        Row: {
+          action_taken: string
+          auction_id: string | null
+          changed_by: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          league_id: string
+          new_size: number
+          old_size: number
+          reason: string | null
+        }
+        Insert: {
+          action_taken?: string
+          auction_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          league_id: string
+          new_size: number
+          old_size: number
+          reason?: string | null
+        }
+        Update: {
+          action_taken?: string
+          auction_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          league_id?: string
+          new_size?: number
+          old_size?: number
+          reason?: string | null
+        }
+        Relationships: []
+      }
       league_startlist_notes: {
         Row: {
           admin_rating_author_id: string | null
