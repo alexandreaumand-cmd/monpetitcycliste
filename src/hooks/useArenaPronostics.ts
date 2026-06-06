@@ -490,28 +490,60 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
     queryFn: async () => {
       if (closedDeadlines.length === 0) return new Set<string>();
 
-      const courseIds = [...new Set(closedDeadlines.map(d => d.course_id))];
-
-      const { data: results, error } = await supabase
-        .from('race_results')
-        .select('course_id, etape_numero, type_classement')
-        .in('course_id', courseIds)
-        .eq('position', 1)
-        .limit(50000);
-
-
-      if (error) throw error;
-
-      const resultKeys = new Set<string>();
-      for (const r of (results || [])) {
-        resultKeys.add(`${r.course_id}|${r.etape_numero ?? 'null'}|${r.type_classement}`);
-      }
-
       const pronosticToClassement: Record<string, string[]> = {
         stage_winner: ['Etape'],
         gc_winner: ['General'],
         one_day_winner: ['General', 'Etape'],
       };
+
+      // Group deadlines per course to issue one targeted query per course.
+      // Previously a single global query was used with .limit(50000) but
+      // PostgREST caps responses at max-rows, so past deadlines could be
+      // missed and stay incorrectly in the "En cours" tab.
+      const byCourse = new Map<string, { etapes: Set<number | null>; classements: Set<string> }>();
+      for (const d of closedDeadlines) {
+        const classements = pronosticToClassement[d.pronostic_type] || [];
+        if (classements.length === 0) continue;
+        let entry = byCourse.get(d.course_id);
+        if (!entry) {
+          entry = { etapes: new Set(), classements: new Set() };
+          byCourse.set(d.course_id, entry);
+        }
+        entry.etapes.add(d.etape_numero);
+        for (const tc of classements) entry.classements.add(tc);
+      }
+
+      const resultKeys = new Set<string>();
+      await Promise.all(
+        Array.from(byCourse.entries()).map(async ([courseId, info]) => {
+          const classements = Array.from(info.classements);
+          const etapes = Array.from(info.etapes);
+          const hasNullEtape = etapes.some((e) => e === null);
+          const numericEtapes = etapes.filter((e): e is number => e !== null);
+
+          let query = supabase
+            .from('race_results')
+            .select('course_id, etape_numero, type_classement')
+            .eq('course_id', courseId)
+            .eq('position', 1)
+            .in('type_classement', classements);
+
+          if (hasNullEtape && numericEtapes.length === 0) {
+            query = query.is('etape_numero', null);
+          } else if (!hasNullEtape && numericEtapes.length > 0) {
+            query = query.in('etape_numero', numericEtapes);
+          }
+          // else: need both null and specific numbers — fetch all matching
+          // position=1 for this course (still small per course) and filter
+          // implicitly via the lookup map below.
+
+          const { data, error } = await query;
+          if (error) throw error;
+          for (const r of data || []) {
+            resultKeys.add(`${r.course_id}|${r.etape_numero ?? 'null'}|${r.type_classement}`);
+          }
+        }),
+      );
 
       const evaluatedIds = new Set<string>();
       for (const d of closedDeadlines) {
