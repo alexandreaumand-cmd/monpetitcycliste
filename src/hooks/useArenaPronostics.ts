@@ -496,7 +496,9 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
         .from('race_results')
         .select('course_id, etape_numero, type_classement')
         .in('course_id', courseIds)
-        .eq('position', 1);
+        .eq('position', 1)
+        .limit(50000);
+
 
       if (error) throw error;
 
