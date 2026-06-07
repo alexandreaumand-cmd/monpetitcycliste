@@ -1,34 +1,39 @@
-# Plan
+# Problème
 
-## Objectif
-Corriger l’onglet **Pronostics > En cours** pour que des courses déjà terminées et évaluées, comme les étapes 3 et 4 de la Vuelta a Andalucia, ne s’y affichent plus.
+Les emails manuels (campagnes "Communications") échouent systématiquement avec l'erreur API :
 
-## Ce que j’ai vérifié
-- La ligue **MPC 2026** n’est pas limitée à une sous-sélection de courses.
-- Les deadlines des étapes **3** et **4** existent bien pour la course 2026.
-- Les résultats d’étape **existent bien** dans la base pour ces deux étapes.
-- Des pronostics de ligue existent aussi pour ces étapes, avec `evaluated_at` et `is_correct` renseignés.
-- Il n’y a pas de blocage visible côté navigateur ni de problème évident de droits d’accès sur les tables concernées.
+> `400 {"type":"missing_unsubscribe","message":"Transactional emails must include an unsubscribe_token"}`
 
-## Cause probable
-La logique de détection des deadlines “évaluées” dans `useEvaluatedDeadlineIds` repose sur une requête globale vers `race_results` avec une **limite fixe**. Si cette requête ne ramène pas toutes les lignes utiles, certaines deadlines fermées restent classées par erreur dans **En cours** au lieu de passer dans **Passés**.
+Tous les envois finissent en `failed` puis `dlq` après 5 retries — donc aucun mail n'arrive dans la boîte des destinataires. Les mails automatiques (enchères, auth) fonctionnent.
 
-## Implémentation proposée
-1. **Fiabiliser la détection des deadlines évaluées** dans `src/hooks/useArenaPronostics.ts`
-   - remplacer l’approche actuelle limitée par une logique qui ne dépend pas d’un volume global tronqué ;
-   - restreindre la recherche exactement aux couples `course_id / etape_numero / type_classement` nécessaires pour les deadlines fermées affichées.
+# Cause racine
 
-2. **Conserver le comportement métier actuel** dans `src/components/arena/PronosticsTab.tsx`
-   - une deadline fermée va dans **Passés** si :
-     - mon pronostic a déjà été évalué, ou
-     - des résultats existent déjà pour cette deadline, même sans pronostic perso ;
-   - sinon elle reste en attente.
+Les deux flux passent par la même file `transactional_emails` traitée par `process-email-queue`, qui transmet `payload.unsubscribe_token` à l'Email API.
 
-3. **Valider sur le cas remonté**
-   - recontrôler les étapes 3 et 4 de la Vuelta a Andalucia 2026 ;
-   - confirmer qu’elles basculent hors de **En cours**.
+- **`send-transactional-email`** (mails auto) : génère un token, le stocke dans `email_unsubscribe_tokens`, et **l'inclut dans le payload de la file** (`unsubscribe_token: unsubscribeToken`). ✅
+- **`send-communication-email`** (mails manuels) : génère bien un token et l'insère dans `email_unsubscribe_tokens`, mais **ne l'ajoute pas au payload** envoyé à `enqueue_email`. Le token n'est utilisé que pour construire l'URL HTML. ❌
 
-## Détails techniques
-- Fichier principal : `src/hooks/useArenaPronostics.ts`
-- Zone à corriger : `useEvaluatedDeadlineIds()`
-- Risque faible : changement ciblé sur la classification des deadlines, sans modifier la saisie des pronostics ni le rendu des cartes.
+L'Email API exige le champ top-level `unsubscribe_token` pour tout envoi `purpose: 'transactional'` → 400 systématique.
+
+# Correction
+
+Dans `supabase/functions/send-communication-email/index.ts`, à la construction de `queuePayload` (autour de la ligne 300), ajouter le champ `unsubscribe_token: token` au payload (le token existe déjà ligne 277).
+
+```ts
+const queuePayload = {
+  message_id: messageId,
+  idempotency_key: messageId,
+  unsubscribe_token: token,   // ← AJOUT
+  to: r.email,
+  from: `${SITE_NAME} <contact@${FROM_DOMAIN}>`,
+  ...
+};
+```
+
+Puis redéployer la fonction `send-communication-email`.
+
+# Vérification
+
+1. Envoyer un email manuel test depuis Communications → Nouvel envoi (1 destinataire).
+2. Vérifier dans `email_send_log` que le statut passe à `sent`/`delivered` au lieu de `failed`.
+3. Confirmer la réception dans la boîte.
