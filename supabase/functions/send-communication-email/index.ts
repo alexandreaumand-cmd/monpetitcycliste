@@ -300,6 +300,7 @@ serve(async (req) => {
       const queuePayload = {
         message_id: messageId,
         idempotency_key: messageId,
+        unsubscribe_token: token,
         to: r.email,
         from: `${SITE_NAME} <contact@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
