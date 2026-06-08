@@ -23,7 +23,7 @@ interface SignupEmailProps {
   lang?: string
 }
 
-const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
+const logoUrl = 'https://labordure.app/__l5e/assets-v1/d9fa7ac8-9123-4cae-9662-7ad169f00800/logo-bordure-light-email.png'
 
 const i18n = {
   fr: {
