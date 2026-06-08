@@ -34,6 +34,39 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+// Upsert email_send_log status by message_id: update pre-existing 'pending' row if any
+// (preserves metadata.batch_id), otherwise insert a new row. Returns nothing.
+async function recordSendLog(
+  supabase: ReturnType<typeof createClient>,
+  fields: {
+    message_id: string | null | undefined
+    template_name: string
+    recipient_email: string
+    status: string
+    error_message?: string | null
+  },
+) {
+  const payload: Record<string, unknown> = {
+    status: fields.status,
+    template_name: fields.template_name,
+    recipient_email: fields.recipient_email,
+  }
+  if (fields.error_message !== undefined) payload.error_message = fields.error_message
+
+  if (fields.message_id) {
+    const { data: updated, error: updErr } = await supabase
+      .from('email_send_log')
+      .update(payload)
+      .eq('message_id', fields.message_id)
+      .select('id')
+    if (!updErr && updated && updated.length > 0) return
+  }
+  await supabase.from('email_send_log').insert({
+    message_id: fields.message_id ?? null,
+    ...payload,
+  })
+}
+
 function parseJwtClaims(token: string): Record<string, unknown> | null {
   const parts = token.split('.')
   if (parts.length < 2) {
