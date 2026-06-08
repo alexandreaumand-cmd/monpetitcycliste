@@ -1,39 +1,13 @@
-# Problème
+## Problème
 
-Les emails manuels (campagnes "Communications") échouent systématiquement avec l'erreur API :
+Les emails d'enchères référencent `https://labordure.app/logo-bordure-light.png`, mais ce fichier n'existe pas dans `public/`. Il se trouve uniquement dans `src/assets/` (bundlé par Vite avec un hash, donc non accessible à cette URL fixe). Résultat : l'image cassée dans Gmail.
 
-> `400 {"type":"missing_unsubscribe","message":"Transactional emails must include an unsubscribe_token"}`
+## Correction
 
-Tous les envois finissent en `failed` puis `dlq` après 5 retries — donc aucun mail n'arrive dans la boîte des destinataires. Les mails automatiques (enchères, auth) fonctionnent.
+1. Copier `src/assets/logo-bordure-light.png` vers `public/logo-bordure-light.png` pour qu'il soit servi tel quel à `https://labordure.app/logo-bordure-light.png`.
+2. Aucun changement de code dans les templates : l'URL `${SITE_URL}/logo-bordure-light.png` fonctionnera dès le prochain déploiement du site.
+3. Pas de redéploiement des edge functions nécessaire (les templates ne changent pas), mais on republie le site pour que `public/` soit servi.
 
-# Cause racine
+## Vérification
 
-Les deux flux passent par la même file `transactional_emails` traitée par `process-email-queue`, qui transmet `payload.unsubscribe_token` à l'Email API.
-
-- **`send-transactional-email`** (mails auto) : génère un token, le stocke dans `email_unsubscribe_tokens`, et **l'inclut dans le payload de la file** (`unsubscribe_token: unsubscribeToken`). ✅
-- **`send-communication-email`** (mails manuels) : génère bien un token et l'insère dans `email_unsubscribe_tokens`, mais **ne l'ajoute pas au payload** envoyé à `enqueue_email`. Le token n'est utilisé que pour construire l'URL HTML. ❌
-
-L'Email API exige le champ top-level `unsubscribe_token` pour tout envoi `purpose: 'transactional'` → 400 systématique.
-
-# Correction
-
-Dans `supabase/functions/send-communication-email/index.ts`, à la construction de `queuePayload` (autour de la ligne 300), ajouter le champ `unsubscribe_token: token` au payload (le token existe déjà ligne 277).
-
-```ts
-const queuePayload = {
-  message_id: messageId,
-  idempotency_key: messageId,
-  unsubscribe_token: token,   // ← AJOUT
-  to: r.email,
-  from: `${SITE_NAME} <contact@${FROM_DOMAIN}>`,
-  ...
-};
-```
-
-Puis redéployer la fonction `send-communication-email`.
-
-# Vérification
-
-1. Envoyer un email manuel test depuis Communications → Nouvel envoi (1 destinataire).
-2. Vérifier dans `email_send_log` que le statut passe à `sent`/`delivered` au lieu de `failed`.
-3. Confirmer la réception dans la boîte.
+Après publication, ouvrir `https://labordure.app/logo-bordure-light.png` en navigation privée → l'image doit s'afficher. Déclencher un round d'enchères de test ou regarder le prochain email reçu : le logo doit apparaître dans l'en-tête vert.
