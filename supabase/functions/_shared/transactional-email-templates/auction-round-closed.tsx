@@ -27,7 +27,7 @@ interface Props {
 }
 
 const SITE_URL = 'https://labordure.app'
-const LOGO_URL = `${SITE_URL}/logo-bordure-light.png`
+const LOGO_URL = 'https://oisfvryhpovwxaxqbmow.supabase.co/storage/v1/object/public/email-assets/logo-bordure-light-email.png'
 
 export const AuctionRoundClosedEmail = ({
   leagueName = 'Votre ligue',

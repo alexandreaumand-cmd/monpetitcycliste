@@ -23,7 +23,7 @@ interface EmailChangeEmailProps {
   lang?: string
 }
 
-const logoUrl = 'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png'
+const logoUrl = 'https://oisfvryhpovwxaxqbmow.supabase.co/storage/v1/object/public/email-assets/logo-bordure-light-email.png'
 
 const i18n = {
   fr: {
