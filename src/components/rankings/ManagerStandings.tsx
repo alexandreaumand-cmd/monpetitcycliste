@@ -307,7 +307,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                                 bonusPoints > 0 ? "text-green-700 border-green-300" : "text-red-700 border-red-300"
                               )}
                             >
-                              {bonusPoints > 0 ? `+${bonusPoints}` : bonusPoints}
+                              {bonusPoints > 0 ? `+${bonusPoints.toFixed(2).replace(/\.?0+$/, '')}` : bonusPoints.toFixed(2).replace(/\.?0+$/, '')}
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
