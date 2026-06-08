@@ -300,8 +300,8 @@ Deno.serve(async (req) => {
           { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
         )
 
-        // Log success
-        await supabase.from('email_send_log').insert({
+        // Log success (update pending row to keep metadata.batch_id)
+        await recordSendLog(supabase, {
           message_id: payload.message_id,
           template_name: payload.label || queue,
           recipient_email: payload.to,
