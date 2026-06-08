@@ -11,6 +11,12 @@ const FROM_DOMAIN = Deno.env.get('EMAIL_FROM_DOMAIN') || ROOT_DOMAIN;
 const DEFAULT_SENDER_DOMAIN = `notify.${ROOT_DOMAIN}`;
 const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') || DEFAULT_SENDER_DOMAIN;
 const SITE_NAME = Deno.env.get('EMAIL_SITE_NAME') || 'La Bordure';
+const SITE_URL = `https://${ROOT_DOMAIN}`;
+const CANONICAL_EMAIL_LOGO_URL = `${SITE_URL}/logo-bordure-light.png`;
+const LEGACY_EMAIL_LOGO_URLS = [
+  'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
+  'http://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
+];
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -26,6 +32,20 @@ function substituteVariables(template: string, vars: { prenom: string; email: st
     .replace(/\{\{\s*prenom\s*\}\}/gi, escapeHtml(vars.prenom))
     .replace(/\{\{\s*email\s*\}\}/gi, escapeHtml(vars.email))
     .replace(/\{\{\s*nom_manager\s*\}\}/gi, escapeHtml(vars.nom_manager));
+}
+function normalizeEmailAssetUrls(html: string): string {
+  let out = html;
+
+  for (const legacyUrl of LEGACY_EMAIL_LOGO_URLS) {
+    out = out.split(legacyUrl).join(CANONICAL_EMAIL_LOGO_URL);
+  }
+
+  out = out.replace(
+    /(<img\b[^>]*\bsrc=["'])\/logo-bordure-light\.png(["'][^>]*>)/gi,
+    `$1${CANONICAL_EMAIL_LOGO_URL}$2`
+  );
+
+  return out;
 }
 function wrapEmail(bodyHtml: string, unsubscribeUrl: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
@@ -130,7 +150,7 @@ serve(async (req) => {
       const managerName = userId ? (nameMap.get(userId) ?? '') : '';
       const prenom = (managerName || email.split('@')[0]).split(' ')[0];
 
-      const personalizedHtml = substituteVariables(batch.body_html, { prenom, email, nom_manager: managerName });
+      const personalizedHtml = substituteVariables(normalizeEmailAssetUrls(batch.body_html ?? ''), { prenom, email, nom_manager: managerName });
       const personalizedSubject = batch.subject
         .replace(/\{\{\s*prenom\s*\}\}/gi, prenom)
         .replace(/\{\{\s*email\s*\}\}/gi, email)
@@ -138,7 +158,7 @@ serve(async (req) => {
 
       const unsubToken = crypto.randomUUID().replace(/-/g, '');
       await supabaseAdmin.from('email_unsubscribe_tokens').insert({ email: email.toLowerCase(), token: unsubToken });
-      const unsubscribeUrl = `https://${ROOT_DOMAIN}/unsubscribe?token=${unsubToken}`;
+      const unsubscribeUrl = `${SITE_URL}/unsubscribe?token=${unsubToken}`;
       const finalHtml = wrapEmail(personalizedHtml, unsubscribeUrl);
       const finalText = htmlToPlain(personalizedHtml) + `\n\n---\nSe désinscrire : ${unsubscribeUrl}`;
 

@@ -11,6 +11,12 @@ const FROM_DOMAIN = Deno.env.get('EMAIL_FROM_DOMAIN') || ROOT_DOMAIN;
 const DEFAULT_SENDER_DOMAIN = `notify.${ROOT_DOMAIN}`;
 const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') || DEFAULT_SENDER_DOMAIN;
 const SITE_NAME = Deno.env.get('EMAIL_SITE_NAME') || 'La Bordure';
+const SITE_URL = `https://${ROOT_DOMAIN}`;
+const CANONICAL_EMAIL_LOGO_URL = `${SITE_URL}/logo-bordure-light.png`;
+const LEGACY_EMAIL_LOGO_URLS = [
+  'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
+  'http://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
+];
 
 const MAX_RECIPIENTS = 500;
 const MAX_SUBJECT = 300;
@@ -47,6 +53,21 @@ function htmlToPlain(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .trim();
+}
+
+function normalizeEmailAssetUrls(html: string): string {
+  let out = html;
+
+  for (const legacyUrl of LEGACY_EMAIL_LOGO_URLS) {
+    out = out.split(legacyUrl).join(CANONICAL_EMAIL_LOGO_URL);
+  }
+
+  out = out.replace(
+    /(<img\b[^>]*\bsrc=["'])\/logo-bordure-light\.png(["'][^>]*>)/gi,
+    `$1${CANONICAL_EMAIL_LOGO_URL}$2`
+  );
+
+  return out;
 }
 
 function substituteVariables(
@@ -181,7 +202,7 @@ serve(async (req) => {
       return jsonResponse({ error: `Maximum ${MAX_RECIPIENTS} destinataires par envoi` }, 400);
     }
 
-    const bodyHtml = sanitizeHtml(bodyHtmlRaw);
+    const bodyHtml = sanitizeHtml(normalizeEmailAssetUrls(bodyHtmlRaw));
 
     // Resolve recipients (email + manager name)
     const recipients: { user_id: string; email: string; manager_name: string }[] = [];
@@ -279,7 +300,7 @@ serve(async (req) => {
         email: r.email.toLowerCase(),
         token,
       });
-      const unsubscribeUrl = `https://${ROOT_DOMAIN}/unsubscribe?token=${token}`;
+      const unsubscribeUrl = `${SITE_URL}/unsubscribe?token=${token}`;
       const finalHtml = wrapEmail(personalizedHtml, unsubscribeUrl);
       const finalText = htmlToPlain(personalizedHtml) + `\n\n---\nSe désinscrire : ${unsubscribeUrl}`;
 
