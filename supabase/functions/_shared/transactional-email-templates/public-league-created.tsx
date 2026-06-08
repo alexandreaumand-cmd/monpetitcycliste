@@ -27,7 +27,7 @@ interface Props {
 }
 
 const SITE_URL = 'https://labordure.app'
-const LOGO_URL = 'https://labordure.app/__l5e/assets-v1/d9fa7ac8-9123-4cae-9662-7ad169f00800/logo-bordure-light-email.png'
+const LOGO_URL = 'https://oisfvryhpovwxaxqbmow.supabase.co/storage/v1/object/public/email-assets/logo-bordure-light-email.png'
 
 const formatDate = (iso?: string) => {
   if (!iso) return ''

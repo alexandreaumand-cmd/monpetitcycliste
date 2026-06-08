@@ -12,7 +12,7 @@ const DEFAULT_SENDER_DOMAIN = `notify.${ROOT_DOMAIN}`;
 const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') || DEFAULT_SENDER_DOMAIN;
 const SITE_NAME = Deno.env.get('EMAIL_SITE_NAME') || 'La Bordure';
 const SITE_URL = `https://${ROOT_DOMAIN}`;
-const CANONICAL_EMAIL_LOGO_URL = 'https://labordure.app/__l5e/assets-v1/d9fa7ac8-9123-4cae-9662-7ad169f00800/logo-bordure-light-email.png';
+const CANONICAL_EMAIL_LOGO_URL = 'https://oisfvryhpovwxaxqbmow.supabase.co/storage/v1/object/public/email-assets/logo-bordure-light-email.png';
 const LEGACY_EMAIL_LOGO_URLS = [
   'https://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
   'http://khahpetvqjoyrwambaqn.supabase.co/storage/v1/object/public/email-assets/logo-bordure.png',
@@ -69,6 +69,11 @@ function normalizeEmailAssetUrls(html: string): string {
 
   out = out.replace(
     /(<img\b[^>]*\bsrc=["'])https:\/\/labordure\.app\/logo-bordure-light\.png(["'][^>]*>)/gi,
+    `$1${CANONICAL_EMAIL_LOGO_URL}$2`
+  );
+
+  out = out.replace(
+    /(<img\b[^>]*\bsrc=["'])https:\/\/labordure\.app\/__l5e\/assets-v1\/[^"']+logo-bordure-light-email\.png(["'][^>]*>)/gi,
     `$1${CANONICAL_EMAIL_LOGO_URL}$2`
   );
 
