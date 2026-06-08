@@ -1,33 +1,37 @@
-# Corriger le statut "en attente" des communications déjà envoyées
+## Diagnostic
 
-## Cause
+La ligue **CopaGIRO** (mode « à la course », Giro d'Italia terminé le 31/05/2026) aurait dû être archivée automatiquement, mais elle est restée en statut `active`.
 
-Dans `supabase/functions/process-email-queue/index.ts`, après envoi réussi, le worker fait `insert({ status: 'sent', ... })` au lieu de mettre à jour la ligne `pending` pré-créée par `send-communication-email`. Cette ligne `pending` reste donc en base avec son `metadata.batch_id`, et c'est celle que `useCommunicationBatches` compte → l'UI affiche "1 en attente" alors que le mail est livré.
+J'ai vérifié :
+- La fonction SQL `public.auto_archive_completed_leagues()` existe et fonctionne — je l'ai appelée manuellement et elle a archivé **3 ligues** dont CopaGIRO, GIRO 2026 et Test. Donc la logique est correcte.
+- Le cron Postgres associé (`auto-archive-completed-leagues`, planifié pour `30 3 * * *` chaque jour) n'a manifestement pas tourné, sinon ces ligues seraient déjà archivées depuis le 1ᵉʳ juin.
+- Je n'ai pas l'accès direct au schéma `cron` pour confirmer l'état du job, mais l'absence d'archivage prouve qu'il n'a pas été exécuté avec succès depuis plusieurs jours.
 
-Même problème côté chemin d'échec (rate_limited / failed) : nouvelles insertions au lieu d'updates, donc les lignes `pending` ne basculent jamais.
+CopaGIRO est désormais bien archivée (statut `completed`, `archived_at = 2026-06-08 12:55`) suite à l'exécution manuelle de la fonction lors du diagnostic.
 
-## Correction
+## Plan correctif
 
-Dans `supabase/functions/process-email-queue/index.ts`, remplacer les `insert` d'`email_send_log` par une logique **update-if-exists, insert-otherwise**, gardée par `message_id` :
+### 1. Redéployer le cron d'archivage
+Recréer le job `cron.schedule` pour `auto_archive_completed_leagues` afin de garantir qu'il est bien actif. La planification reste quotidienne à 03:30 UTC.
 
-1. **Succès (ligne ~271)** : `update({ status: 'sent', sent_at: now })` sur la ligne avec ce `message_id`. Si aucune ligne n'existe (cas legacy / autres flows sans pré-insertion), faire un `insert` en fallback.
-2. **Rate-limited (ligne ~298)** : `update({ status: 'rate_limited', error_message })` puis fallback `insert`.
-3. **Failed définitif / DLQ** : même logique d'update vers `failed`.
-4. Garder le `metadata.batch_id` existant (un `update` ne le touche pas).
+```sql
+-- Désinscrire l'ancien job s'il existe (sans erreur si absent)
+-- Reschedule auto-archive-completed-leagues à 03:30 UTC quotidien
+```
 
-Le guard anti-doublon ligne 222-246 reste valide : il continue de chercher `status='sent'`.
+### 2. Ajouter une exécution de contrôle
+Appeler la fonction une fois après le reschedule pour balayer toute ligue terminée actuelle (déjà fait pour CopaGIRO/GIRO 2026/Test, mais ré-exécution idempotente).
 
-## Étapes
+### 3. Vérification post-déploiement
+- Lister le job dans `cron.job` via le client admin Supabase pour confirmer `active = true`.
+- Surveiller `cron.job_run_details` après la prochaine exécution à 03:30 UTC pour s'assurer du succès.
 
-1. Modifier `supabase/functions/process-email-queue/index.ts` (3 endroits : succès, rate-limited, failed).
-2. Redéployer la fonction `process-email-queue`.
-3. **Migration de rattrapage (one-shot SQL)** : pour les `email_send_log` où il existe à la fois une ligne `pending` et une ligne `sent`/`failed` avec le même `message_id`, passer la ligne `pending` à `sent` (en gardant son `metadata.batch_id`) puis supprimer le doublon orphelin. Cela corrigera l'affichage des batchs déjà envoyés (dont celui du 7 juin 14:14).
+## Détails techniques
 
-## Vérification
+- **Fichier concerné** : nouvelle migration SQL `supabase/migrations/<timestamp>_reschedule_auto_archive_leagues.sql`.
+- **Aucun changement** à la fonction `auto_archive_completed_leagues` elle-même — sa logique est correcte.
+- **Aucun changement frontend** — dès que `status` passe à `completed` et `archived_at` est rempli, `useUserLeagues` filtre déjà la ligue de l'affichage du dashboard.
 
-- Renvoyer un test via "Nouvel envoi" → la ligne doit passer directement de `pending` à `sent`, et le badge dans Historique doit afficher "1 envoyé" (0 en attente).
-- Vérifier les batchs historiques après migration : plus de "en attente" sur les envois déjà livrés.
-
-## Hors-scope
-
-Pas de changement UI (`useCommunicationBatches.ts`), pas de changement à `send-communication-email`.
+## Hors scope
+- Refonte de la logique d'archivage par phases / mode complet.
+- Ajout d'une UI d'administration pour relancer manuellement le job (peut être ajouté ultérieurement si tu le souhaites).
