@@ -643,35 +643,59 @@ export function useStartlistTeams(courseId: string | null) {
 
       if (!importData) return [];
 
-      // Get distinct source_team names from startlist
+      // Load all startlist entries (with coureur_id when matched, source_team as fallback)
       const { data: entries, error } = await supabase
         .from('startlist_entries')
-        .select('source_team')
-        .eq('startlist_id', importData.id)
-        .not('source_team', 'is', null);
+        .select('coureur_id, source_team')
+        .eq('startlist_id', importData.id);
 
       if (error) throw error;
+      if (!entries || entries.length === 0) return [];
 
-      const uniqueTeamNames = [...new Set((entries || []).map(e => e.source_team).filter(Boolean))] as string[];
-      if (uniqueTeamNames.length === 0) return [];
-
-      // Fetch equipes_saisons for this season, match by nom_affiche or trigramme
+      // Fetch season equipes once
       const { data: equipesSaisons } = await supabase
         .from('equipes_saisons')
-        .select('id, nom_affiche, trigramme')
+        .select('id, equipe_id, nom_affiche, trigramme')
         .eq('saison_id', importData.saison_id)
         .eq('actif', true);
 
       if (!equipesSaisons || equipesSaisons.length === 0) return [];
 
-      // Match source_team names to equipes_saisons
-      const matched: StartlistTeam[] = [];
-      const usedIds = new Set<string>();
+      // Map equipe_id -> equipes_saisons row (for the deterministic path via coureurs)
+      const equipeIdToEs = new Map<string, { id: string; nom_affiche: string }>();
+      for (const es of equipesSaisons) {
+        if (es.equipe_id) equipeIdToEs.set(es.equipe_id, { id: es.id, nom_affiche: es.nom_affiche });
+      }
+
+      const matchedById = new Map<string, StartlistTeam>();
+
+      // Path 1 (deterministic): use coureurs_saisons.equipe_id of matched riders
+      const coureurIds = [...new Set(entries.map(e => e.coureur_id).filter(Boolean))] as string[];
+      if (coureurIds.length > 0) {
+        const { data: cs } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, equipe_id')
+          .eq('saison_id', importData.saison_id)
+          .in('coureur_id', coureurIds);
+        for (const row of cs || []) {
+          if (!row.equipe_id) continue;
+          const es = equipeIdToEs.get(row.equipe_id);
+          if (es && !matchedById.has(es.id)) {
+            matchedById.set(es.id, { equipe_saison_id: es.id, nom_affiche: es.nom_affiche });
+          }
+        }
+      }
+
+      // Path 2 (fallback): for source_team strings without a corresponding matched coureur,
+      // fall back to fuzzy matching on nom_affiche / trigramme so we don't lose teams.
+      const uniqueTeamNames = [...new Set(
+        entries.map(e => e.source_team).filter(Boolean)
+      )] as string[];
 
       for (const teamName of uniqueTeamNames) {
         const lower = teamName.toLowerCase();
         const match = equipesSaisons.find(es =>
-          !usedIds.has(es.id) && (
+          !matchedById.has(es.id) && (
             es.nom_affiche.toLowerCase() === lower ||
             es.trigramme?.toLowerCase() === lower ||
             es.nom_affiche.toLowerCase().includes(lower) ||
@@ -679,12 +703,11 @@ export function useStartlistTeams(courseId: string | null) {
           )
         );
         if (match) {
-          usedIds.add(match.id);
-          matched.push({ equipe_saison_id: match.id, nom_affiche: match.nom_affiche });
+          matchedById.set(match.id, { equipe_saison_id: match.id, nom_affiche: match.nom_affiche });
         }
       }
 
-      return matched.sort((a, b) => a.nom_affiche.localeCompare(b.nom_affiche));
+      return [...matchedById.values()].sort((a, b) => a.nom_affiche.localeCompare(b.nom_affiche));
     },
     enabled: !!courseId,
     staleTime: 1000 * 60 * 10,
