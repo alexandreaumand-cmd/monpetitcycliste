@@ -1235,7 +1235,7 @@ serve(async (req) => {
 
         groups.push({
           name: isPeloton ? "Peloton" : idx === 0 ? "Tête de course" : `Groupe ${idx + 1}`,
-          riders: isPeloton ? riderNames.slice(0, 5) : riderNames.slice(0, 10),
+          riders: riderNames.slice(0, 200),
           riderCount: groupRiders.length,
           gap: gap.replace(/^\+\s*/, "+").trim() || "0:00",
           isPeloton,
