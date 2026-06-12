@@ -733,23 +733,31 @@ export function usePronosticProgression(
   return useQuery<PronosticProgressionResult>({
     queryKey: ['arena-pronostic-progression', leagueId, courseId ?? null, topN],
     queryFn: async () => {
-      let query = supabase
-        .from('arena_pronostics')
-        .select('manager_id, course_id, etape_numero, is_correct, evaluated_at')
-        .eq('league_id', leagueId)
-        .not('evaluated_at', 'is', null);
-      if (courseId) query = query.eq('course_id', courseId);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      const rows = (data || []) as {
+      const PAGE = 1000;
+      const rows: {
         manager_id: string;
         course_id: string;
         etape_numero: number | null;
         is_correct: boolean | null;
         evaluated_at: string;
-      }[];
+      }[] = [];
+      for (let from = 0; ; from += PAGE) {
+        let query = supabase
+          .from('arena_pronostics')
+          .select('manager_id, course_id, etape_numero, is_correct, evaluated_at')
+          .eq('league_id', leagueId)
+          .not('evaluated_at', 'is', null)
+          .order('evaluated_at', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (courseId) query = query.eq('course_id', courseId);
+        const { data, error } = await query;
+        if (error) throw error;
+        const batch = (data || []) as typeof rows;
+        rows.push(...batch);
+        if (batch.length < PAGE) break;
+      }
       if (rows.length === 0) return { points: [], managers: [] };
+
 
       // Aggregate totals per manager to pick top N
       const totals: Record<string, number> = {};
