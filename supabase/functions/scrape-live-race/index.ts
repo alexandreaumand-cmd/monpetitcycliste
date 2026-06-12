@@ -546,12 +546,13 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         situationGroups.push({
           name: fg.name,
           gap: fg.gap,
-          riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
+          riders: groupRiders.slice(0, 200),
           riderIds: [],
           riderCount,
           isPeloton,
-          riderBibs: isPeloton ? [] : groupBibs.slice(0, 15),
-          riderGcGaps: isPeloton ? [] : groupGcGaps.slice(0, 15),
+          riderBibs: groupBibs.slice(0, 200),
+          riderGcGaps: groupGcGaps.slice(0, 200),
+
         });
         
         console.log(`[PCS Live] Fallback group "${fg.name}": ${groupRiders.length} riders parsed, gap=${fg.gap}, peloton=${isPeloton}`);
