@@ -392,12 +392,13 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
       situationGroups.push({
         name: groupName,
         gap: g.gap,
-        riders: isPeloton ? g.riders.slice(0, 5) : g.riders.slice(0, 15),
+        riders: g.riders.slice(0, 200),
         riderIds: [],
         riderCount: g.riderCount,
         isPeloton,
-        riderBibs: isPeloton ? [] : g.bibs.slice(0, 15),
-        riderGcGaps: isPeloton ? [] : g.gcGaps.slice(0, 15),
+        riderBibs: g.bibs.slice(0, 200),
+        riderGcGaps: g.gcGaps.slice(0, 200),
+
       } as any);
 
       console.log(`[PCS Live] Group "${groupName}": ${g.riderCount} riders, gap=${g.gap}, peloton=${isPeloton}`);
@@ -545,12 +546,13 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         situationGroups.push({
           name: fg.name,
           gap: fg.gap,
-          riders: isPeloton ? groupRiders.slice(0, 5) : groupRiders.slice(0, 15),
+          riders: groupRiders.slice(0, 200),
           riderIds: [],
           riderCount,
           isPeloton,
-          riderBibs: isPeloton ? [] : groupBibs.slice(0, 15),
-          riderGcGaps: isPeloton ? [] : groupGcGaps.slice(0, 15),
+          riderBibs: groupBibs.slice(0, 200),
+          riderGcGaps: groupGcGaps.slice(0, 200),
+
         });
         
         console.log(`[PCS Live] Fallback group "${fg.name}": ${groupRiders.length} riders parsed, gap=${fg.gap}, peloton=${isPeloton}`);
@@ -1233,7 +1235,7 @@ serve(async (req) => {
 
         groups.push({
           name: isPeloton ? "Peloton" : idx === 0 ? "Tête de course" : `Groupe ${idx + 1}`,
-          riders: isPeloton ? riderNames.slice(0, 5) : riderNames.slice(0, 10),
+          riders: riderNames.slice(0, 200),
           riderCount: groupRiders.length,
           gap: gap.replace(/^\+\s*/, "+").trim() || "0:00",
           isPeloton,
