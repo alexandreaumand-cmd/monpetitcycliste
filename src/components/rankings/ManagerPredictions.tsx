@@ -154,7 +154,7 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
                           <Badge variant="outline" className={getTrendColor(pred.regression.color)}>
                             <span className="flex items-center gap-1">
                               {getTrendIcon(pred.regression.icon)}
-                              {pred.regression.slope > 0 ? "+" : ""}{pred.regression.slope} pts/phase
+                              {pred.regression.slope > 0 ? "+" : ""}{Math.round(pred.regression.slope)} pts/phase
                             </span>
                           </Badge>
                           <Badge variant="outline" className={getConfidenceColor(pred.regression.confidence)}>
