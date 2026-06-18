@@ -79,40 +79,55 @@ Deno.serve(async (req) => {
     const managerActuals: { manager_id: string; manager_nom: string; actual_points: number; pointsByCourse: Map<string, number> }[] = [];
 
     for (const manager of managers) {
-      // Get roster for this manager in this league
-      const { data: roster } = await supabase
-        .from('rosters')
-        .select('coureur_id')
-        .in('phase_id', phaseIds)
-        .eq('manager_id', manager.id)
-        .eq('league_id', league_id);
+      // Get roster for this manager in this league (paginated, with phase_id)
+      const roster = await fetchAllRows((offset) =>
+        supabase
+          .from('rosters')
+          .select('coureur_id, phase_id')
+          .in('phase_id', phaseIds)
+          .eq('manager_id', manager.id)
+          .eq('league_id', league_id)
+          .range(offset, offset + PAGE_SIZE - 1)
+      );
 
       if (!roster || roster.length === 0) {
         managerActuals.push({ manager_id: manager.id, manager_nom: manager.nom, actual_points: 0, pointsByCourse: new Map() });
         continue;
       }
 
-      const coureurIds = [...new Set(roster.map(r => r.coureur_id))];
+      // Map coureur -> set of phases where he was rostered
+      const riderPhases = new Map<string, Set<string>>();
+      roster.forEach(r => {
+        if (!riderPhases.has(r.coureur_id)) riderPhases.set(r.coureur_id, new Set());
+        riderPhases.get(r.coureur_id)!.add(r.phase_id);
+      });
+
+      const coureurIds = [...riderPhases.keys()];
 
       // Fetch all points for these riders in these phases (paginated, scoped to league courses if any)
       const points = await fetchAllRows((offset) => {
         let q = supabase
           .from('points_ledger')
-          .select('points, course_id')
+          .select('points, course_id, coureur_id, phase_id')
           .in('phase_id', phaseIds)
           .in('coureur_id', coureurIds);
         if (leagueCourseIds) q = q.in('course_id', leagueCourseIds);
         return q.range(offset, offset + PAGE_SIZE - 1);
       });
 
-      const actualPoints = points.reduce((sum, p) => sum + p.points, 0);
+      let actualPoints = 0;
       const pointsByCourse = new Map<string, number>();
       points.forEach(p => {
+        // Only count points for phases where this rider was actually rostered
+        const phaseSet = riderPhases.get(p.coureur_id);
+        if (!phaseSet || !phaseSet.has(p.phase_id)) return;
+        actualPoints += p.points;
         pointsByCourse.set(p.course_id, (pointsByCourse.get(p.course_id) || 0) + p.points);
       });
 
       managerActuals.push({ manager_id: manager.id, manager_nom: manager.nom, actual_points: actualPoints, pointsByCourse });
     }
+
 
     // Compute expected_points = league average
     const totalLeaguePoints = managerActuals.reduce((sum, m) => sum + m.actual_points, 0);
