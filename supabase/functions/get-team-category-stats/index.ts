@@ -115,9 +115,9 @@ Deno.serve(async (req) => {
     const allRiderIds = [...new Set(allPointsData.map((p: any) => p.coureur_id).filter(Boolean))];
     let allRidersData: any[] = [];
     {
-      const PAGE_SIZE = 1000;
-      for (let i = 0; i < allRiderIds.length; i += PAGE_SIZE) {
-        const chunk = allRiderIds.slice(i, i + PAGE_SIZE);
+      const CHUNK_SIZE = 150; // keep URL length under server limits
+      for (let i = 0; i < allRiderIds.length; i += CHUNK_SIZE) {
+        const chunk = allRiderIds.slice(i, i + CHUNK_SIZE);
         const { data: batch, error: batchError } = await supabase
           .from('coureurs')
           .select('id, nom')
