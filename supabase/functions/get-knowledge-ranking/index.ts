@@ -57,12 +57,12 @@ Deno.serve(async (req) => {
     const { data: managers, error: managersError } = await managersQuery;
     if (managersError) throw managersError;
 
-    // Get phases for this season (with numero for labeling)
+    // Get phases for this season (with index_dans_saison for labeling)
     const { data: allPhases, error: phasesError } = await supabase
       .from('phases')
-      .select('id, numero')
+      .select('id, index_dans_saison')
       .eq('saison_id', saison_id)
-      .order('numero', { ascending: true });
+      .order('index_dans_saison', { ascending: true });
 
     if (phasesError) throw phasesError;
 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     const phaseIds = phases.map(p => p.id);
-    const phaseLabels = phases.map(p => `P${p.numero}`);
+    const phaseLabels = phases.map(p => `P${p.index_dans_saison}`);
     const phaseIdToIndex = new Map(phases.map((p, i) => [p.id, i]));
 
     // Fetch all coureurs names in one go
