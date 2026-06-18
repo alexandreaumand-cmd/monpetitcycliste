@@ -84,11 +84,13 @@ Deno.serve(async (req) => {
     const phaseLabels = phases.map(p => `P${p.index_dans_saison}`);
     const phaseIdToIndex = new Map(phases.map((p, i) => [p.id, i]));
 
-    // Fetch all coureurs names in one go
-    const { data: allCoureurs, error: coureursError } = await supabase
-      .from('coureurs')
-      .select('id, nom');
-    if (coureursError) throw coureursError;
+    // Fetch all coureurs names (paginated — table exceeds PostgREST's default 1000-row cap)
+    const allCoureurs = await fetchAllRows((offset) =>
+      supabase
+        .from('coureurs')
+        .select('id, nom')
+        .range(offset, offset + PAGE_SIZE - 1)
+    );
     const coureurNameMap = new Map((allCoureurs || []).map(c => [c.id, c.nom]));
 
     // Fetch equipes_saisons for team category mapping
