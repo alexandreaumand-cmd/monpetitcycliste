@@ -171,7 +171,7 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
                   <div className="text-right space-y-2">
                     <div>
                       <p className="text-sm text-muted-foreground">Projection fin de saison</p>
-                      <p className="text-2xl font-bold">{pred.total_predicted} pts</p>
+                      <p className="text-2xl font-bold">{Math.round(pred.total_predicted)} pts</p>
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <div className="text-xs text-muted-foreground">
@@ -222,12 +222,12 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
                     data={[
                       ...selectedManager.historical_points.map(hp => ({
                         phase: hp.phase_index,
-                        Historique: hp.points,
+                        Historique: Math.round(hp.points),
                         Régression: Math.round(selectedManager.regression.slope * hp.phase_index + selectedManager.regression.intercept),
                       })),
                       ...selectedManager.predictions.map(p => ({
                         phase: p.phase_index,
-                        Prédiction: p.predicted_points,
+                        Prédiction: Math.round(p.predicted_points),
                         Régression: Math.round(selectedManager.regression.slope * p.phase_index + selectedManager.regression.intercept),
                       }))
                     ]}
@@ -283,7 +283,7 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Tendance</p>
                   <p className="text-xl font-bold">
-                    {selectedManager.regression.slope > 0 ? "+" : ""}{selectedManager.regression.slope} pts/phase
+                    {selectedManager.regression.slope > 0 ? "+" : ""}{Math.round(selectedManager.regression.slope)} pts/phase
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{selectedManager.regression.interpretation}</p>
                 </div>
@@ -294,7 +294,7 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
                 </div>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Projection totale</p>
-                  <p className="text-xl font-bold">{selectedManager.total_predicted} pts</p>
+                  <p className="text-xl font-bold">{Math.round(selectedManager.total_predicted)} pts</p>
                   <p className="text-xs text-muted-foreground mt-1">Fin de saison</p>
                 </div>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
