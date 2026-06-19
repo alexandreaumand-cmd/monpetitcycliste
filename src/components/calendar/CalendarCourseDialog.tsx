@@ -537,7 +537,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               Programme
             </button>
           )}
-          {courseRouteImage && !imageError && (
+          {hasAnyRouteImage && !imageError && (
             <button
               type="button"
               onClick={() => setShowParcours(v => !v)}
