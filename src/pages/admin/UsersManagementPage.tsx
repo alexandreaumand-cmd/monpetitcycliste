@@ -319,6 +319,16 @@ export default function UsersManagementPage() {
   const sortedUsers = filteredUsers ? [...filteredUsers].sort((a, b) => {
     if (!sortDirection || !sortColumn) return 0;
 
+    if (sortColumn === 'preferred_language') {
+      const langA = (a.preferred_language || '').toLowerCase();
+      const langB = (b.preferred_language || '').toLowerCase();
+      if (langA === langB) return 0;
+      if (!langA) return 1;
+      if (!langB) return -1;
+      const cmp = langA.localeCompare(langB);
+      return sortDirection === 'asc' ? cmp : -cmp;
+    }
+
     let dateA: string | null = null;
     let dateB: string | null = null;
 
@@ -340,7 +350,7 @@ export default function UsersManagementPage() {
     return sortDirection === 'asc' ? comparison : -comparison;
   }) : [];
 
-  const handleSort = (column: 'last_connection' | 'created_at') => {
+  const handleSort = (column: 'last_connection' | 'created_at' | 'preferred_language') => {
     if (sortColumn !== column) {
       setSortColumn(column);
       setSortDirection('desc');
