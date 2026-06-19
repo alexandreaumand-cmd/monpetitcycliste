@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus, Map, List, Bike } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { useStageDates } from "@/hooks/useStageDates";
 import { Coffee } from "lucide-react";
@@ -18,6 +19,7 @@ import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
 
 type TypeClassement = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
 
