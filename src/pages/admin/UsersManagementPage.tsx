@@ -48,6 +48,7 @@ interface UserData {
   email_confirmed_at: string | null;
   banned_until: string | null;
   created_at: string;
+  preferred_language: string | null;
   activity: UserActivity;
 }
 
