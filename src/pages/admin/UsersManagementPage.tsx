@@ -83,7 +83,7 @@ export default function UsersManagementPage() {
   const [deleteTargetUser, setDeleteTargetUser] = useState<UserData | null>(null);
   
   // Sorting state
-  const [sortColumn, setSortColumn] = useState<'last_connection' | 'created_at' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'last_connection' | 'created_at' | 'preferred_language' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   // Fetch users
