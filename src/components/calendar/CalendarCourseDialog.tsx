@@ -512,6 +512,54 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
           </div>
         </DialogHeader>
 
+        {/* Section visibility toggles */}
+        <div className="px-6 py-2 border-b bg-muted/20 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground mr-1">Afficher :</span>
+          {programme && programme.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowProgramme(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+                showProgramme
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+              )}
+            >
+              <List className="h-3 w-3" />
+              Programme
+            </button>
+          )}
+          {courseRouteImage && !imageError && (
+            <button
+              type="button"
+              onClick={() => setShowParcours(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+                showParcours
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+              )}
+            >
+              <Image className="h-3 w-3" />
+              Parcours
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowRiders(v => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+              showRiders
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+            )}
+          >
+            <Bike className="h-3 w-3" />
+            Coureurs inscrits
+          </button>
+        </div>
+
         <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
           <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 p-6">
             {/* Left Column - Points & Route */}
