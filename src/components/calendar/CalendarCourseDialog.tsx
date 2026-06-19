@@ -11,6 +11,7 @@ import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { useStageDates } from "@/hooks/useStageDates";
 import { Coffee } from "lucide-react";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
+import { RouteImageGallery } from "@/components/startlist/RouteImageGallery";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -242,21 +243,29 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
     enabled: open && !!course?.course_id,
   });
 
-  // Fetch route image directly from courses table
-  const { data: courseRouteImage } = useQuery({
-    queryKey: ["calendar-course-route-image", course?.course_id],
+  // Fetch route image (fallback) + multi-stage images
+  const { data: routeData } = useQuery({
+    queryKey: ["calendar-course-route", course?.course_id],
     queryFn: async () => {
-      if (!course?.course_id) return null;
-      const { data, error } = await supabase
-        .from("courses")
-        .select("route_image_url")
-        .eq("id", course.course_id)
-        .single();
-      if (error) throw error;
-      return data?.route_image_url;
+      if (!course?.course_id) return { fallback: null as string | null, images: [] as Array<{ etape_numero: number | null; image_url: string; label: string | null; sort_order: number }> };
+      const [{ data: courseRow }, { data: stageImages }] = await Promise.all([
+        supabase.from("courses").select("route_image_url").eq("id", course.course_id).single(),
+        supabase
+          .from("course_route_images")
+          .select("etape_numero, image_url, label, sort_order")
+          .eq("course_id", course.course_id)
+          .order("sort_order", { ascending: true }),
+      ]);
+      return {
+        fallback: courseRow?.route_image_url || null,
+        images: stageImages || [],
+      };
     },
     enabled: open && !!course?.course_id,
   });
+  const courseRouteImage = routeData?.fallback || null;
+  const stageRouteImages = routeData?.images || [];
+  const hasAnyRouteImage = !!courseRouteImage || stageRouteImages.length > 0;
 
   // Fetch startlist entries
   const { data: startlistData, isLoading: loadingStartlist } = useQuery({
@@ -529,7 +538,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               Programme
             </button>
           )}
-          {courseRouteImage && !imageError && (
+          {hasAnyRouteImage && !imageError && (
             <button
               type="button"
               onClick={() => setShowParcours(v => !v)}
@@ -662,25 +671,22 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               )}
 
               {/* Route Image */}
-              {showParcours && courseRouteImage && !imageError && (
+              {showParcours && hasAnyRouteImage && !imageError && (
                 <div className="space-y-2">
                   <h3 className="font-medium text-sm flex items-center gap-2">
                     <Image className="h-4 w-4" />
                     {t('drawer.route')}
+                    {stageRouteImages.length > 1 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {stageRouteImages.length} étapes
+                      </Badge>
+                    )}
                   </h3>
-                  <a
-                    href={courseRouteImage}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={courseRouteImage}
-                      alt={t('drawer.route')}
-                      className="w-full rounded-lg border hover:opacity-90 transition-opacity cursor-zoom-in"
-                      onError={() => setImageError(true)}
-                    />
-                  </a>
+                  <RouteImageGallery
+                    images={stageRouteImages}
+                    fallbackUrl={courseRouteImage}
+                    onImageClick={(url) => window.open(url, "_blank", "noopener,noreferrer")}
+                  />
                 </div>
               )}
 
