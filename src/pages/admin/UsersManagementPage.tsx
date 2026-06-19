@@ -575,6 +575,17 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Ligues</th>
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
+                      onClick={() => handleSort('preferred_language')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Langue
+                        {sortColumn !== 'preferred_language' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'preferred_language' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'preferred_language' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                      </div>
+                    </th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
                       onClick={() => handleSort('last_connection')}
