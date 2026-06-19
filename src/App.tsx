@@ -12,6 +12,7 @@ import { LeagueProvider } from "./contexts/LeagueContext";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { ScrollToTop } from "./components/shared/ScrollToTop";
+import { useLanguageSync } from "./hooks/useLanguageSync";
 
 // Lazy-loaded pages
 const Index = React.lazy(() => import("./pages/Index"));
