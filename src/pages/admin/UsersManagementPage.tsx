@@ -747,6 +747,22 @@ export default function UsersManagementPage() {
                             </HoverCardContent>
                           </HoverCard>
                         </td>
+                        <td className="px-4 py-3 text-sm">
+                          {(() => {
+                            const lang = (user.preferred_language || 'fr').toLowerCase();
+                            const map: Record<string, { flag: string; label: string }> = {
+                              fr: { flag: '🇫🇷', label: 'FR' },
+                              en: { flag: '🇬🇧', label: 'EN' },
+                            };
+                            const info = map[lang] || { flag: '🌐', label: lang.toUpperCase() };
+                            return (
+                              <Badge variant="outline" className="gap-1">
+                                <span>{info.flag}</span>
+                                <span>{info.label}</span>
+                              </Badge>
+                            );
+                          })()}
+                        </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
                           {activity?.last_activity_at
                             ? format(new Date(activity.last_activity_at), 'dd MMM yyyy', { locale: fr })
