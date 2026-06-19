@@ -1,0 +1,1 @@
+UPDATE managers SET preferred_language = 'en' WHERE user_id = (SELECT id FROM auth.users WHERE email = 'briand.ludo@gmail.com');
