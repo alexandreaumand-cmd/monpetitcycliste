@@ -242,21 +242,29 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
     enabled: open && !!course?.course_id,
   });
 
-  // Fetch route image directly from courses table
-  const { data: courseRouteImage } = useQuery({
-    queryKey: ["calendar-course-route-image", course?.course_id],
+  // Fetch route image (fallback) + multi-stage images
+  const { data: routeData } = useQuery({
+    queryKey: ["calendar-course-route", course?.course_id],
     queryFn: async () => {
-      if (!course?.course_id) return null;
-      const { data, error } = await supabase
-        .from("courses")
-        .select("route_image_url")
-        .eq("id", course.course_id)
-        .single();
-      if (error) throw error;
-      return data?.route_image_url;
+      if (!course?.course_id) return { fallback: null as string | null, images: [] as Array<{ etape_numero: number | null; image_url: string; label: string | null; sort_order: number }> };
+      const [{ data: courseRow }, { data: stageImages }] = await Promise.all([
+        supabase.from("courses").select("route_image_url").eq("id", course.course_id).single(),
+        supabase
+          .from("course_route_images")
+          .select("etape_numero, image_url, label, sort_order")
+          .eq("course_id", course.course_id)
+          .order("sort_order", { ascending: true }),
+      ]);
+      return {
+        fallback: courseRow?.route_image_url || null,
+        images: stageImages || [],
+      };
     },
     enabled: open && !!course?.course_id,
   });
+  const courseRouteImage = routeData?.fallback || null;
+  const stageRouteImages = routeData?.images || [];
+  const hasAnyRouteImage = !!courseRouteImage || stageRouteImages.length > 0;
 
   // Fetch startlist entries
   const { data: startlistData, isLoading: loadingStartlist } = useQuery({
