@@ -158,6 +158,7 @@ serve(async (req) => {
         email: user.email || '',
         manager_id: manager?.id || null,
         manager_name: manager?.nom || null,
+        preferred_language: manager?.preferred_language || 'fr',
         is_superadmin: hasSuperAdminRole,
         league_count: leagueCount,
         league_admin_count: leagueAdminCount,
