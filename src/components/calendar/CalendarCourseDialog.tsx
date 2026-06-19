@@ -11,6 +11,7 @@ import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { useStageDates } from "@/hooks/useStageDates";
 import { Coffee } from "lucide-react";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
+import { RouteImageGallery } from "@/components/startlist/RouteImageGallery";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
