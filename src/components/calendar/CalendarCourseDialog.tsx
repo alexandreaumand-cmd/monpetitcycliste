@@ -179,6 +179,10 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   const [imageError, setImageError] = useState(false);
   const [pointsBreakdownOpen, setPointsBreakdownOpen] = useState(false);
   const [mobileMovementsOpen, setMobileMovementsOpen] = useState(false);
+  const [showProgramme, setShowProgramme] = useState(true);
+  const [showParcours, setShowParcours] = useState(true);
+  const [showRiders, setShowRiders] = useState(true);
+
 
   // Fetch detailed course data from v_course_points_theoriques
   const { data: courseDetails, isLoading: loadingDetails } = useQuery({
