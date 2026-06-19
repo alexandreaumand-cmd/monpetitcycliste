@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus } from "lucide-react";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus, List, Bike } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { useStageDates } from "@/hooks/useStageDates";
 import { Coffee } from "lucide-react";
@@ -18,6 +18,7 @@ import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
 
 type TypeClassement = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
 
@@ -177,6 +178,10 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   const [imageError, setImageError] = useState(false);
   const [pointsBreakdownOpen, setPointsBreakdownOpen] = useState(false);
   const [mobileMovementsOpen, setMobileMovementsOpen] = useState(false);
+  const [showProgramme, setShowProgramme] = useState(true);
+  const [showParcours, setShowParcours] = useState(true);
+  const [showRiders, setShowRiders] = useState(true);
+
 
   // Fetch detailed course data from v_course_points_theoriques
   const { data: courseDetails, isLoading: loadingDetails } = useQuery({
@@ -506,8 +511,56 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
           </div>
         </DialogHeader>
 
+        {/* Section visibility toggles */}
+        <div className="px-6 py-2 border-b bg-muted/20 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground mr-1">Afficher :</span>
+          {programme && programme.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowProgramme(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+                showProgramme
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+              )}
+            >
+              <List className="h-3 w-3" />
+              Programme
+            </button>
+          )}
+          {courseRouteImage && !imageError && (
+            <button
+              type="button"
+              onClick={() => setShowParcours(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+                showParcours
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+              )}
+            >
+              <Image className="h-3 w-3" />
+              Parcours
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowRiders(v => !v)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+              showRiders
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-muted border-muted-foreground/20 text-muted-foreground line-through"
+            )}
+          >
+            <Bike className="h-3 w-3" />
+            Coureurs inscrits
+          </button>
+        </div>
+
         <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 p-6">
+          <div className={cn("grid grid-cols-1 gap-6 p-6", showRiders ? "lg:grid-cols-[340px_1fr]" : "lg:grid-cols-1")}>
             {/* Left Column - Points & Route */}
             <div className="space-y-4">
               {/* Total Points */}
@@ -525,7 +578,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               </div>
 
               {/* Programme (stage races with configured dates) */}
-              {programme && programme.length > 0 && (
+              {showProgramme && programme && programme.length > 0 && (
                 <div className="rounded-lg border bg-card">
                   <div className="px-3 py-2 border-b text-sm font-medium">Programme</div>
                   <div className="max-h-56 overflow-y-auto divide-y">
@@ -609,7 +662,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               )}
 
               {/* Route Image */}
-              {courseRouteImage && !imageError && (
+              {showParcours && courseRouteImage && !imageError && (
                 <div className="space-y-2">
                   <h3 className="font-medium text-sm flex items-center gap-2">
                     <Image className="h-4 w-4" />
@@ -653,129 +706,131 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
             </div>
 
             {/* Right Column - Startlist */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {t('drawer.registeredRiders')}
-                  {stats && (
-                    <Badge variant="secondary" className="ml-1">
-                      {stats.total}
-                    </Badge>
-                  )}
-                </h3>
-              </div>
-
-              {/* Stats badges */}
-              {stats && (
-                <div className="flex flex-wrap gap-2">
-                  {stats.confirmed_teams != null && stats.total_teams != null && stats.total_teams > 0 && (
-                    <Badge variant="outline" className="gap-1 text-green-700 border-green-300 bg-green-50">
-                      <ShieldCheck className="h-3 w-3" />
-                      {t('drawer.confirmedTeams', { count: stats.confirmed_teams, total: stats.total_teams })}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300 bg-blue-50">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {t('drawer.matchedRiders', { count: stats.matched })}
-                  </Badge>
-                  {stats.unmatched > 0 && (
-                    <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50">
-                      <AlertTriangle className="h-3 w-3" />
-                      {t('drawer.unmatchedRiders', { count: stats.unmatched })}
-                    </Badge>
-                  )}
+            {showRiders && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {t('drawer.registeredRiders')}
+                    {stats && (
+                      <Badge variant="secondary" className="ml-1">
+                        {stats.total}
+                      </Badge>
+                    )}
+                  </h3>
                 </div>
-              )}
 
-              {/* Legend */}
-              {stats && (stats.confirmed_teams ?? 0) > 0 && (
-                <div className="text-xs text-muted-foreground space-y-0.5 px-1">
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3 w-3 text-green-500" />
-                    <span>{t('drawer.legendOfficial')}</span>
+                {/* Stats badges */}
+                {stats && (
+                  <div className="flex flex-wrap gap-2">
+                    {stats.confirmed_teams != null && stats.total_teams != null && stats.total_teams > 0 && (
+                      <Badge variant="outline" className="gap-1 text-green-700 border-green-300 bg-green-50">
+                        <ShieldCheck className="h-3 w-3" />
+                        {t('drawer.confirmedTeams', { count: stats.confirmed_teams, total: stats.total_teams })}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300 bg-blue-50">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {t('drawer.matchedRiders', { count: stats.matched })}
+                    </Badge>
+                    {stats.unmatched > 0 && (
+                      <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50">
+                        <AlertTriangle className="h-3 w-3" />
+                        {t('drawer.unmatchedRiders', { count: stats.unmatched })}
+                      </Badge>
+                    )}
                   </div>
-                  {stats.unmatched > 0 && (
+                )}
+
+                {/* Legend */}
+                {stats && (stats.confirmed_teams ?? 0) > 0 && (
+                  <div className="text-xs text-muted-foreground space-y-0.5 px-1">
                     <div className="flex items-center gap-1.5">
-                      <AlertTriangle className="h-3 w-3 text-amber-500" />
-                      <span>{t('drawer.legendUnmatched')}</span>
+                      <ShieldCheck className="h-3 w-3 text-green-500" />
+                      <span>{t('drawer.legendOfficial')}</span>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {loadingStartlist ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                    <Skeleton key={i} className="h-8 w-full" />
-                  ))}
-                </div>
-              ) : groupedStartlistEntries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="max-h-[550px] overflow-y-auto p-3 space-y-4">
-                    {groupedStartlistEntries.map(({ team, entries, confirmed }) => {
-                      const half = Math.ceil(entries.length / 2);
-                      const col1 = entries.slice(0, half);
-                      const col2 = entries.slice(half);
-                      return (
-                        <div key={team}>
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
-                            {confirmed && <ShieldCheck className="h-3 w-3 text-green-500" />}
-                            <span>{team}</span>
-                            <span className="text-muted-foreground/60">({entries.length})</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                            <div>
-                              {col1.map((entry, idx) => renderRiderRow(entry, idx))}
-                            </div>
-                            <div>
-                              {col2.map((entry, idx) => renderRiderRow(entry, idx + half))}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {stats.unmatched > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="h-3 w-3 text-amber-500" />
+                        <span>{t('drawer.legendUnmatched')}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/20">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{t('drawer.noStartlist')}</p>
-                </div>
-              )}
+                )}
 
-              {/* Startlist movements - Mobile only (collapsible at bottom) */}
-              <div className="lg:hidden">
-                <Collapsible open={mobileMovementsOpen} onOpenChange={setMobileMovementsOpen}>
-                  <CollapsibleTrigger asChild>
-                    <button className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
-                      <span className="font-medium text-sm flex items-center gap-2">
-                        <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
-                        {t('drawer.movements.title')}
-                        {movementCount > 0 && (
-                          <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
-                        )}
-                      </span>
-                      {mobileMovementsOpen ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <div className="rounded-lg border bg-card p-2">
-                      <StartlistMovementsCompact
-                        items={movements || []}
-                        isLoading={loadingMovements}
-                        resolveTeam={resolveTeam}
-                        scrollMaxClass="max-h-[400px]"
-                      />
+                {loadingStartlist ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                      <Skeleton key={i} className="h-8 w-full" />
+                    ))}
+                  </div>
+                ) : groupedStartlistEntries.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[550px] overflow-y-auto p-3 space-y-4">
+                      {groupedStartlistEntries.map(({ team, entries, confirmed }) => {
+                        const half = Math.ceil(entries.length / 2);
+                        const col1 = entries.slice(0, half);
+                        const col2 = entries.slice(half);
+                        return (
+                          <div key={team}>
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
+                              {confirmed && <ShieldCheck className="h-3 w-3 text-green-500" />}
+                              <span>{team}</span>
+                              <span className="text-muted-foreground/60">({entries.length})</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                              <div>
+                                {col1.map((entry, idx) => renderRiderRow(entry, idx))}
+                              </div>
+                              <div>
+                                {col2.map((entry, idx) => renderRiderRow(entry, idx + half))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/20">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">{t('drawer.noStartlist')}</p>
+                  </div>
+                )}
+
+                {/* Startlist movements - Mobile only (collapsible at bottom) */}
+                <div className="lg:hidden">
+                  <Collapsible open={mobileMovementsOpen} onOpenChange={setMobileMovementsOpen}>
+                    <CollapsibleTrigger asChild>
+                      <button className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
+                        <span className="font-medium text-sm flex items-center gap-2">
+                          <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
+                          {t('drawer.movements.title')}
+                          {movementCount > 0 && (
+                            <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
+                          )}
+                        </span>
+                        {mobileMovementsOpen ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <div className="rounded-lg border bg-card p-2">
+                        <StartlistMovementsCompact
+                          items={movements || []}
+                          isLoading={loadingMovements}
+                          resolveTeam={resolveTeam}
+                          scrollMaxClass="max-h-[400px]"
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </ScrollArea>
       </DialogContent>
