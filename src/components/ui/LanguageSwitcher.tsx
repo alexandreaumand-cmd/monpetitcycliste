@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageSwitcherProps {
   variant?: 'default' | 'ghost' | 'outline';
