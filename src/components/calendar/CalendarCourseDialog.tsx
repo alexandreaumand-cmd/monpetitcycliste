@@ -561,7 +561,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
         </div>
 
         <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 p-6">
+          <div className={cn("grid grid-cols-1 gap-6 p-6", showRiders ? "lg:grid-cols-[340px_1fr]" : "lg:grid-cols-1")}>
             {/* Left Column - Points & Route */}
             <div className="space-y-4">
               {/* Total Points */}
