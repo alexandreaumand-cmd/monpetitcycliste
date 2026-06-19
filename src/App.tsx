@@ -47,6 +47,8 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  useLanguageSync();
+
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
