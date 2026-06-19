@@ -3519,6 +3519,7 @@ export type Database = {
           email: string | null
           id: string
           nom: string
+          preferred_language: string
           preferred_league_id: string | null
           sponsor: string | null
           user_id: string | null
@@ -3529,6 +3530,7 @@ export type Database = {
           email?: string | null
           id?: string
           nom: string
+          preferred_language?: string
           preferred_league_id?: string | null
           sponsor?: string | null
           user_id?: string | null
@@ -3539,6 +3541,7 @@ export type Database = {
           email?: string | null
           id?: string
           nom?: string
+          preferred_language?: string
           preferred_league_id?: string | null
           sponsor?: string | null
           user_id?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.managers ADD COLUMN IF NOT EXISTS preferred_language text NOT NULL DEFAULT 'fr';

@@ -73,7 +73,7 @@ serve(async (req) => {
     // Récupération des managers
     const { data: managers, error: managersError } = await supabaseClient
       .from('managers')
-      .select('id, user_id, nom');
+      .select('id, user_id, nom, preferred_language');
     if (managersError) {
       console.error('[admin-users-list] managers fetch error:', managersError);
       throw managersError;
@@ -158,6 +158,7 @@ serve(async (req) => {
         email: user.email || '',
         manager_id: manager?.id || null,
         manager_name: manager?.nom || null,
+        preferred_language: manager?.preferred_language || 'fr',
         is_superadmin: hasSuperAdminRole,
         league_count: leagueCount,
         league_admin_count: leagueAdminCount,

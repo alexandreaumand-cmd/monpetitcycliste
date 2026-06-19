@@ -48,6 +48,7 @@ interface UserData {
   email_confirmed_at: string | null;
   banned_until: string | null;
   created_at: string;
+  preferred_language: string | null;
   activity: UserActivity;
 }
 
@@ -82,7 +83,7 @@ export default function UsersManagementPage() {
   const [deleteTargetUser, setDeleteTargetUser] = useState<UserData | null>(null);
   
   // Sorting state
-  const [sortColumn, setSortColumn] = useState<'last_connection' | 'created_at' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'last_connection' | 'created_at' | 'preferred_language' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   // Fetch users
@@ -318,6 +319,16 @@ export default function UsersManagementPage() {
   const sortedUsers = filteredUsers ? [...filteredUsers].sort((a, b) => {
     if (!sortDirection || !sortColumn) return 0;
 
+    if (sortColumn === 'preferred_language') {
+      const langA = (a.preferred_language || '').toLowerCase();
+      const langB = (b.preferred_language || '').toLowerCase();
+      if (langA === langB) return 0;
+      if (!langA) return 1;
+      if (!langB) return -1;
+      const cmp = langA.localeCompare(langB);
+      return sortDirection === 'asc' ? cmp : -cmp;
+    }
+
     let dateA: string | null = null;
     let dateB: string | null = null;
 
@@ -339,7 +350,7 @@ export default function UsersManagementPage() {
     return sortDirection === 'asc' ? comparison : -comparison;
   }) : [];
 
-  const handleSort = (column: 'last_connection' | 'created_at') => {
+  const handleSort = (column: 'last_connection' | 'created_at' | 'preferred_language') => {
     if (sortColumn !== column) {
       setSortColumn(column);
       setSortDirection('desc');
@@ -564,6 +575,17 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Ligues</th>
                     <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium">Activité</th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
+                      onClick={() => handleSort('preferred_language')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Langue
+                        {sortColumn !== 'preferred_language' && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortColumn === 'preferred_language' && sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortColumn === 'preferred_language' && sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                      </div>
+                    </th>
                     <th 
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
                       onClick={() => handleSort('last_connection')}
@@ -724,6 +746,22 @@ export default function UsersManagementPage() {
                               </div>
                             </HoverCardContent>
                           </HoverCard>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {(() => {
+                            const lang = (user.preferred_language || 'fr').toLowerCase();
+                            const map: Record<string, { flag: string; label: string }> = {
+                              fr: { flag: '🇫🇷', label: 'FR' },
+                              en: { flag: '🇬🇧', label: 'EN' },
+                            };
+                            const info = map[lang] || { flag: '🌐', label: lang.toUpperCase() };
+                            return (
+                              <Badge variant="outline" className="gap-1">
+                                <span>{info.flag}</span>
+                                <span>{info.label}</span>
+                              </Badge>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
                           {activity?.last_activity_at

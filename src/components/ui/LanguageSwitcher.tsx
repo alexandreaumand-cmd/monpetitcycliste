@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageSwitcherProps {
   variant?: 'default' | 'ghost' | 'outline';
@@ -33,8 +34,19 @@ export const LanguageSwitcher = ({
   const currentLanguage = (i18n.language?.split('-')[0] || 'fr') as SupportedLanguage;
   const currentLangInfo = languageLabels[currentLanguage] || languageLabels.fr;
 
-  const handleLanguageChange = (lang: SupportedLanguage) => {
+  const handleLanguageChange = async (lang: SupportedLanguage) => {
     i18n.changeLanguage(lang);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('managers')
+          .update({ preferred_language: lang })
+          .eq('user_id', user.id);
+      }
+    } catch (e) {
+      console.warn('[LanguageSwitcher] could not persist preferred_language:', e);
+    }
   };
 
   return (
