@@ -670,25 +670,22 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               )}
 
               {/* Route Image */}
-              {showParcours && courseRouteImage && !imageError && (
+              {showParcours && hasAnyRouteImage && !imageError && (
                 <div className="space-y-2">
                   <h3 className="font-medium text-sm flex items-center gap-2">
                     <Image className="h-4 w-4" />
                     {t('drawer.route')}
+                    {stageRouteImages.length > 1 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {stageRouteImages.length} étapes
+                      </Badge>
+                    )}
                   </h3>
-                  <a
-                    href={courseRouteImage}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={courseRouteImage}
-                      alt={t('drawer.route')}
-                      className="w-full rounded-lg border hover:opacity-90 transition-opacity cursor-zoom-in"
-                      onError={() => setImageError(true)}
-                    />
-                  </a>
+                  <RouteImageGallery
+                    images={stageRouteImages}
+                    fallbackUrl={courseRouteImage}
+                    onImageClick={(url) => window.open(url, "_blank", "noopener,noreferrer")}
+                  />
                 </div>
               )}
 
