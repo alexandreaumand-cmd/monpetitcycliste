@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus, Map, List, Bike } from "lucide-react";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck, ArrowDownUp, Plus, Minus, List, Bike } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { useStageDates } from "@/hooks/useStageDates";
 import { Coffee } from "lucide-react";
