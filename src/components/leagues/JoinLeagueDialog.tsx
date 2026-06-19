@@ -42,6 +42,8 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
         .from('leagues')
         .select('*, league_scopes(*)')
         .eq('visibility', 'public')
+        .neq('status', 'completed')
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
