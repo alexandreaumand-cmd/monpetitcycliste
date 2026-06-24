@@ -1,49 +1,41 @@
+## Problème
 
-## Diagnostic
+Dans la ligue MPC 2026, le compte à rebours pour la P4 ne s'affiche pas, alors qu'on est à moins de 10 jours du début des enchères (01/07/2026 12:00 UTC).
 
-Sur l'étape 3 du Tour Auvergne - Rhône-Alpes (TTT du 09/06), la liste des équipes proposée dans le combobox de pronostic est construite par le hook `useStartlistTeams` (`src/hooks/useArenaPronostics.ts`). Ce hook :
+## Cause
 
-1. Récupère les valeurs distinctes de `startlist_entries.source_team` (texte brut importé, ex: `"Netcompany INEOS (WT)"`).
-2. Tente de les rapprocher des `equipes_saisons` de la saison par comparaison de chaînes (égalité, trigramme, ou `includes` dans un sens ou l'autre sur `nom_affiche`).
+La date d'ouverture est bien enregistrée dans `phase_auction_schedule` (table admin "Planning enchères par phase"), mais elle n'a pas été propagée dans `auctions.opens_at` pour la ligue MPC 2026 / P4. La ligne d'enchère P4 round 1 a `opens_at = NULL`.
 
-En testant cette logique sur la startlist actuelle (22 équipes), **5 équipes ne sont jamais rapprochées** car la chaîne `source_team` (avec le suffixe `(WT)/(PRT)` et des variantes d'orthographe / espaces) ne correspond pas exactement au `nom_affiche` :
+Le hook `useLeagueAuctionStatus` qui pilote l'affichage du compte à rebours (et qui respecte déjà la règle "10 jours avant") filtre `.not('opens_at','is',null)`, donc il ignore cette enchère et ne montre rien.
 
-- Lotto Intermarché (WT)
-- Soudal Quick-Step (WT)
-- Team Jayco AlUla (WT)
-- TotalEnergies (PRT)
-- (et selon la fenêtre d'import, potentiellement d'autres)
+Une fonction SQL `sync_phase_schedule_to_auctions(phase_id)` existe déjà pour propager la date du planning vers les enchères des ligues actives par phase. Elle n'a simplement pas été rejouée depuis que la P4 a été planifiée.
 
-Dans la simulation SQL, **Netcompany INEOS est bien candidate** au matching, donc en théorie elle devrait apparaître. Mais le matching repose sur une heuristique fragile (sensible à la casse, aux espaces, aux suffixes, à un éventuel doublon `usedIds` côté équipes_saisons) — et l'utilisateur ne la voit pas. Il faut remplacer cette heuristique par une dérivation déterministe.
+## Correctif
 
-## Correctif proposé
+Migration unique qui rejoue la synchro pour toutes les phases déjà planifiées :
 
-Réécrire `useStartlistTeams` pour dériver la liste des équipes **à partir des coureurs déjà matchés dans la startlist**, plutôt que par fuzzy-matching de `source_team` :
+```sql
+DO $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN SELECT phase_id FROM public.phase_auction_schedule LOOP
+    PERFORM public.sync_phase_schedule_to_auctions(r.phase_id);
+  END LOOP;
+END $$;
+```
 
-1. Charger les `startlist_entries` du dernier import (`startlist_id`) avec `coureur_id NOT NULL`.
-2. Joindre `coureurs_saisons` sur `(coureur_id, saison_id)` pour récupérer `equipe_saison_id`.
-3. Joindre `equipes_saisons` pour récupérer `id` + `nom_affiche`.
-4. Déduplifier par `equipe_saison_id`, trier par `nom_affiche`.
-5. **Fallback** : pour les entries sans coureur matché, conserver l'heuristique actuelle sur `source_team` afin de ne pas perdre d'équipe — mais en complément, pas en remplacement.
+Effet attendu sur MPC 2026 :
+- `auctions` (P4, round 1, scheduled) → `opens_at = 2026-07-01 12:00 UTC`, `deadline_at = 2026-07-02 12:00 UTC`.
+- Le hook `useLeagueAuctionStatus` voit l'enchère, calcule `diffDays ≈ 7` (≤ 10), et affiche la carte de compte à rebours sur le dashboard de la ligue.
 
-Aucun changement de schéma. Aucun changement d'UI (le combobox `PronosticStartlistTeamCombobox` consomme déjà `{ equipe_saison_id, nom_affiche }`).
+Aucun changement de code frontend nécessaire : la règle "10 jours avant" (`SCHEDULED_VISIBILITY_DAYS = 10` dans `useLeagueAuctionStatus.tsx`) est déjà en place et fonctionne.
 
-## Vérifications
+## Vérification
 
-- Sur le Tour Auvergne - Rhône-Alpes, la liste doit contenir les 22 équipes, dont **NETCOMPANY INEOS**, Lotto Intermarché, Soudal Quick-Step, Team Jayco AlUla, TotalEnergies.
-- Le pronostic existant éventuel reste sélectionné via `equipe_saison_id`.
-- Recharger l'Arène → Pronostics → étape 3 et vérifier que Netcompany INEOS est sélectionnable.
-
-## Détails techniques
-
-- Fichier modifié : `src/hooks/useArenaPronostics.ts` (fonction `useStartlistTeams`).
-- Requête principale :
-  ```ts
-  supabase
-    .from('startlist_entries')
-    .select('coureur_id, source_team, coureurs_saisons!inner(equipe_saison_id, saison_id, equipes_saisons!inner(id, nom_affiche))')
-    .eq('startlist_id', importData.id)
-    .eq('coureurs_saisons.saison_id', importData.saison_id)
-    .not('coureur_id', 'is', null)
-  ```
-- Garder le tri alphabétique sur `nom_affiche` et la clé React-Query inchangée.
+Après la migration, requête de contrôle :
+```sql
+SELECT id, statut, opens_at FROM auctions
+WHERE phase_id = 'a4dc1df4-6386-48cb-93fd-77bdf99f4117'
+  AND league_id = 'b5b46b5e-7c78-4ad9-a669-b08e8f099800';
+```
+doit retourner `opens_at = 2026-07-01 12:00:00+00`. Puis rafraîchir la page MPC 2026 → la carte "Les enchères vont démarrer" avec le compte à rebours doit apparaître.
