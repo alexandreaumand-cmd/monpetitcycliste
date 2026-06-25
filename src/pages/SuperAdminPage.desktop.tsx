@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity, HeartPulse } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity, HeartPulse, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -23,6 +23,7 @@ import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunications
 import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
 import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
 import SuperAdminInjuriesPage from "@/pages/admin/SuperAdminInjuriesPage";
+import SuperAdminGlobalRostersPage from "@/pages/admin/SuperAdminGlobalRostersPage";
 
 interface NavGroup {
   label: string;
@@ -57,6 +58,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
+      { label: "Rosters globaux", path: "global-rosters", icon: Users2 },
       { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
       { label: "Enchères Live", path: "auctions", icon: Gavel },
       { label: "Arène", path: "arena", icon: Swords },
@@ -165,6 +167,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
               <Route path="publish-health" element={<SuperAdminPublishHealthPage />} />
               <Route path="injuries" element={<SuperAdminInjuriesPage />} />
+              <Route path="global-rosters" element={<SuperAdminGlobalRostersPage />} />
             </Routes>
           </div>
         </main>
