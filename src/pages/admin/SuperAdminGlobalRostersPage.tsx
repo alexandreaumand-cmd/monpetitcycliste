@@ -247,16 +247,16 @@ export default function SuperAdminGlobalRostersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Coureur</TableHead>
-                <TableHead>Équipe</TableHead>
-                <TableHead className="text-right">Cote</TableHead>
-                <TableHead>Manager</TableHead>
-                <TableHead>Ligue</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-center">Saison</TableHead>
-                <TableHead className="text-center">Phase</TableHead>
-                <TableHead className="text-right">Prix payé</TableHead>
-                <TableHead className="text-center">Round</TableHead>
+                <TableHead><SortHeader label="Coureur" sKey="coureur_nom" /></TableHead>
+                <TableHead><SortHeader label="Équipe" sKey="equipe_nom" /></TableHead>
+                <TableHead className="text-right"><SortHeader label="Cote" sKey="cote" align="right" /></TableHead>
+                <TableHead><SortHeader label="Manager" sKey="manager_nom" /></TableHead>
+                <TableHead><SortHeader label="Ligue" sKey="league_name" /></TableHead>
+                <TableHead><SortHeader label="Type" sKey="game_mode" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Saison" sKey="saison_annee" align="center" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Phase" sKey="phase_index" align="center" /></TableHead>
+                <TableHead className="text-right"><SortHeader label="Prix payé" sKey="prix_signature" align="right" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Round" sKey="round_achat" align="center" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
