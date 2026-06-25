@@ -192,6 +192,7 @@ export default function SuperAdminGlobalRostersPage() {
                 <TableHead>Manager</TableHead>
                 <TableHead>Ligue</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead className="text-center">Saison</TableHead>
                 <TableHead className="text-center">Phase</TableHead>
                 <TableHead className="text-right">Prix payé</TableHead>
                 <TableHead className="text-center">Round</TableHead>
