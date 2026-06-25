@@ -26,6 +26,7 @@ import SuperAdminCommunicationsPage from "@/pages/admin/SuperAdminCommunications
 import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
 import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
 import SuperAdminInjuriesPage from "@/pages/admin/SuperAdminInjuriesPage";
+import SuperAdminGlobalRostersPage from "@/pages/admin/SuperAdminGlobalRostersPage";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
