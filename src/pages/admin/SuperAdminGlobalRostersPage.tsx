@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Search } from "lucide-react";
+import { Loader2, Download, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const PAGE_SIZE = 100;
