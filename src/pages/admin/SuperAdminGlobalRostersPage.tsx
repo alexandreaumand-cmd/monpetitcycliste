@@ -15,7 +15,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 const PAGE_SIZE = 100;
 
 export default function SuperAdminGlobalRostersPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [coureurInput, setCoureurInput] = useState("");
   const [managerInput, setManagerInput] = useState("");
