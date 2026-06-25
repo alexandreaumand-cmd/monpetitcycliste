@@ -63,6 +63,7 @@ export default function SuperAdminGlobalRostersPage() {
       "Manager",
       "Ligue",
       "Type",
+      "Saison",
       "Phase",
       "Prix payé",
       "Round",
@@ -75,6 +76,7 @@ export default function SuperAdminGlobalRostersPage() {
         r.manager_nom,
         r.league_name,
         gameModeLabel(r.game_mode),
+        r.saison_annee,
         r.phase_index,
         r.prix_signature ?? "",
         r.round_achat ?? "",
@@ -190,6 +192,7 @@ export default function SuperAdminGlobalRostersPage() {
                 <TableHead>Manager</TableHead>
                 <TableHead>Ligue</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead className="text-center">Saison</TableHead>
                 <TableHead className="text-center">Phase</TableHead>
                 <TableHead className="text-right">Prix payé</TableHead>
                 <TableHead className="text-center">Round</TableHead>
@@ -198,13 +201,13 @@ export default function SuperAdminGlobalRostersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12">
+                  <TableCell colSpan={10} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                     Aucun roster trouvé avec ces filtres.
                     {coureurInput && (
                       <div className="mt-1 text-xs">
@@ -226,6 +229,7 @@ export default function SuperAdminGlobalRostersPage() {
                         {gameModeLabel(r.game_mode)}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center tabular-nums">{r.saison_annee}</TableCell>
                     <TableCell className="text-center tabular-nums">P{r.phase_index}</TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       {r.prix_signature ?? "—"}
