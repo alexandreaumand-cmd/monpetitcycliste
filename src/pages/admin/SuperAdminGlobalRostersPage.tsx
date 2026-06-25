@@ -55,13 +55,14 @@ export default function SuperAdminGlobalRostersPage() {
   const filters: GlobalRostersFilters = useMemo(
     () => ({
       saisonId: saisonId === "all" ? null : saisonId,
+      leagueIds: leagueId === "all" ? null : [leagueId],
       gameModes: gameMode === "all" ? null : [gameMode],
       coureurSearch,
       managerSearch,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [saisonId, gameMode, coureurSearch, managerSearch, page],
+    [saisonId, leagueId, gameMode, coureurSearch, managerSearch, page],
   );
 
   const { data, isLoading, isFetching } = useGlobalRosters(filters);
