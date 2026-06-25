@@ -7058,6 +7058,36 @@ export type Database = {
           total_points: number
         }[]
       }
+      get_global_rosters: {
+        Args: {
+          _coureur_search?: string
+          _game_modes?: string[]
+          _league_ids?: string[]
+          _limit?: number
+          _manager_search?: string
+          _offset?: number
+          _phase_ids?: string[]
+          _saison_id?: string
+        }
+        Returns: {
+          cote: number
+          coureur_id: string
+          coureur_nom: string
+          equipe_nom: string
+          game_mode: string
+          league_id: string
+          league_name: string
+          manager_id: string
+          manager_nom: string
+          phase_id: string
+          phase_index: number
+          prix_signature: number
+          roster_id: string
+          round_achat: number
+          saison_id: string
+          total_count: number
+        }[]
+      }
       get_league_course_ids: {
         Args: { p_league_id: string }
         Returns: {
