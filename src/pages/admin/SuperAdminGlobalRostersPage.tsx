@@ -36,6 +36,22 @@ export default function SuperAdminGlobalRostersPage() {
     },
   });
 
+  const { data: leagues } = useQuery({
+    queryKey: ["leagues-list-for-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leagues")
+        .select("id, name, saison:saison_id (annee)")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((l) => ({
+        id: l.id,
+        name: l.name,
+        saison_annee: (l.saison as { annee?: number } | null)?.annee ?? null,
+      }));
+    },
+  });
+
   const filters: GlobalRostersFilters = useMemo(
     () => ({
       saisonId: saisonId === "all" ? null : saisonId,
