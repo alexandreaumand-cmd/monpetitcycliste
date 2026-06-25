@@ -39,16 +39,9 @@ export default function SuperAdminGlobalRostersPage() {
   const { data: leagues } = useQuery({
     queryKey: ["leagues-list-for-filter"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("league_scopes")
-        .select("league_id, season_id, league:league_id(id, name), saison:season_id(annee)")
-        .order("league(name)", { ascending: true });
+      const { data, error } = await supabase.rpc("get_leagues_for_filter");
       if (error) throw error;
-      return (data ?? []).map((row) => ({
-        id: row.league_id,
-        name: (row.league as { name?: string } | null)?.name ?? "",
-        saison_annee: (row.saison as { annee?: number } | null)?.annee ?? null,
-      }));
+      return (data ?? []) as { id: string; name: string; saison_annee: number | null }[];
     },
   });
 
