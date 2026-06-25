@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Search } from "lucide-react";
+import { Loader2, Download, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const PAGE_SIZE = 100;
@@ -45,9 +45,70 @@ export default function SuperAdminGlobalRostersPage() {
   );
 
   const { data, isLoading, isFetching } = useGlobalRosters(filters);
-  const rows = data?.rows ?? [];
+  const rawRows = data?.rows ?? [];
   const total = Number(data?.totalCount ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  type SortKey =
+    | "coureur_nom"
+    | "equipe_nom"
+    | "cote"
+    | "manager_nom"
+    | "league_name"
+    | "game_mode"
+    | "saison_annee"
+    | "phase_index"
+    | "prix_signature"
+    | "round_achat";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const rows = useMemo(() => {
+    if (!sortKey) return rawRows;
+    const sorted = [...rawRows].sort((a, b) => {
+      const va = a[sortKey];
+      const vb = b[sortKey];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return va - vb;
+      return String(va).localeCompare(String(vb), "fr", { numeric: true });
+    });
+    return sortDir === "asc" ? sorted : sorted.reverse();
+  }, [rawRows, sortKey, sortDir]);
+
+  const SortHeader = ({
+    label,
+    sKey,
+    align = "left",
+  }: {
+    label: string;
+    sKey: SortKey;
+    align?: "left" | "right" | "center";
+  }) => {
+    const active = sortKey === sKey;
+    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    const justify = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(sKey)}
+        className={`flex items-center gap-1 w-full ${justify} hover:text-foreground transition-colors ${active ? "text-foreground" : ""}`}
+      >
+        <span>{label}</span>
+        <Icon className={`h-3 w-3 ${active ? "opacity-100" : "opacity-40"}`} />
+      </button>
+    );
+  };
 
   const uniqueCoureurs = new Set(rows.map((r) => r.coureur_id)).size;
   const uniqueManagers = new Set(rows.map((r) => r.manager_id)).size;
@@ -186,16 +247,16 @@ export default function SuperAdminGlobalRostersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Coureur</TableHead>
-                <TableHead>Équipe</TableHead>
-                <TableHead className="text-right">Cote</TableHead>
-                <TableHead>Manager</TableHead>
-                <TableHead>Ligue</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-center">Saison</TableHead>
-                <TableHead className="text-center">Phase</TableHead>
-                <TableHead className="text-right">Prix payé</TableHead>
-                <TableHead className="text-center">Round</TableHead>
+                <TableHead><SortHeader label="Coureur" sKey="coureur_nom" /></TableHead>
+                <TableHead><SortHeader label="Équipe" sKey="equipe_nom" /></TableHead>
+                <TableHead className="text-right"><SortHeader label="Cote" sKey="cote" align="right" /></TableHead>
+                <TableHead><SortHeader label="Manager" sKey="manager_nom" /></TableHead>
+                <TableHead><SortHeader label="Ligue" sKey="league_name" /></TableHead>
+                <TableHead><SortHeader label="Type" sKey="game_mode" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Saison" sKey="saison_annee" align="center" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Phase" sKey="phase_index" align="center" /></TableHead>
+                <TableHead className="text-right"><SortHeader label="Prix payé" sKey="prix_signature" align="right" /></TableHead>
+                <TableHead className="text-center"><SortHeader label="Round" sKey="round_achat" align="center" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
