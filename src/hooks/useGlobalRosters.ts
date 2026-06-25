@@ -26,6 +26,7 @@ export interface GlobalRosterRow {
   phase_id: string;
   phase_index: number;
   saison_id: string;
+  saison_annee: number;
   prix_signature: number | null;
   round_achat: number | null;
   total_count: number;
