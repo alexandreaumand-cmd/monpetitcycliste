@@ -259,7 +259,7 @@ export default function SuperAdminGlobalRostersPage() {
               } else {
                 params.set("leagueId", v);
               }
-              window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+              setSearchParams(params, { replace: true });
             }}
           >
             <SelectTrigger>
