@@ -257,6 +257,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="cron-jobs" element={<SuperAdminCronJobsPage />} />
             <Route path="publish-health" element={<SuperAdminPublishHealthPage />} />
             <Route path="injuries" element={<SuperAdminInjuriesPage />} />
+            <Route path="global-rosters" element={<SuperAdminGlobalRostersPage />} />
           </Routes>
         </div>
       </main>
