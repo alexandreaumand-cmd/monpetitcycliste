@@ -63,6 +63,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
+      { label: "Rosters globaux", path: "global-rosters", icon: Users2 },
       { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
       { label: "Enchères Live", path: "auctions", icon: Gavel },
       { label: "Arène", path: "arena", icon: Swords },
