@@ -7167,6 +7167,14 @@ export type Database = {
           total_points: number
         }[]
       }
+      get_leagues_for_filter: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          saison_annee: number
+        }[]
+      }
       get_manager_public_info: {
         Args: { manager_id: string }
         Returns: {
