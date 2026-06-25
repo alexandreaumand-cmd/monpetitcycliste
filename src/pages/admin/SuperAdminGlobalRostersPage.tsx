@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useGlobalRosters, type GlobalRostersFilters } from "@/hooks/useGlobalRosters";
@@ -14,10 +15,13 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 const PAGE_SIZE = 100;
 
 export default function SuperAdminGlobalRostersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [coureurInput, setCoureurInput] = useState("");
   const [managerInput, setManagerInput] = useState("");
   const [gameMode, setGameMode] = useState<string>("all");
   const [saisonId, setSaisonId] = useState<string>("all");
+  const [leagueId, setLeagueId] = useState<string>(() => searchParams.get("leagueId") ?? "all");
   const [page, setPage] = useState(0);
 
   const coureurSearch = useDebouncedValue(coureurInput, 300);
@@ -32,16 +36,33 @@ export default function SuperAdminGlobalRostersPage() {
     },
   });
 
+  const { data: leagues } = useQuery({
+    queryKey: ["leagues-list-for-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leagues")
+        .select("id, name, saison:saison_id (annee)")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((l) => ({
+        id: l.id,
+        name: l.name,
+        saison_annee: (l.saison as { annee?: number } | null)?.annee ?? null,
+      }));
+    },
+  });
+
   const filters: GlobalRostersFilters = useMemo(
     () => ({
       saisonId: saisonId === "all" ? null : saisonId,
+      leagueIds: leagueId === "all" ? null : [leagueId],
       gameModes: gameMode === "all" ? null : [gameMode],
       coureurSearch,
       managerSearch,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [saisonId, gameMode, coureurSearch, managerSearch, page],
+    [saisonId, leagueId, gameMode, coureurSearch, managerSearch, page],
   );
 
   const { data, isLoading, isFetching } = useGlobalRosters(filters);
@@ -166,7 +187,7 @@ export default function SuperAdminGlobalRostersPage() {
       </div>
 
       <Card className="p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -225,6 +246,32 @@ export default function SuperAdminGlobalRostersPage() {
               <SelectItem value="five_phases">À la phase (5 phases)</SelectItem>
               <SelectItem value="full_season">À la phase (saison)</SelectItem>
               <SelectItem value="per_course">À la course</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={leagueId}
+            onValueChange={(v) => {
+              setLeagueId(v);
+              setPage(0);
+              const params = new URLSearchParams(searchParams);
+              if (v === "all") {
+                params.delete("leagueId");
+              } else {
+                params.set("leagueId", v);
+              }
+              setSearchParams(params, { replace: true });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Ligue" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les ligues</SelectItem>
+              {leagues?.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name} {l.saison_annee ? `(${l.saison_annee})` : ""}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
