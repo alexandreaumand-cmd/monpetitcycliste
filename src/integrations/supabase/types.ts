@@ -7084,6 +7084,7 @@ export type Database = {
           prix_signature: number
           roster_id: string
           round_achat: number
+          saison_annee: number
           saison_id: string
           total_count: number
         }[]
