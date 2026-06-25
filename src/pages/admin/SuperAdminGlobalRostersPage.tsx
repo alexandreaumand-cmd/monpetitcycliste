@@ -40,14 +40,14 @@ export default function SuperAdminGlobalRostersPage() {
     queryKey: ["leagues-list-for-filter"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("leagues")
-        .select("id, name, saison:saison_id (annee)")
-        .order("name", { ascending: true });
+        .from("league_scopes")
+        .select("league_id, season_id, league:league_id(id, name), saison:season_id(annee)")
+        .order("league(name)", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((l) => ({
-        id: l.id,
-        name: l.name,
-        saison_annee: (l.saison as { annee?: number } | null)?.annee ?? null,
+      return (data ?? []).map((row) => ({
+        id: row.league_id,
+        name: (row.league as { name?: string } | null)?.name ?? "",
+        saison_annee: (row.saison as { annee?: number } | null)?.annee ?? null,
       }));
     },
   });
