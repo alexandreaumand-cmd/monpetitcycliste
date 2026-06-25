@@ -15,14 +15,14 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 const PAGE_SIZE = 100;
 
 export default function SuperAdminGlobalRostersPage() {
+  const [searchParams] = useSearchParams();
+
   const [coureurInput, setCoureurInput] = useState("");
   const [managerInput, setManagerInput] = useState("");
   const [gameMode, setGameMode] = useState<string>("all");
   const [saisonId, setSaisonId] = useState<string>("all");
   const [leagueId, setLeagueId] = useState<string>(() => searchParams.get("leagueId") ?? "all");
   const [page, setPage] = useState(0);
-
-  const [searchParams] = useSearchParams();
 
   const coureurSearch = useDebouncedValue(coureurInput, 300);
   const managerSearch = useDebouncedValue(managerInput, 300);
