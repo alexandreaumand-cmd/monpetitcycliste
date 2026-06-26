@@ -117,7 +117,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           .select("manager_id, league_id")
           .in("manager_id", managerIds);
 
-        const leagueIds = [...new Set((memberData || []).map((m: any) => m.league_id).filter(Boolean))];
+        const leagueIds = [...new Set((memberData || []).map((m: any) => m.league_id).filter(Boolean))] as string[];
         const { data: leaguesData } = await supabase
           .from("leagues")
           .select("id, name")
