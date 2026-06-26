@@ -114,8 +114,8 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       if (managerIds.length > 0) {
         const { data: memberData } = await supabase
           .from("league_members")
-          .select("manager_id, leagues(name)")
-          .in("manager_id", managerIds);
+          .select("manager_id, league_id, leagues(name)")
+          .in("manager_id", managerIds) as { data: any[] | null; error: any };
         (memberData || []).forEach((m: any) => {
           if (!leagueMap.has(m.manager_id)) {
             leagueMap.set(m.manager_id, m.leagues?.name || '—');
