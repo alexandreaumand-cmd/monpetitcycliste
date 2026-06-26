@@ -61,7 +61,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
 
       const leagueIds = leagues.map(l => l.id);
       const ownerManagerIds = [...new Set(leagues.map(l => l.owner_manager_id).filter(Boolean))];
-      const activeLeagueIds = leagues.filter(l => l.status === 'active').map(l => l.id);
+      const activeLeagueIds = leagues.filter(l => l.status === 'active' || l.status === 'pending').map(l => l.id);
 
       // ── STAGE 1: Independent queries (no dependencies) ──
       const [
