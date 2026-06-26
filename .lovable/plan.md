@@ -1,75 +1,27 @@
-## Nouvelle page Super Admin : "Rosters globaux"
+## Problème
 
-Vue centralisée pour vérifier rapidement si un coureur (ex. vainqueur d'un CN) est détenu par au moins un manager, dans n'importe quelle ligue/phase, avant de saisir un résultat.
+1. Le bonus « coureur bonusé (+25%) » de Nadalito sur le coureur Wilco Kelderman pour la course **Tour de Suisse** n'aurait jamais dû exister : la seule ligue de Nadalito est **CopaGIRO**, dont le scope est limité à `giro-d-italia-mj6wbnif`. La fonction `recalculate-rider-bonuses` génère un bonus pour **chaque entrée de `points_ledger`** du coureur sur la phase, sans filtrer par le scope de la ligue. Tout ce qu'un coureur marque dans une autre course de la même phase finit attribué à toutes les ligues qui ont sélectionné ce coureur.
 
-### Emplacement
+2. La colonne **Ligue** du tableau « Bonus Coureur attribués » est vide alors que la table `bonus_points` contient déjà la colonne `league_id`. Le composant `RiderBonusTab` essaie de retrouver la ligue via `league_members` en filtrant sur `manager_id`, alors que cette table utilise `user_id` — la requête ne renvoie rien et la colonne tombe sur `'—'`.
 
-Nouvelle entrée **"Rosters globaux"** dans le groupe **"Ligues & Arène"** du menu Super Admin (desktop + mobile), icône `Users2`, route `/dashboard/super-admin/global-rosters`.
+## Correctifs
 
-### Écran
+### 1. `supabase/functions/recalculate-rider-bonuses/index.ts`
+Pour chaque sélection (`coureur_id`, `manager_id`, `league_id`) :
+- Appeler la RPC `get_league_course_ids(p_league_id => leagueId)` pour récupérer la liste des courses appartenant au scope de la ligue (mise en cache locale par `leagueId` pour éviter les appels répétés).
+- Filtrer les entrées de `points_ledger` pour ne garder que celles dont `course_id` est dans ce scope avant de calculer les 25 %.
+- Si la liste est vide, ne rien insérer et logger.
 
-Un tableau unique listant **une ligne par roster** (coureur détenu par un manager dans une phase d'une ligue), avec :
+### 2. `src/components/admin/bonus/RiderBonusTab.tsx`
+- Étendre le `select` de la requête `rider-bonuses` pour inclure `league_id` et `league:leagues!bonus_points_league_id_fkey(id, name)`.
+- Supprimer le bloc qui interroge `league_members` (filtrage cassé sur `manager_id`).
+- Renseigner `league_name` à partir de `bonus.league?.name`, avec fallback `'—'` si `league_id` est null (anciens bonus).
+- Si la FK n'existe pas avec ce nom, faire une requête séparée `leagues.select('id,name').in('id', leagueIds)` à partir des `league_id` distincts des bonus.
 
-**Colonnes**
-- Coureur (nom + photo si dispo)
-- Équipe saison
-- Cote actuelle (`coureurs_saisons.cote`)
-- Manager (nom + avatar)
-- Ligue (nom + badge type "à la phase" / "à la course")
-- Phase (numéro + nom)
-- Prix payé (`rosters.prix_signature`)
-- Round d'achat (récupéré via jointure `bids` gagnants → `auctions.round`)
+### 3. Nettoyage des données existantes
+- Supprimer les bonus `coureur_bonuse` déjà créés pour des couples `(league_id, course_id)` qui ne sont pas dans le scope de la ligue (notamment la ligne Nadalito × Kelderman × Tour de Suisse).
+- Lancer ensuite « Recalculer tous les bonus coureur » depuis l'écran pour la phase concernée afin de régénérer un état propre.
 
-**Filtres en haut de page**
-- Recherche coureur (autocomplete)
-- Recherche manager
-- Sélecteur ligue (multi)
-- Sélecteur phase (1 à 5)
-- Sélecteur saison (via `LeagueContext` / `SeasonContext`)
-- Type de ligue (à la phase / à la course / toutes)
-- Toggle "Coureurs non détenus" (à terme — voir note plus bas)
-
-**Comportements**
-- Pagination serveur (50 lignes/page) car volume important (124 managers × N ligues × 5 phases × ~20 coureurs).
-- Tri colonnes : coureur, cote (desc), prix (desc), manager, ligue.
-- Compteur en haut : "X rosters · Y coureurs uniques détenus · Z managers".
-- Export CSV du résultat filtré.
-
-### Cas d'usage principal (workflow CN)
-
-Tu tapes "Langelotti" dans le filtre coureur : si le tableau est vide → personne ne le détient → tu ne saisis pas le résultat. Sinon tu vois exactement qui, dans quelle ligue/phase, à quel prix.
-
-### Détails techniques
-
-**Source de données** : nouvelle vue SQL `v_global_rosters` qui joint :
-```
-rosters
-  → coureurs_saisons (cote, équipe)
-  → coureurs (nom)
-  → managers (nom)
-  → leagues (nom, template_id → "à la phase"/"à la course")
-  → phases (numéro)
-  → bids (winning_bid_id → round d'achat depuis auctions.round)
-```
-
-**Hook** : `useGlobalRosters({ filters, page })` avec React Query, debounced search, comptage séparé pour la pagination.
-
-**Composants** :
-- `src/pages/admin/SuperAdminGlobalRostersPage.tsx` (page)
-- `src/components/admin/GlobalRostersFilters.tsx` (barre de filtres)
-- `src/components/admin/GlobalRostersTable.tsx` (tableau + tri + pagination)
-- Hook : `src/hooks/useGlobalRosters.ts`
-
-**Sécurité** : accès via `SuperAdminGuard` (déjà en place sur les autres routes admin). Politique RLS sur la vue / RPC : `has_role(auth.uid(), 'super_admin')` uniquement. Pas de GRANT à anon.
-
-**Routes ajoutées** dans `SuperAdminPage.desktop.tsx` et `SuperAdminPage.mobile.tsx`, plus l'item dans `navGroups` / `navSections` (groupe "Ligues & Arène").
-
-### Note pour plus tard (hors scope)
-
-Le toggle "Coureurs non détenus" implique de charger toute la `coureurs_saisons` et faire un anti-join — à implémenter dans un second temps si besoin, idéalement via une RPC dédiée. Pour ton workflow CN immédiat, la recherche par nom suffit.
-
-### Hors scope
-
-- Pas de modification des rosters depuis cet écran (lecture seule).
-- Pas de changement sur la logique de saisie des résultats.
-- Pas de modif UI des autres écrans Super Admin.
+## Hors scope
+- Pas de changement sur les autres types de bonus (`first_win`, `itt`, manager).
+- Pas de migration de schéma : `bonus_points.league_id` existe déjà et est rempli.
