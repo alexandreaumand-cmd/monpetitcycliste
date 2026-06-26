@@ -60,6 +60,186 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
 
   const gameMode = templates?.find(t => t.id === league.game_mode);
 
+  const renderAuctionBlock = () => {
+    if (!auctionStatus || loadingAuction) return null;
+    return (
+      <div 
+        onClick={() => onViewDetails(true)}
+        className={
+          auctionStatus.isAnnouncementsPending 
+            ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+            : auctionStatus.isPastScheduled
+              ? "bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+              : auctionStatus.isScheduled 
+                ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+        }
+      >
+        <div className="flex items-center gap-2">
+          {auctionStatus.isAnnouncementsPending ? (
+            <>
+              <PartyPopper className="h-5 w-5 text-orange-600" />
+              <h3 className="font-montserrat font-bold text-orange-900">
+                {t('leagueCard.auction.resultsInProgress')}
+              </h3>
+            </>
+          ) : auctionStatus.isPastScheduled ? (
+            <>
+              <Clock className="h-5 w-5 text-gray-600" />
+              <h3 className="font-montserrat font-bold text-gray-800">
+                {t('leagueCard.auction.awaitingOpening')}
+              </h3>
+            </>
+          ) : auctionStatus.isScheduled ? (
+            <>
+              <Clock className="h-5 w-5 text-blue-600" />
+              <h3 className="font-montserrat font-bold text-blue-900">
+                {t('leagueCard.auction.scheduled')}
+              </h3>
+            </>
+          ) : (
+            <>
+              <Gavel className="h-5 w-5 text-amber-900" />
+              <h3 className="font-montserrat font-bold text-amber-900">
+                {t('leagueCard.auction.inProgress')}
+              </h3>
+            </>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          {(league.game_mode === 'five_phases' || league.game_mode === 'full_season') && auctionStatus.phaseIndex != null && (
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-inter ${
+                auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
+                  : auctionStatus.isScheduled ? 'text-blue-800' 
+                  : 'text-amber-900'
+              }`}>
+                Phase
+              </span>
+              <span className={`text-lg font-montserrat font-bold ${
+                auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
+                  : auctionStatus.isScheduled ? 'text-blue-900' 
+                  : 'text-amber-900'
+              }`}>
+                Phase {auctionStatus.phaseIndex}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-inter ${
+              auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
+                : auctionStatus.isScheduled ? 'text-blue-800' 
+                : 'text-amber-900'
+            }`}>
+              {t('leagueCard.auction.round')}
+            </span>
+            <span className={`text-lg font-montserrat font-bold ${
+              auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
+                : auctionStatus.isScheduled ? 'text-blue-900' 
+                : 'text-amber-900'
+            }`}>
+              Round {auctionStatus.roundNumber}
+            </span>
+          </div>
+          
+          {auctionStatus.isAnnouncementsPending && (
+            <div className="bg-orange-50/80 rounded-lg p-3 border border-orange-200 mt-3">
+              <p className="text-sm text-orange-800 text-center">
+                {t('leagueCard.auction.resultsRevealing')}
+              </p>
+              <p className="text-xs text-orange-600 text-center mt-1">
+                {t('leagueCard.auction.clickToSeeAnnouncements')}
+              </p>
+            </div>
+          )}
+          
+          {!auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-inter text-amber-900 flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {t('leagueCard.auction.validatedManagers')}
+                </span>
+                <span className="text-lg font-montserrat font-bold text-amber-900">
+                  {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
+                </span>
+              </div>
+              
+              <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-secondary h-full transition-all duration-500 ease-out"
+                  style={{ 
+                    width: `${(auctionStatus.validatedCount / Math.max(auctionStatus.totalManagers, 1)) * 100}%` 
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {auctionStatus.isPastScheduled && (
+            <div className="bg-gray-50/80 rounded-lg p-3 border border-gray-200 mt-3">
+              <p className="text-sm text-gray-700 text-center">
+                {t('leagueCard.auction.awaitingOpeningDesc')}
+              </p>
+            </div>
+          )}
+
+          {!auctionStatus.isAnnouncementsPending && !auctionStatus.isPastScheduled && (
+            <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'bg-white/80 dark:bg-background/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200 dark:border-blue-800' : 'border-border'} mt-3`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`} />
+                <span className={`text-xs font-inter font-medium ${auctionStatus.isScheduled ? 'text-blue-800 dark:text-blue-300' : 'text-foreground'}`}>
+                  {auctionStatus.isScheduled ? t('leagueCard.auction.openingIn') : t('leagueCard.auction.timeRemaining')}
+                </span>
+              </div>
+              
+              {countdown.isExpired ? (
+                <p className="text-sm font-montserrat font-bold text-primary">
+                  {auctionStatus.isScheduled ? t('leagueCard.auction.openingInProgress') : t('leagueCard.auction.closingInProgress')}
+                </p>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="text-center">
+                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                      {String(countdown.days).padStart(2, '0')}
+                    </div>
+                    <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>
+                      {countdown.days > 1 ? t('leagueCard.auction.days') : t('leagueCard.auction.day')}
+                    </div>
+                  </div>
+                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className="text-center">
+                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                      {String(countdown.hours).padStart(2, '0')}
+                    </div>
+                    <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>h</div>
+                  </div>
+                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className="text-center">
+                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                      {String(countdown.minutes).padStart(2, '0')}
+                    </div>
+                    <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>min</div>
+                  </div>
+                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className="text-center">
+                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                      {String(countdown.seconds).padStart(2, '0')}
+                    </div>
+                    <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>sec</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+
   return (
     <Card className="hover:shadow-lg transition-all duration-200">
       <CardHeader className="space-y-3">
