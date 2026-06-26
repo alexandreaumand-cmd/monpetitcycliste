@@ -108,24 +108,43 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
       if (error) throw error;
 
-      // Enrich with team info
-      const enriched = await Promise.all(
-        (data || []).map(async (bonus) => {
-          if (!bonus.coureur_id) return bonus;
+      // Fetch league names for all managers in one batch
+      const managerIds = [...new Set((data || []).map((b: any) => b.manager_id).filter(Boolean))];
+      let leagueMap = new Map<string, string>();
+      if (managerIds.length > 0) {
+        const { data: memberData } = await supabase
+          .from("league_members")
+          .select("manager_id, leagues(name)")
+          .in("manager_id", managerIds);
+        (memberData || []).forEach((m: any) => {
+          if (!leagueMap.has(m.manager_id)) {
+            leagueMap.set(m.manager_id, m.leagues?.name || '—');
+          }
+        });
+      }
 
-          const { data: seasonData } = await supabase
-            .from("coureurs_saisons")
-            .select(`
-              equipes_saisons!coureurs_saisons_equipe_id_fkey(nom_affiche, trigramme)
-            `)
-            .eq("coureur_id", bonus.coureur_id)
-            .eq("saison_id", saisonId)
-            .maybeSingle();
+      // Enrich with team info and league name
+      const enriched = await Promise.all(
+        (data || []).map(async (bonus: any) => {
+          let equipe = 'N/A';
+          if (bonus.coureur_id) {
+            const { data: seasonData } = await supabase
+              .from("coureurs_saisons")
+              .select(`
+                equipes_saisons!coureurs_saisons_equipe_id_fkey(nom_affiche, trigramme)
+              `)
+              .eq("coureur_id", bonus.coureur_id)
+              .eq("saison_id", saisonId)
+              .maybeSingle();
+
+            equipe = (seasonData?.equipes_saisons as any)?.trigramme || 
+                    (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A';
+          }
 
           return {
             ...bonus,
-            equipe: (seasonData?.equipes_saisons as any)?.trigramme || 
-                    (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A'
+            equipe,
+            league_name: leagueMap.get(bonus.manager_id) || '—'
           };
         })
       );
@@ -555,14 +574,15 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Coureur</TableHead>
-                    <TableHead>Équipe</TableHead>
-                    <TableHead>Manager</TableHead>
-                    <TableHead>Course</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead>Commentaire</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Coureur</TableHead>
+                  <TableHead>Équipe</TableHead>
+                  <TableHead>Manager</TableHead>
+                  <TableHead>Ligue</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead className="text-right">Points</TableHead>
+                  <TableHead>Commentaire</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -581,6 +601,9 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                         <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
                       </TableCell>
                       <TableCell>{bonus.manager?.nom || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">{bonus.league_name || '—'}</Badge>
+                      </TableCell>
                       <TableCell className="text-xs">
                         {bonus.course_id
                           ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
