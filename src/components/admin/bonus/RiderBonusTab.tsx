@@ -114,11 +114,19 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       if (managerIds.length > 0) {
         const { data: memberData } = await supabase
           .from("league_members")
-          .select("manager_id, league_id, leagues(name)")
-          .in("manager_id", managerIds) as { data: any[] | null; error: any };
+          .select("manager_id, league_id")
+          .in("manager_id", managerIds);
+
+        const leagueIds = [...new Set((memberData || []).map((m: any) => m.league_id).filter(Boolean))];
+        const { data: leaguesData } = await supabase
+          .from("leagues")
+          .select("id, name")
+          .in("id", leagueIds);
+
+        const leaguesMap = new Map((leaguesData || []).map((l: any) => [l.id, l.name]));
         (memberData || []).forEach((m: any) => {
-          if (!leagueMap.has(m.manager_id)) {
-            leagueMap.set(m.manager_id, m.leagues?.name || '—');
+          if (!leagueMap.has(m.manager_id) && m.league_id) {
+            leagueMap.set(m.manager_id, leaguesMap.get(m.league_id) || '—');
           }
         });
       }
