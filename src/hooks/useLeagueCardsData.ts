@@ -244,7 +244,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
         }
 
         let auctionStatus: AuctionStatus | null = null;
-        if (league.status === 'active' && season) {
+        if ((league.status === 'active' || league.status === 'pending') && season) {
           const phases = phasesBySeason.get(season.seasonId) || [];
           const today = new Date().toISOString().split('T')[0];
 
