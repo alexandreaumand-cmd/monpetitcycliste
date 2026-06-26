@@ -379,6 +379,8 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 {t('leagueCard.invitePlayers')}
               </Button>
             )}
+
+            {renderAuctionBlock()}
           </>
         )}
 
