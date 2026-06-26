@@ -98,6 +98,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           coureur_id,
           manager_id,
           course_id,
+          league_id,
           created_at,
           coureur:coureurs!bonus_points_coureur_id_fkey(id, nom),
           manager:managers!bonus_points_manager_id_fkey(id, nom)
@@ -108,27 +109,15 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
       if (error) throw error;
 
-      // Fetch league names for all managers in one batch
-      const managerIds = [...new Set((data || []).map((b: any) => b.manager_id).filter(Boolean))];
-      let leagueMap = new Map<string, string>();
-      if (managerIds.length > 0) {
-        const { data: memberData } = await (supabase as any)
-          .from("league_members")
-          .select("manager_id, league_id")
-          .in("manager_id", managerIds);
-
-        const leagueIds = [...new Set((memberData || []).map((m: any) => m.league_id).filter(Boolean))] as string[];
+      // Resolve league names via bonus_points.league_id directly
+      const leagueIds = [...new Set((data || []).map((b: any) => b.league_id).filter(Boolean))] as string[];
+      const leaguesMap = new Map<string, string>();
+      if (leagueIds.length > 0) {
         const { data: leaguesData } = await supabase
           .from("leagues")
           .select("id, name")
           .in("id", leagueIds);
-
-        const leaguesMap = new Map((leaguesData || []).map((l: any) => [l.id, l.name]));
-        (memberData || []).forEach((m: any) => {
-          if (!leagueMap.has(m.manager_id) && m.league_id) {
-            leagueMap.set(m.manager_id, leaguesMap.get(m.league_id) || '—');
-          }
-        });
+        (leaguesData || []).forEach((l: any) => leaguesMap.set(l.id, l.name));
       }
 
       // Enrich with team info and league name
@@ -152,7 +141,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           return {
             ...bonus,
             equipe,
-            league_name: leagueMap.get(bonus.manager_id) || '—'
+            league_name: bonus.league_id ? (leaguesMap.get(bonus.league_id) || '—') : '—'
           };
         })
       );
