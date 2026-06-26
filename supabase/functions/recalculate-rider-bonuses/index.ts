@@ -107,6 +107,22 @@ Deno.serve(async (req) => {
     let totalAfter = 0;
     let bonusesCreated = 0;
 
+    // Cache des courses par ligue (scope)
+    const leagueCoursesCache = new Map<string, Set<string>>();
+    const getLeagueCourses = async (leagueId: string): Promise<Set<string>> => {
+      if (leagueCoursesCache.has(leagueId)) return leagueCoursesCache.get(leagueId)!;
+      const { data: courseRows, error: scopeError } = await supabase
+        .rpc('get_league_course_ids', { p_league_id: leagueId });
+      if (scopeError) {
+        console.error(`Error fetching scope for league ${leagueId}:`, scopeError);
+        leagueCoursesCache.set(leagueId, new Set());
+        return leagueCoursesCache.get(leagueId)!;
+      }
+      const set = new Set<string>((courseRows || []).map((r: any) => r.course_id));
+      leagueCoursesCache.set(leagueId, set);
+      return set;
+    };
+
     // 2. Process each selection
     for (const selection of selections) {
       const { coureur_id: riderId, manager_id: managerId, league_id: leagueId } = selection;
@@ -139,6 +155,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // 2b-bis. Récupère les courses du scope de la ligue
+      const scopeCourses = await getLeagueCourses(leagueId);
+      if (scopeCourses.size === 0) {
+        console.log(`League ${leagueId} has no courses in scope, skipping rider ${riderId}`);
+        continue;
+      }
+
       // 2c. Get all points_ledger entries for this coureur/phase
       const { data: ledgerEntries, error: ledgerError } = await supabase
         .from('points_ledger')
@@ -156,9 +179,9 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 2d. Calculate 25% for each entry and insert
+      // 2d. Calculate 25% for each entry within league scope and insert
       const bonusInserts = ledgerEntries
-        .filter(entry => Number(entry.points) > 0)
+        .filter(entry => Number(entry.points) > 0 && scopeCourses.has(entry.course_id))
         .map(entry => {
           const bonusPoints = Math.round(Number(entry.points) * 0.25 * 100) / 100;
           const etapeLabel = entry.etape_numero ? ` Etape ${entry.etape_numero}` : '';
@@ -190,6 +213,8 @@ Deno.serve(async (req) => {
         bonusesCreated += bonusInserts.length;
 
         console.log(`Rider ${riderId}: ${bonusInserts.length} bonuses created (${existingTotal} -> ${newTotal})`);
+      } else {
+        console.log(`Rider ${riderId}: no in-scope ledger entries for league ${leagueId}`);
       }
     }
 
