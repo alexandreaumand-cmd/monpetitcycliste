@@ -12,6 +12,34 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
+type NewCourseState = {
+  nom: string;
+  date_debut: string;
+  date_fin: string;
+  categorie: string;
+  phase_id: string;
+  type_course: "one_day" | "stage_race";
+  pays: string;
+  uci_code: string;
+  wt_tier: string;
+  pcs_slug: string;
+  route_image_url: string;
+};
+
+const EMPTY_COURSE: NewCourseState = {
+  nom: "",
+  date_debut: "",
+  date_fin: "",
+  categorie: "",
+  phase_id: "",
+  type_course: "one_day",
+  pays: "",
+  uci_code: "",
+  wt_tier: "",
+  pcs_slug: "",
+  route_image_url: "",
+};
+
 export const CoursesManager = () => {
   const [filters, setFilters] = useState({
     phase_id: "all",
@@ -21,15 +49,8 @@ export const CoursesManager = () => {
     categorie: "all",
   });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newCourse, setNewCourse] = useState({
-    nom: "",
-    date_debut: "",
-    date_fin: "",
-    categorie: "",
-    phase_id: "",
-    type_course: "one_day" as "one_day" | "stage_race",
-    pays: "",
-  });
+  const [dialogMode, setDialogMode] = useState<"create" | "duplicate">("create");
+  const [newCourse, setNewCourse] = useState<NewCourseState>(EMPTY_COURSE);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -55,8 +76,6 @@ export const CoursesManager = () => {
         .select('categorie')
         .order('categorie');
       if (error) throw error;
-      
-      // Extraire les catégories uniques
       const unique = [...new Set(data.map(r => r.categorie))];
       return unique;
     },
@@ -82,7 +101,7 @@ export const CoursesManager = () => {
           .from('phases')
           .select('id')
           .eq('saison_id', filters.saison_id);
-        
+
         if (phasesForSaison && phasesForSaison.length > 0) {
           const phaseIds = phasesForSaison.map(p => p.id);
           query = query.in('phase_id', phaseIds);
@@ -106,28 +125,39 @@ export const CoursesManager = () => {
 
   // Mutation pour créer une course
   const createCourseMutation = useMutation({
-    mutationFn: async (courseData: any) => {
-      // Générer un ID unique basé sur le nom de la course
+    mutationFn: async (courseData: NewCourseState) => {
       const generateCourseId = (nom: string): string => {
         const slug = nom
           .toLowerCase()
           .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
-          .replace(/[^a-z0-9]+/g, '-')     // Remplacer les espaces/caractères spéciaux par des tirets
-          .replace(/^-+|-+$/g, '');        // Enlever les tirets au début/fin
-        const timestamp = Date.now().toString(36); // Timestamp en base 36 pour plus court
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        const timestamp = Date.now().toString(36);
         return `${slug}-${timestamp}`;
       };
 
       const courseId = generateCourseId(courseData.nom);
 
+      const payload: any = {
+        id: courseId,
+        nom: courseData.nom,
+        date_debut: courseData.date_debut,
+        date_fin: courseData.date_fin,
+        categorie: courseData.categorie || null,
+        phase_id: courseData.phase_id,
+        type_course: courseData.type_course,
+        pays: courseData.pays || null,
+        uci_code: courseData.uci_code || null,
+        wt_tier: courseData.wt_tier || null,
+        pcs_slug: courseData.pcs_slug || null,
+        route_image_url: courseData.route_image_url || null,
+        statut: 'scheduled',
+      };
+
       const { data, error } = await supabase
         .from('courses')
-        .insert({
-          ...courseData,
-          id: courseId,
-          statut: 'scheduled',
-        })
+        .insert(payload)
         .select()
         .single();
 
@@ -141,15 +171,8 @@ export const CoursesManager = () => {
         description: "La course a été ajoutée avec succès",
       });
       setCreateDialogOpen(false);
-      setNewCourse({
-        nom: "",
-        date_debut: "",
-        date_fin: "",
-        categorie: "",
-        phase_id: "",
-        type_course: "one_day",
-        pays: "",
-      });
+      setNewCourse(EMPTY_COURSE);
+      setDialogMode("create");
     },
     onError: (error) => {
       toast({
@@ -191,7 +214,6 @@ export const CoursesManager = () => {
         .from('courses')
         .delete()
         .eq('id', courseId);
-      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -228,6 +250,34 @@ export const CoursesManager = () => {
     }
   };
 
+  const handleDuplicate = (course: any) => {
+    const rawType = (course.type_course ?? "").toString().toLowerCase();
+    const type_course: "one_day" | "stage_race" = rawType.includes("stage") ? "stage_race" : "one_day";
+    setNewCourse({
+      nom: `${course.nom ?? ""} (copie)`,
+      date_debut: course.date_debut ?? "",
+      date_fin: course.date_fin ?? "",
+      categorie: course.categorie ?? "",
+      phase_id: course.phase_id ?? "",
+      type_course,
+      pays: course.pays ?? "",
+      uci_code: course.uci_code ?? "",
+      wt_tier: course.wt_tier ?? "",
+      pcs_slug: course.pcs_slug ?? "",
+      route_image_url: course.route_image_url ?? "",
+    });
+    setDialogMode("duplicate");
+    setCreateDialogOpen(true);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open) {
+      setNewCourse(EMPTY_COURSE);
+      setDialogMode("create");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -235,18 +285,20 @@ export const CoursesManager = () => {
         title="Gestion des courses"
         subtitle="Éditer les informations des courses de la saison"
         actions={
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <Dialog open={createDialogOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => { setDialogMode("create"); setNewCourse(EMPTY_COURSE); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter une course
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Créer une nouvelle course</DialogTitle>
+                <DialogTitle>
+                  {dialogMode === "duplicate" ? "Dupliquer la course" : "Créer une nouvelle course"}
+                </DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-4 py-4">
                 <div>
                   <Label htmlFor="course-name">Nom de la course *</Label>
@@ -321,7 +373,7 @@ export const CoursesManager = () => {
                     <Label htmlFor="type-course">Type de course</Label>
                     <Select
                       value={newCourse.type_course}
-                      onValueChange={(value: "one_day" | "stage_race") => 
+                      onValueChange={(value: "one_day" | "stage_race") =>
                         setNewCourse({ ...newCourse, type_course: value })
                       }
                     >
@@ -336,13 +388,55 @@ export const CoursesManager = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="pays">Pays</Label>
+                    <Input
+                      id="pays"
+                      value={newCourse.pays}
+                      onChange={(e) => setNewCourse({ ...newCourse, pays: e.target.value })}
+                      placeholder="Ex: ITA, FRA, BEL"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="uci-code">Code UCI</Label>
+                    <Input
+                      id="uci-code"
+                      value={newCourse.uci_code}
+                      onChange={(e) => setNewCourse({ ...newCourse, uci_code: e.target.value })}
+                      placeholder="Ex: 1.UWT"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="wt-tier">WT Tier</Label>
+                    <Input
+                      id="wt-tier"
+                      value={newCourse.wt_tier}
+                      onChange={(e) => setNewCourse({ ...newCourse, wt_tier: e.target.value })}
+                      placeholder="Ex: WT, Pro"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pcs-slug">PCS slug</Label>
+                    <Input
+                      id="pcs-slug"
+                      value={newCourse.pcs_slug}
+                      onChange={(e) => setNewCourse({ ...newCourse, pcs_slug: e.target.value })}
+                      placeholder="Ex: milano-sanremo"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="pays">Pays</Label>
+                  <Label htmlFor="route-image-url">URL image du parcours</Label>
                   <Input
-                    id="pays"
-                    value={newCourse.pays}
-                    onChange={(e) => setNewCourse({ ...newCourse, pays: e.target.value })}
-                    placeholder="Ex: ITA, FRA, BEL"
+                    id="route-image-url"
+                    value={newCourse.route_image_url}
+                    onChange={(e) => setNewCourse({ ...newCourse, route_image_url: e.target.value })}
+                    placeholder="https://..."
                   />
                 </div>
               </div>
@@ -350,7 +444,7 @@ export const CoursesManager = () => {
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => setCreateDialogOpen(false)}
+                  onClick={() => handleDialogOpenChange(false)}
                   disabled={createCourseMutation.isPending}
                 >
                   Annuler
@@ -361,7 +455,7 @@ export const CoursesManager = () => {
                 >
                   {createCourseMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   <Plus className="h-4 w-4 mr-2" />
-                  Créer la course
+                  {dialogMode === "duplicate" ? "Créer la copie" : "Créer la course"}
                 </Button>
               </div>
             </DialogContent>
@@ -376,6 +470,7 @@ export const CoursesManager = () => {
         isLoading={isLoading}
         onSave={(updates) => updateCoursesMutation.mutate(updates)}
         onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
       />
     </div>
   );

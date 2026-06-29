@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CalendarDays } from "lucide-react";
+import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CalendarDays, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StageDatesDialog } from "./StageDatesDialog";
@@ -15,12 +15,13 @@ interface CoursesTableProps {
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
   onDelete: (courseId: string, courseName: string) => void;
+  onDuplicate?: (course: any) => void;
 }
 
 type SortField = 'nom' | 'date_debut' | 'date_fin' | 'categorie' | 'phase' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
-export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTableProps) => {
+export const CoursesTable = ({ courses, isLoading, onSave, onDelete, onDuplicate }: CoursesTableProps) => {
   const [editedCourses, setEditedCourses] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [sortField, setSortField] = useState<SortField>(null);
@@ -311,6 +312,17 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
                             className="h-8 w-8 p-0"
                           >
                             <CalendarDays className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onDuplicate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDuplicate(course)}
+                            title="Dupliquer cette course"
+                            className="h-8 w-8 p-0"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                         )}
                         <Button
