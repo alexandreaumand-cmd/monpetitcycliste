@@ -211,11 +211,11 @@ export const CoursesManager = () => {
   const deleteCourseMutation = useMutation({
     mutationFn: async (courseId: string) => {
       const steps: Array<[string, () => Promise<{ error: any }>]> = [
-        ['points_ledger', () => supabase.from('points_ledger').delete().eq('course_id', courseId)],
-        ['race_results', () => supabase.from('race_results').delete().eq('course_id', courseId)],
-        ['race_result_sets', () => supabase.from('race_result_sets').delete().eq('course_id', courseId)],
-        ['race_results_history', () => supabase.from('race_results_history').delete().eq('course_id', courseId)],
-        ['courses', () => supabase.from('courses').delete().eq('id', courseId)],
+        ['points_ledger', async () => await supabase.from('points_ledger').delete().eq('course_id', courseId)],
+        ['race_results', async () => await supabase.from('race_results').delete().eq('course_id', courseId)],
+        ['race_result_sets', async () => await supabase.from('race_result_sets').delete().eq('course_id', courseId)],
+        ['race_results_history', async () => await supabase.from('race_results_history').delete().eq('course_id', courseId)],
+        ['courses', async () => await supabase.from('courses').delete().eq('id', courseId)],
       ];
       for (const [name, run] of steps) {
         const { error } = await run();
