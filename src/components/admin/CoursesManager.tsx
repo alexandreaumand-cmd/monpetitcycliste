@@ -207,20 +207,26 @@ export const CoursesManager = () => {
     },
   });
 
-  // Mutation pour supprimer une course
+  // Mutation pour supprimer une course (avec cascade contrôlée)
   const deleteCourseMutation = useMutation({
     mutationFn: async (courseId: string) => {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', courseId);
-      if (error) throw error;
+      const steps: Array<[string, () => Promise<{ error: any }>]> = [
+        ['points_ledger', () => supabase.from('points_ledger').delete().eq('course_id', courseId)],
+        ['race_results', () => supabase.from('race_results').delete().eq('course_id', courseId)],
+        ['race_result_sets', () => supabase.from('race_result_sets').delete().eq('course_id', courseId)],
+        ['race_results_history', () => supabase.from('race_results_history').delete().eq('course_id', courseId)],
+        ['courses', () => supabase.from('courses').delete().eq('id', courseId)],
+      ];
+      for (const [name, run] of steps) {
+        const { error } = await run();
+        if (error) throw new Error(`[${name}] ${error.message}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       toast({
         title: "✅ Course supprimée",
-        description: "La course a été supprimée avec succès",
+        description: "La course et ses dépendances ont été supprimées",
       });
     },
     onError: (error) => {

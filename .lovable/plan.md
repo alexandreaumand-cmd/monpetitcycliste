@@ -1,27 +1,58 @@
-## Problème
+## Pourquoi l'erreur ?
 
-1. Le bonus « coureur bonusé (+25%) » de Nadalito sur le coureur Wilco Kelderman pour la course **Tour de Suisse** n'aurait jamais dû exister : la seule ligue de Nadalito est **CopaGIRO**, dont le scope est limité à `giro-d-italia-mj6wbnif`. La fonction `recalculate-rider-bonuses` génère un bonus pour **chaque entrée de `points_ledger`** du coureur sur la phase, sans filtrer par le scope de la ligue. Tout ce qu'un coureur marque dans une autre course de la même phase finit attribué à toutes les ligues qui ont sélectionné ce coureur.
+La course « à supprimer » a déjà des données rattachées :
+- 1 ligne dans `race_results` (résultat de course)
+- 1 ligne dans `race_result_sets` (jeu de résultats)
+- 1 ligne dans `points_ledger` (points attribués)
 
-2. La colonne **Ligue** du tableau « Bonus Coureur attribués » est vide alors que la table `bonus_points` contient déjà la colonne `league_id`. Le composant `RiderBonusTab` essaie de retrouver la ligue via `league_members` en filtrant sur `manager_id`, alors que cette table utilise `user_id` — la requête ne renvoie rien et la colonne tombe sur `'—'`.
+Les clés étrangères `race_results.course_id`, `points_ledger.course_id` et `race_results_history.course_id` sont en `ON DELETE NO ACTION` (les autres tables liées, elles, sont déjà en CASCADE). La base refuse donc la suppression tant qu'il reste un résultat ou un point lié à la course.
 
-## Correctifs
+## Correction proposée
 
-### 1. `supabase/functions/recalculate-rider-bonuses/index.ts`
-Pour chaque sélection (`coureur_id`, `manager_id`, `league_id`) :
-- Appeler la RPC `get_league_course_ids(p_league_id => leagueId)` pour récupérer la liste des courses appartenant au scope de la ligue (mise en cache locale par `leagueId` pour éviter les appels répétés).
-- Filtrer les entrées de `points_ledger` pour ne garder que celles dont `course_id` est dans ce scope avant de calculer les 25 %.
-- Si la liste est vide, ne rien insérer et logger.
+Suppression « cascade contrôlée » côté application (pas de modification de schéma — on garde la sécurité actuelle qui empêche une suppression accidentelle).
 
-### 2. `src/components/admin/bonus/RiderBonusTab.tsx`
-- Étendre le `select` de la requête `rider-bonuses` pour inclure `league_id` et `league:leagues!bonus_points_league_id_fkey(id, name)`.
-- Supprimer le bloc qui interroge `league_members` (filtrage cassé sur `manager_id`).
-- Renseigner `league_name` à partir de `bonus.league?.name`, avec fallback `'—'` si `league_id` est null (anciens bonus).
-- Si la FK n'existe pas avec ce nom, faire une requête séparée `leagues.select('id,name').in('id', leagueIds)` à partir des `league_id` distincts des bonus.
+### Étape 1 — Compter les dépendances avant suppression
 
-### 3. Nettoyage des données existantes
-- Supprimer les bonus `coureur_bonuse` déjà créés pour des couples `(league_id, course_id)` qui ne sont pas dans le scope de la ligue (notamment la ligne Nadalito × Kelderman × Tour de Suisse).
-- Lancer ensuite « Recalculer tous les bonus coureur » depuis l'écran pour la phase concernée afin de régénérer un état propre.
+Dans `CoursesManager.tsx`, avant d'appeler la suppression, interroger en parallèle :
+- `race_results` (count)
+- `race_result_sets` (count)
+- `points_ledger` (count)
+- `race_results_history` (count)
 
-## Hors scope
-- Pas de changement sur les autres types de bonus (`first_win`, `itt`, manager).
-- Pas de migration de schéma : `bonus_points.league_id` existe déjà et est rempli.
+### Étape 2 — Confirmation enrichie
+
+Remplacer le `window.confirm` actuel par une confirmation qui affiche le détail :
+
+```
+Supprimer la course "à supprimer" ?
+
+Cette action supprimera également :
+- 1 résultat de course
+- 1 jeu de résultats
+- 1 entrée de points
+
+Action irréversible.
+```
+
+Si tous les compteurs sont à 0 → confirmation simple comme aujourd'hui.
+
+### Étape 3 — Suppression en cascade ordonnée
+
+Dans `deleteCourseMutation`, exécuter dans l'ordre :
+1. `delete from points_ledger where course_id = ...`
+2. `delete from race_results where course_id = ...`
+3. `delete from race_result_sets where course_id = ...`
+4. `delete from race_results_history where course_id = ...`
+5. `delete from courses where id = ...`
+
+Les autres dépendances (`arena_pronostics`, `arena_live_courses`, `course_route_images`, `course_stage_config`, `startlist_imports`, `league_startlist_notes`, `arena_pronostic_deadlines`, `arena_messages`) sont déjà en `ON DELETE CASCADE` / `SET NULL` — pas besoin de les toucher.
+
+### Étape 4 — Gestion d'erreur
+
+Si une étape échoue, afficher l'erreur exacte dans le toast (table + message) pour pouvoir diagnostiquer sans deviner.
+
+## Fichiers modifiés
+
+- `src/components/admin/CoursesManager.tsx` : nouvelle logique `handleDelete` (préchargement des compteurs + dialog de confirmation enrichi) et `deleteCourseMutation` (suppression ordonnée des dépendances).
+
+Aucune migration SQL nécessaire.
