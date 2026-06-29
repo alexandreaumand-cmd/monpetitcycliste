@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Calendar, Save } from "lucide-react";
 import { format } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { fr } from "date-fns/locale";
+
+const PARIS_TZ = "Europe/Paris";
 
 export function PhaseAuctionSchedule() {
   const queryClient = useQueryClient();
@@ -62,27 +65,31 @@ export function PhaseAuctionSchedule() {
   const getScheduleDate = (phaseId: string) => {
     if (dates[phaseId] !== undefined) return dates[phaseId];
     const existing = schedules.find(s => s.phase_id === phaseId);
-    return existing ? existing.auction_opens_at.slice(0, 16) : '';
+    if (!existing) return '';
+    return format(toZonedTime(existing.auction_opens_at, PARIS_TZ), "yyyy-MM-dd'T'HH:mm");
   };
 
   const saveMutation = useMutation({
     mutationFn: async ({ phaseId, dateStr }: { phaseId: string; dateStr: string }) => {
+      const utcIso = fromZonedTime(dateStr, PARIS_TZ).toISOString();
       const existing = schedules.find(s => s.phase_id === phaseId);
       if (existing) {
         const { error } = await supabase
           .from('phase_auction_schedule')
-          .update({ auction_opens_at: new Date(dateStr).toISOString(), updated_at: new Date().toISOString() })
+          .update({ auction_opens_at: utcIso, updated_at: new Date().toISOString() })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('phase_auction_schedule')
-          .insert({ phase_id: phaseId, auction_opens_at: new Date(dateStr).toISOString() });
+          .insert({ phase_id: phaseId, auction_opens_at: utcIso });
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['phase-auction-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['league-cards-data'] });
+      queryClient.invalidateQueries({ queryKey: ['next-auction-info'] });
       toast.success('Date sauvegardée');
     },
     onError: (err: any) => {
@@ -100,6 +107,8 @@ export function PhaseAuctionSchedule() {
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Ces dates s'appliquent aux ligues actives jouant par phase (mode "5 Phases" et anciennes ligues "Saison complète"). La date du premier tour de chaque ligue est fixée par son créateur.
+          <br />
+          <span className="font-medium">Toutes les heures sont en heure de Paris (Europe/Paris).</span>
         </p>
       </CardHeader>
       <CardContent>
@@ -119,7 +128,7 @@ export function PhaseAuctionSchedule() {
                   {phase.date_fin && format(new Date(phase.date_fin), 'dd MMM yyyy', { locale: fr })}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs whitespace-nowrap">Début enchères :</Label>
+                  <Label className="text-xs whitespace-nowrap">Début enchères (Paris) :</Label>
                   <Input
                     type="datetime-local"
                     value={dateValue}
