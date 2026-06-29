@@ -21,7 +21,7 @@ interface CoursesTableProps {
 type SortField = 'nom' | 'date_debut' | 'date_fin' | 'categorie' | 'phase' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
-export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTableProps) => {
+export const CoursesTable = ({ courses, isLoading, onSave, onDelete, onDuplicate }: CoursesTableProps) => {
   const [editedCourses, setEditedCourses] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [sortField, setSortField] = useState<SortField>(null);
