@@ -152,6 +152,17 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         const now = new Date();
         const isPast = opensAtDate ? opensAtDate <= now : false;
 
+        // Déclenchement à la demande : si l'heure d'ouverture est passée,
+        // on invoque l'edge function pour basculer l'enchère en `open`
+        // sans attendre le filet de sécurité cron.
+        if (isPast) {
+          try {
+            await supabase.functions.invoke('auto-open-scheduled-auctions', { body: {} });
+          } catch (e) {
+            console.warn('[useLeagueAuctionStatus] auto-open invocation failed:', e);
+          }
+        }
+
         // Masquer la carte tant que l'ouverture est à plus de SCHEDULED_VISIBILITY_DAYS jours.
         if (opensAtDate && !isPast) {
           const diffDays = (opensAtDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
