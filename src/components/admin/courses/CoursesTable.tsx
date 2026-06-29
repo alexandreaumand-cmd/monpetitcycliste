@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CalendarDays } from "lucide-react";
+import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CalendarDays, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StageDatesDialog } from "./StageDatesDialog";
@@ -15,6 +15,7 @@ interface CoursesTableProps {
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
   onDelete: (courseId: string, courseName: string) => void;
+  onDuplicate?: (course: any) => void;
 }
 
 type SortField = 'nom' | 'date_debut' | 'date_fin' | 'categorie' | 'phase' | null;
