@@ -207,20 +207,26 @@ export const CoursesManager = () => {
     },
   });
 
-  // Mutation pour supprimer une course
+  // Mutation pour supprimer une course (avec cascade contrôlée)
   const deleteCourseMutation = useMutation({
     mutationFn: async (courseId: string) => {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', courseId);
-      if (error) throw error;
+      const steps: Array<[string, () => Promise<{ error: any }>]> = [
+        ['points_ledger', async () => await supabase.from('points_ledger').delete().eq('course_id', courseId)],
+        ['race_results', async () => await supabase.from('race_results').delete().eq('course_id', courseId)],
+        ['race_result_sets', async () => await supabase.from('race_result_sets').delete().eq('course_id', courseId)],
+        ['race_results_history', async () => await supabase.from('race_results_history').delete().eq('course_id', courseId)],
+        ['courses', async () => await supabase.from('courses').delete().eq('id', courseId)],
+      ];
+      for (const [name, run] of steps) {
+        const { error } = await run();
+        if (error) throw new Error(`[${name}] ${error.message}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       toast({
         title: "✅ Course supprimée",
-        description: "La course a été supprimée avec succès",
+        description: "La course et ses dépendances ont été supprimées",
       });
     },
     onError: (error) => {
@@ -244,8 +250,24 @@ export const CoursesManager = () => {
     createCourseMutation.mutate(newCourse);
   };
 
-  const handleDelete = (courseId: string, courseName: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la course "${courseName}" ?\n\nCette action est irréversible.`)) {
+  const handleDelete = async (courseId: string, courseName: string) => {
+    const [rr, rs, pl, rh] = await Promise.all([
+      supabase.from('race_results').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('race_result_sets').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('points_ledger').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('race_results_history').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+    ]);
+    const counts = {
+      'résultat(s) de course': rr.count ?? 0,
+      'jeu(x) de résultats': rs.count ?? 0,
+      'entrée(s) de points': pl.count ?? 0,
+      'historique de résultats': rh.count ?? 0,
+    };
+    const lines = Object.entries(counts).filter(([, n]) => n > 0).map(([label, n]) => `- ${n} ${label}`);
+    const detail = lines.length
+      ? `\n\nCette action supprimera également :\n${lines.join('\n')}`
+      : '';
+    if (window.confirm(`Supprimer la course "${courseName}" ?${detail}\n\nAction irréversible.`)) {
       deleteCourseMutation.mutate(courseId);
     }
   };
