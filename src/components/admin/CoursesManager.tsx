@@ -250,8 +250,24 @@ export const CoursesManager = () => {
     createCourseMutation.mutate(newCourse);
   };
 
-  const handleDelete = (courseId: string, courseName: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la course "${courseName}" ?\n\nCette action est irréversible.`)) {
+  const handleDelete = async (courseId: string, courseName: string) => {
+    const [rr, rs, pl, rh] = await Promise.all([
+      supabase.from('race_results').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('race_result_sets').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('points_ledger').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+      supabase.from('race_results_history').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+    ]);
+    const counts = {
+      'résultat(s) de course': rr.count ?? 0,
+      'jeu(x) de résultats': rs.count ?? 0,
+      'entrée(s) de points': pl.count ?? 0,
+      'historique de résultats': rh.count ?? 0,
+    };
+    const lines = Object.entries(counts).filter(([, n]) => n > 0).map(([label, n]) => `- ${n} ${label}`);
+    const detail = lines.length
+      ? `\n\nCette action supprimera également :\n${lines.join('\n')}`
+      : '';
+    if (window.confirm(`Supprimer la course "${courseName}" ?${detail}\n\nAction irréversible.`)) {
       deleteCourseMutation.mutate(courseId);
     }
   };
