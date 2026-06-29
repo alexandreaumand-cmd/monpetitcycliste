@@ -7668,6 +7668,7 @@ export type Database = {
         Args: { p_phase_id: string }
         Returns: number
       }
+      trigger_auto_open_auctions: { Args: never; Returns: number }
       unaccent: { Args: { "": string }; Returns: string }
       verify_course_save: {
         Args: { p_course_id: string }
