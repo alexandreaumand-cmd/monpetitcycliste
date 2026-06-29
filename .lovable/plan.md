@@ -1,36 +1,44 @@
-## Pourquoi un cron jusqu'ici
+## Problème
 
-L'ouverture d'une enchère `scheduled` n'est pas un simple changement de statut : elle doit aussi (1) prolonger la `deadline_at` si elle est dans le passé, (2) créer une notification in-app pour chaque membre, (3) déclencher l'email "round ouvert". Tout ça vivait dans l'edge function `auto-open-scheduled-auctions`, donc il fallait un planificateur HTTP pour la rappeler toutes les 5 min — d'où le cron, fragile (URL de projet en dur dans `cron.job.command`, qui a justement cassé sur CopaTOUR).
+Tu modifies une date dans **Admin → Planning enchères par phase**, mais :
 
-## Objectif
+1. **Les cartes de ligue ne bougent pas** parce que la table `phase_auction_schedule` (où tu écris) et la table `auctions` (que lisent les cartes) ne sont pas synchronisées automatiquement. La fonction `sync_phase_schedule_to_auctions()` existe mais elle n'est appelée nulle part — il n'y a pas de trigger attaché, malgré son nom. Il faut donc actuellement la déclencher à la main (ce qu'on avait fait pour MPC 2026 / P4).
+2. **Fuseau horaire ambigu** : le champ `<input type="datetime-local">` est interprété par `new Date(dateStr)` dans le fuseau du navigateur de l'admin. Si tu administres depuis Paris ça tombe juste, mais ce n'est garanti nulle part et rien ne le dit dans l'UI. Côté DB, la colonne est en `timestamptz` (UTC).
 
-Supprimer la dépendance au cron HTTP. L'ouverture doit se faire **toute seule** dès que `opens_at` est atteint, sans planificateur externe ni edge function appelée par cron.
+## Correctifs
 
-## Approche
+### 1. Synchronisation automatique vers `auctions`
+- Créer un **trigger** `AFTER INSERT OR UPDATE` sur `phase_auction_schedule` qui appelle `sync_phase_schedule_to_auctions(NEW.phase_id)`.
+- Étendre la fonction pour qu'elle :
+  - prenne aussi en compte les ligues `pending` (pas seulement `active`), pour que le countdown apparaisse dès la création de la ligue (cas CopaTOUR/P4).
+  - mette à jour `opens_at` même si l'enchère est encore `scheduled` mais déjà créée — comportement déjà OK, à confirmer.
 
-Deux mécanismes complémentaires, tous deux côté base :
+Résultat : dès que tu enregistres une nouvelle date dans le planning, toutes les enchères `scheduled` des ligues concernées sont alignées sans aucune action manuelle.
 
-### 1. Ouverture "à la demande" via RPC SQL (mécanisme principal)
+### 2. Forcer le fuseau Paris dans l'admin
+- Dans `PhaseAuctionSchedule.tsx` :
+  - Convertir la saisie `datetime-local` en UTC **explicitement depuis Europe/Paris** (`date-fns-tz` `fromZonedTime`) avant d'écrire en DB, au lieu de `new Date(dateStr).toISOString()`.
+  - Convertir la valeur DB vers Paris pour pré-remplir le champ (`toZonedTime` + `format` `yyyy-MM-dd'T'HH:mm`).
+  - Ajouter un petit label « heure de Paris » à côté du champ pour lever toute ambiguïté.
 
-- Nouvelle fonction Postgres `public.open_due_auctions()` :
-  - Sélectionne toutes les `auctions` `statut = 'scheduled'` avec `opens_at <= now()` dont la ligue est `active`.
-  - Pour chacune : passe `statut = 'open'`, prolonge `deadline_at` si nécessaire, insère les `notifications` directement en SQL, et enfile les emails via `pg_net.http_post` vers `send-transactional-email` (l'unique appel HTTP restant, déjà utilisé partout ailleurs pour les mails).
-  - Retourne le nombre d'enchères ouvertes.
-- Côté front, le hook `useLeagueAuctionStatus` (déjà `refetchInterval: 30s`) appelle `open_due_auctions()` via `supabase.rpc(...)` **avant** sa requête de statut, dès qu'il détecte au moins une `scheduled` dont `opens_at` est dépassé. Résultat : la première personne qui ouvre l'app après l'heure prévue déclenche l'ouverture, et tout le monde voit l'enchère ouverte dans la foulée.
-- Idempotent (le `UPDATE ... WHERE statut = 'scheduled'`) → sans risque si plusieurs onglets appellent simultanément.
+Aucun changement de schéma sur ce volet — uniquement la conversion côté UI.
 
-### 2. Filet de sécurité : pg_cron en SQL pur (pas de HTTP)
-
-Pour les ligues sans aucun membre connecté au moment T (peu probable, mais possible) :
-- Remplacer le job `auto-open-scheduled-auctions` par un appel direct à `SELECT public.open_due_auctions();` toutes les 5 min.
-- Avantage : **plus aucune URL ni clé en dur** dans `cron.job` — c'est juste du SQL. Le bug qui a touché CopaTOUR (mauvaise URL de projet) devient structurellement impossible.
-- L'edge function `auto-open-scheduled-auctions` peut être supprimée (ou laissée en place comme outil manuel de secours).
+### 3. Rafraîchissement immédiat côté cartes
+- Après le `saveMutation`, invalider la query `['league-cards-data', …]` (en plus de `phase-auction-schedule`) pour que les cartes affichent la nouvelle date sans attendre les 5 min de `staleTime`.
 
 ## Détails techniques
 
-- `open_due_auctions()` est `SECURITY DEFINER`, `search_path = public`, owner postgres. Elle réplique la logique de l'edge function actuelle (filtre ligue active, prolongation de `deadline_at`, notifications, emails).
-- Emails : insertion dans `email_send_log` + `pg_net.http_post('.../send-transactional-email', ...)` avec `idempotency_key = auction-opened-<auction_id>` (déjà géré par la fonction email).
-- Notifications : `INSERT INTO notifications` en lot, en se branchant sur la même table `league_members` que `notifyLeagueMembers`.
-- Hook front : nouveau micro-hook `useAutoOpenDueAuctions(leagueId)` appelé en amont de `useLeagueAuctionStatus`, qui n'appelle l'RPC que si une enchère `scheduled` de la ligue a `opens_at <= now()`.
-- Suppression : `cron.unschedule('auto-open-scheduled-auctions')` puis recréation en SQL pur (`SELECT public.open_due_auctions();`).
-- Tests : forcer une `auctions.opens_at` dans le passé sur une ligue de test, recharger le dashboard → l'enchère bascule `open` sans cron, et toujours via cron SQL si personne n'est connecté.
+- Migration SQL :
+  - `CREATE OR REPLACE FUNCTION sync_phase_schedule_to_auctions(...)` modifiée pour inclure `l.status IN ('active','pending')`.
+  - `CREATE TRIGGER trg_sync_phase_schedule_to_auctions AFTER INSERT OR UPDATE OF auction_opens_at ON public.phase_auction_schedule FOR EACH ROW EXECUTE FUNCTION ...` (wrapper trigger function qui appelle `sync_phase_schedule_to_auctions(NEW.phase_id)` puis `RETURN NEW`).
+- `src/components/admin/PhaseAuctionSchedule.tsx` :
+  - `import { fromZonedTime, toZonedTime } from 'date-fns-tz'` (déjà dans les deps).
+  - `getScheduleDate` → `format(toZonedTime(existing.auction_opens_at, 'Europe/Paris'), "yyyy-MM-dd'T'HH:mm")`.
+  - `saveMutation` → `fromZonedTime(dateStr, 'Europe/Paris').toISOString()`.
+  - `queryClient.invalidateQueries({ queryKey: ['league-cards-data'] })` ajouté dans `onSuccess`.
+  - Label « (heure de Paris) » sous le champ.
+
+## Hors scope
+
+- Le composant `AuctionCreator` continue d'utiliser l'heure locale du navigateur pour le « lancement rapide » (deadline = now+24h), comportement inchangé.
+- Pas de migration des données existantes : `phase_auction_schedule` stocke déjà du `timestamptz`, donc les valeurs déjà saisies par toi depuis Paris restent correctes.
