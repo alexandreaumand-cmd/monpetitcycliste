@@ -314,6 +314,17 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete, onDuplicate
                             <CalendarDays className="h-4 w-4" />
                           </Button>
                         )}
+                        {onDuplicate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDuplicate(course)}
+                            title="Dupliquer cette course"
+                            className="h-8 w-8 p-0"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
