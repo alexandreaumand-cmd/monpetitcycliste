@@ -96,7 +96,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
           leagueId 
             ? supabase
                 .from("league_scopes")
-                .select("season_id")
+                .select("season_id, phases")
                 .eq("league_id", leagueId)
                 .maybeSingle()
             : Promise.resolve({ data: null, error: null })
