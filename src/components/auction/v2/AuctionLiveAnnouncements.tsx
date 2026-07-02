@@ -444,6 +444,10 @@ export function AuctionLiveAnnouncements({
                                           <span className="font-semibold text-primary">
                                             🎉 {t('live.wonFor', { amount: annonce.winning_amount })}
                                           </span>
+                                        ) : annonce.is_my_loss ? (
+                                          <span className="font-semibold text-destructive">
+                                            💔 <strong>{annonce.winning_manager?.nom}</strong> — {annonce.winning_amount}
+                                          </span>
                                         ) : (
                                           <span>
                                             <strong>{annonce.winning_manager?.nom}</strong> — {annonce.winning_amount}
@@ -455,7 +459,22 @@ export function AuctionLiveAnnouncements({
                                           {annonce.is_my_win ? (
                                             <>✅ {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           ) : (
-                                            <>{annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
+                                            <>
+                                              {annonce.losers.map((l: any, i: number) => {
+                                                const isMe = annonce.is_my_loss && (
+                                                  (l.manager_id && currentManagerId && l.manager_id === currentManagerId) ||
+                                                  (currentManagerNom && l.manager === currentManagerNom)
+                                                );
+                                                return (
+                                                  <span key={i}>
+                                                    {i > 0 && ', '}
+                                                    <span className={isMe ? 'text-destructive font-semibold' : ''}>
+                                                      {l.manager} ({l.montant})
+                                                    </span>
+                                                  </span>
+                                                );
+                                              })}
+                                            </>
                                           )}
                                         </p>
                                       )}
