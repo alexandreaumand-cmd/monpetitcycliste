@@ -1,24 +1,29 @@
-## Problème
+## Diagnostic
 
-Dans la ligue CopaTOUR (mode « À la course », centrée sur le Tour de France), l'onglet « Mon équipe » affiche « Équipe vide » alors que les enchères sont terminées et que 15 coureurs sont bien attribués à chaque manager.
+Dans la ligue « Suceurs_de_Roux » :
+- `starting_phase_index = 3` et `started_at_effective = 2026-05-08`
+- Le Giro d'Italia démarre exactement le `2026-05-08`
 
-## Cause
+Les vues de classement utilisent le filtre strict :
 
-L'écran équipe utilise `activePhase` calculée dans `SeasonContext` à partir de la date du jour : aujourd'hui (2 juillet 2026), on tombe dans la **phase 3** de la saison (7 mai → 3 juillet). Or CopaTOUR est scopé sur la **phase 4** uniquement (`league_scopes.phases = [phase 4]`, Tour de France, 4 juillet → 21 août). Résultat : la RPC `manager_team_by_id` est appelée avec la phase 3 → aucun roster → écran vide.
+```
+c.date_debut > l.started_at_effective
+```
 
-Le sélecteur de phase est aussi masqué en mode `per_course` (`{!isPerCourse && ...}`), donc l'utilisateur ne peut pas corriger manuellement.
+Résultat : toute course commençant **le jour même** de `started_at_effective` est exclue. Le Giro (et donc les points de ses managers) est écarté du classement.
 
-## Correctif
+Le même bug touche une seconde ligue détectée : « RMC <> La Bordure - Tour AuRA 2026 » (démarrage le 2026-06-04 avec 1 course sur ce jour).
 
-Dans `src/contexts/SeasonContext.tsx` :
+## Correction proposée
 
-1. Charger `league_scopes.phases` en même temps que le scope (déjà requêté).
-2. Si la ligue a une liste de phases scopées non vide, filtrer `phases` sur cette liste avant de calculer `activePhase`.
-3. `computeActivePhase` s'appliquera alors uniquement aux phases pertinentes → CopaTOUR bascule automatiquement sur la phase 4 (prochaine phase à venir dans le sous-ensemble).
+Passer le filtre de `>` à `>=` dans les vues de classement, pour inclure les courses commençant exactement à la date de démarrage effective de la ligue (comportement attendu quand on démarre au début d'une phase).
 
-Aucun changement d'API pour les composants consommateurs (`phases` et `activePhase` restent exposés). Les ligues multi-phases (ex. MPC 2026 avec toutes les phases dans son scope) ne sont pas impactées.
+Vues à recréer (branche `starting_phase_index IS NOT NULL`) :
+- `v_manager_standings_by_season_v2`
+- `v_manager_standings_by_phase_v2`
+- `v_manager_standings_total`
+- (et toute vue similaire déclarée dans la même migration)
 
-## Vérification
+Un seul migration SQL qui réémet ces vues avec `c.date_debut >= l.started_at_effective`.
 
-- Ouvrir CopaTOUR → onglet Équipes : les 15 coureurs de Ludo doivent apparaître pour la phase 4.
-- Ouvrir MPC 2026 → onglet Équipes : comportement inchangé, phase active toujours calculée à partir de la date.
+Aucune modification de données (pas besoin de toucher `started_at_effective`) et aucun changement front. Après application, les classements des deux ligues concernées se remettront automatiquement à jour, Giro d'Italia inclus.
