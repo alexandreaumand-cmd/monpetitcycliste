@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // Get manager
     const { data: manager } = await supabase
       .from('managers')
-      .select('id')
+      .select('id, nom')
       .eq('user_id', user.id)
       .single();
 
