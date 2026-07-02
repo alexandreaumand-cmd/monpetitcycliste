@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Interval uniforme entre annonces : 1s
-    const intervalMs = 1000;
+    // Interval uniforme entre annonces : 2s
+    const intervalMs = 2000;
 
     // Translations for announcement text
     const translations = {

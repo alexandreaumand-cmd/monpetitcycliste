@@ -137,7 +137,7 @@ export function AuctionLiveAnnouncements({
             // Laisser la dernière annonce visible 5s avant de basculer
             setTimeout(() => setIsReplaying(false), 5000);
           }
-        }, 1000);
+        }, 2000);
       } else {
         // Live mode: show all as they come
         setReplayVisibleCount(allAnnonces.length);
