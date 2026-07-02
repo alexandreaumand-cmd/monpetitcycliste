@@ -8,6 +8,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { toast } from "sonner";
 import {
   Collapsible,
@@ -54,6 +55,9 @@ export function AuctionLiveAnnouncements({
   const replayStartedForRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
+  const { data: currentManager } = useCurrentManager();
+  const currentManagerId = currentManager?.id ?? managerId;
+  const currentManagerNom = currentManager?.nom ?? null;
 
   // Fetch available rounds for round selector
   const { data: availableRounds = [] } = useQuery({
