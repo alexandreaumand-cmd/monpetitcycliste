@@ -96,7 +96,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
           leagueId 
             ? supabase
                 .from("league_scopes")
-                .select("season_id")
+                .select("season_id, phases")
                 .eq("league_id", leagueId)
                 .maybeSingle()
             : Promise.resolve({ data: null, error: null })
@@ -143,12 +143,20 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
+        // Filter phases by league scope (for leagues limited to specific phases, e.g. per_course)
+        const scopedPhaseIds: string[] | null = Array.isArray(scopeResult.data?.phases) && scopeResult.data.phases.length > 0
+          ? (scopeResult.data.phases as string[])
+          : null;
+        const effectivePhases = scopedPhaseIds
+          ? phasesData.filter(p => scopedPhaseIds.includes(p.id))
+          : phasesData;
+
         // Step 4: Set all states at once to minimize re-renders
         setSeasons(seasonsData);
         setSelectedSeasonState(targetSeason);
         setIsLeagueSeason(isFromLeague);
-        setPhases(phasesData);
-        setActivePhase(computeActivePhase(phasesData));
+        setPhases(effectivePhases.length > 0 ? effectivePhases : phasesData);
+        setActivePhase(computeActivePhase(effectivePhases.length > 0 ? effectivePhases : phasesData));
 
       } catch (error) {
         console.error("Error loading seasons/phases:", error);

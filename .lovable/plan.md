@@ -1,30 +1,24 @@
-## Objectif
-Mettre en évidence les annonces où le manager courant a **perdu** l'enchère, avec un style rouge, en complément du surlignage existant pour les gains.
+## Problème
 
-## Changements
+Dans la ligue CopaTOUR (mode « À la course », centrée sur le Tour de France), l'onglet « Mon équipe » affiche « Équipe vide » alors que les enchères sont terminées et que 15 coureurs sont bien attribués à chaque manager.
 
-### 1. Backend — enrichir `losers_json` avec `manager_id`
-`supabase/functions/clore-round/index.ts` : ajouter `manager_id: b.manager_id` (et `winner.manager_id` dans le cas de dégradation en égalité) dans chaque entrée `losers_json`. Ainsi les futures annonces embarquent l'identité des perdants de façon fiable.
+## Cause
 
-### 2. Backend — exposer `is_my_loss`
-`supabase/functions/auction-get-live-status/index.ts` : dans le mapping des annonces, calculer :
-```
-is_my_loss = type === 'gain'
-  && !is_my_win
-  && losers.some(l => l.manager_id === manager.id || l.manager === manager.nom)
-```
-Le fallback par `manager.nom` couvre les annonces déjà existantes sans `manager_id`.
+L'écran équipe utilise `activePhase` calculée dans `SeasonContext` à partir de la date du jour : aujourd'hui (2 juillet 2026), on tombe dans la **phase 3** de la saison (7 mai → 3 juillet). Or CopaTOUR est scopé sur la **phase 4** uniquement (`league_scopes.phases = [phase 4]`, Tour de France, 4 juillet → 21 août). Résultat : la RPC `manager_team_by_id` est appelée avec la phase 3 → aucun roster → écran vide.
 
-### 3. Frontend — style rouge
-`src/components/auction/v2/AuctionLiveAnnouncements.tsx` :
-- Étendre le type d'annonce avec `is_my_loss?: boolean`.
-- Dans le bloc `className` (ligne 408), ajouter une variante rouge :
-  - `is_my_win` → vert primary (inchangé)
-  - `is_my_loss` → `bg-destructive/10 border-destructive`
-  - défaut → `bg-card`
-- Dans la liste des losers (ligne 454-456), si `is_my_loss`, surligner l'entrée correspondant au manager courant en rouge (`text-destructive font-semibold`) plutôt que la ligne neutre.
+Le sélecteur de phase est aussi masqué en mode `per_course` (`{!isPerCourse && ...}`), donc l'utilisateur ne peut pas corriger manuellement.
 
-## Fichiers modifiés
-- `supabase/functions/clore-round/index.ts`
-- `supabase/functions/auction-get-live-status/index.ts`
-- `src/components/auction/v2/AuctionLiveAnnouncements.tsx`
+## Correctif
+
+Dans `src/contexts/SeasonContext.tsx` :
+
+1. Charger `league_scopes.phases` en même temps que le scope (déjà requêté).
+2. Si la ligue a une liste de phases scopées non vide, filtrer `phases` sur cette liste avant de calculer `activePhase`.
+3. `computeActivePhase` s'appliquera alors uniquement aux phases pertinentes → CopaTOUR bascule automatiquement sur la phase 4 (prochaine phase à venir dans le sous-ensemble).
+
+Aucun changement d'API pour les composants consommateurs (`phases` et `activePhase` restent exposés). Les ligues multi-phases (ex. MPC 2026 avec toutes les phases dans son scope) ne sont pas impactées.
+
+## Vérification
+
+- Ouvrir CopaTOUR → onglet Équipes : les 15 coureurs de Ludo doivent apparaître pour la phase 4.
+- Ouvrir MPC 2026 → onglet Équipes : comportement inchangé, phase active toujours calculée à partir de la date.
