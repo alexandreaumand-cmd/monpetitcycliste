@@ -172,6 +172,7 @@ Deno.serve(async (req) => {
           winning_manager_id: null,
           winning_amount: maxAmount,
           losers_json: maxBids.map((b) => ({
+            manager_id: b.manager_id,
             manager: b.managers.nom,
             montant: parseFloat(b.montant),
           })),
@@ -220,9 +221,11 @@ Deno.serve(async (req) => {
             winning_manager_id: null,
             winning_amount: maxAmount,
             losers_json: [{
+              manager_id: winner.manager_id,
               manager: winner.managers.nom,
               montant: parseFloat(winner.montant),
             }, ...losers.map((b) => ({
+              manager_id: b.manager_id,
               manager: b.managers.nom,
               montant: parseFloat(b.montant),
             }))],
@@ -252,6 +255,7 @@ Deno.serve(async (req) => {
           winning_manager_id: winner.manager_id,
           winning_amount: maxAmount,
           losers_json: losers.map((b) => ({
+            manager_id: b.manager_id,
             manager: b.managers.nom,
             montant: parseFloat(b.montant),
           })),

@@ -8,6 +8,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { toast } from "sonner";
 import {
   Collapsible,
@@ -54,6 +55,9 @@ export function AuctionLiveAnnouncements({
   const replayStartedForRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
+  const { data: currentManager } = useCurrentManager();
+  const currentManagerId = currentManager?.id ?? managerId;
+  const currentManagerNom = currentManager?.nom ?? null;
 
   // Fetch available rounds for round selector
   const { data: availableRounds = [] } = useQuery({
@@ -408,7 +412,9 @@ export function AuctionLiveAnnouncements({
                               className={`p-2.5 sm:p-4 rounded-lg border animate-fade-in ${
                                 annonce.is_my_win
                                   ? 'bg-primary/10 border-primary'
-                                  : 'bg-card'
+                                  : annonce.is_my_loss
+                                    ? 'bg-destructive/10 border-destructive'
+                                    : 'bg-card'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-2 sm:gap-4">
@@ -442,6 +448,10 @@ export function AuctionLiveAnnouncements({
                                           <span className="font-semibold text-primary">
                                             🎉 {t('live.wonFor', { amount: annonce.winning_amount })}
                                           </span>
+                                        ) : annonce.is_my_loss ? (
+                                          <span className="font-semibold text-destructive">
+                                            💔 <strong>{annonce.winning_manager?.nom}</strong> — {annonce.winning_amount}
+                                          </span>
                                         ) : (
                                           <span>
                                             <strong>{annonce.winning_manager?.nom}</strong> — {annonce.winning_amount}
@@ -453,7 +463,22 @@ export function AuctionLiveAnnouncements({
                                           {annonce.is_my_win ? (
                                             <>✅ {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           ) : (
-                                            <>{annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
+                                            <>
+                                              {annonce.losers.map((l: any, i: number) => {
+                                                const isMe = annonce.is_my_loss && (
+                                                  (l.manager_id && currentManagerId && l.manager_id === currentManagerId) ||
+                                                  (currentManagerNom && l.manager === currentManagerNom)
+                                                );
+                                                return (
+                                                  <span key={i}>
+                                                    {i > 0 && ', '}
+                                                    <span className={isMe ? 'text-destructive font-semibold' : ''}>
+                                                      {l.manager} ({l.montant})
+                                                    </span>
+                                                  </span>
+                                                );
+                                              })}
+                                            </>
                                           )}
                                         </p>
                                       )}
