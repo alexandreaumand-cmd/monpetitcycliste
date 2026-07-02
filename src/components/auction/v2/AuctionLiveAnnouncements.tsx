@@ -408,7 +408,9 @@ export function AuctionLiveAnnouncements({
                               className={`p-2.5 sm:p-4 rounded-lg border animate-fade-in ${
                                 annonce.is_my_win
                                   ? 'bg-primary/10 border-primary'
-                                  : 'bg-card'
+                                  : annonce.is_my_loss
+                                    ? 'bg-destructive/10 border-destructive'
+                                    : 'bg-card'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-2 sm:gap-4">
