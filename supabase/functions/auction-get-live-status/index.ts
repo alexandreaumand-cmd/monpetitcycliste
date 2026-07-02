@@ -129,9 +129,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Format annonces with is_my_win flag
+    // Format annonces with is_my_win / is_my_loss flags
     const annonces = published_annonces.map(a => {
       const coureur = coureursMap.get(a.coureur_id);
+      const losers = (a.losers_json as any[]) || [];
+      const is_my_win = a.winning_manager_id === manager.id;
+      const is_my_loss = a.type === 'gain' && !is_my_win && losers.some(
+        (l: any) => l?.manager_id === manager.id || l?.manager === manager.nom
+      );
       return {
         id: a.id,
         type: a.type,
@@ -145,8 +150,9 @@ Deno.serve(async (req) => {
           nom: (a.managers as any).nom,
         } : null,
         winning_amount: a.winning_amount,
-        losers: a.losers_json || [],
-        is_my_win: a.winning_manager_id === manager.id,
+        losers,
+        is_my_win,
+        is_my_loss,
         published_at: a.published_at,
       };
     });
