@@ -178,10 +178,10 @@ export function ManagerRatingModal({
             onChange={(e) => setGlobalNote(e.target.value)}
             placeholder="Ex: Excellent niveau général, belles sélections stratégiques..."
             className="min-h-[80px] resize-none"
-            maxLength={500}
+            maxLength={1500}
           />
           <span className="text-xs text-muted-foreground mt-1 block">
-            {globalNote.length} / 500 caractères
+            {globalNote.length} / 1500 caractères
           </span>
         </div>
         
