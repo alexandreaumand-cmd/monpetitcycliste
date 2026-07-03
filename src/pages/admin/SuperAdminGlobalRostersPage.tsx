@@ -21,6 +21,7 @@ export default function SuperAdminGlobalRostersPage() {
   const [managerInput, setManagerInput] = useState("");
   const [gameMode, setGameMode] = useState<string>("all");
   const [saisonId, setSaisonId] = useState<string>("all");
+  const [phaseId, setPhaseId] = useState<string>("all");
   const [leagueId, setLeagueId] = useState<string>(() => searchParams.get("leagueId") ?? "all");
   const [page, setPage] = useState(0);
 
@@ -45,17 +46,40 @@ export default function SuperAdminGlobalRostersPage() {
     },
   });
 
+  const { data: phases } = useQuery({
+    queryKey: ["phases-list-for-filter", saisonId],
+    queryFn: async () => {
+      let q = supabase
+        .from("phases")
+        .select("id, saison_id, index_dans_saison, date_debut, date_fin")
+        .order("index_dans_saison", { ascending: true });
+      if (saisonId !== "all") {
+        q = q.eq("saison_id", saisonId);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as {
+        id: string;
+        saison_id: string;
+        index_dans_saison: number;
+        date_debut: string;
+        date_fin: string;
+      }[];
+    },
+  });
+
   const filters: GlobalRostersFilters = useMemo(
     () => ({
       saisonId: saisonId === "all" ? null : saisonId,
       leagueIds: leagueId === "all" ? null : [leagueId],
       gameModes: gameMode === "all" ? null : [gameMode],
+      phaseIds: phaseId === "all" ? null : [phaseId],
       coureurSearch,
       managerSearch,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [saisonId, leagueId, gameMode, coureurSearch, managerSearch, page],
+    [saisonId, leagueId, gameMode, phaseId, coureurSearch, managerSearch, page],
   );
 
   const { data, isLoading, isFetching } = useGlobalRosters(filters);
@@ -99,6 +123,16 @@ export default function SuperAdminGlobalRostersPage() {
     });
     return sortDir === "asc" ? sorted : sorted.reverse();
   }, [rawRows, sortKey, sortDir]);
+
+  const sortedPhases = useMemo(() => {
+    if (!phases) return [];
+    return [...phases].sort((a, b) => {
+      const anneeA = saisons?.find((s) => s.id === a.saison_id)?.annee ?? 0;
+      const anneeB = saisons?.find((s) => s.id === b.saison_id)?.annee ?? 0;
+      if (anneeB !== anneeA) return anneeB - anneeA;
+      return a.index_dans_saison - b.index_dans_saison;
+    });
+  }, [phases, saisons]);
 
   const SortHeader = ({
     label,
@@ -180,7 +214,7 @@ export default function SuperAdminGlobalRostersPage() {
       </div>
 
       <Card className="p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -209,6 +243,7 @@ export default function SuperAdminGlobalRostersPage() {
             value={saisonId}
             onValueChange={(v) => {
               setSaisonId(v);
+              setPhaseId("all");
               setPage(0);
             }}
           >
@@ -265,6 +300,29 @@ export default function SuperAdminGlobalRostersPage() {
                   {l.name} {l.saison_annee ? `(${l.saison_annee})` : ""}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={phaseId}
+            onValueChange={(v) => {
+              setPhaseId(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Phase" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les phases</SelectItem>
+              {sortedPhases.map((p) => {
+                const annee = saisons?.find((s) => s.id === p.saison_id)?.annee;
+                const label = annee ? `P${p.index_dans_saison} (${annee})` : `P${p.index_dans_saison}`;
+                return (
+                  <SelectItem key={p.id} value={p.id}>
+                    {label}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
