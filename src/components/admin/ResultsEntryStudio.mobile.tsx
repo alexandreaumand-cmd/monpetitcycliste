@@ -732,6 +732,7 @@ export const ResultsEntryStudioMobile = ({
       setLastSaved(new Date());
       toast.success("Résultats enregistrés");
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
+      tttManuallySet.current = false;
       loadResults();
     },
     onError: (error: Error) => {
