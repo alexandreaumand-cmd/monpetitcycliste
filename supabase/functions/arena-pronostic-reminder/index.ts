@@ -17,9 +17,9 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find deadlines approaching within 1 hour that haven't been reminded yet
+    // Find deadlines approaching within 15 minutes that haven't been reminded yet
     const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
 
     const { data: upcomingDeadlines, error: dlError } = await adminClient
       .from('arena_pronostic_deadlines')
