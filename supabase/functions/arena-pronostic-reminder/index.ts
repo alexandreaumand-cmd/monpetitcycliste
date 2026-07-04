@@ -17,15 +17,15 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find deadlines approaching within 1 hour that haven't been reminded yet
+    // Find deadlines approaching within 15 minutes that haven't been reminded yet
     const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
 
     const { data: upcomingDeadlines, error: dlError } = await adminClient
       .from('arena_pronostic_deadlines')
       .select('id, course_id, etape_numero, pronostic_type, deadline_at, courses(nom)')
       .gt('deadline_at', now.toISOString())
-      .lte('deadline_at', oneHourLater.toISOString())
+      .lte('deadline_at', windowEnd.toISOString())
       .is('reminder_sent_at', null);
 
     if (dlError) {
@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
 
       const title = '🎯 Pronostics bientôt clos !';
       const message = courseNames.length === 1
-        ? `Plus qu'1h pour pronostiquer : ${courseNames[0]}`
-        : `Plus qu'1h pour pronostiquer : ${courseNames.join(', ')}`;
+        ? `Plus que 15 min pour pronostiquer : ${courseNames[0]}`
+        : `Plus que 15 min pour pronostiquer : ${courseNames.join(', ')}`;
 
       console.log(`[reminder] Sending broadcast: ${message}`);
 
