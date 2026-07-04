@@ -1140,24 +1140,75 @@ export const ResultsEntryStudioMobile = ({
               </Button>
             </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-1.5">
-                {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    {row.coureur_id && (
-                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
-                    )}
-                    <span className="font-bold text-xs w-5">{row.position}</span>
-                    <div className="flex-1">
-                      <CoureursCombobox
-                        value={row.coureur_id}
-                        onSelect={(coureur) => handleRiderChange(index, coureur)}
-                        phaseId={course.phase_id}
-                        disabled={isCancelled}
-                        context="super-admin"
-                      />
+                {currentClassement === "General" && !courseIsStageRace && isTTT && saisonId ? (
+                  resultRows.slice(0, 10).map((row, index) => (
+                    <div key={`team-gc-${index}`} className={cn("border rounded-md bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
+                      <div className="flex items-center gap-1.5 p-2">
+                        <span className="font-bold text-xs w-5">{row.position}</span>
+                        <div className="flex-1 min-w-0">
+                          <EquipeCombobox
+                            saisonId={saisonId}
+                            value={row.equipe_id || undefined}
+                            onValueChange={(equipeId) => handleTeamChange(index, equipeId || null)}
+                            disabled={isCancelled}
+                          />
+                        </div>
+                        {row.equipe_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleToggleExpand(index)}
+                          >
+                            <ChevronDown className={cn("h-3 w-3 transition-transform", row.is_expanded && "rotate-180")} />
+                            <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                              {row.team_riders?.filter(r => r.coureur_id).length || 0}/{tttRidersCount}
+                            </Badge>
+                          </Button>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
+                      </div>
+                      {row.is_expanded && row.team_riders && (
+                        <div className="border-t bg-background/50 p-2 space-y-1.5">
+                          {row.team_riders.map((rider, rIdx) => (
+                            <div key={`r-gc-${index}-${rIdx}`} className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-muted-foreground w-8">{row.position}.{rIdx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <CoureursCombobox
+                                  value={rider.coureur_id}
+                                  onSelect={(coureur) => handleTeamRiderChange(index, rIdx, coureur?.coureur_id || null, coureur?.coureur_nom || null)}
+                                  phaseId={course.phase_id}
+                                  disabled={isCancelled}
+                                  context="super-admin"
+                                  showTakenRiders={true}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                    <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                      {row.coureur_id && (
+                        <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      )}
+                      <span className="font-bold text-xs w-5">{row.position}</span>
+                      <div className="flex-1">
+                        <CoureursCombobox
+                          value={row.coureur_id}
+                          onSelect={(coureur) => handleRiderChange(index, coureur)}
+                          phaseId={course.phase_id}
+                          disabled={isCancelled}
+                          context="super-admin"
+                        />
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
+                    </div>
+                  ))
+                )}
               </CollapsibleContent>
           </Collapsible>
 
