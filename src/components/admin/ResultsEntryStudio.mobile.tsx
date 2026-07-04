@@ -475,6 +475,40 @@ export const ResultsEntryStudioMobile = ({
     }));
   };
 
+  // TTT handlers
+  const handleTeamChange = (index: number, equipeId: string | null) => {
+    setResultRows(prev => prev.map((row, i) => {
+      if (i !== index) return row;
+      const rule = scoringRules?.find(sr => sr.place === row.position);
+      const pointsPerRider = Math.round((rule?.points || 0) / tttRidersCount);
+      const teamRiders = equipeId ? Array.from({ length: tttRidersCount }, (_, idx) => ({
+        coureur_id: null,
+        coureur_nom: null,
+        position_decimal: row.position + (idx + 1) / 10,
+      })) : [];
+      return { ...row, equipe_id: equipeId, team_riders: teamRiders, points: pointsPerRider, is_expanded: !!equipeId };
+    }));
+  };
+
+  const handleToggleExpand = (index: number) => {
+    setResultRows(prev => prev.map((row, i) =>
+      i === index ? { ...row, is_expanded: !row.is_expanded } : row
+    ));
+  };
+
+  const handleTeamRiderChange = (teamIndex: number, riderIndex: number, riderId: string | null, riderName: string | null) => {
+    setResultRows(prev => prev.map((row, i) => {
+      if (i !== teamIndex || !row.team_riders) return row;
+      const newTeamRiders = [...row.team_riders];
+      newTeamRiders[riderIndex] = {
+        ...newTeamRiders[riderIndex],
+        coureur_id: riderId,
+        coureur_nom: riderName,
+      };
+      return { ...row, team_riders: newTeamRiders };
+    }));
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
