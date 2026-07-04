@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
 
       const title = '🎯 Pronostics bientôt clos !';
       const message = courseNames.length === 1
-        ? `Plus qu'1h pour pronostiquer : ${courseNames[0]}`
-        : `Plus qu'1h pour pronostiquer : ${courseNames.join(', ')}`;
+        ? `Plus que 15 min pour pronostiquer : ${courseNames[0]}`
+        : `Plus que 15 min pour pronostiquer : ${courseNames.join(', ')}`;
 
       console.log(`[reminder] Sending broadcast: ${message}`);
 
