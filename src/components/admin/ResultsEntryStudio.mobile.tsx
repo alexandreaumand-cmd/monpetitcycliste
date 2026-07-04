@@ -513,13 +513,58 @@ export const ResultsEntryStudioMobile = ({
     mutationFn: async () => {
       const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
 
-      // Update cancellation status
-      await leagueClient
-        .from('race_result_sets')
-        .update({ is_cancelled: isCancelled })
-        .eq('course_id', course.course_id)
-        .eq('type_classement', currentClassement)
-        .eq('etape_numero', etapeNumeroValue);
+      // Upsert race_result_sets with cancellation + TTT info (delete-then-insert)
+      const { data: phaseForSet } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      const { data: userForSet } = await supabase.auth.getUser();
+      const { data: managerForSet } = userForSet.user
+        ? await supabase.from('managers').select('id').eq('user_id', userForSet.user.id).single()
+        : { data: null };
+
+      if (phaseForSet?.saison_id) {
+        let delRrs = supabase
+          .from('race_result_sets')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement);
+        delRrs = etapeNumeroValue === null
+          ? delRrs.is('etape_numero', null)
+          : delRrs.eq('etape_numero', etapeNumeroValue);
+        await delRrs;
+
+        await supabase.from('race_result_sets').insert({
+          course_id: course.course_id,
+          saison_id: phaseForSet.saison_id,
+          type_classement: currentClassement,
+          etape_numero: etapeNumeroValue,
+          is_cancelled: isCancelled,
+          is_ttt: isTTT && tttEligible,
+          ttt_riders_count: isTTT && tttEligible ? tttRidersCount : null,
+          created_by: managerForSet?.id,
+        });
+      }
+
+      // Persist TTT config on course_stage_config for points calculation
+      if (isTTT && tttEligible) {
+        let delCsc = supabase
+          .from('course_stage_config')
+          .delete()
+          .eq('course_id', course.course_id);
+        delCsc = etapeNumeroValue === null
+          ? delCsc.is('etape_numero', null)
+          : delCsc.eq('etape_numero', etapeNumeroValue);
+        await delCsc;
+
+        await supabase.from('course_stage_config').insert({
+          course_id: course.course_id,
+          etape_numero: etapeNumeroValue,
+          ttt_riders_per_team: tttRidersCount,
+          is_ttt: true,
+        });
+      }
 
       // If cancelled, delete all results AND points and return
       if (isCancelled) {
@@ -540,31 +585,82 @@ export const ResultsEntryStudioMobile = ({
         return { success: true, message: 'Annulation enregistrée' };
       }
 
-      // Otherwise, save results via edge function (same as desktop)
-      const validRows = resultRows.filter(r => r.coureur_id);
-      
       const hasSuperCombatif = courseIsStageRace && course.categorie === 'WT GT' && currentClassement === 'Combatif' && combatifWinner;
 
-      if (validRows.length === 0 && !hasSuperCombatif) {
-        throw new Error("Aucun résultat à sauvegarder");
-      }
-
-      // Save main results via admin-result-save-lot edge function
-      if (validRows.length > 0) {
-        const { error: saveLotError } = await supabase.functions.invoke('admin-result-save-lot', {
-          body: {
-            p_course_id: course.course_id,
-            p_type_classement: currentClassement,
-            p_etape_numero: etapeNumeroValue,
-            p_rows: validRows.map(row => ({
-              coureur_id: row.coureur_id,
-              position: row.statut === 'finished' && row.position > 0 ? row.position : null,
-              statut: row.statut,
-            })),
-          },
+      if (isTTT && tttEligible) {
+        // TTT Mode: direct insert into race_results with equipe_id + position_decimal
+        const teamRows = resultRows.flatMap(teamRow => {
+          if (!teamRow.equipe_id || !teamRow.team_riders) return [];
+          return teamRow.team_riders
+            .filter(r => r.coureur_id)
+            .map(r => ({
+              coureur_id: r.coureur_id!,
+              position: teamRow.position,
+              position_decimal: r.position_decimal,
+              equipe_id: teamRow.equipe_id!,
+            }));
         });
 
-        if (saveLotError) throw saveLotError;
+        if (teamRows.length === 0) {
+          throw new Error("Aucun coureur d'équipe à sauvegarder");
+        }
+
+        // Compute date_classement (same logic as admin-stage-save-step)
+        let dateClassement: string;
+        if (currentClassement === 'Etape' && course.date_debut) {
+          const d = new Date(course.date_debut);
+          d.setUTCDate(d.getUTCDate() + (currentStage - 1));
+          dateClassement = d.toISOString().split('T')[0];
+        } else {
+          dateClassement = course.date_fin || course.date_debut || new Date().toISOString().split('T')[0];
+        }
+
+        await supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement)
+          .eq('etape_numero', etapeNumeroValue);
+
+        const inserts = teamRows.map(r => ({
+          course_id: course.course_id,
+          coureur_id: r.coureur_id,
+          type_classement: currentClassement,
+          etape_numero: etapeNumeroValue,
+          position: Math.floor(r.position_decimal),
+          position_decimal: r.position_decimal,
+          statut: 'finished' as const,
+          equipe_id: r.equipe_id,
+          date_classement: dateClassement,
+          saison_id: phaseForSet?.saison_id,
+        }));
+
+        const { error: insertError } = await supabase.from('race_results').insert(inserts);
+        if (insertError) throw insertError;
+      } else {
+        // Normal Mode: save via edge function
+        const validRows = resultRows.filter(r => r.coureur_id);
+
+        if (validRows.length === 0 && !hasSuperCombatif) {
+          throw new Error("Aucun résultat à sauvegarder");
+        }
+
+        if (validRows.length > 0) {
+          const { error: saveLotError } = await supabase.functions.invoke('admin-result-save-lot', {
+            body: {
+              p_course_id: course.course_id,
+              p_type_classement: currentClassement,
+              p_etape_numero: etapeNumeroValue,
+              p_rows: validRows.map(row => ({
+                coureur_id: row.coureur_id,
+                position: row.statut === 'finished' && row.position > 0 ? row.position : null,
+                statut: row.statut,
+              })),
+            },
+          });
+
+          if (saveLotError) throw saveLotError;
+        }
       }
 
       // Save jersey holders via edge function
