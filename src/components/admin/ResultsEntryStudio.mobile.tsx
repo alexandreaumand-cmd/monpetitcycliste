@@ -299,7 +299,7 @@ export const ResultsEntryStudioMobile = ({
 
     console.log('📝 Grille finale créée:', rows.length, 'lignes');
     setResultRows(rows);
-  }, [scoringRules, currentClassement, currentStage, course.course_id]);
+  }, [scoringRules, currentClassement, currentStage, course.course_id, isTTT, tttRidersCount, tttEligible]);
 
   // Load existing results when scoring rules are available - only for current classement
   useEffect(() => {
