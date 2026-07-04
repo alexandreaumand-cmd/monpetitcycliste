@@ -106,6 +106,35 @@ export const ResultsEntryStudioMobile = ({
   const leagueClient = useLeagueClient();
   const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
 
+  // TTT mode state
+  const [isTTT, setIsTTT] = useState(false);
+  const [tttRidersCount, setTttRidersCount] = useState(7);
+  const [saisonId, setSaisonId] = useState<string | null>(null);
+  const tttManuallySet = useRef(false);
+
+  // TTT is available for stage-race "Etape" tab and for one-day general
+  const tttEligible =
+    (courseIsStageRace && currentClassement === "Etape") ||
+    (!courseIsStageRace && currentClassement === "General");
+
+  // Load saison_id from course phase
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      if (data) setSaisonId(data.saison_id);
+    })();
+  }, [course.phase_id]);
+
+  // Reset TTT flag when switching stage/classement (mirrors desktop behavior)
+  useEffect(() => {
+    tttManuallySet.current = false;
+    setIsTTT(false);
+  }, [currentStage, currentClassement]);
+
   // Fetch scoring rules using normalized views (same as desktop)
   const { data: scoringRules } = useQuery({
     queryKey: ['scoring-rules-mobile', course.course_id, currentClassement],
