@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       .from('arena_pronostic_deadlines')
       .select('id, course_id, etape_numero, pronostic_type, deadline_at, courses(nom)')
       .gt('deadline_at', now.toISOString())
-      .lte('deadline_at', oneHourLater.toISOString())
+      .lte('deadline_at', windowEnd.toISOString())
       .is('reminder_sent_at', null);
 
     if (dlError) {
