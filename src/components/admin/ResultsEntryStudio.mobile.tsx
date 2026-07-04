@@ -188,11 +188,11 @@ export const ResultsEntryStudioMobile = ({
       return;
     }
 
-    // Load cancellation status
+    // Load cancellation + TTT status
     const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
     const { data: resultSetData } = await supabase
       .from('race_result_sets')
-      .select('is_cancelled')
+      .select('is_cancelled, is_ttt, ttt_riders_count')
       .eq('course_id', course.course_id)
       .eq('type_classement', currentClassement)
       .eq('etape_numero', etapeNumeroValue)
@@ -200,9 +200,19 @@ export const ResultsEntryStudioMobile = ({
 
     setIsCancelled(resultSetData?.is_cancelled || false);
 
+    // Hydrate TTT state from DB unless the user manually toggled it
+    const dbIsTTT = !!resultSetData?.is_ttt;
+    const dbRidersCount = resultSetData?.ttt_riders_count || 7;
+    if (!tttManuallySet.current) {
+      setIsTTT(dbIsTTT);
+      setTttRidersCount(dbRidersCount);
+    }
+    const effectiveIsTTT = tttManuallySet.current ? isTTT : dbIsTTT;
+    const effectiveRidersCount = tttManuallySet.current ? tttRidersCount : dbRidersCount;
+
     let query = supabase
       .from('race_results')
-      .select('*, coureurs(nom)')
+      .select('*, coureurs(nom), equipes(nom, code_court)')
       .eq('course_id', course.course_id)
       .eq('type_classement', currentClassement);
     
@@ -216,36 +226,76 @@ export const ResultsEntryStudioMobile = ({
     console.log('📊 Résultats existants chargés:', existingData?.length || 0);
     
     const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
-    const rows: ResultRow[] = [];
+    let rows: ResultRow[] = [];
 
-    const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
-    console.log('✅ Résultats "finished" avec position:', finishedResults.length);
-    
-    // Create rows based on scoring rules
-    for (let i = 1; i <= maxPlace; i++) {
-      const existing = finishedResults.find(r => r.position === i);
-      const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+    if (effectiveIsTTT && tttEligible) {
+      // TTT Mode: Group existing results by team (position 1-10)
+      const teamResults: Record<number, { equipe_id: string | null; riders: TeamRider[] }> = {};
+      (existingData || []).forEach((r: any) => {
+        const pos = r.position;
+        if (!pos || pos < 1 || pos > 10) return;
+        if (!teamResults[pos]) {
+          teamResults[pos] = { equipe_id: r.equipe_id || null, riders: [] };
+        }
+        teamResults[pos].riders.push({
+          coureur_id: r.coureur_id,
+          coureur_nom: (r.coureurs as any)?.nom || null,
+          position_decimal: r.position_decimal || (pos + (teamResults[pos].riders.length + 1) / 10),
+        });
+      });
+
+      rows = Array.from({ length: 10 }, (_, i) => {
+        const position = i + 1;
+        const rule = scoringRules.find(sr => sr.place === position);
+        const teamData = teamResults[position];
+        const pointsPerRider = Math.round((rule?.points || 0) / effectiveRidersCount);
+        return {
+          position,
+          coureur_id: null,
+          coureur_nom: null,
+          statut: 'finished' as StatutType,
+          points: pointsPerRider,
+          equipe_id: teamData?.equipe_id || null,
+          is_expanded: false,
+          team_riders: teamData?.riders && teamData.riders.length > 0
+            ? teamData.riders
+            : Array.from({ length: effectiveRidersCount }, (_, idx) => ({
+                coureur_id: null,
+                coureur_nom: null,
+                position_decimal: position + (idx + 1) / 10,
+              })),
+        };
+      });
+    } else {
+      const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+      console.log('✅ Résultats "finished" avec position:', finishedResults.length);
       
-      rows.push({
-        position: i,
-        coureur_id: existing?.coureur_id || null,
-        coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
-        statut: 'finished' as StatutType,
-        points,
+      // Create rows based on scoring rules
+      for (let i = 1; i <= maxPlace; i++) {
+        const existing = finishedResults.find(r => r.position === i);
+        const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+        
+        rows.push({
+          position: i,
+          coureur_id: existing?.coureur_id || null,
+          coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
+          statut: 'finished' as StatutType,
+          points,
+        });
+      }
+
+      // Add non-finished results at the end
+      const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
+      nonFinishedResults.forEach(r => {
+        rows.push({
+          position: 0,
+          coureur_id: r.coureur_id,
+          coureur_nom: (r.coureurs as any)?.nom || null,
+          statut: r.statut as StatutType,
+          points: 0,
+        });
       });
     }
-
-    // Add non-finished results at the end
-    const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
-    nonFinishedResults.forEach(r => {
-      rows.push({
-        position: 0,
-        coureur_id: r.coureur_id,
-        coureur_nom: (r.coureurs as any)?.nom || null,
-        statut: r.statut as StatutType,
-        points: 0,
-      });
-    });
 
     console.log('📝 Grille finale créée:', rows.length, 'lignes');
     setResultRows(rows);
