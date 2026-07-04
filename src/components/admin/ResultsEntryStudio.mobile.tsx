@@ -878,69 +878,112 @@ export const ResultsEntryStudioMobile = ({
           </div>
         )}
 
-        {/* Cancelled checkbox */}
-        <div className="flex items-center gap-2 px-4 pb-3">
-          <Checkbox
-            id="cancelled-checkbox-mobile"
-            checked={isCancelled}
-            onCheckedChange={async (checked) => {
-              setIsCancelled(checked === true);
-              if (checked) {
-                setResultRows(prev => prev.map(row => ({
-                  ...row,
-                  coureur_id: null,
-                  coureur_nom: null,
-                })));
-                
-                // Create/update race_result_set immediately
-                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
-                const { data: managerData } = await supabase
-                  .from('managers')
-                  .select('id')
-                  .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-                  .single();
+        {/* Cancelled + TTT checkboxes */}
+        <div className="flex items-center justify-between gap-3 px-4 pb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="cancelled-checkbox-mobile"
+              checked={isCancelled}
+              onCheckedChange={async (checked) => {
+                setIsCancelled(checked === true);
+                if (checked) {
+                  setResultRows(prev => prev.map(row => ({
+                    ...row,
+                    coureur_id: null,
+                    coureur_nom: null,
+                  })));
+                  
+                  // Create/update race_result_set immediately
+                  const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+                  const { data: managerData } = await supabase
+                    .from('managers')
+                    .select('id')
+                    .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                    .single();
 
-                const { data: phaseData } = await supabase
-                  .from('phases')
-                  .select('saison_id')
-                  .eq('id', course.phase_id)
-                  .single();
+                  const { data: phaseData } = await supabase
+                    .from('phases')
+                    .select('saison_id')
+                    .eq('id', course.phase_id)
+                    .single();
 
-                if (managerData?.id && phaseData?.saison_id) {
+                  if (managerData?.id && phaseData?.saison_id) {
+                    await supabase
+                      .from('race_result_sets')
+                      .upsert({
+                        course_id: course.course_id,
+                        saison_id: phaseData.saison_id,
+                        type_classement: currentClassement,
+                        etape_numero: etapeNumeroValue,
+                        is_cancelled: true,
+                        created_by: managerData.id
+                      }, {
+                        onConflict: 'course_id,type_classement,etape_numero',
+                        ignoreDuplicates: false
+                      });
+                    
+                    // Refresh results status query
+                    queryClient.invalidateQueries({ queryKey: ['results-status'] });
+                  }
+                } else {
+                  // When unchecking, update is_cancelled to false
+                  const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
                   await supabase
                     .from('race_result_sets')
-                    .upsert({
-                      course_id: course.course_id,
-                      saison_id: phaseData.saison_id,
-                      type_classement: currentClassement,
-                      etape_numero: etapeNumeroValue,
-                      is_cancelled: true,
-                      created_by: managerData.id
-                    }, {
-                      onConflict: 'course_id,type_classement,etape_numero',
-                      ignoreDuplicates: false
-                    });
+                    .update({ is_cancelled: false })
+                    .eq('course_id', course.course_id)
+                    .eq('type_classement', currentClassement)
+                    .eq('etape_numero', etapeNumeroValue);
                   
-                  // Refresh results status query
                   queryClient.invalidateQueries({ queryKey: ['results-status'] });
                 }
-              } else {
-                // When unchecking, update is_cancelled to false
-                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
-                await supabase
-                  .from('race_result_sets')
-                  .update({ is_cancelled: false })
-                  .eq('course_id', course.course_id)
-                  .eq('type_classement', currentClassement)
-                  .eq('etape_numero', etapeNumeroValue);
-                
-                queryClient.invalidateQueries({ queryKey: ['results-status'] });
-              }
-            }}
-          />
-          <label htmlFor="cancelled-checkbox-mobile" className="text-sm font-medium cursor-pointer">
-            {courseIsStageRace && currentClassement === "Etape" ? "Étape annulée" : "Course annulée"}
-          </label>
+              }}
+            />
+            <label htmlFor="cancelled-checkbox-mobile" className="text-sm font-medium cursor-pointer">
+              {courseIsStageRace && currentClassement === "Etape" ? "Étape annulée" : "Course annulée"}
+            </label>
+          </div>
+
+          {tttEligible && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="ttt-checkbox-mobile"
+                  checked={isTTT}
+                  disabled={isCancelled}
+                  onCheckedChange={(checked) => {
+                    tttManuallySet.current = true;
+                    setIsTTT(checked === true);
+                    setResultRows([]);
+                  }}
+                />
+                <label htmlFor="ttt-checkbox-mobile" className="text-sm font-medium cursor-pointer">
+                  TTT
+                </label>
+              </div>
+              {isTTT && (
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-muted-foreground">Nb</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={tttRidersCount}
+                    disabled={isCancelled}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      if (v >= 1 && v <= 10) {
+                        tttManuallySet.current = true;
+                        setTttRidersCount(v);
+                        setResultRows([]);
+                      }
+                    }}
+                    className="w-14 h-8"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Info message for cancelled stages */}
