@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2 } from "lucide-react";
+import { EquipeCombobox } from "@/components/shared/EquipeCombobox";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2, ChevronDown } from "lucide-react";
 import { usePcsImport } from "@/hooks/usePcsImport";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/collapsible";
 import { JerseyHoldersInput } from "./JerseyHoldersInput";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 type Course = {
   course_id: string;
@@ -37,12 +40,21 @@ type Course = {
 type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif";
 type StatutType = "finished" | "dnf" | "dns" | "dsq";
 
+type TeamRider = {
+  coureur_id: string | null;
+  coureur_nom: string | null;
+  position_decimal: number;
+};
+
 type ResultRow = {
   position: number;
   coureur_id: string | null;
   coureur_nom: string | null;
   statut: StatutType;
   points: number;
+  equipe_id?: string | null;
+  team_riders?: TeamRider[];
+  is_expanded?: boolean;
 };
 
 type ScoringRule = {
@@ -93,6 +105,35 @@ export const ResultsEntryStudioMobile = ({
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
   const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
+
+  // TTT mode state
+  const [isTTT, setIsTTT] = useState(false);
+  const [tttRidersCount, setTttRidersCount] = useState(7);
+  const [saisonId, setSaisonId] = useState<string | null>(null);
+  const tttManuallySet = useRef(false);
+
+  // TTT is available for stage-race "Etape" tab and for one-day general
+  const tttEligible =
+    (courseIsStageRace && currentClassement === "Etape") ||
+    (!courseIsStageRace && currentClassement === "General");
+
+  // Load saison_id from course phase
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      if (data) setSaisonId(data.saison_id);
+    })();
+  }, [course.phase_id]);
+
+  // Reset TTT flag when switching stage/classement (mirrors desktop behavior)
+  useEffect(() => {
+    tttManuallySet.current = false;
+    setIsTTT(false);
+  }, [currentStage, currentClassement]);
 
   // Fetch scoring rules using normalized views (same as desktop)
   const { data: scoringRules } = useQuery({
@@ -147,17 +188,27 @@ export const ResultsEntryStudioMobile = ({
       return;
     }
 
-    // Load cancellation status
+    // Load cancellation + TTT status
     const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
     const { data: resultSetData } = await supabase
       .from('race_result_sets')
-      .select('is_cancelled')
+      .select('is_cancelled, is_ttt, ttt_riders_count')
       .eq('course_id', course.course_id)
       .eq('type_classement', currentClassement)
       .eq('etape_numero', etapeNumeroValue)
       .maybeSingle();
 
     setIsCancelled(resultSetData?.is_cancelled || false);
+
+    // Hydrate TTT state from DB unless the user manually toggled it
+    const dbIsTTT = !!resultSetData?.is_ttt;
+    const dbRidersCount = resultSetData?.ttt_riders_count || 7;
+    if (!tttManuallySet.current) {
+      setIsTTT(dbIsTTT);
+      setTttRidersCount(dbRidersCount);
+    }
+    const effectiveIsTTT = tttManuallySet.current ? isTTT : dbIsTTT;
+    const effectiveRidersCount = tttManuallySet.current ? tttRidersCount : dbRidersCount;
 
     let query = supabase
       .from('race_results')
@@ -175,40 +226,80 @@ export const ResultsEntryStudioMobile = ({
     console.log('📊 Résultats existants chargés:', existingData?.length || 0);
     
     const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
-    const rows: ResultRow[] = [];
+    let rows: ResultRow[] = [];
 
-    const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
-    console.log('✅ Résultats "finished" avec position:', finishedResults.length);
-    
-    // Create rows based on scoring rules
-    for (let i = 1; i <= maxPlace; i++) {
-      const existing = finishedResults.find(r => r.position === i);
-      const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+    if (effectiveIsTTT && tttEligible) {
+      // TTT Mode: Group existing results by team (position 1-10)
+      const teamResults: Record<number, { equipe_id: string | null; riders: TeamRider[] }> = {};
+      (existingData || []).forEach((r: any) => {
+        const pos = r.position;
+        if (!pos || pos < 1 || pos > 10) return;
+        if (!teamResults[pos]) {
+          teamResults[pos] = { equipe_id: r.equipe_id || null, riders: [] };
+        }
+        teamResults[pos].riders.push({
+          coureur_id: r.coureur_id,
+          coureur_nom: (r.coureurs as any)?.nom || null,
+          position_decimal: r.position_decimal || (pos + (teamResults[pos].riders.length + 1) / 10),
+        });
+      });
+
+      rows = Array.from({ length: 10 }, (_, i) => {
+        const position = i + 1;
+        const rule = scoringRules.find(sr => sr.place === position);
+        const teamData = teamResults[position];
+        const pointsPerRider = Math.round((rule?.points || 0) / effectiveRidersCount);
+        return {
+          position,
+          coureur_id: null,
+          coureur_nom: null,
+          statut: 'finished' as StatutType,
+          points: pointsPerRider,
+          equipe_id: teamData?.equipe_id || null,
+          is_expanded: false,
+          team_riders: teamData?.riders && teamData.riders.length > 0
+            ? teamData.riders
+            : Array.from({ length: effectiveRidersCount }, (_, idx) => ({
+                coureur_id: null,
+                coureur_nom: null,
+                position_decimal: position + (idx + 1) / 10,
+              })),
+        };
+      });
+    } else {
+      const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+      console.log('✅ Résultats "finished" avec position:', finishedResults.length);
       
-      rows.push({
-        position: i,
-        coureur_id: existing?.coureur_id || null,
-        coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
-        statut: 'finished' as StatutType,
-        points,
+      // Create rows based on scoring rules
+      for (let i = 1; i <= maxPlace; i++) {
+        const existing = finishedResults.find(r => r.position === i);
+        const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+        
+        rows.push({
+          position: i,
+          coureur_id: existing?.coureur_id || null,
+          coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
+          statut: 'finished' as StatutType,
+          points,
+        });
+      }
+
+      // Add non-finished results at the end
+      const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
+      nonFinishedResults.forEach(r => {
+        rows.push({
+          position: 0,
+          coureur_id: r.coureur_id,
+          coureur_nom: (r.coureurs as any)?.nom || null,
+          statut: r.statut as StatutType,
+          points: 0,
+        });
       });
     }
 
-    // Add non-finished results at the end
-    const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
-    nonFinishedResults.forEach(r => {
-      rows.push({
-        position: 0,
-        coureur_id: r.coureur_id,
-        coureur_nom: (r.coureurs as any)?.nom || null,
-        statut: r.statut as StatutType,
-        points: 0,
-      });
-    });
-
     console.log('📝 Grille finale créée:', rows.length, 'lignes');
     setResultRows(rows);
-  }, [scoringRules, currentClassement, currentStage, course.course_id]);
+  }, [scoringRules, currentClassement, currentStage, course.course_id, isTTT, tttRidersCount, tttEligible]);
 
   // Load existing results when scoring rules are available - only for current classement
   useEffect(() => {
@@ -384,17 +475,96 @@ export const ResultsEntryStudioMobile = ({
     }));
   };
 
+  // TTT handlers
+  const handleTeamChange = (index: number, equipeId: string | null) => {
+    setResultRows(prev => prev.map((row, i) => {
+      if (i !== index) return row;
+      const rule = scoringRules?.find(sr => sr.place === row.position);
+      const pointsPerRider = Math.round((rule?.points || 0) / tttRidersCount);
+      const teamRiders = equipeId ? Array.from({ length: tttRidersCount }, (_, idx) => ({
+        coureur_id: null,
+        coureur_nom: null,
+        position_decimal: row.position + (idx + 1) / 10,
+      })) : [];
+      return { ...row, equipe_id: equipeId, team_riders: teamRiders, points: pointsPerRider, is_expanded: !!equipeId };
+    }));
+  };
+
+  const handleToggleExpand = (index: number) => {
+    setResultRows(prev => prev.map((row, i) =>
+      i === index ? { ...row, is_expanded: !row.is_expanded } : row
+    ));
+  };
+
+  const handleTeamRiderChange = (teamIndex: number, riderIndex: number, riderId: string | null, riderName: string | null) => {
+    setResultRows(prev => prev.map((row, i) => {
+      if (i !== teamIndex || !row.team_riders) return row;
+      const newTeamRiders = [...row.team_riders];
+      newTeamRiders[riderIndex] = {
+        ...newTeamRiders[riderIndex],
+        coureur_id: riderId,
+        coureur_nom: riderName,
+      };
+      return { ...row, team_riders: newTeamRiders };
+    }));
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
 
-      // Update cancellation status
-      await leagueClient
-        .from('race_result_sets')
-        .update({ is_cancelled: isCancelled })
-        .eq('course_id', course.course_id)
-        .eq('type_classement', currentClassement)
-        .eq('etape_numero', etapeNumeroValue);
+      // Upsert race_result_sets with cancellation + TTT info (delete-then-insert)
+      const { data: phaseForSet } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      const { data: userForSet } = await supabase.auth.getUser();
+      const { data: managerForSet } = userForSet.user
+        ? await supabase.from('managers').select('id').eq('user_id', userForSet.user.id).single()
+        : { data: null };
+
+      if (phaseForSet?.saison_id) {
+        let delRrs = supabase
+          .from('race_result_sets')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement);
+        delRrs = etapeNumeroValue === null
+          ? delRrs.is('etape_numero', null)
+          : delRrs.eq('etape_numero', etapeNumeroValue);
+        await delRrs;
+
+        await supabase.from('race_result_sets').insert({
+          course_id: course.course_id,
+          saison_id: phaseForSet.saison_id,
+          type_classement: currentClassement,
+          etape_numero: etapeNumeroValue,
+          is_cancelled: isCancelled,
+          is_ttt: isTTT && tttEligible,
+          ttt_riders_count: isTTT && tttEligible ? tttRidersCount : null,
+          created_by: managerForSet?.id,
+        });
+      }
+
+      // Persist TTT config on course_stage_config for points calculation
+      if (isTTT && tttEligible) {
+        let delCsc = supabase
+          .from('course_stage_config')
+          .delete()
+          .eq('course_id', course.course_id);
+        delCsc = etapeNumeroValue === null
+          ? delCsc.is('etape_numero', null)
+          : delCsc.eq('etape_numero', etapeNumeroValue);
+        await delCsc;
+
+        await supabase.from('course_stage_config').insert({
+          course_id: course.course_id,
+          etape_numero: etapeNumeroValue,
+          ttt_riders_per_team: tttRidersCount,
+          is_ttt: true,
+        });
+      }
 
       // If cancelled, delete all results AND points and return
       if (isCancelled) {
@@ -415,31 +585,82 @@ export const ResultsEntryStudioMobile = ({
         return { success: true, message: 'Annulation enregistrée' };
       }
 
-      // Otherwise, save results via edge function (same as desktop)
-      const validRows = resultRows.filter(r => r.coureur_id);
-      
       const hasSuperCombatif = courseIsStageRace && course.categorie === 'WT GT' && currentClassement === 'Combatif' && combatifWinner;
 
-      if (validRows.length === 0 && !hasSuperCombatif) {
-        throw new Error("Aucun résultat à sauvegarder");
-      }
-
-      // Save main results via admin-result-save-lot edge function
-      if (validRows.length > 0) {
-        const { error: saveLotError } = await supabase.functions.invoke('admin-result-save-lot', {
-          body: {
-            p_course_id: course.course_id,
-            p_type_classement: currentClassement,
-            p_etape_numero: etapeNumeroValue,
-            p_rows: validRows.map(row => ({
-              coureur_id: row.coureur_id,
-              position: row.statut === 'finished' && row.position > 0 ? row.position : null,
-              statut: row.statut,
-            })),
-          },
+      if (isTTT && tttEligible) {
+        // TTT Mode: direct insert into race_results with equipe_id + position_decimal
+        const teamRows = resultRows.flatMap(teamRow => {
+          if (!teamRow.equipe_id || !teamRow.team_riders) return [];
+          return teamRow.team_riders
+            .filter(r => r.coureur_id)
+            .map(r => ({
+              coureur_id: r.coureur_id!,
+              position: teamRow.position,
+              position_decimal: r.position_decimal,
+              equipe_id: teamRow.equipe_id!,
+            }));
         });
 
-        if (saveLotError) throw saveLotError;
+        if (teamRows.length === 0) {
+          throw new Error("Aucun coureur d'équipe à sauvegarder");
+        }
+
+        // Compute date_classement (same logic as admin-stage-save-step)
+        let dateClassement: string;
+        if (currentClassement === 'Etape' && course.date_debut) {
+          const d = new Date(course.date_debut);
+          d.setUTCDate(d.getUTCDate() + (currentStage - 1));
+          dateClassement = d.toISOString().split('T')[0];
+        } else {
+          dateClassement = course.date_fin || course.date_debut || new Date().toISOString().split('T')[0];
+        }
+
+        await supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement)
+          .eq('etape_numero', etapeNumeroValue);
+
+        const inserts = teamRows.map(r => ({
+          course_id: course.course_id,
+          coureur_id: r.coureur_id,
+          type_classement: currentClassement,
+          etape_numero: etapeNumeroValue,
+          position: Math.floor(r.position_decimal),
+          position_decimal: r.position_decimal,
+          statut: 'finished' as const,
+          equipe_id: r.equipe_id,
+          date_classement: dateClassement,
+          saison_id: phaseForSet?.saison_id,
+        }));
+
+        const { error: insertError } = await supabase.from('race_results').insert(inserts);
+        if (insertError) throw insertError;
+      } else {
+        // Normal Mode: save via edge function
+        const validRows = resultRows.filter(r => r.coureur_id);
+
+        if (validRows.length === 0 && !hasSuperCombatif) {
+          throw new Error("Aucun résultat à sauvegarder");
+        }
+
+        if (validRows.length > 0) {
+          const { error: saveLotError } = await supabase.functions.invoke('admin-result-save-lot', {
+            body: {
+              p_course_id: course.course_id,
+              p_type_classement: currentClassement,
+              p_etape_numero: etapeNumeroValue,
+              p_rows: validRows.map(row => ({
+                coureur_id: row.coureur_id,
+                position: row.statut === 'finished' && row.position > 0 ? row.position : null,
+                statut: row.statut,
+              })),
+            },
+          });
+
+          if (saveLotError) throw saveLotError;
+        }
       }
 
       // Save jersey holders via edge function
@@ -511,6 +732,7 @@ export const ResultsEntryStudioMobile = ({
       setLastSaved(new Date());
       toast.success("Résultats enregistrés");
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
+      tttManuallySet.current = false;
       loadResults();
     },
     onError: (error: Error) => {
@@ -656,69 +878,112 @@ export const ResultsEntryStudioMobile = ({
           </div>
         )}
 
-        {/* Cancelled checkbox */}
-        <div className="flex items-center gap-2 px-4 pb-3">
-          <Checkbox
-            id="cancelled-checkbox-mobile"
-            checked={isCancelled}
-            onCheckedChange={async (checked) => {
-              setIsCancelled(checked === true);
-              if (checked) {
-                setResultRows(prev => prev.map(row => ({
-                  ...row,
-                  coureur_id: null,
-                  coureur_nom: null,
-                })));
-                
-                // Create/update race_result_set immediately
-                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
-                const { data: managerData } = await supabase
-                  .from('managers')
-                  .select('id')
-                  .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-                  .single();
+        {/* Cancelled + TTT checkboxes */}
+        <div className="flex items-center justify-between gap-3 px-4 pb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="cancelled-checkbox-mobile"
+              checked={isCancelled}
+              onCheckedChange={async (checked) => {
+                setIsCancelled(checked === true);
+                if (checked) {
+                  setResultRows(prev => prev.map(row => ({
+                    ...row,
+                    coureur_id: null,
+                    coureur_nom: null,
+                  })));
+                  
+                  // Create/update race_result_set immediately
+                  const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+                  const { data: managerData } = await supabase
+                    .from('managers')
+                    .select('id')
+                    .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                    .single();
 
-                const { data: phaseData } = await supabase
-                  .from('phases')
-                  .select('saison_id')
-                  .eq('id', course.phase_id)
-                  .single();
+                  const { data: phaseData } = await supabase
+                    .from('phases')
+                    .select('saison_id')
+                    .eq('id', course.phase_id)
+                    .single();
 
-                if (managerData?.id && phaseData?.saison_id) {
+                  if (managerData?.id && phaseData?.saison_id) {
+                    await supabase
+                      .from('race_result_sets')
+                      .upsert({
+                        course_id: course.course_id,
+                        saison_id: phaseData.saison_id,
+                        type_classement: currentClassement,
+                        etape_numero: etapeNumeroValue,
+                        is_cancelled: true,
+                        created_by: managerData.id
+                      }, {
+                        onConflict: 'course_id,type_classement,etape_numero',
+                        ignoreDuplicates: false
+                      });
+                    
+                    // Refresh results status query
+                    queryClient.invalidateQueries({ queryKey: ['results-status'] });
+                  }
+                } else {
+                  // When unchecking, update is_cancelled to false
+                  const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
                   await supabase
                     .from('race_result_sets')
-                    .upsert({
-                      course_id: course.course_id,
-                      saison_id: phaseData.saison_id,
-                      type_classement: currentClassement,
-                      etape_numero: etapeNumeroValue,
-                      is_cancelled: true,
-                      created_by: managerData.id
-                    }, {
-                      onConflict: 'course_id,type_classement,etape_numero',
-                      ignoreDuplicates: false
-                    });
+                    .update({ is_cancelled: false })
+                    .eq('course_id', course.course_id)
+                    .eq('type_classement', currentClassement)
+                    .eq('etape_numero', etapeNumeroValue);
                   
-                  // Refresh results status query
                   queryClient.invalidateQueries({ queryKey: ['results-status'] });
                 }
-              } else {
-                // When unchecking, update is_cancelled to false
-                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
-                await supabase
-                  .from('race_result_sets')
-                  .update({ is_cancelled: false })
-                  .eq('course_id', course.course_id)
-                  .eq('type_classement', currentClassement)
-                  .eq('etape_numero', etapeNumeroValue);
-                
-                queryClient.invalidateQueries({ queryKey: ['results-status'] });
-              }
-            }}
-          />
-          <label htmlFor="cancelled-checkbox-mobile" className="text-sm font-medium cursor-pointer">
-            {courseIsStageRace && currentClassement === "Etape" ? "Étape annulée" : "Course annulée"}
-          </label>
+              }}
+            />
+            <label htmlFor="cancelled-checkbox-mobile" className="text-sm font-medium cursor-pointer">
+              {courseIsStageRace && currentClassement === "Etape" ? "Étape annulée" : "Course annulée"}
+            </label>
+          </div>
+
+          {tttEligible && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="ttt-checkbox-mobile"
+                  checked={isTTT}
+                  disabled={isCancelled}
+                  onCheckedChange={(checked) => {
+                    tttManuallySet.current = true;
+                    setIsTTT(checked === true);
+                    setResultRows([]);
+                  }}
+                />
+                <label htmlFor="ttt-checkbox-mobile" className="text-sm font-medium cursor-pointer">
+                  TTT
+                </label>
+              </div>
+              {isTTT && (
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-muted-foreground">Nb</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={tttRidersCount}
+                    disabled={isCancelled}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      if (v >= 1 && v <= 10) {
+                        tttManuallySet.current = true;
+                        setTttRidersCount(v);
+                        setResultRows([]);
+                      }
+                    }}
+                    className="w-14 h-8"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Info message for cancelled stages */}
@@ -764,24 +1029,75 @@ export const ResultsEntryStudioMobile = ({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-1.5">
-                {currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-1 p-1.5 bg-muted rounded-md", isCancelled && "opacity-50 pointer-events-none")}>
-                    {row.coureur_id && (
-                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
-                    )}
-                    <span className="font-bold text-[11px] w-4">{row.position}</span>
-                    <div className="flex-1 min-w-0">
-                      <CoureursCombobox
-                        value={row.coureur_id}
-                        onSelect={(coureur) => handleRiderChange(index, coureur)}
-                        phaseId={course.phase_id}
-                        disabled={isCancelled}
-                        context="super-admin"
-                      />
+                {currentClassement === "Etape" && isTTT && saisonId ? (
+                  resultRows.slice(0, 10).map((row, index) => (
+                    <div key={`team-${index}`} className={cn("border rounded-md bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
+                      <div className="flex items-center gap-1.5 p-2">
+                        <span className="font-bold text-[11px] w-4">{row.position}</span>
+                        <div className="flex-1 min-w-0">
+                          <EquipeCombobox
+                            saisonId={saisonId}
+                            value={row.equipe_id || undefined}
+                            onValueChange={(equipeId) => handleTeamChange(index, equipeId || null)}
+                            disabled={isCancelled}
+                          />
+                        </div>
+                        {row.equipe_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleToggleExpand(index)}
+                          >
+                            <ChevronDown className={cn("h-3 w-3 transition-transform", row.is_expanded && "rotate-180")} />
+                            <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                              {row.team_riders?.filter(r => r.coureur_id).length || 0}/{tttRidersCount}
+                            </Badge>
+                          </Button>
+                        )}
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 whitespace-nowrap">{row.points}pts</Badge>
+                      </div>
+                      {row.is_expanded && row.team_riders && (
+                        <div className="border-t bg-background/50 p-2 space-y-1.5">
+                          {row.team_riders.map((rider, rIdx) => (
+                            <div key={`r-${index}-${rIdx}`} className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-muted-foreground w-8">{row.position}.{rIdx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <CoureursCombobox
+                                  value={rider.coureur_id}
+                                  onSelect={(coureur) => handleTeamRiderChange(index, rIdx, coureur?.coureur_id || null, coureur?.coureur_nom || null)}
+                                  phaseId={course.phase_id}
+                                  disabled={isCancelled}
+                                  context="super-admin"
+                                  showTakenRiders={true}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-[9px] px-1 py-0 whitespace-nowrap">{row.points}pts</Badge>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                    <div key={index} className={cn("flex items-center gap-1 p-1.5 bg-muted rounded-md", isCancelled && "opacity-50 pointer-events-none")}>
+                      {row.coureur_id && (
+                        <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      )}
+                      <span className="font-bold text-[11px] w-4">{row.position}</span>
+                      <div className="flex-1 min-w-0">
+                        <CoureursCombobox
+                          value={row.coureur_id}
+                          onSelect={(coureur) => handleRiderChange(index, coureur)}
+                          phaseId={course.phase_id}
+                          disabled={isCancelled}
+                          context="super-admin"
+                        />
+                      </div>
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 whitespace-nowrap">{row.points}pts</Badge>
+                    </div>
+                  ))
+                )}
 
                 {/* Jersey Holders */}
                 <div className="mt-3 pt-3 border-t border-dashed">
@@ -824,24 +1140,75 @@ export const ResultsEntryStudioMobile = ({
               </Button>
             </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-1.5">
-                {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    {row.coureur_id && (
-                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
-                    )}
-                    <span className="font-bold text-xs w-5">{row.position}</span>
-                    <div className="flex-1">
-                      <CoureursCombobox
-                        value={row.coureur_id}
-                        onSelect={(coureur) => handleRiderChange(index, coureur)}
-                        phaseId={course.phase_id}
-                        disabled={isCancelled}
-                        context="super-admin"
-                      />
+                {currentClassement === "General" && !courseIsStageRace && isTTT && saisonId ? (
+                  resultRows.slice(0, 10).map((row, index) => (
+                    <div key={`team-gc-${index}`} className={cn("border rounded-md bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
+                      <div className="flex items-center gap-1.5 p-2">
+                        <span className="font-bold text-xs w-5">{row.position}</span>
+                        <div className="flex-1 min-w-0">
+                          <EquipeCombobox
+                            saisonId={saisonId}
+                            value={row.equipe_id || undefined}
+                            onValueChange={(equipeId) => handleTeamChange(index, equipeId || null)}
+                            disabled={isCancelled}
+                          />
+                        </div>
+                        {row.equipe_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleToggleExpand(index)}
+                          >
+                            <ChevronDown className={cn("h-3 w-3 transition-transform", row.is_expanded && "rotate-180")} />
+                            <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                              {row.team_riders?.filter(r => r.coureur_id).length || 0}/{tttRidersCount}
+                            </Badge>
+                          </Button>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
+                      </div>
+                      {row.is_expanded && row.team_riders && (
+                        <div className="border-t bg-background/50 p-2 space-y-1.5">
+                          {row.team_riders.map((rider, rIdx) => (
+                            <div key={`r-gc-${index}-${rIdx}`} className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-muted-foreground w-8">{row.position}.{rIdx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <CoureursCombobox
+                                  value={rider.coureur_id}
+                                  onSelect={(coureur) => handleTeamRiderChange(index, rIdx, coureur?.coureur_id || null, coureur?.coureur_nom || null)}
+                                  phaseId={course.phase_id}
+                                  disabled={isCancelled}
+                                  context="super-admin"
+                                  showTakenRiders={true}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                    <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                      {row.coureur_id && (
+                        <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      )}
+                      <span className="font-bold text-xs w-5">{row.position}</span>
+                      <div className="flex-1">
+                        <CoureursCombobox
+                          value={row.coureur_id}
+                          onSelect={(coureur) => handleRiderChange(index, coureur)}
+                          phaseId={course.phase_id}
+                          disabled={isCancelled}
+                          context="super-admin"
+                        />
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
+                    </div>
+                  ))
+                )}
               </CollapsibleContent>
           </Collapsible>
 

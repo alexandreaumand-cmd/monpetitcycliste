@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-03T15:16:35.864Z",
+  "generatedAt": "2026-07-04T18:01:27.985Z",
   "thresholds": {
     "edgeFunctions": 130,
     "assetsMB": 8,
@@ -55,5 +55,5 @@
       }
     ]
   },
-  "distMB": 8.85
+  "distMB": null
 }
