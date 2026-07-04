@@ -212,7 +212,7 @@ export const ResultsEntryStudioMobile = ({
 
     let query = supabase
       .from('race_results')
-      .select('*, coureurs(nom), equipes(nom, code_court)')
+      .select('*, coureurs(nom)')
       .eq('course_id', course.course_id)
       .eq('type_classement', currentClassement);
     
