@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2 } from "lucide-react";
+import { EquipeCombobox } from "@/components/shared/EquipeCombobox";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2, ChevronDown } from "lucide-react";
 import { usePcsImport } from "@/hooks/usePcsImport";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/collapsible";
 import { JerseyHoldersInput } from "./JerseyHoldersInput";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 type Course = {
   course_id: string;
@@ -37,12 +40,21 @@ type Course = {
 type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif";
 type StatutType = "finished" | "dnf" | "dns" | "dsq";
 
+type TeamRider = {
+  coureur_id: string | null;
+  coureur_nom: string | null;
+  position_decimal: number;
+};
+
 type ResultRow = {
   position: number;
   coureur_id: string | null;
   coureur_nom: string | null;
   statut: StatutType;
   points: number;
+  equipe_id?: string | null;
+  team_riders?: TeamRider[];
+  is_expanded?: boolean;
 };
 
 type ScoringRule = {
