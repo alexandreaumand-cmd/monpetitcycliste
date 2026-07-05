@@ -106,21 +106,21 @@ export default function SuperAdminPhasesPage() {
     queryClient.invalidateQueries({ queryKey: ["next-auction-info"] });
   };
 
+  type PhaseStatut = "active" | "completed" | "draft" | "auction_open" | "auction_closed";
+
   const setStatusMutation = useMutation({
-    mutationFn: async ({ phaseId, statut }: { phaseId: string; statut: string }) => {
+    mutationFn: async ({ phaseId, statut }: { phaseId: string; statut: PhaseStatut }) => {
       const target = phases.find((p) => p.id === phaseId);
       if (!target) throw new Error("Phase introuvable");
 
       if (statut === "active") {
-        // Cascade: earlier phases -> completed, later phases -> draft, this -> active
         const updates = phases.map((p) => {
-          let newStatut: string;
+          let newStatut: PhaseStatut;
           if (p.id === phaseId) newStatut = "active";
           else if (p.index_dans_saison < target.index_dans_saison) newStatut = "completed";
           else newStatut = "draft";
           return { id: p.id, statut: newStatut };
         });
-        // Only update phases whose statut actually changes
         const toUpdate = updates.filter((u) => {
           const cur = phases.find((p) => p.id === u.id)!;
           return cur.statut !== u.statut;
