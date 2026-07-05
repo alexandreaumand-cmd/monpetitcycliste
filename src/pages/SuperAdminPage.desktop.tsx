@@ -24,6 +24,7 @@ import SuperAdminCronJobsPage from "@/pages/admin/SuperAdminCronJobsPage";
 import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPage";
 import SuperAdminInjuriesPage from "@/pages/admin/SuperAdminInjuriesPage";
 import SuperAdminGlobalRostersPage from "@/pages/admin/SuperAdminGlobalRostersPage";
+import SuperAdminPhasesPage from "@/pages/admin/SuperAdminPhasesPage";
 
 interface NavGroup {
   label: string;
