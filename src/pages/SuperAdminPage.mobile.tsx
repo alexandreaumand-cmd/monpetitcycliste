@@ -66,6 +66,7 @@ const navSections: NavSection[] = [
       { label: "Utilisateurs", path: "users", icon: Shield },
       { label: "Rosters globaux", path: "global-rosters", icon: Users2 },
       { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
+      { label: "Gestion des phases", path: "phases", icon: Calendar },
       { label: "Enchères Live", path: "auctions", icon: Gavel },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
