@@ -160,6 +160,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
               <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
+              <Route path="phases" element={<SuperAdminPhasesPage />} />
               <Route path="auctions" element={<SuperAdminAuctionsPage />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
               <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
