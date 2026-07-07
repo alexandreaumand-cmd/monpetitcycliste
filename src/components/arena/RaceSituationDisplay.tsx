@@ -78,13 +78,24 @@ function GroupRow({
   const [open, setOpen] = useState(false);
   const badgeLabel = group.isPeloton ? "P" : String(index);
 
-  const riderItems = group.riders.map((name, ri) => {
-    const riderId = group.riderIds?.[ri];
-    const ownerName = riderId && rosterOwners?.[riderId];
-    const bib = group.riderBibs?.[ri];
-    const gcGap = group.riderGcGaps?.[ri];
-    return { name, ownerName, bib, gcGap };
-  });
+  const riderItems = group.riders
+    .map((name, ri) => {
+      const riderId = group.riderIds?.[ri];
+      const ownerName = riderId ? rosterOwners?.[riderId] : undefined;
+      const bib = group.riderBibs?.[ri];
+      const gcGap = group.riderGcGaps?.[ri];
+      return { name, ownerName, bib, gcGap };
+    })
+    .sort((a, b) => {
+      // Riders with an owner first, sorted by manager name; unowned riders last, sorted by rider name
+      if (a.ownerName && !b.ownerName) return -1;
+      if (!a.ownerName && b.ownerName) return 1;
+      if (a.ownerName && b.ownerName) {
+        const cmp = a.ownerName.localeCompare(b.ownerName, "fr", { sensitivity: "base" });
+        if (cmp !== 0) return cmp;
+      }
+      return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
+    });
 
   const showRiders = riderItems.length > 0;
   const showCollapsible = riderItems.length > 5;
