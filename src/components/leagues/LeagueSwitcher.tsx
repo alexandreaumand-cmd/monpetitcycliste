@@ -69,12 +69,12 @@ export function LeagueSwitcher() {
           <DropdownMenuLabel>{t('switcher.myLeagues')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           
-          {leagues.length === 0 ? (
+          {activeLeagues.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
               {t('switcher.noLeagues')}
             </div>
           ) : (
-            leagues.map(league => (
+            activeLeagues.map(league => (
               <DropdownMenuItem
                 key={league.id}
                 onClick={() => setLeagueId(league.id)}
