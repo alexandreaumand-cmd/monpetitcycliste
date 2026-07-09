@@ -38,6 +38,7 @@ export function LeagueSwitcher() {
   });
 
   const currentLeague = leagues.find(l => l.id === leagueId);
+  const activeLeagues = leagues.filter(l => l.status !== 'completed');
   const gameModeTemplate = currentLeague?.game_mode 
     ? templates?.find(t => t.id === currentLeague.game_mode) 
     : null;
@@ -69,12 +70,12 @@ export function LeagueSwitcher() {
           <DropdownMenuLabel>{t('switcher.myLeagues')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           
-          {leagues.length === 0 ? (
+          {activeLeagues.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
               {t('switcher.noLeagues')}
             </div>
           ) : (
-            leagues.map(league => (
+            activeLeagues.map(league => (
               <DropdownMenuItem
                 key={league.id}
                 onClick={() => setLeagueId(league.id)}

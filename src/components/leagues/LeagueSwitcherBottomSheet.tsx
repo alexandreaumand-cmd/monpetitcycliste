@@ -22,6 +22,7 @@ export function LeagueSwitcherBottomSheet({
   const { t } = useTranslation('leagues');
   const { leagueId, setLeagueId } = useLeague();
   const { leagues, roles, isLoading } = useUserLeagues();
+  const activeLeagues = leagues.filter(l => l.status !== 'completed');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
@@ -42,13 +43,13 @@ export function LeagueSwitcherBottomSheet({
           <div className="text-sm text-muted-foreground animate-pulse py-4">
             {t('switcher.loading')}
           </div>
-        ) : leagues.length === 0 ? (
+        ) : activeLeagues.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4">
             {t('switcher.noLeagues')}
           </div>
         ) : (
           <div className="space-y-2 mb-6">
-            {leagues.map(league => (
+            {activeLeagues.map(league => (
               <Button
                 key={league.id}
                 variant={league.id === leagueId ? "default" : "outline"}
