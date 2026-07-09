@@ -38,6 +38,7 @@ export function LeagueSwitcher() {
   });
 
   const currentLeague = leagues.find(l => l.id === leagueId);
+  const activeLeagues = leagues.filter(l => l.status !== 'completed');
   const gameModeTemplate = currentLeague?.game_mode 
     ? templates?.find(t => t.id === currentLeague.game_mode) 
     : null;

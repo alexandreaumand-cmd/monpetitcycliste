@@ -22,6 +22,7 @@ export function LeagueSwitcherBottomSheet({
   const { t } = useTranslation('leagues');
   const { leagueId, setLeagueId } = useLeague();
   const { leagues, roles, isLoading } = useUserLeagues();
+  const activeLeagues = leagues.filter(l => l.status !== 'completed');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
