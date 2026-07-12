@@ -1,49 +1,58 @@
-# Ajouter le mode TTT à la saisie de résultats sur mobile
+# Correction du graphique "Évolution des points"
 
-## Constat
+## Problème observé
 
-Sur desktop (`src/components/admin/ResultsEntryStudio.desktop.tsx`), la saisie propose une case à cocher **TTT** + un champ **Nb coureurs** (1‑10) qui bascule la grille en mode équipes (positions 1‑10 par équipe, coureurs répartis dedans, points calculés au prorata).
+Dans la ligue *Suceurs_de_Roux*, le graphique affiche Matt L en tête (~11 900 pts) alors que le classement réel donne :
+- Snoop maxi max : 15 215
+- FESTINA : 15 061
+- Matt L : 14 175
 
-Sur mobile (`src/components/admin/ResultsEntryStudio.mobile.tsx`), rien de tout cela n'existe : aucun état `isTTT`, aucun sélecteur d'équipe, aucune persistance de `is_ttt` / `ttt_riders_count`. On ne peut donc pas déclarer une étape/course comme TTT depuis un téléphone.
+En interrogeant la base, on retrouve bien ces totaux via `points_ledger` + `rosters`. En appelant l'edge function `get-cumulative-points-series` directement, elle renvoie :
 
-## Objectif
+| Manager | Chart | Réel | Écart |
+|---|---|---|---|
+| Snoop maxi max | 9 613 | 14 940 | -5 327 |
+| FESTINA | 10 615 | 15 060 | -4 445 |
+| Matt L | 11 888 | 13 808 | -1 920 |
+| Eufemiano | 10 070 | 11 503 | -1 433 |
+| Jambon | 9 461 | 10 278 | -817 |
+| Marco_Moro | 4 727 | 4 912 | -185 |
 
-Atteindre la parité fonctionnelle du mode TTT entre mobile et desktop, sans toucher au desktop ni à la logique backend (les tables `race_result_sets.is_ttt/ttt_riders_count` et `course_stage_config.is_ttt` existent déjà et sont utilisées par le calcul des points).
+Tous les managers perdent des points, dans des proportions variables. Aucune ligne n'a `phase_id`/`date_classement` manquant, aucun doublon dans `race_results`.
 
-## Changements (frontend uniquement)
+## Cause
 
-### 1. `src/components/admin/ResultsEntryStudio.mobile.tsx`
+L'edge function `supabase/functions/get-cumulative-points-series/index.ts` utilise un helper `fetchAllRows` qui pagine via `.range(from, from+999)` **sans `ORDER BY` explicite**. PostgREST ne garantit pas un ordre stable entre pages sans `order()` : certaines lignes peuvent être renvoyées deux fois et d'autres omises entre deux `range()` successifs.
 
-- **État** : ajouter `isTTT`, `tttRidersCount` (défaut 7), et une ref `tttManuallySet` — même sémantique que desktop (empêche la lecture DB d'écraser un choix utilisateur en cours d'édition).
-- **Chargement (`loadResults`)** :
-  - Élargir la lecture de `race_result_sets` pour inclure `is_ttt, ttt_riders_count`.
-  - Si `!tttManuallySet.current`, hydrater `isTTT` / `tttRidersCount` depuis la ligne trouvée.
-  - Si `is_ttt` en DB : reconstruire la grille par équipe (grouper les `race_results` par `equipe_id`, positions 1‑10, coureurs rangés par `position_decimal`) exactement comme desktop l.376‑410.
-- **Réinitialisation** : quand l'étape ou l'onglet de classement change réellement, remettre `isTTT` à `false` et vider la grille (miroir de desktop l.242‑253).
-- **UI** : dans le header de la section de saisie (à côté de la case *Annulée*), ajouter :
-  - Checkbox **TTT** visible uniquement pour `classement === "Etape"` ou pour une One‑Day sur l'onglet finals.
-  - Input numérique **Nb coureurs** (1‑10) affiché quand `isTTT` est coché.
-  - Toute bascule met `tttManuallySet.current = true`, `isDirty = true` et vide la grille.
-- **Grille TTT** : nouveau bloc de rendu (utilisé quand `isTTT`) affichant 10 lignes « équipe » avec un `EquipeCombobox` + zone repliable listant `tttRidersCount` `CoureursCombobox` (position_decimal `pos + i/10`). Réutiliser `useResultRows` (`handleTeamChange`, `handleToggleExpand`, `handleTeamRiderChange`) déjà prévus pour ce mode.
-- **Sauvegarde** : dans le flux existant de save,
-  - upsert `race_result_sets` avec `is_ttt` et `ttt_riders_count` (null si TTT off),
-  - upsert `course_stage_config` avec `is_ttt: true` et `ttt_riders_count` quand TTT est actif sur une étape,
-  - en mode TTT, insertion directe dans `race_results` avec `equipe_id` + `position_decimal` (au lieu du chemin classique top‑N), calqué sur desktop l.752‑790,
-  - `validLinesCount` compte les coureurs présents dans les `team_riders` quand TTT.
-- Après un save réussi, remettre `tttManuallySet.current = false`.
+Ici deux requêtes paginées sont affectées et faussent le graphe :
+1. `points_ledger` (2 167 lignes → 3 pages) → certaines lignes sautées = points perdus.
+2. `race_results` (2 167 lignes → 3 pages) → clés manquantes dans `dateIndex`, donc les `points_ledger` correspondants sont ignorés à l'étape d'agrégation (`pointsSkipped++`).
 
-### 2. Aucun changement backend
+Le nombre de lignes total retourné reste identique parce que les doublons compensent, mais la composition change → les managers dont les gros scores (souvent le classement General) tombent dans une page instable perdent le plus (ex : Snoop, tout son General de 5 365 pts saute).
 
-Les tables, RPC de scoring et edge functions gèrent déjà le TTT (utilisés par la version desktop). On se contente d'envoyer les mêmes payloads.
+Les autres requêtes paginées (`rosters`, `courses` dates, `manager_bonus_points`, `bonus_points`, `managers`) souffrent du même risque mais avec un impact moindre car peu volumineuses.
 
-## Hors périmètre
+## Correctif
 
-- Pas de refonte visuelle du composant mobile.
-- Pas de modification de `ResultsEntryStudio.desktop.tsx`, du hook `useResultRows`, ni des fonctions Supabase.
-- Pas de changement sur la lecture des résultats (drawers, classements) — déjà compatibles TTT.
+Rendre `fetchAllRows` déterministe.
+
+### Fichier modifié
+- `supabase/functions/get-cumulative-points-series/index.ts`
+
+### Changements
+1. Dans `fetchAllRows`, exiger un tri stable : accepter un paramètre `orderColumn` (par défaut `'id'`) et faire `baseQuery.order(orderColumn, { ascending: true }).range(...)`. Les appelants passeront une colonne présente et unique.
+2. Ajuster les six appels à `fetchAllRows` :
+   - `rosters` → order `id`
+   - `points_ledger` → order `id`
+   - `courses` (dates) → order `id`
+   - `race_results` → order `id`
+   - `managers` → order `id`
+   - `manager_bonus_points` et `bonus_points` → order `id` (via appel dédié ; la jointure `phases!inner` reste inchangée)
+
+Aucun impact fonctionnel côté client : la sortie garde la même structure, seuls les totaux redeviennent complets.
 
 ## Vérification
 
-1. Sur mobile, ouvrir une étape → cocher TTT, saisir 8 coureurs, choisir 10 équipes + coureurs, sauvegarder → recharger et vérifier que la grille revient bien en mode TTT.
-2. Décocher TTT sur une étape existante → la grille repasse en top‑N classique et `is_ttt` repasse à `false` en DB.
-3. Sur desktop, rouvrir la même étape et confirmer que le mode TTT + `tttRidersCount` sont identiques à ce qui a été saisi depuis le mobile.
+Après déploiement, réinvoquer l'edge function avec les mêmes paramètres (`league_id` Suceurs_de_Roux, `view_mode: 'season'`) et confirmer que les totaux finaux correspondent aux classements (Snoop 14 940 + bonus, Matt L 13 808 + bonus, etc., cohérent avec les 15 215 / 14 175 affichés dans l'onglet Managers, aux bonus près).
+
+Aucun autre écran ne dépend de cette function : le fix est isolé au graphique Chrono.

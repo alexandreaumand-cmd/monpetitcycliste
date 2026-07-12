@@ -11,21 +11,24 @@ const corsHeaders = {
  */
 async function fetchAllRows<T>(
   baseQuery: any,
-  batchSize: number = 1000
+  batchSize: number = 1000,
+  orderColumn: string = 'id'
 ): Promise<T[]> {
   let allData: T[] = [];
   let from = 0;
   let hasMore = true;
 
+  // Ensure a stable ordering so paginated range() calls don't drop or duplicate rows.
+  const orderedQuery = baseQuery.order(orderColumn, { ascending: true });
+
   while (hasMore) {
-    // Clone the query for each batch and apply range
-    const { data, error } = await baseQuery.range(from, from + batchSize - 1);
-    
+    const { data, error } = await orderedQuery.range(from, from + batchSize - 1);
+
     if (error) {
       console.error(`Error fetching batch at offset ${from}:`, error);
       throw error;
     }
-    
+
     if (data && data.length > 0) {
       allData = allData.concat(data);
       from += batchSize;
