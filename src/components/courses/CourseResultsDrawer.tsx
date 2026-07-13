@@ -154,6 +154,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [totalBreakdown, setTotalBreakdown] = useState<any[]>([]);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isTTT, setIsTTT] = useState(false);
+  const [leaderboardEtape, setLeaderboardEtape] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Fetch league name for export
