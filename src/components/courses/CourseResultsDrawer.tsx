@@ -1030,6 +1030,24 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             </TabsContent>
 
             <TabsContent value="leaderboard" className="space-y-4 mt-4">
+              {meta?.etapes_disponibles && meta.etapes_disponibles.length > 0 && (
+                <Select
+                  value={leaderboardEtape === null ? "total" : leaderboardEtape.toString()}
+                  onValueChange={(v) => setLeaderboardEtape(v === "total" ? null : parseInt(v, 10))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">Total course (toutes étapes & classements)</SelectItem>
+                    {meta.etapes_disponibles.map((etape) => (
+                      <SelectItem key={etape} value={etape.toString()}>
+                        Étape {etape}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {leaderboardLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
