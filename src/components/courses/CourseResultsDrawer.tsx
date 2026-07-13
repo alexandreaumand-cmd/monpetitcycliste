@@ -189,16 +189,16 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     staleTime: 1000 * 60 * 30,
   });
 
-  // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
+  // Fetch leaderboard for the course - either aggregated or for a specific stage
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
-    queryKey: ["course-leaderboard-drawer", courseId, leagueId],
+    queryKey: ["course-leaderboard-drawer", courseId, leagueId, leaderboardEtape],
     queryFn: async () => {
       if (!courseId) return null;
       const { data, error } = await supabase.functions.invoke("course-leaderboard", {
         body: {
           course_id: courseId,
           type_classement: null,  // Always aggregate all classification types
-          etape_numero: null,     // Always aggregate all stages
+          etape_numero: leaderboardEtape, // null = full course, N = only stage N
           league_id: leagueId
         }
       });
