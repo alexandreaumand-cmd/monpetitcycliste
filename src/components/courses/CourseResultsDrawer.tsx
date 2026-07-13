@@ -154,6 +154,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [totalBreakdown, setTotalBreakdown] = useState<any[]>([]);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isTTT, setIsTTT] = useState(false);
+  const [leaderboardEtape, setLeaderboardEtape] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Fetch league name for export
@@ -188,16 +189,16 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     staleTime: 1000 * 60 * 30,
   });
 
-  // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
+  // Fetch leaderboard for the course - either aggregated or for a specific stage
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
-    queryKey: ["course-leaderboard-drawer", courseId, leagueId],
+    queryKey: ["course-leaderboard-drawer", courseId, leagueId, leaderboardEtape],
     queryFn: async () => {
       if (!courseId) return null;
       const { data, error } = await supabase.functions.invoke("course-leaderboard", {
         body: {
           course_id: courseId,
           type_classement: null,  // Always aggregate all classification types
-          etape_numero: null,     // Always aggregate all stages
+          etape_numero: leaderboardEtape, // null = full course, N = only stage N
           league_id: leagueId
         }
       });
@@ -220,6 +221,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
   useEffect(() => {
     if (open && courseId) {
+      setLeaderboardEtape(null);
       loadMeta();
     }
   }, [open, courseId]);
@@ -1028,6 +1030,24 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             </TabsContent>
 
             <TabsContent value="leaderboard" className="space-y-4 mt-4">
+              {meta?.etapes_disponibles && meta.etapes_disponibles.length > 0 && (
+                <Select
+                  value={leaderboardEtape === null ? "total" : leaderboardEtape.toString()}
+                  onValueChange={(v) => setLeaderboardEtape(v === "total" ? null : parseInt(v, 10))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">Total course (toutes étapes & classements)</SelectItem>
+                    {meta.etapes_disponibles.map((etape) => (
+                      <SelectItem key={etape} value={etape.toString()}>
+                        Étape {etape}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {leaderboardLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (

@@ -1,58 +1,51 @@
-# Correction du graphique "Évolution des points"
+# Sélecteur d'étape dans l'onglet "Managers"
 
-## Problème observé
+## Objectif
 
-Dans la ligue *Suceurs_de_Roux*, le graphique affiche Matt L en tête (~11 900 pts) alors que le classement réel donne :
-- Snoop maxi max : 15 215
-- FESTINA : 15 061
-- Matt L : 14 175
+Dans le drawer de résultats d'une course à étapes (ex. Tour de France), permettre à l'utilisateur de filtrer le classement des managers par étape, tout en conservant l'option « Total course » (toutes étapes et tous classements confondus, comportement actuel).
 
-En interrogeant la base, on retrouve bien ces totaux via `points_ledger` + `rosters`. En appelant l'edge function `get-cumulative-points-series` directement, elle renvoie :
+## UX
 
-| Manager | Chart | Réel | Écart |
-|---|---|---|---|
-| Snoop maxi max | 9 613 | 14 940 | -5 327 |
-| FESTINA | 10 615 | 15 060 | -4 445 |
-| Matt L | 11 888 | 13 808 | -1 920 |
-| Eufemiano | 10 070 | 11 503 | -1 433 |
-| Jambon | 9 461 | 10 278 | -817 |
-| Marco_Moro | 4 727 | 4 912 | -185 |
+Dans l'onglet **Managers** du `CourseResultsDrawer`, ajouter au-dessus du tableau, uniquement pour les courses à étapes (`meta.etapes_disponibles.length > 0`), un `Select` :
 
-Tous les managers perdent des points, dans des proportions variables. Aucune ligne n'a `phase_id`/`date_classement` manquant, aucun doublon dans `race_results`.
+- **Total course** (valeur par défaut) — affiche le classement agrégé sur toute la course (comportement actuel, tous types de classement + toutes étapes).
+- **Étape 1**, **Étape 2**, … — affiche les points inscrits par chaque manager sur cette étape uniquement, tous classements confondus pour cette étape (classement d'étape + points marqués par les porteurs de maillots ce jour-là + éventuel classement général intermédiaire à la fin de l'étape).
 
-## Cause
+Le sous-tableau développable « Coureurs contributeurs » reste, mais reflète le filtre courant (uniquement les points de l'étape sélectionnée le cas échéant).
 
-L'edge function `supabase/functions/get-cumulative-points-series/index.ts` utilise un helper `fetchAllRows` qui pagine via `.range(from, from+999)` **sans `ORDER BY` explicite**. PostgREST ne garantit pas un ordre stable entre pages sans `order()` : certaines lignes peuvent être renvoyées deux fois et d'autres omises entre deux `range()` successifs.
+Pour les courses d'un jour, aucun sélecteur n'est ajouté (comportement inchangé).
 
-Ici deux requêtes paginées sont affectées et faussent le graphe :
-1. `points_ledger` (2 167 lignes → 3 pages) → certaines lignes sautées = points perdus.
-2. `race_results` (2 167 lignes → 3 pages) → clés manquantes dans `dateIndex`, donc les `points_ledger` correspondants sont ignorés à l'étape d'agrégation (`pointsSkipped++`).
+## Détails techniques
 
-Le nombre de lignes total retourné reste identique parce que les doublons compensent, mais la composition change → les managers dont les gros scores (souvent le classement General) tombent dans une page instable perdent le plus (ex : Snoop, tout son General de 5 365 pts saute).
+### 1. Edge function `supabase/functions/course-leaderboard/index.ts`
 
-Les autres requêtes paginées (`rosters`, `courses` dates, `manager_bonus_points`, `bonus_points`, `managers`) souffrent du même risque mais avec un impact moindre car peu volumineuses.
+Aujourd'hui, `etape_numero` n'est pris en compte que si `type_classement === 'Etape'`. À modifier pour supporter un filtrage par étape seul (tous classements) :
 
-## Correctif
+```ts
+if (type_classement) {
+  pointsQuery = pointsQuery.eq('type_classement', type_classement);
+}
+if (etape_numero) {
+  pointsQuery = pointsQuery.eq('etape_numero', etape_numero);
+}
+```
 
-Rendre `fetchAllRows` déterministe.
+Ainsi :
+- `type_classement=null, etape_numero=null` → total course (inchangé).
+- `type_classement=null, etape_numero=N` → tous les points inscrits sur l'étape N.
 
-### Fichier modifié
-- `supabase/functions/get-cumulative-points-series/index.ts`
+### 2. Frontend `src/components/courses/CourseResultsDrawer.tsx`
 
-### Changements
-1. Dans `fetchAllRows`, exiger un tri stable : accepter un paramètre `orderColumn` (par défaut `'id'`) et faire `baseQuery.order(orderColumn, { ascending: true }).range(...)`. Les appelants passeront une colonne présente et unique.
-2. Ajuster les six appels à `fetchAllRows` :
-   - `rosters` → order `id`
-   - `points_ledger` → order `id`
-   - `courses` (dates) → order `id`
-   - `race_results` → order `id`
-   - `managers` → order `id`
-   - `manager_bonus_points` et `bonus_points` → order `id` (via appel dédié ; la jointure `phases!inner` reste inchangée)
-
-Aucun impact fonctionnel côté client : la sortie garde la même structure, seuls les totaux redeviennent complets.
+- Ajouter un état local `leaderboardEtape: number | null` (défaut `null` = total).
+- Injecter `leaderboardEtape` dans la `queryKey` et dans le `body` (`etape_numero: leaderboardEtape`) de la query `course-leaderboard-drawer`.
+- Réinitialiser `leaderboardEtape` à `null` à chaque ouverture / changement de course.
+- Rendre le `Select` en tête du `TabsContent value="leaderboard"` uniquement si `meta?.etapes_disponibles?.length > 0`, avec options `Total course` + une entrée par étape disponible.
+- Le rendu du tableau et des contributeurs reste identique (les données renvoyées par l'edge function sont déjà filtrées).
 
 ## Vérification
 
-Après déploiement, réinvoquer l'edge function avec les mêmes paramètres (`league_id` Suceurs_de_Roux, `view_mode: 'season'`) et confirmer que les totaux finaux correspondent aux classements (Snoop 14 940 + bonus, Matt L 13 808 + bonus, etc., cohérent avec les 15 215 / 14 175 affichés dans l'onglet Managers, aux bonus près).
-
-Aucun autre écran ne dépend de cette function : le fix est isolé au graphique Chrono.
+1. Course d'un jour (ex. Milano-Sanremo) : onglet Managers inchangé, pas de sélecteur.
+2. Course à étapes (Tour de France) :
+   - Sélecteur visible, « Total course » sélectionné par défaut, totaux identiques à aujourd'hui.
+   - Sélectionner « Étape 3 » recharge le tableau avec uniquement les points de l'étape 3 ; la somme des points d'un manager correspond aux points de ses coureurs sur cette étape (visibles dans l'onglet Étapes).
+   - Le breakdown développable ne liste que les entrées de l'étape sélectionnée.
