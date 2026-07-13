@@ -52,9 +52,9 @@ Deno.serve(async (req) => {
 
     if (type_classement) {
       pointsQuery = pointsQuery.eq('type_classement', type_classement);
-      if (type_classement === 'Etape' && etape_numero) {
-        pointsQuery = pointsQuery.eq('etape_numero', etape_numero);
-      }
+    }
+    if (etape_numero) {
+      pointsQuery = pointsQuery.eq('etape_numero', etape_numero);
     }
 
     const { data: pointsData, error: pointsError } = await pointsQuery;
