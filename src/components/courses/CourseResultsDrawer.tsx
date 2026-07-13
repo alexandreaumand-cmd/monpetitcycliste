@@ -221,6 +221,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
   useEffect(() => {
     if (open && courseId) {
+      setLeaderboardEtape(null);
       loadMeta();
     }
   }, [open, courseId]);
