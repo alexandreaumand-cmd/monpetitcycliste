@@ -290,9 +290,15 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 isAnnouncementsPending: true,
               };
             } else {
-              const now = new Date().toISOString();
+              const nowDate = new Date();
+              const nowMs = nowDate.getTime();
+              const VISIBILITY_MS = 10 * 24 * 60 * 60 * 1000;
               const scheduled = leagueAuctions
-                .filter(a => a.statut === 'scheduled' && a.opens_at && a.opens_at > now)
+                .filter(a => {
+                  if (a.statut !== 'scheduled' || !a.opens_at) return false;
+                  const opensMs = new Date(a.opens_at).getTime();
+                  return opensMs > nowMs && opensMs - nowMs <= VISIBILITY_MS;
+                })
                 .sort((a, b) => (a.opens_at || '').localeCompare(b.opens_at || ''))[0];
 
               if (scheduled) {
