@@ -33,6 +33,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
 
@@ -234,6 +236,8 @@ export const RankingsMobile = () => {
         ratio_points_par_prix: item.ratio_points_par_prix,
         owners: item.owners,
         owners_all: item.owners_all,
+        owners_by_phase: item.owners_by_phase,
+
       })) || [];
     },
   });
@@ -649,7 +653,12 @@ export const RankingsMobile = () => {
                 {topRiders.map((rider, idx) => {
                   const rank = idx + 1;
                   const owners = selectedPhase ? rider.owners : rider.owners_all;
-                  const ownerNames = owners?.map((o: any) => o.manager_nom).filter(Boolean).join(', ') || null;
+                  const phasesByManager = selectedPhase ? {} : getPhasesByManager(rider.owners_by_phase);
+                  const ownerNames = owners?.map((o: any) => {
+                    const phases = phasesByManager[o.manager_id] || [];
+                    return phases.length > 0 ? `${o.manager_nom} (${phases.join(', ')})` : o.manager_nom;
+                  }).filter(Boolean).join(', ') || null;
+
                   
                   return (
                     <MobileCard

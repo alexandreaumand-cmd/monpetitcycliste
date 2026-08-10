@@ -20,6 +20,8 @@ import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
+import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+
 
 type TopRidersProps = {
   phaseId?: string | null;
@@ -589,17 +591,31 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                           )
                         ) : (
                           rider.owners_all && rider.owners_all.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 items-center">
-                              {rider.owners_all.map((owner) => (
-                                <Badge key={owner.manager_id} variant="outline" className="text-xs">
-                                  {owner.manager_nom}
-                                </Badge>
-                              ))}
-                            </div>
+                            (() => {
+                              const phasesByManager = getPhasesByManager(rider.owners_by_phase);
+                              return (
+                                <div className="flex flex-wrap gap-1 items-center">
+                                  {rider.owners_all.map((owner) => {
+                                    const phases = phasesByManager[owner.manager_id] || [];
+                                    return (
+                                      <Badge key={owner.manager_id} variant="outline" className="text-xs">
+                                        {owner.manager_nom}
+                                        {phases.length > 0 && (
+                                          <span className="ml-1 text-[10px] text-muted-foreground">
+                                            {phases.join(', ')}
+                                          </span>
+                                        )}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )
                         )}
+
                       </TableCell>
                     </TableRow>
                   ))}
