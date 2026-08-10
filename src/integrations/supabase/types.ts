@@ -5458,6 +5458,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tweet_posts: {
+        Row: {
+          course_id: string
+          created_at: string
+          error: string | null
+          etape_numero: number | null
+          id: string
+          image_path: string | null
+          kind: string
+          status: string
+          text: string | null
+          tweet_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          error?: string | null
+          etape_numero?: number | null
+          id?: string
+          image_path?: string | null
+          kind: string
+          status?: string
+          text?: string | null
+          tweet_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          error?: string | null
+          etape_numero?: number | null
+          id?: string
+          image_path?: string | null
+          kind?: string
+          status?: string
+          text?: string | null
+          tweet_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           created_at: string
