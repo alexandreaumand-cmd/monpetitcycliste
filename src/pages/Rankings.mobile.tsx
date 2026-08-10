@@ -234,6 +234,8 @@ export const RankingsMobile = () => {
         ratio_points_par_prix: item.ratio_points_par_prix,
         owners: item.owners,
         owners_all: item.owners_all,
+        owners_by_phase: item.owners_by_phase,
+
       })) || [];
     },
   });
