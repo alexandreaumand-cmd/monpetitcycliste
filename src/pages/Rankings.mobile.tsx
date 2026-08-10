@@ -33,6 +33,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
 
