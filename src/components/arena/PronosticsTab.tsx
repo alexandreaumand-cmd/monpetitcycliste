@@ -125,8 +125,10 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
             pronostic={getPronosticForDeadline(deadline)}
             leagueId={leagueId}
             managerId={managerId}
+            isCancelled={cancelledIds?.has(deadline.id) ?? false}
           />
         ))}
+
       </div>
     );
   };
