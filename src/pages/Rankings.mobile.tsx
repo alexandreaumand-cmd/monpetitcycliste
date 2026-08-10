@@ -651,7 +651,12 @@ export const RankingsMobile = () => {
                 {topRiders.map((rider, idx) => {
                   const rank = idx + 1;
                   const owners = selectedPhase ? rider.owners : rider.owners_all;
-                  const ownerNames = owners?.map((o: any) => o.manager_nom).filter(Boolean).join(', ') || null;
+                  const phasesByManager = selectedPhase ? {} : getPhasesByManager(rider.owners_by_phase);
+                  const ownerNames = owners?.map((o: any) => {
+                    const phases = phasesByManager[o.manager_id] || [];
+                    return phases.length > 0 ? `${o.manager_nom} (${phases.join(', ')})` : o.manager_nom;
+                  }).filter(Boolean).join(', ') || null;
+
                   
                   return (
                     <MobileCard
