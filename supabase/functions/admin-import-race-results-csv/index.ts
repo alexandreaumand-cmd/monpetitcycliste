@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { triggerResultTweet } from '../_shared/triggerTweet.ts';
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -315,6 +317,55 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    // Automatic X (Twitter) publication (non-blocking)
+    if (supabaseUrl && serviceRoleKey && supabaseServiceClient) {
+      for (const courseId of courseIds) {
+        try {
+          const { data: courseInfo } = await supabaseServiceClient
+            .from('courses')
+            .select('type_course')
+            .eq('id', courseId)
+            .maybeSingle();
+          const isOneDay = String(courseInfo?.type_course || '').toLowerCase().includes('one');
+
+          const stageNumbers = Array.from(new Set(
+            results
+              .filter(r => r.course_id === courseId && r.type_classement === 'Etape' && r.etape_numero)
+              .map(r => r.etape_numero as number)
+          )).sort((a, b) => a - b);
+
+          for (const etape of stageNumbers) {
+            await triggerResultTweet({
+              supabaseUrl,
+              serviceRoleKey,
+              course_id: courseId,
+              kind: 'stage',
+              etape_numero: etape,
+            });
+          }
+
+          const hasFinal = results.some(
+            r => r.course_id === courseId &&
+              (r.type_classement === 'General' || r.type_classement === 'GC') &&
+              !r.etape_numero
+          );
+
+          if (hasFinal) {
+            await triggerResultTweet({
+              supabaseUrl,
+              serviceRoleKey,
+              course_id: courseId,
+              kind: isOneDay ? 'oneday' : 'gc',
+              etape_numero: null,
+            });
+          }
+        } catch (tweetError) {
+          console.error(`[admin-import-race-results-csv] tweet trigger error for ${courseId}:`, tweetError);
+        }
+      }
+    }
+
 
     return new Response(
       JSON.stringify({
