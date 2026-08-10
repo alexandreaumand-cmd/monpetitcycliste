@@ -194,7 +194,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       if (isMultiManagerBonus) {
         const { data: rostersData, error: rostersError } = await supabase
           .from("rosters")
-          .select("manager_id")
+          .select("manager_id, league_id")
           .eq("phase_id", phaseId)
           .eq("coureur_id", selectedCoureur.id);
 
@@ -206,11 +206,21 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           return;
         }
 
-        const bonusInserts = rostersData.map(roster => ({
+        // Un bonus par couple (manager, ligue), dédoublonné
+        const uniquePairs = Array.from(
+          new Map(
+            rostersData
+              .filter((r: any) => r.manager_id)
+              .map((r: any) => [`${r.manager_id}|${r.league_id ?? ''}`, r])
+          ).values()
+        ) as Array<{ manager_id: string; league_id: string | null }>;
+
+        const bonusInserts = uniquePairs.map(roster => ({
           phase_id: phaseId,
           bonus_type: bonusType,
           coureur_id: selectedCoureur.id,
           manager_id: roster.manager_id,
+          league_id: roster.league_id,
           course_id: courseIdToSave,
           points: parseInt(points),
           commentaire: commentaire || null,
@@ -220,7 +230,10 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
         const { error } = await supabase.from("bonus_points").insert(bonusInserts);
         if (error) throw error;
 
-        toast.success(`Bonus attribué à ${rostersData.length} manager(s)`);
+        const managersCount = new Set(uniquePairs.map(p => p.manager_id)).size;
+        const leaguesCount = new Set(uniquePairs.map(p => p.league_id)).size;
+        toast.success(`Bonus attribué à ${managersCount} manager(s) dans ${leaguesCount} ligue(s)`);
+
       } else {
         const { error } = await supabase.from("bonus_points").insert([{
           phase_id: phaseId,
