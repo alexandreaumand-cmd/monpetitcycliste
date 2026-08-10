@@ -44,13 +44,14 @@ export const PronosticRaceCard = ({
   pronostic,
   leagueId,
   managerId,
+  isCancelled = false,
 }: PronosticRaceCardProps) => {
   const { t, i18n } = useTranslation("arena");
   const lang = i18n.language?.split('-')[0] || 'fr';
   const savePronostic = useSavePronostic();
 
   const isExpired = isPast(new Date(deadline.deadline_at));
-  const isEvaluated = pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
+  const isEvaluated = !isCancelled && pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
   const isTTT = deadline.is_ttt;
 
   const typeLabel = useMemo(() => {
@@ -70,6 +71,9 @@ export const PronosticRaceCard = ({
   }, [deadline, t, isTTT]);
 
   const statusInfo = useMemo(() => {
+    if (isCancelled) {
+      return { icon: Ban, color: "text-muted-foreground", bg: "bg-muted/50", label: "Étape annulée" };
+    }
     if (isEvaluated && pronostic) {
       return pronostic.is_correct
         ? { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30", label: t("pronostics.status.correct") }
@@ -79,7 +83,9 @@ export const PronosticRaceCard = ({
       return { icon: Lock, color: "text-muted-foreground", bg: "bg-muted/50", label: t("pronostics.status.closed") };
     }
     return { icon: Clock, color: "text-primary", bg: "bg-primary/5", label: t("pronostics.status.open") };
-  }, [isEvaluated, isExpired, pronostic, t]);
+  }, [isCancelled, isEvaluated, isExpired, pronostic, t]);
+
+
 
   const handleSelectRider = async (coureurId: string, coureurNom: string) => {
     try {
