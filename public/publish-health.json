@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T07:52:29.570Z",
+  "generatedAt": "2026-08-10T09:00:25.707Z",
   "thresholds": {
     "edgeFunctions": 130,
     "assetsMB": 8,
@@ -8,7 +8,7 @@
     "singleAssetKB": 500
   },
   "edgeFunctions": 122,
-  "migrations": 560,
+  "migrations": 561,
   "assets": {
     "count": 57,
     "totalMB": 4.75,
