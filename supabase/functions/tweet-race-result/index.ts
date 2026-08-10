@@ -119,6 +119,28 @@ Deno.serve(async (req) => {
       etapeRaw === null || etapeRaw === undefined ? null : Number(etapeRaw);
     const force = payload?.force === true;
 
+    // Diagnostic: validates the X credentials without publishing anything.
+    if (payload?.diagnose === true) {
+      const creds = getTwitterCredentials();
+      const vcUrl = 'https://api.x.com/1.1/account/verify_credentials.json';
+      const vcHeader = await buildOauth1Header('GET', vcUrl, creds);
+      const vcRes = await fetch(vcUrl, { headers: { Authorization: vcHeader } });
+      const vcBody = await vcRes.text();
+      return json({
+        diagnose: true,
+        verify_credentials_status: vcRes.status,
+        verify_credentials_body: vcBody.slice(0, 500),
+        shapes: {
+          consumerKey_len: creds.consumerKey.length,
+          consumerSecret_len: creds.consumerSecret.length,
+          accessToken_len: creds.accessToken.length,
+          accessToken_has_dash: creds.accessToken.includes('-'),
+          accessTokenSecret_len: creds.accessTokenSecret.length,
+        },
+      });
+    }
+
+
     if (!course_id || !kind || !['stage', 'gc', 'oneday'].includes(kind)) {
       return json({ error: 'course_id et kind (stage|gc|oneday) sont requis' }, 400);
     }
