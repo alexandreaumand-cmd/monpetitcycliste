@@ -36,18 +36,33 @@ const formatDateFr = (value?: string | null) => {
 
 async function uploadMedia(png: Uint8Array): Promise<string> {
   const creds = getTwitterCredentials();
-  const url = 'https://upload.x.com/1.1/media/upload.json';
-  const authHeader = await buildOauth1Header('POST', url, creds);
+  const endpoints = [
+    'https://api.x.com/2/media/upload',
+    'https://upload.twitter.com/1.1/media/upload.json',
+    'https://upload.x.com/1.1/media/upload.json',
+  ];
 
-  const form = new FormData();
-  form.append('media', new Blob([png], { type: 'image/png' }), 'standings.png');
+  let lastError = '';
+  for (const url of endpoints) {
+    const authHeader = await buildOauth1Header('POST', url, creds);
+    const form = new FormData();
+    form.append('media', new Blob([png], { type: 'image/png' }), 'standings.png');
 
-  const res = await fetch(url, { method: 'POST', headers: { Authorization: authHeader }, body: form });
-  const body = await res.text();
-  if (!res.ok) throw new Error(`Upload média X échoué [${res.status}]: ${body}`);
-  const parsed = JSON.parse(body);
-  return parsed.media_id_string as string;
+    const res = await fetch(url, { method: 'POST', headers: { Authorization: authHeader }, body: form });
+    const body = await res.text();
+    if (res.ok) {
+      const parsed = JSON.parse(body);
+      const mediaId = parsed?.data?.id ?? parsed?.media_id_string ?? parsed?.media_key;
+      if (mediaId) return String(mediaId);
+      lastError = `Réponse média inattendue (${url}): ${body}`;
+      continue;
+    }
+    lastError = `Upload média X échoué sur ${url} [${res.status}]: ${body}`;
+    console.error(lastError);
+  }
+  throw new Error(lastError);
 }
+
 
 async function postTweet(text: string, mediaId: string): Promise<string> {
   const creds = getTwitterCredentials();
@@ -103,6 +118,28 @@ Deno.serve(async (req) => {
     const etape_numero: number | null =
       etapeRaw === null || etapeRaw === undefined ? null : Number(etapeRaw);
     const force = payload?.force === true;
+
+    // Diagnostic: validates the X credentials without publishing anything.
+    if (payload?.diagnose === true) {
+      const creds = getTwitterCredentials();
+      const vcUrl = 'https://api.x.com/1.1/account/verify_credentials.json';
+      const vcHeader = await buildOauth1Header('GET', vcUrl, creds);
+      const vcRes = await fetch(vcUrl, { headers: { Authorization: vcHeader } });
+      const vcBody = await vcRes.text();
+      return json({
+        diagnose: true,
+        verify_credentials_status: vcRes.status,
+        verify_credentials_body: vcBody.slice(0, 500),
+        shapes: {
+          consumerKey_len: creds.consumerKey.length,
+          consumerSecret_len: creds.consumerSecret.length,
+          accessToken_len: creds.accessToken.length,
+          accessToken_has_dash: creds.accessToken.includes('-'),
+          accessTokenSecret_len: creds.accessTokenSecret.length,
+        },
+      });
+    }
+
 
     if (!course_id || !kind || !['stage', 'gc', 'oneday'].includes(kind)) {
       return json({ error: 'course_id et kind (stage|gc|oneday) sont requis' }, 400);
