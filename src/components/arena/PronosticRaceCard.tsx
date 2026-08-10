@@ -22,7 +22,9 @@ interface PronosticRaceCardProps {
   pronostic: MyPronostic | null;
   leagueId: string;
   managerId: string;
+  isCancelled?: boolean;
 }
+
 
 function formatShortDeadline(deadline: Date, lang: string): string {
   const now = new Date();
