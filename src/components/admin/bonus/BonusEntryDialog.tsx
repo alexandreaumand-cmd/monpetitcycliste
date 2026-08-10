@@ -148,10 +148,10 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
       const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
 
       if (isMultiManagerBonus) {
-        // Pour first_win et itt: récupérer tous les managers qui ont ce coureur dans cette phase
+        // Pour first_win et itt: récupérer tous les managers (et leurs ligues) qui ont ce coureur dans cette phase
         const { data: rostersData, error: rostersError } = await supabase
           .from('rosters')
-          .select('manager_id, managers(nom)')
+          .select('manager_id, league_id')
           .eq('phase_id', phaseId)
           .eq('coureur_id', data.coureur_id);
 
@@ -167,16 +167,24 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
           return false;
         }
 
-        // Créer un bonus pour chaque manager
-        const bonusInserts = rostersData.map(roster => ({
+        // Un bonus par couple (manager, ligue), dédoublonné
+        const uniquePairs = Array.from(
+          new Map(
+            rostersData
+              .filter((r: any) => r.manager_id)
+              .map((r: any) => [`${r.manager_id}|${r.league_id ?? ''}`, r])
+          ).values()
+        ) as Array<{ manager_id: string; league_id: string | null }>;
+
+        const bonusInserts = uniquePairs.map(roster => ({
           phase_id: phaseId,
           bonus_type: bonusType,
           coureur_id: data.coureur_id,
           manager_id: roster.manager_id,
+          league_id: roster.league_id,
           points: data.points,
           commentaire: data.commentaire || null,
           created_by: managerData?.id,
-          // Les bonus coureurs ne sont pas liés à une league
         }));
 
         const { error } = await supabase
@@ -185,10 +193,13 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
         if (error) throw error;
 
+        const managersCount = new Set(uniquePairs.map(p => p.manager_id)).size;
+        const leaguesCount = new Set(uniquePairs.map(p => p.league_id)).size;
         toast({
           title: "Bonus enregistré",
-          description: `Le bonus a été attribué à ${rostersData.length} manager(s)`,
+          description: `Le bonus a été attribué à ${managersCount} manager(s) dans ${leaguesCount} ligue(s)`,
         });
+
       } else {
         // Pour coureur_bonuse: attribution à un seul manager
         if (!data.manager_id) {
