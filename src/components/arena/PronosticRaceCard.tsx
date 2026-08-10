@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban } from "lucide-react";
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
 import { PronosticStartlistTeamCombobox } from "./PronosticStartlistTeamCombobox";
 import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
@@ -22,7 +22,9 @@ interface PronosticRaceCardProps {
   pronostic: MyPronostic | null;
   leagueId: string;
   managerId: string;
+  isCancelled?: boolean;
 }
+
 
 function formatShortDeadline(deadline: Date, lang: string): string {
   const now = new Date();
@@ -42,13 +44,14 @@ export const PronosticRaceCard = ({
   pronostic,
   leagueId,
   managerId,
+  isCancelled = false,
 }: PronosticRaceCardProps) => {
   const { t, i18n } = useTranslation("arena");
   const lang = i18n.language?.split('-')[0] || 'fr';
   const savePronostic = useSavePronostic();
 
   const isExpired = isPast(new Date(deadline.deadline_at));
-  const isEvaluated = pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
+  const isEvaluated = !isCancelled && pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
   const isTTT = deadline.is_ttt;
 
   const typeLabel = useMemo(() => {
@@ -68,6 +71,9 @@ export const PronosticRaceCard = ({
   }, [deadline, t, isTTT]);
 
   const statusInfo = useMemo(() => {
+    if (isCancelled) {
+      return { icon: Ban, color: "text-muted-foreground", bg: "bg-muted/50", label: "Étape annulée" };
+    }
     if (isEvaluated && pronostic) {
       return pronostic.is_correct
         ? { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30", label: t("pronostics.status.correct") }
@@ -77,7 +83,9 @@ export const PronosticRaceCard = ({
       return { icon: Lock, color: "text-muted-foreground", bg: "bg-muted/50", label: t("pronostics.status.closed") };
     }
     return { icon: Clock, color: "text-primary", bg: "bg-primary/5", label: t("pronostics.status.open") };
-  }, [isEvaluated, isExpired, pronostic, t]);
+  }, [isCancelled, isEvaluated, isExpired, pronostic, t]);
+
+
 
   const handleSelectRider = async (coureurId: string, coureurNom: string) => {
     try {
@@ -138,11 +146,18 @@ export const PronosticRaceCard = ({
           <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0 leading-tight">
             {typeLabel}
           </Badge>
+          {isCancelled && (
+            <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0 leading-tight gap-0.5 text-muted-foreground">
+              <Ban className="h-2.5 w-2.5" />
+              Étape annulée
+            </Badge>
+          )}
           {deadline.courses?.categorie && (
             <Badge variant="secondary" className="text-[10px] shrink-0 truncate max-w-[70px] px-1.5 py-0 leading-tight">
               {deadline.courses.categorie}
             </Badge>
           )}
+
           {shortDeadline && (
             <div className="flex items-center gap-0.5 shrink-0 text-primary ml-auto">
               <Clock className="h-2.5 w-2.5" />

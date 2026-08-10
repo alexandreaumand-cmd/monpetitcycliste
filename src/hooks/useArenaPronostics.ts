@@ -564,6 +564,51 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
   });
 }
 
+/**
+ * Hook returning the ids of deadlines whose stage has been marked as cancelled
+ * (race_result_sets.is_cancelled = true). Those stages will never get results,
+ * so they must not stay in the "En cours" tab.
+ */
+export function useCancelledDeadlineIds(deadlines: PronosticDeadline[] | undefined) {
+  const closedDeadlines = useMemo(() => {
+    if (!deadlines) return [];
+    return deadlines.filter((d) => isPast(new Date(d.deadline_at)));
+  }, [deadlines]);
+
+  return useQuery({
+    queryKey: ['arena-cancelled-deadline-ids', closedDeadlines.map(d => d.id).join(',')],
+    queryFn: async () => {
+      const cancelled = new Set<string>();
+      if (closedDeadlines.length === 0) return cancelled;
+
+      const courseIds = Array.from(new Set(closedDeadlines.map((d) => d.course_id)));
+
+      const { data, error } = await supabase
+        .from('race_result_sets')
+        .select('course_id, etape_numero, is_cancelled')
+        .in('course_id', courseIds)
+        .eq('is_cancelled', true);
+
+      if (error) throw error;
+
+      const cancelledKeys = new Set(
+        (data || []).map((r) => `${r.course_id}|${r.etape_numero ?? 'null'}`),
+      );
+
+      for (const d of closedDeadlines) {
+        if (cancelledKeys.has(`${d.course_id}|${d.etape_numero ?? 'null'}`)) {
+          cancelled.add(d.id);
+        }
+      }
+
+      return cancelled;
+    },
+    enabled: closedDeadlines.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+
 export interface StartlistRider {
   coureur_id: string;
   nom: string;
