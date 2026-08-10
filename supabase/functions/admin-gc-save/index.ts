@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { triggerResultTweet } from '../_shared/triggerTweet.ts';
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -227,6 +229,15 @@ Deno.serve(async (req) => {
       if (jerseyError) throw jerseyError;
     }
 
+    // Automatic X (Twitter) publication (non-blocking)
+    await triggerResultTweet({
+      supabaseUrl,
+      serviceRoleKey: supabaseKey,
+      course_id,
+      kind: 'gc',
+      etape_numero: null,
+    });
+
     return new Response(JSON.stringify({ 
       success: true,
       message: 'Classement général enregistré avec succès',
@@ -235,6 +246,7 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
 
   } catch (error) {
     console.error('Error in admin-gc-save:', error);

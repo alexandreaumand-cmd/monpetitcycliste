@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity, HeartPulse, Users2 } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio, Gavel, Mail, Timer, Activity, HeartPulse, Users2, Twitter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -25,6 +25,7 @@ import SuperAdminPublishHealthPage from "@/pages/admin/SuperAdminPublishHealthPa
 import SuperAdminInjuriesPage from "@/pages/admin/SuperAdminInjuriesPage";
 import SuperAdminGlobalRostersPage from "@/pages/admin/SuperAdminGlobalRostersPage";
 import SuperAdminPhasesPage from "@/pages/admin/SuperAdminPhasesPage";
+import SuperAdminTweetsPage from "@/pages/admin/SuperAdminTweetsPage";
 
 interface NavGroup {
   label: string;
@@ -66,6 +67,7 @@ const navGroups: NavGroup[] = [
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
       { label: "Communications", path: "communications", icon: Mail },
+      { label: "Tweets", path: "tweets", icon: Twitter },
     ],
   },
   {
@@ -161,6 +163,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="users" element={<UsersManagementPage />} />
               <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
               <Route path="phases" element={<SuperAdminPhasesPage />} />
+              <Route path="tweets" element={<SuperAdminTweetsPage />} />
               <Route path="auctions" element={<SuperAdminAuctionsPage />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
               <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />

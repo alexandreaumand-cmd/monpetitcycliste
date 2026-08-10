@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { triggerResultTweet } from '../_shared/triggerTweet.ts';
+
 
 interface PointsByUserLeague {
   user_id: string;
@@ -420,9 +422,36 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Automatic X (Twitter) publication (non-blocking)
+    if (p_type_classement === 'Etape' || p_type_classement === 'General') {
+      try {
+        const { data: courseInfo } = await supabaseService
+          .from('courses')
+          .select('type_course')
+          .eq('id', p_course_id)
+          .maybeSingle();
+
+        const isOneDay = String(courseInfo?.type_course || '').toLowerCase().includes('one');
+        const kind = p_type_classement === 'Etape' ? 'stage' : isOneDay ? 'oneday' : 'gc';
+
+        if (kind !== 'stage' || p_etape_numero) {
+          await triggerResultTweet({
+            supabaseUrl,
+            serviceRoleKey: supabaseServiceKey,
+            course_id: p_course_id,
+            kind,
+            etape_numero: kind === 'stage' ? p_etape_numero : null,
+          });
+        }
+      } catch (tweetError) {
+        console.error('[admin-result-save-lot] tweet trigger error:', tweetError);
+      }
+    }
+
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
 
   } catch (error) {
     console.error('Error in admin-result-save-lot:', error);
