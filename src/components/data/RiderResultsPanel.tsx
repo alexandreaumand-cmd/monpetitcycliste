@@ -124,6 +124,15 @@ export function RiderResultsPanel({
                 <Trophy className="h-4 w-4 text-primary" />
                 {riderName || "Coureur"}
               </SheetTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 -mr-2"
+                onClick={() => onOpenChange(false)}
+                aria-label="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
             <SheetDescription className="text-xs">
               {data?.rider?.equipe && data.rider.equipe !== 'N/A' && (
