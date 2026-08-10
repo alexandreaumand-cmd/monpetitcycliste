@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban } from "lucide-react";
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
 import { PronosticStartlistTeamCombobox } from "./PronosticStartlistTeamCombobox";
 import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
