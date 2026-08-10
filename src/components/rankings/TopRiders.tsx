@@ -20,6 +20,8 @@ import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
+import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+
 
 type TopRidersProps = {
   phaseId?: string | null;
