@@ -146,11 +146,18 @@ export const PronosticRaceCard = ({
           <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0 leading-tight">
             {typeLabel}
           </Badge>
+          {isCancelled && (
+            <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0 leading-tight gap-0.5 text-muted-foreground">
+              <Ban className="h-2.5 w-2.5" />
+              Étape annulée
+            </Badge>
+          )}
           {deadline.courses?.categorie && (
             <Badge variant="secondary" className="text-[10px] shrink-0 truncate max-w-[70px] px-1.5 py-0 leading-tight">
               {deadline.courses.categorie}
             </Badge>
           )}
+
           {shortDeadline && (
             <div className="flex items-center gap-0.5 shrink-0 text-primary ml-auto">
               <Clock className="h-2.5 w-2.5" />
