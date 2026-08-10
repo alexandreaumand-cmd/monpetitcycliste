@@ -99,28 +99,22 @@ Deno.serve(async (req) => {
     const token = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
     const isInternal = token === serviceKey;
 
-    if (!isInternal) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) return json({ error: 'Unauthorized' }, 401);
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      const isSuperAdmin = (roles || []).some((r: { role: string }) => r.role === 'superadmin');
-      if (!isSuperAdmin) return json({ error: 'Accès refusé: réservé aux superadministrateurs' }, 403);
-    }
-
     const payload = await req.json().catch(() => ({}));
-    const course_id: string | undefined = payload?.course_id;
-    const kind: Kind | undefined = payload?.kind;
-    const etapeRaw = payload?.etape_numero;
-    const etape_numero: number | null =
-      etapeRaw === null || etapeRaw === undefined ? null : Number(etapeRaw);
-    const force = payload?.force === true;
 
     // Diagnostic: validates the X credentials without publishing anything.
+    // Available both to internal service calls and to authenticated superadmins.
     if (payload?.diagnose === true) {
+      if (!isInternal) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+        const isSuperAdmin = (roles || []).some((r: { role: string }) => r.role === 'superadmin');
+        if (!isSuperAdmin) return json({ error: 'Accès refusé: réservé aux superadministrateurs' }, 403);
+      }
+
       const creds = getTwitterCredentials();
       const vcUrl = 'https://api.x.com/1.1/account/verify_credentials.json';
       const vcHeader = await buildOauth1Header('GET', vcUrl, creds);
@@ -139,6 +133,26 @@ Deno.serve(async (req) => {
         },
       });
     }
+
+    if (!isInternal) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      const isSuperAdmin = (roles || []).some((r: { role: string }) => r.role === 'superadmin');
+      if (!isSuperAdmin) return json({ error: 'Accès refusé: réservé aux superadministrateurs' }, 403);
+    }
+
+    const course_id: string | undefined = payload?.course_id;
+    const kind: Kind | undefined = payload?.kind;
+    const etapeRaw = payload?.etape_numero;
+    const etape_numero: number | null =
+      etapeRaw === null || etapeRaw === undefined ? null : Number(etapeRaw);
+    const force = payload?.force === true;
+
 
 
     if (!course_id || !kind || !['stage', 'gc', 'oneday'].includes(kind)) {
