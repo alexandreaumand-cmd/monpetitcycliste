@@ -10,6 +10,7 @@ import {
   usePronosticDeadlines,
   useMyPronostics,
   useEvaluatedDeadlineIds,
+  useCancelledDeadlineIds,
 } from "@/hooks/useArenaPronostics";
 import { isPast } from "date-fns";
 
@@ -24,8 +25,9 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines(leagueId);
   const { data: myPronostics, isLoading: pronosticsLoading } = useMyPronostics(leagueId, managerId || null);
   const { data: evaluatedIds, isLoading: evaluatedLoading } = useEvaluatedDeadlineIds(deadlines);
+  const { data: cancelledIds, isLoading: cancelledLoading } = useCancelledDeadlineIds(deadlines);
 
-  const isLoading = managerLoading || deadlinesLoading || pronosticsLoading || evaluatedLoading;
+  const isLoading = managerLoading || deadlinesLoading || pronosticsLoading || evaluatedLoading || cancelledLoading;
 
   // Split deadlines into categories
   const { openDeadlines, evaluatedDeadlines, pendingDeadlines } = useMemo(() => {
@@ -45,8 +47,12 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
           p.etape_numero === d.etape_numero
       );
 
+      // Case 0: Stage was cancelled → Passés (results will never come)
+      if (cancelledIds?.has(d.id)) {
+        evaluated.push(d);
+      }
       // Case 1: Manager has a pick and it's been evaluated → Passés
-      if (prono && prono.is_correct !== null && prono.is_correct !== undefined) {
+      else if (prono && prono.is_correct !== null && prono.is_correct !== undefined) {
         evaluated.push(d);
       }
       // Case 2: No pick but race results exist → Passés
@@ -63,7 +69,8 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     evaluated.sort((a, b) => new Date(b.deadline_at).getTime() - new Date(a.deadline_at).getTime());
 
     return { openDeadlines: open, evaluatedDeadlines: evaluated, pendingDeadlines: pending };
-  }, [deadlines, myPronostics, evaluatedIds]);
+  }, [deadlines, myPronostics, evaluatedIds, cancelledIds]);
+
 
   const getPronosticForDeadline = (deadline: typeof deadlines extends (infer T)[] ? T : never) => {
     if (!myPronostics) return null;
