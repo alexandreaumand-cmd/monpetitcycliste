@@ -110,9 +110,10 @@ export const RiderPointsDetail = ({
     
     return Object.entries(grouped).map(([courseName, courseRows]: [string, any]) => ({
       courseName,
-      rows: courseRows,
+      rows: sortPointsRows(courseRows as any[]),
       totalPoints: courseRows.reduce((sum: number, r: any) => sum + (r.points || 0), 0)
     }));
+
   }, [rows]);
 
   const getRatioColor = (ratio: number) => {
