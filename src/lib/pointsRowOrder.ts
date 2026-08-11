@@ -22,24 +22,28 @@ function isPorteur(type?: string | null) {
 
 function finalRank(type?: string | null): number {
   const t = normalize(type);
-  if (t === "general" || t === "général" || t === "gc") return 0;
-  if (t === "points" || t === "vert") return 1;
-  if (t === "montagne" || t === "gpm" || t === "mountain") return 2;
-  if (t === "jeune" || t === "youth") return 3;
+  if (t.includes("general") || t.includes("général") || t === "gc") return 0;
+  if (t.includes("points") || t.includes("vert")) return 1;
+  if (t.includes("montagne") || t.includes("gpm") || t.includes("mountain") || t.includes("pois")) return 2;
+  if (t.includes("jeune") || t.includes("youth") || t.includes("blanc")) return 3;
   return FINAL_ORDER.length;
 }
 
 function isStage(type?: string | null) {
   const t = normalize(type);
-  return t === "etape" || t === "étape" || t === "stage";
+  return t.startsWith("etape") || t.startsWith("étape") || t.startsWith("stage");
 }
 
+
 export function comparePointsRows(a: PointsRowLike, b: PointsRowLike): number {
-  const aFinal = !a.etape_numero && !isPorteur(a.type_classement);
-  const bFinal = !b.etape_numero && !isPorteur(b.type_classement);
+  // Un classement final = type reconnu (général, points, montagne, jeune) et non "Porteur",
+  // même si un numéro d'étape parasite est présent en base.
+  const aFinal = !isPorteur(a.type_classement) && (finalRank(a.type_classement) < FINAL_ORDER.length || !a.etape_numero);
+  const bFinal = !isPorteur(b.type_classement) && (finalRank(b.type_classement) < FINAL_ORDER.length || !b.etape_numero);
 
   // 1. Classements finaux d'abord
   if (aFinal !== bFinal) return aFinal ? -1 : 1;
+
   if (aFinal && bFinal) {
     const diff = finalRank(a.type_classement) - finalRank(b.type_classement);
     if (diff !== 0) return diff;
