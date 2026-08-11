@@ -22,17 +22,18 @@ function isPorteur(type?: string | null) {
 
 function finalRank(type?: string | null): number {
   const t = normalize(type);
-  if (t === "general" || t === "général" || t === "gc") return 0;
-  if (t === "points" || t === "vert") return 1;
-  if (t === "montagne" || t === "gpm" || t === "mountain") return 2;
-  if (t === "jeune" || t === "youth") return 3;
+  if (t.includes("general") || t.includes("général") || t === "gc") return 0;
+  if (t.includes("points") || t.includes("vert")) return 1;
+  if (t.includes("montagne") || t.includes("gpm") || t.includes("mountain") || t.includes("pois")) return 2;
+  if (t.includes("jeune") || t.includes("youth") || t.includes("blanc")) return 3;
   return FINAL_ORDER.length;
 }
 
 function isStage(type?: string | null) {
   const t = normalize(type);
-  return t === "etape" || t === "étape" || t === "stage";
+  return t.startsWith("etape") || t.startsWith("étape") || t.startsWith("stage");
 }
+
 
 export function comparePointsRows(a: PointsRowLike, b: PointsRowLike): number {
   // Un classement final = type reconnu (général, points, montagne, jeune) et non "Porteur",
