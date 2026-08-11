@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 interface RiderResultsPanelProps {
   open: boolean;
