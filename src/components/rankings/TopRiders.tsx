@@ -21,6 +21,8 @@ import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
 import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 
 type TopRidersProps = {
@@ -345,8 +347,16 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       phase.courses.get(courseKey)!.push(row);
     });
     
+    // Sort rows within each course (finals first, then stage order)
+    phaseMap.forEach(phase => {
+      phase.courses.forEach((courseRows, key) => {
+        phase.courses.set(key, sortPointsRows(courseRows));
+      });
+    });
+
     // Convert to array and sort by phase index
     const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_index - b.phase_index);
+
     
     return { phases, bonus };
   }, [riderPointsData?.rows, searchTerm, phaseLabelFromDb]);

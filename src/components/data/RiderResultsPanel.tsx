@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 interface RiderResultsPanelProps {
   open: boolean;
@@ -64,15 +66,20 @@ export function RiderResultsPanel({
 
   // Group rows by course for a cleaner display
   const courseGroups = data?.rows
-    ? data.rows
-        .filter((r) => !r.is_bonus)
-        .reduce<Record<string, ResultRow[]>>((acc, row) => {
-          const key = row.course_nom;
-          if (!acc[key]) acc[key] = [];
-          acc[key].push(row);
-          return acc;
-        }, {})
+    ? Object.fromEntries(
+        Object.entries(
+          data.rows
+            .filter((r) => !r.is_bonus)
+            .reduce<Record<string, ResultRow[]>>((acc, row) => {
+              const key = row.course_nom;
+              if (!acc[key]) acc[key] = [];
+              acc[key].push(row);
+              return acc;
+            }, {})
+        ).map(([key, rows]) => [key, sortPointsRows(rows)])
+      )
     : {};
+
 
   const bonusRows = data?.rows?.filter((r) => r.is_bonus) || [];
 

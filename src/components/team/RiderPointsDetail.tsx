@@ -11,6 +11,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 interface UpcomingRace {
   race_id: string;
@@ -110,9 +112,10 @@ export const RiderPointsDetail = ({
     
     return Object.entries(grouped).map(([courseName, courseRows]: [string, any]) => ({
       courseName,
-      rows: courseRows,
+      rows: sortPointsRows(courseRows as any[]),
       totalPoints: courseRows.reduce((sum: number, r: any) => sum + (r.points || 0), 0)
     }));
+
   }, [rows]);
 
   const getRatioColor = (ratio: number) => {
