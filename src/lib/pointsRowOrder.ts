@@ -35,11 +35,14 @@ function isStage(type?: string | null) {
 }
 
 export function comparePointsRows(a: PointsRowLike, b: PointsRowLike): number {
-  const aFinal = !a.etape_numero && !isPorteur(a.type_classement);
-  const bFinal = !b.etape_numero && !isPorteur(b.type_classement);
+  // Un classement final = type reconnu (général, points, montagne, jeune) et non "Porteur",
+  // même si un numéro d'étape parasite est présent en base.
+  const aFinal = !isPorteur(a.type_classement) && (finalRank(a.type_classement) < FINAL_ORDER.length || !a.etape_numero);
+  const bFinal = !isPorteur(b.type_classement) && (finalRank(b.type_classement) < FINAL_ORDER.length || !b.etape_numero);
 
   // 1. Classements finaux d'abord
   if (aFinal !== bFinal) return aFinal ? -1 : 1;
+
   if (aFinal && bFinal) {
     const diff = finalRank(a.type_classement) - finalRank(b.type_classement);
     if (diff !== 0) return diff;
