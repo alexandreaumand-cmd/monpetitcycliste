@@ -345,8 +345,16 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       phase.courses.get(courseKey)!.push(row);
     });
     
+    // Sort rows within each course (finals first, then stage order)
+    phaseMap.forEach(phase => {
+      phase.courses.forEach((courseRows, key) => {
+        phase.courses.set(key, sortPointsRows(courseRows));
+      });
+    });
+
     // Convert to array and sort by phase index
     const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_index - b.phase_index);
+
     
     return { phases, bonus };
   }, [riderPointsData?.rows, searchTerm, phaseLabelFromDb]);
