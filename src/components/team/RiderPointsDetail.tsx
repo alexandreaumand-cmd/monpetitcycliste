@@ -11,6 +11,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 interface UpcomingRace {
   race_id: string;
