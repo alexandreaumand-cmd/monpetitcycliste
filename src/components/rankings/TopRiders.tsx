@@ -21,6 +21,8 @@ import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { InjuryBadge } from "@/components/shared/InjuryBadge";
 import { useTranslation } from "react-i18next";
 import { getPhasesByManager } from "@/lib/riderOwnerPhases";
+import { sortPointsRows } from "@/lib/pointsRowOrder";
+
 
 
 type TopRidersProps = {
