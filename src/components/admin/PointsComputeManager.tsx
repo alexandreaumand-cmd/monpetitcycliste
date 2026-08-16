@@ -11,9 +11,33 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
+// Extrait le message d'erreur réel renvoyé par la fonction backend
+// (sinon on n'affiche que "Edge Function returned a non-2xx status code")
+const extractFunctionError = async (error: any, fallback: string): Promise<string> => {
+  try {
+    const response = error?.context;
+    if (response && typeof response.text === 'function') {
+      const raw = await response.text();
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.error) return String(parsed.error);
+          if (parsed?.message) return String(parsed.message);
+        } catch {
+          return raw;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return error?.message || fallback;
+};
+
 export const PointsComputeManager = () => {
   const { selectedSeason } = useSeasonContext();
   const { toast } = useToast();
+
 
   // Section "Recalcul complet d'une phase"
   const [fullRecalcSeasonId, setFullRecalcSeasonId] = useState<string>("");
