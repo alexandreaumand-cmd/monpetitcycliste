@@ -729,9 +729,13 @@ export const ResultsEntryStudioMobile = ({
 
       return { success: true, computeFailed };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setLastSaved(new Date());
-      toast.success("Résultats enregistrés");
+      if ((result as any)?.computeFailed) {
+        toast.error("Résultats enregistrés mais points NON recalculés — utilisez « Recalcul Points »", { duration: 10000 });
+      } else {
+        toast.success("Résultats enregistrés");
+      }
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
       tttManuallySet.current = false;
       loadResults();
