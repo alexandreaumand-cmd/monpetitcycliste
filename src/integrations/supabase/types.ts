@@ -1635,12 +1635,14 @@ export type Database = {
           course_id: string | null
           created_at: string
           created_by: string
+          etape_numero: number | null
           id: string
           league_id: string | null
           manager_id: string | null
           phase_id: string
           points: number
           target_manager_id: string | null
+          type_classement: string | null
           updated_at: string
         }
         Insert: {
@@ -1650,12 +1652,14 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           created_by: string
+          etape_numero?: number | null
           id?: string
           league_id?: string | null
           manager_id?: string | null
           phase_id: string
           points: number
           target_manager_id?: string | null
+          type_classement?: string | null
           updated_at?: string
         }
         Update: {
@@ -1665,12 +1669,14 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           created_by?: string
+          etape_numero?: number | null
           id?: string
           league_id?: string | null
           manager_id?: string | null
           phase_id?: string
           points?: number
           target_manager_id?: string | null
+          type_classement?: string | null
           updated_at?: string
         }
         Relationships: [
