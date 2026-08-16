@@ -235,11 +235,13 @@ export const PointsComputeManager = () => {
       });
     } catch (error: any) {
       console.error('Error computing course points:', error);
+      const description = await extractFunctionError(error, "Impossible de calculer les points de la course");
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de calculer les points de la course",
+        description,
         variant: "destructive"
       });
+
     } finally {
       setComputingCourse(false);
     }
