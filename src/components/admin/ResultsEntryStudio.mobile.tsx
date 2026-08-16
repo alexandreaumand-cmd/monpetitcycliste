@@ -717,20 +717,25 @@ export const ResultsEntryStudioMobile = ({
       }
 
       // Recalculate points via compute-points edge function (same as desktop)
-      const { error: computeError } = await supabase.functions.invoke('compute-points', {
+      const { data: computeData, error: computeError } = await supabase.functions.invoke('compute-points', {
         body: { course_id: course.course_id },
       });
 
-      if (computeError) {
-        console.error('Error computing points:', computeError);
-        // Don't fail the save if compute fails
+      const computeFailed = !!computeError || !!(computeData as any)?.error;
+
+      if (computeFailed) {
+        console.error('Error computing points:', computeError || (computeData as any)?.error);
       }
-      
-      return { success: true };
+
+      return { success: true, computeFailed };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setLastSaved(new Date());
-      toast.success("Résultats enregistrés");
+      if ((result as any)?.computeFailed) {
+        toast.error("Résultats enregistrés mais points NON recalculés — utilisez « Recalcul Points »", { duration: 10000 });
+      } else {
+        toast.success("Résultats enregistrés");
+      }
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
       tttManuallySet.current = false;
       loadResults();
