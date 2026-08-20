@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
           .from('coureurs_saisons')
           .select('coureur_id, coureurs!inner(id, nom), equipe_id')
           .eq('saison_id', saison_id)
+          .eq('actif', true)
           .eq('coureur_id', coureurId)
           .limit(1);
 

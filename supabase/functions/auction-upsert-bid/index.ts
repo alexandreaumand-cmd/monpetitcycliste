@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
         .select('coureur_id, prix_initial, coureurs!inner(nom)')
         .eq('coureur_id', rider_id)
         .eq('saison_id', phaseData.saison_id)
+        .eq('actif', true)
         .limit(1);
       
       if (coureurSaisonData && coureurSaisonData.length > 0) {

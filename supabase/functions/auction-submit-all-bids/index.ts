@@ -214,6 +214,7 @@ Deno.serve(async (req) => {
       .from('coureurs_saisons')
       .select('coureur_id, prix_initial')
       .eq('saison_id', phase.saison_id)
+      .eq('actif', true)
       .in('coureur_id', coureurIds);
     
     if (seasonsError) {
