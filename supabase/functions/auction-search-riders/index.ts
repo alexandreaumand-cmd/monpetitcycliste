@@ -128,7 +128,9 @@ Deno.serve(async (req) => {
         prix_initial,
         coureurs!inner(id, nom)
       `)
-      .eq('saison_id', phase.saison_id);
+      .eq('saison_id', phase.saison_id)
+      // Exclure les fiches de saison désactivées (doublons d'orthographe, etc.)
+      .eq('actif', true);
 
     // Search by name
     if (q && q.trim().length >= 2) {

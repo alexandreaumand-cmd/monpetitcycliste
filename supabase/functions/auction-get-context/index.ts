@@ -200,6 +200,7 @@ Deno.serve(async (req) => {
         .from('coureurs_saisons')
         .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
         .eq('saison_id', phase.saison_id)
+        .eq('actif', true)
         .in('coureur_id', rosterCoureurIds);
 
       // Collect unique equipe_ids for batch fetch
@@ -268,6 +269,7 @@ Deno.serve(async (req) => {
         .from('coureurs_saisons')
         .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
         .eq('saison_id', phase.saison_id)
+        .eq('actif', true)
         .in('coureur_id', coureur_ids);
 
       // Identify missing coureurs for fallback
