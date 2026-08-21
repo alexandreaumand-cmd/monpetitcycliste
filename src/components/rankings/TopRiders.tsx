@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { normalizeString } from "@/lib/stringUtils";
@@ -100,7 +101,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
+  const [managerFilter, setManagerFilter] = useState<'all' | 'with' | 'without'>('all');
   const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
@@ -282,19 +283,17 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       );
     }
     
-    // Filter to show only riders without managers
-    if (showOnlyWithoutManagers) {
+    // Filter by manager ownership
+    if (managerFilter !== 'all') {
       filtered = filtered.filter(rider => {
-        if (phaseId) {
-          return !rider.owners || rider.owners.length === 0;
-        } else {
-          return !rider.owners_all || rider.owners_all.length === 0;
-        }
+        const owners = phaseId ? rider.owners : rider.owners_all;
+        const hasOwner = !!owners && owners.length > 0;
+        return managerFilter === 'with' ? hasOwner : !hasOwner;
       });
     }
     
     return filtered;
-  }, [sortedRiders, riderSearchTerm, showOnlyWithoutManagers, phaseId]);
+  }, [sortedRiders, riderSearchTerm, managerFilter, phaseId]);
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
@@ -460,15 +459,22 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 value={riderSearchTerm}
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
               />
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <Switch
-                  id="hide-no-managers"
-                  checked={showOnlyWithoutManagers}
-                  onCheckedChange={setShowOnlyWithoutManagers}
-                />
-                <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
-                  {t('topRiders.hideWithoutManager')}
-                </Label>
+              <div className="flex items-center gap-1 whitespace-nowrap">
+                {(['all', 'with', 'without'] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setManagerFilter(key)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                      managerFilter === key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    {t(`topRiders.managerFilter.${key}`)}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">

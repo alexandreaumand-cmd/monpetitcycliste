@@ -52,7 +52,12 @@
     "filterCategoriesPlaceholder": "Filtrer par catégorie...",
     "filterReset": "Réinitialiser",
     "filterNoResults": "Aucune course trouvée",
-    "filtersTitle": "Filtres"
+    "filtersTitle": "Filtres",
+    "managerFilter": {
+      "all": "Tous",
+      "with": "Avec manager",
+      "without": "Sans manager"
+    }
   },
   "riderDetails": {
     "totalPoints": "Points totaux",

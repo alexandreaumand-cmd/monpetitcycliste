@@ -52,7 +52,7 @@ export const RankingsMobile = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = usePersistentState<string>("rankings.mobile.riderSearch", "");
-  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = usePersistentState<boolean>("rankings.mobile.withoutManagers", false);
+  const [managerFilter, setManagerFilter] = usePersistentState<'all' | 'with' | 'without'>("rankings.mobile.managerFilter", 'all');
   const [riderSortBy, setRiderSortBy] = usePersistentState<'points' | 'ratio'>("rankings.mobile.riderSort", 'points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
@@ -254,10 +254,11 @@ export const RankingsMobile = () => {
       );
     }
     
-    if (showOnlyWithoutManagers) {
+    if (managerFilter !== 'all') {
       filtered = filtered.filter(rider => {
         const owners = selectedPhase ? rider.owners : rider.owners_all;
-        return !owners || owners.length === 0;
+        const hasOwner = !!owners && owners.length > 0;
+        return managerFilter === 'with' ? hasOwner : !hasOwner;
       });
     }
     
@@ -274,7 +275,7 @@ export const RankingsMobile = () => {
     }
     
     return filtered;
-  }, [allTopRiders, riderSearchTerm, showOnlyWithoutManagers, selectedPhase, riderSortBy]);
+  }, [allTopRiders, riderSearchTerm, managerFilter, selectedPhase, riderSortBy]);
 
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
@@ -590,15 +591,22 @@ export const RankingsMobile = () => {
                 className="h-10"
               />
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="hide-no-managers-mobile"
-                    checked={showOnlyWithoutManagers}
-                    onCheckedChange={setShowOnlyWithoutManagers}
-                  />
-                  <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
-                    {t('topRiders.hideWithoutManager')}
-                  </Label>
+                <div className="flex items-center gap-1">
+                  {(['all', 'with', 'without'] as const).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setManagerFilter(key)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                        managerFilter === key
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/40 text-muted-foreground"
+                      )}
+                    >
+                      {t(`topRiders.managerFilter.${key}`)}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex gap-1 items-center">
                   <Button
