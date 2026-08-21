@@ -285,20 +285,19 @@ export const MyTeamMobile = () => {
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
-      // Fetch standings data from the same view as Rankings
+      // Fetch standings data from the same source as Rankings (league-scoped RPC)
       if (targetManagerId && selectedPhaseId && leagueId) {
-        const { data: standing } = await supabase
-          .from('v_manager_standings_by_phase_v2')
-          .select('total_points, manager_bonus, rider_bonus')
-          .match({ 
-            phase_id: selectedPhaseId,
-            manager_id: targetManagerId,
-            league_id: leagueId
-          })
-          .maybeSingle();
+        const client: any = supabase;
+        const { data: standingsRows } = await client.rpc('get_manager_standings_by_phase', {
+          _league_id: leagueId,
+          _phase_id: selectedPhaseId,
+        });
+        const standing = (standingsRows || []).find(
+          (row: any) => row.manager_id === targetManagerId
+        ) || null;
 
         if (standing) {
-          const totalBonus = (standing.manager_bonus || 0) + (standing.rider_bonus || 0);
+          const totalBonus = (Number(standing.manager_bonus) || 0) + (Number(standing.rider_bonus) || 0);
           setKpis(prev => ({
             ...prev,
             total_points: Number(standing.total_points) || 0,
