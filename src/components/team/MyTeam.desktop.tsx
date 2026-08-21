@@ -253,33 +253,48 @@ export const MyTeamDesktop = () => {
         .eq('user_id', session.user.id)
         .single()).data?.id;
 
-      // Appeler la fonction avec le token d'authentification
-      const { data, error } = await supabase.functions.invoke('manager-my-team', {
-        body: { 
-          phase_id: selectedPhaseId,
-          manager_id: selectedManagerId,
-          league_id: leagueId
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
+      const client: any = supabase;
 
+      // Lancer en parallèle : équipe, classement de la phase et coureur bonus
+      const [teamRes, standingsRes, bonusRiderRes] = await Promise.all([
+        supabase.functions.invoke('manager-my-team', {
+          body: {
+            phase_id: selectedPhaseId,
+            manager_id: selectedManagerId,
+            league_id: leagueId
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }),
+        targetManagerId && selectedPhaseId && leagueId
+          ? client.rpc('get_manager_standings_by_phase', {
+              _league_id: leagueId,
+              _phase_id: selectedPhaseId,
+            })
+          : Promise.resolve({ data: null }),
+        targetManagerId && selectedPhaseId
+          ? client
+              .from('bonus_rider_selections')
+              .select('coureur_id')
+              .eq('manager_id', targetManagerId)
+              .eq('phase_id', selectedPhaseId)
+              .eq('league_id', leagueId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      const { data, error } = teamRes;
       if (error) throw error;
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
 
-      // Fetch standings data from the same view as Rankings
+      // Points officiels (même source que le classement)
       if (targetManagerId && selectedPhaseId && leagueId) {
-        const client: any = supabase;
-        const { data: standing } = await client
-          .from('v_manager_standings_by_phase_v2')
-          .select('total_points, manager_bonus, rider_bonus')
-          .eq('phase_id', selectedPhaseId)
-          .eq('manager_id', targetManagerId)
-          .eq('league_id', leagueId)
-          .maybeSingle();
-        
+        const standing = (standingsRes?.data || []).find(
+          (row: any) => row.manager_id === targetManagerId
+        ) || null;
+
         if (standing) {
           const managerBonus = Number(standing.manager_bonus) || 0;
           const riderBonus = Number(standing.rider_bonus) || 0;
@@ -302,25 +317,17 @@ export const MyTeamDesktop = () => {
         }
       }
 
-      // Charger le coureur bonus sélectionné (s'il existe)
+      // Coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
-        const client: any = supabase;
-      const { data: bonusRider } = await client
-        .from('bonus_rider_selections')
-        .select('coureur_id')
-        .eq('manager_id', targetManagerId)
-        .eq('phase_id', selectedPhaseId)
-        .eq('league_id', leagueId)
-        .maybeSingle();
+        const bonusRider = bonusRiderRes?.data || null;
 
         if (bonusRider) {
-          // Fetch the rider name separately
           const { data: rider } = await client
             .from('coureurs')
             .select('nom')
             .eq('id', bonusRider.coureur_id)
             .maybeSingle();
-            
+
           setBonusRiderSelection({
             coureur_id: bonusRider.coureur_id,
             coureur_nom: rider?.nom || ''
