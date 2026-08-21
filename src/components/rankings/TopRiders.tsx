@@ -100,7 +100,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
+  const [managerFilter, setManagerFilter] = useState<'all' | 'with' | 'without'>('all');
   const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
@@ -282,19 +282,17 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       );
     }
     
-    // Filter to show only riders without managers
-    if (showOnlyWithoutManagers) {
+    // Filter by manager ownership
+    if (managerFilter !== 'all') {
       filtered = filtered.filter(rider => {
-        if (phaseId) {
-          return !rider.owners || rider.owners.length === 0;
-        } else {
-          return !rider.owners_all || rider.owners_all.length === 0;
-        }
+        const owners = phaseId ? rider.owners : rider.owners_all;
+        const hasOwner = !!owners && owners.length > 0;
+        return managerFilter === 'with' ? hasOwner : !hasOwner;
       });
     }
     
     return filtered;
-  }, [sortedRiders, riderSearchTerm, showOnlyWithoutManagers, phaseId]);
+  }, [sortedRiders, riderSearchTerm, managerFilter, phaseId]);
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
