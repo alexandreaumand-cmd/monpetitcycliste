@@ -270,29 +270,47 @@ export const MyTeamMobile = () => {
         .eq('user_id', session.user.id)
         .single()).data?.id;
 
-      const { data, error } = await supabase.functions.invoke("manager-my-team", {
-        body: { 
-          phase_id: selectedPhaseId,
-          manager_id: selectedManagerId,
-          league_id: leagueId
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const client: any = supabase;
 
+      // Lancer en parallèle : équipe, classement de la phase et coureur bonus
+      const [teamRes, standingsRes, bonusRiderRes] = await Promise.all([
+        supabase.functions.invoke("manager-my-team", {
+          body: {
+            phase_id: selectedPhaseId,
+            manager_id: selectedManagerId,
+            league_id: leagueId
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }),
+        targetManagerId && selectedPhaseId && leagueId
+          ? client.rpc('get_manager_standings_by_phase', {
+              _league_id: leagueId,
+              _phase_id: selectedPhaseId,
+            })
+          : Promise.resolve({ data: null }),
+        targetManagerId && selectedPhaseId
+          ? supabase
+              .from('bonus_rider_selections')
+              .select('coureur_id, coureurs(nom)')
+              .match({
+                manager_id: targetManagerId,
+                phase_id: selectedPhaseId,
+                league_id: leagueId
+              })
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      const { data, error } = teamRes;
       if (error) throw error;
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
-      // Fetch standings data from the same source as Rankings (league-scoped RPC)
+      // Points officiels (même source que le classement)
       if (targetManagerId && selectedPhaseId && leagueId) {
-        const client: any = supabase;
-        const { data: standingsRows } = await client.rpc('get_manager_standings_by_phase', {
-          _league_id: leagueId,
-          _phase_id: selectedPhaseId,
-        });
-        const standing = (standingsRows || []).find(
+        const standing = (standingsRes?.data || []).find(
           (row: any) => row.manager_id === targetManagerId
         ) || null;
 
@@ -314,22 +332,14 @@ export const MyTeamMobile = () => {
         }
       }
 
-      // Charger le coureur bonus sélectionné (s'il existe)
+      // Coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
-      const { data: bonusRider } = await supabase
-        .from('bonus_rider_selections')
-        .select('coureur_id, coureurs(nom)')
-        .match({
-          manager_id: targetManagerId,
-          phase_id: selectedPhaseId,
-          league_id: leagueId
-        })
-        .maybeSingle();
+        const bonusRider: any = bonusRiderRes?.data || null;
 
         if (bonusRider) {
           setBonusRiderSelection({
             coureur_id: bonusRider.coureur_id,
-            coureur_nom: bonusRider.coureurs.nom
+            coureur_nom: bonusRider.coureurs?.nom
           });
           setHasSelectedBonusRider(true);
         } else {
