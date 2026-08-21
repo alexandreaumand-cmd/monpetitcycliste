@@ -58,6 +58,11 @@ export const PronosticRaceCard = ({
   const isEvaluated = !isCancelled && pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
   const isTTT = deadline.is_ttt;
 
+  const [imageOpen, setImageOpen] = useState(false);
+  const { data: routeImages } = useCourseRouteImages(deadline.course_id, !isExpired);
+  const routeImage = pickRouteImage(routeImages, deadline.etape_numero);
+
+
   const typeLabel = useMemo(() => {
     if (isTTT) {
       return `TTT ${deadline.etape_numero ? `#${deadline.etape_numero}` : ""}`;
