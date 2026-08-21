@@ -272,13 +272,13 @@ export const MyTeamDesktop = () => {
       // Fetch standings data from the same view as Rankings
       if (targetManagerId && selectedPhaseId && leagueId) {
         const client: any = supabase;
-        const { data: standing } = await client
-          .from('v_manager_standings_by_phase_v2')
-          .select('total_points, manager_bonus, rider_bonus')
-          .eq('phase_id', selectedPhaseId)
-          .eq('manager_id', targetManagerId)
-          .eq('league_id', leagueId)
-          .maybeSingle();
+        const { data: standingsRows } = await client.rpc('get_manager_standings_by_phase', {
+          _league_id: leagueId,
+          _phase_id: selectedPhaseId,
+        });
+        const standing = (standingsRows || []).find(
+          (row: any) => row.manager_id === targetManagerId
+        ) || null;
         
         if (standing) {
           const managerBonus = Number(standing.manager_bonus) || 0;
