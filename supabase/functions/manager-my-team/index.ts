@@ -364,13 +364,28 @@ Deno.serve(async (req) => {
     if (phaseId && targetManagerId) {
       console.log(`[manager-my-team] Computing rank for phase ${phaseId}, manager ${targetManagerId}`);
       
-      let standingsQuery = supabase
-        .from('v_manager_standings_by_phase_v2')
-        .select('manager_id, total_points, nb_scoreurs')
-        .eq('phase_id', phaseId);
-      
-      if (league_id) standingsQuery = standingsQuery.eq('league_id', league_id);
-      const { data: standings } = await standingsQuery.order('total_points', { ascending: false });
+      let standings: Array<{ manager_id: string; total_points: number; nb_scoreurs: number }> | null = null;
+
+      if (league_id) {
+        // Fonction filtrée par ligue : bien plus rapide que la vue globale
+        const { data: rpcRows, error: rpcError } = await supabase.rpc('get_manager_standings_by_phase', {
+          _league_id: league_id,
+          _phase_id: phaseId,
+        });
+        if (rpcError) console.error('[manager-my-team] standings rpc error:', rpcError.message);
+        standings = (rpcRows || []) as typeof standings;
+      } else {
+        const { data: viewRows } = await supabase
+          .from('v_manager_standings_by_phase_v2')
+          .select('manager_id, total_points, nb_scoreurs')
+          .eq('phase_id', phaseId)
+          .order('total_points', { ascending: false });
+        standings = (viewRows || []) as typeof standings;
+      }
+
+      standings = (standings || []).sort(
+        (a, b) => (Number(b.total_points) || 0) - (Number(a.total_points) || 0)
+      );
 
       if (standings && standings.length > 0) {
         managersCount = standings.length;
