@@ -52,7 +52,12 @@
     "filterCategoriesPlaceholder": "Filter by category...",
     "filterReset": "Reset",
     "filterNoResults": "No race found",
-    "filtersTitle": "Filters"
+    "filtersTitle": "Filters",
+    "managerFilter": {
+      "all": "All",
+      "with": "With manager",
+      "without": "Without manager"
+    }
   },
   "riderDetails": {
     "totalPoints": "Total points",
