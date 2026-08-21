@@ -7235,6 +7235,38 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_manager_standings_by_phase: {
+        Args: { _league_id: string; _phase_id?: string }
+        Returns: {
+          avatar_url: string
+          league_id: string
+          manager_bonus: number
+          manager_id: string
+          manager_nom: string
+          nb_scoreurs: number
+          nb_victoires: number
+          phase_id: string
+          rider_bonus: number
+          total_points: number
+          total_race_pts: number
+        }[]
+      }
+      get_manager_standings_by_season: {
+        Args: { _league_id: string; _saison_id?: string }
+        Returns: {
+          avatar_url: string
+          league_id: string
+          manager_bonus: number
+          manager_id: string
+          manager_nom: string
+          nb_scoreurs: number
+          nb_victoires: number
+          rider_bonus: number
+          saison_id: string
+          total_points: number
+          total_race_pts: number
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
