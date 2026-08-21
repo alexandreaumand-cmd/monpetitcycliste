@@ -208,6 +208,48 @@ export const PronosticRaceCard = ({
           )}
         </div>
 
+        {/* Route image link (open pronostics only) */}
+        {!isExpired && routeImage && (
+          <>
+            <button
+              type="button"
+              onClick={() => setImageOpen(true)}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+            >
+              <ImageIcon className="h-3 w-3 shrink-0" />
+              <span className="truncate">{routeImage.label || t("pronostics.routeImage")}</span>
+            </button>
+            <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">
+                    {deadline.courses?.nom || deadline.course_id}
+                    {deadline.etape_numero != null ? ` — ${typeLabel}` : ""}
+                  </DialogTitle>
+                </DialogHeader>
+                <OptimizedImage
+                  src={routeImage.image_url}
+                  alt={routeImage.label || t("pronostics.routeImage")}
+                  inline
+                  loading="eager"
+                  className="w-full h-auto rounded-md"
+                />
+                <a
+                  href={routeImage.image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("pronostics.routeImageOpen")}
+                </a>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+
+
+
         {/* Collapsible all picks (closed state only) */}
         {isExpired && (
           <ClosedPronosticsList
