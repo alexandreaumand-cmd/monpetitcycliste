@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { useCourseRouteImages, pickRouteImage } from "@/hooks/useCourseRouteImage";
+import { useState } from "react";
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
 import { PronosticStartlistTeamCombobox } from "./PronosticStartlistTeamCombobox";
 import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
@@ -53,6 +57,11 @@ export const PronosticRaceCard = ({
   const isExpired = isPast(new Date(deadline.deadline_at));
   const isEvaluated = !isCancelled && pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
   const isTTT = deadline.is_ttt;
+
+  const [imageOpen, setImageOpen] = useState(false);
+  const { data: routeImages } = useCourseRouteImages(deadline.course_id, !isExpired);
+  const routeImage = pickRouteImage(routeImages, deadline.etape_numero);
+
 
   const typeLabel = useMemo(() => {
     if (isTTT) {
@@ -198,6 +207,48 @@ export const PronosticRaceCard = ({
             <span className="text-xs text-muted-foreground italic">{t("pronostics.noPick")}</span>
           )}
         </div>
+
+        {/* Route image link (open pronostics only) */}
+        {!isExpired && routeImage && (
+          <>
+            <button
+              type="button"
+              onClick={() => setImageOpen(true)}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+            >
+              <ImageIcon className="h-3 w-3 shrink-0" />
+              <span className="truncate">{routeImage.label || t("pronostics.routeImage")}</span>
+            </button>
+            <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">
+                    {deadline.courses?.nom || deadline.course_id}
+                    {deadline.etape_numero != null ? ` — ${typeLabel}` : ""}
+                  </DialogTitle>
+                </DialogHeader>
+                <OptimizedImage
+                  src={routeImage.image_url}
+                  alt={routeImage.label || t("pronostics.routeImage")}
+                  inline
+                  loading="eager"
+                  className="w-full h-auto rounded-md"
+                />
+                <a
+                  href={routeImage.image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("pronostics.routeImageOpen")}
+                </a>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+
+
 
         {/* Collapsible all picks (closed state only) */}
         {isExpired && (

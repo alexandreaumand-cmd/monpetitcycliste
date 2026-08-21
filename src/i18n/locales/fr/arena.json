@@ -67,6 +67,8 @@
     },
     "allPicks": "Pronostics des managers",
     "noPicksYet": "Aucun pronostic pour cette course",
+    "routeImage": "Profil de l'étape",
+    "routeImageOpen": "Ouvrir dans un nouvel onglet",
     "you": "(vous)"
   },
   "votes": {

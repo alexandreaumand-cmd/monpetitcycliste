@@ -67,6 +67,8 @@
     },
     "allPicks": "Managers' picks",
     "noPicksYet": "No picks for this race",
+    "routeImage": "Stage profile",
+    "routeImageOpen": "Open in a new tab",
     "you": "(you)"
   },
   "votes": {
