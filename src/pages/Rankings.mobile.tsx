@@ -275,7 +275,7 @@ export const RankingsMobile = () => {
     }
     
     return filtered;
-  }, [allTopRiders, riderSearchTerm, showOnlyWithoutManagers, selectedPhase, riderSortBy]);
+  }, [allTopRiders, riderSearchTerm, managerFilter, selectedPhase, riderSortBy]);
 
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
@@ -591,15 +591,22 @@ export const RankingsMobile = () => {
                 className="h-10"
               />
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="hide-no-managers-mobile"
-                    checked={showOnlyWithoutManagers}
-                    onCheckedChange={setShowOnlyWithoutManagers}
-                  />
-                  <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
-                    {t('topRiders.hideWithoutManager')}
-                  </Label>
+                <div className="flex items-center gap-1">
+                  {(['all', 'with', 'without'] as const).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setManagerFilter(key)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                        managerFilter === key
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/40 text-muted-foreground"
+                      )}
+                    >
+                      {t(`topRiders.managerFilter.${key}`)}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex gap-1 items-center">
                   <Button
