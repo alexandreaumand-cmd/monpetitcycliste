@@ -458,15 +458,22 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 value={riderSearchTerm}
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
               />
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <Switch
-                  id="hide-no-managers"
-                  checked={showOnlyWithoutManagers}
-                  onCheckedChange={setShowOnlyWithoutManagers}
-                />
-                <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
-                  {t('topRiders.hideWithoutManager')}
-                </Label>
+              <div className="flex items-center gap-1 whitespace-nowrap">
+                {(['all', 'with', 'without'] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setManagerFilter(key)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                      managerFilter === key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    {t(`topRiders.managerFilter.${key}`)}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
