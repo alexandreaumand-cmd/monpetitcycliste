@@ -52,7 +52,7 @@ export const RankingsMobile = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = usePersistentState<string>("rankings.mobile.riderSearch", "");
-  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = usePersistentState<boolean>("rankings.mobile.withoutManagers", false);
+  const [managerFilter, setManagerFilter] = usePersistentState<'all' | 'with' | 'without'>("rankings.mobile.managerFilter", 'all');
   const [riderSortBy, setRiderSortBy] = usePersistentState<'points' | 'ratio'>("rankings.mobile.riderSort", 'points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
@@ -254,10 +254,11 @@ export const RankingsMobile = () => {
       );
     }
     
-    if (showOnlyWithoutManagers) {
+    if (managerFilter !== 'all') {
       filtered = filtered.filter(rider => {
         const owners = selectedPhase ? rider.owners : rider.owners_all;
-        return !owners || owners.length === 0;
+        const hasOwner = !!owners && owners.length > 0;
+        return managerFilter === 'with' ? hasOwner : !hasOwner;
       });
     }
     
