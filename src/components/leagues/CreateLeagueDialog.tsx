@@ -529,6 +529,11 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
       case 'courses':
         return (
           <div className="space-y-2">
+            {missingCourses.length > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                {t('clone.missingCourses', { list: missingCourses.join(', ') })}
+              </p>
+            )}
             <CourseSelector
               seasonId={seasonId}
               selectedCourseIds={selectedCourseIds}
