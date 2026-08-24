@@ -4,7 +4,9 @@ import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Shirt } from "lucide-react";
+import { TrendingUp, TrendingDown, Shirt, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
