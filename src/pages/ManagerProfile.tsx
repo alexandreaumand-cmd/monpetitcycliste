@@ -20,7 +20,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trophy, Target, Users, Coins, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  Trophy,
+  Target,
+  Users,
+  Coins,
+  TrendingUp,
+  Medal,
+  Flag,
+  Percent,
+  Star,
+  Repeat,
+} from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
   n == null ? "-" : Math.round(Number(n)).toLocaleString("fr-FR");
