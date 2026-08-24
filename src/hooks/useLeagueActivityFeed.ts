@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type ActivityKind =
   | "result"
   | "pronostic"
+  | "pronostic_result"
   | "injury"
   | "startlist"
   | "chat"
@@ -21,6 +22,10 @@ export interface ActivityItem {
   count_value: number | null;
   is_mine: boolean;
   link_path: string;
+  /** Course name without the stage suffix — used to group rows per race. */
+  course_nom: string | null;
+  /** Riders involved (scoring riders for results, picked rider for pronostics). */
+  riders: string | null;
 }
 
 /**
