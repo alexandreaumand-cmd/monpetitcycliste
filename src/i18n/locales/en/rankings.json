@@ -152,7 +152,7 @@
     "pronoRate": "Pronostic accuracy",
     "fetishRider": "Favourite performer",
     "favoriteRider": "Most drafted rider",
-    "phasesCount": "{{count}} phase",
-    "phasesCount_plural": "{{count}} phases"
+    "phasesCount_one": "{{count}} phase",
+    "phasesCount_other": "{{count}} phases"
   }
 }

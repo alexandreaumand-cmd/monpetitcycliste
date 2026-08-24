@@ -152,7 +152,7 @@
     "pronoRate": "Réussite pronostics",
     "fetishRider": "Coureur fétiche",
     "favoriteRider": "Coureur préféré",
-    "phasesCount": "{{count}} phase",
-    "phasesCount_plural": "{{count}} phases"
+    "phasesCount_one": "{{count}} phase",
+    "phasesCount_other": "{{count}} phases"
   }
 }
