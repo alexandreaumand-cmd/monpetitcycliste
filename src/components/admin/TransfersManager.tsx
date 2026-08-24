@@ -397,7 +397,14 @@ export const TransfersManager = () => {
               {(transfers ?? []).map((t) => {
                 const seasonTeams = (teams ?? []).filter((x) => x.saison_id === t.saison_id);
                 const search = riderSearch[t.id] ?? "";
-                const results = (riderQueries.data ?? {})[search] ?? [];
+                const rawResults = ((riderQueries.data ?? {})[search] ?? []) as RiderOption[];
+                const results = [...rawResults].sort((a, b) => {
+                  const aTarget = a.seasons.some((s) => s.annee === t.target_year) ? 1 : 0;
+                  const bTarget = b.seasons.some((s) => s.annee === t.target_year) ? 1 : 0;
+                  if (aTarget !== bTarget) return bTarget - aTarget;
+                  return (b.seasons[0]?.annee ?? 0) - (a.seasons[0]?.annee ?? 0);
+                });
+
                 return (
                   <div key={t.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
