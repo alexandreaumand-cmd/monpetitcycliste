@@ -106,6 +106,21 @@ export default function ManagerProfile() {
     enabled: !!leagueId,
   });
 
+  const { data: extra, isLoading: extraLoading } = useQuery({
+    queryKey: ["mp-extra-stats", managerId, leagueId, selectedSeason?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_manager_extra_stats", {
+        _manager_id: managerId!,
+        _league_id: leagueId ?? undefined,
+        _saison_id: selectedSeason?.id ?? undefined,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+    enabled: !!managerId,
+  });
+
+
   const sorted = useMemo(
     () =>
       [...(seasonStandings ?? [])].sort(
