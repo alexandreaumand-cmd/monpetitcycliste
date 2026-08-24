@@ -112,7 +112,7 @@ export const CreatePollDialog = ({ leagueId, managerId }: CreatePollDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
           <Plus className="h-4 w-4 mr-2" />
           {t("votes.create.button")}
         </Button>
