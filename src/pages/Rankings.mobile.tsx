@@ -8,7 +8,7 @@ import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal } from "lucide-react";
+import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal, ExternalLink } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
