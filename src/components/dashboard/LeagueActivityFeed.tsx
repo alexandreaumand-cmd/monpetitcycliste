@@ -313,6 +313,17 @@ export const LeagueActivityFeed = () => {
     const isOpen = openGroups[entry.key] ?? false;
     const totalPoints = entry.items.reduce((sum, i) => sum + (i.my_points ?? 0), 0);
     const hasNew = entry.items.some((i) => isNewAt(i.occurred_at));
+    const isStartlist = entry.variant === "startlist";
+    const GroupIcon = isStartlist ? ListChecks : Trophy;
+    const groupIconTone = isStartlist ? "text-muted-foreground" : "text-bordure-gold";
+    const summary = isStartlist
+      ? t("activity.startlistGroupSummary", { count: entry.items.length })
+      : t("activity.groupSummary", {
+          count: entry.items.length,
+          points: Math.round(totalPoints),
+        });
+
+
 
     if (isMobile) {
       return (
