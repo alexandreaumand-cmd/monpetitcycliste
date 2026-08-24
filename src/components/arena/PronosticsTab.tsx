@@ -5,7 +5,6 @@ import { Target } from "lucide-react";
 import { PronosticRaceCard } from "./PronosticRaceCard";
 import { PronosticStandings } from "./PronosticStandings";
 import { PronosticUrgencyBanner } from "./PronosticUrgencyBanner";
-import { HallOfFameSection } from "./HallOfFameSection";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TabGroup } from "@/components/mobile/TabGroup";
 import {
@@ -179,15 +178,13 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
         {activeTab === "standings" && (
           <div className="space-y-4 lg:hidden">
             <PronosticStandings leagueId={leagueId} />
-            <HallOfFameSection leagueId={leagueId} variant="compact" />
           </div>
         )}
       </div>
 
-      {/* Desktop: standings + prestige podium always visible in a sticky column. */}
+      {/* Desktop: standings always visible in a sticky column. */}
       <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
         <PronosticStandings leagueId={leagueId} showChart={false} />
-        <HallOfFameSection leagueId={leagueId} variant="compact" />
       </aside>
     </div>
   );
