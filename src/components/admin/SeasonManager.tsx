@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Calendar, CheckCircle, Play, Rocket } from "lucide-react";
+import { Loader2, Plus, Calendar, CheckCircle, Play, Rocket, FileEdit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SeasonDeleteManager } from "./SeasonDeleteManager";
+import { SeasonPrepareManager } from "./SeasonPrepareManager";
+import { SeasonPricesImport } from "./SeasonPricesImport";
 
 export const SeasonManager = () => {
   const { toast } = useToast();
@@ -21,6 +24,8 @@ export const SeasonManager = () => {
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [budget, setBudget] = useState("2200");
+  const [phaseStatut, setPhaseStatut] = useState<"draft" | "active">("draft");
+
 
   const { data: saisons, isLoading } = useQuery({
     queryKey: ['saisons', 'with-phases'],
