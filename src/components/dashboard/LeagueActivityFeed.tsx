@@ -332,7 +332,7 @@ export const LeagueActivityFeed = () => {
             onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
             className="w-full flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 text-left transition-colors hover:bg-muted/40"
           >
-            <Trophy className="h-3.5 w-3.5 shrink-0 mt-0.5 text-bordure-gold" />
+            <GroupIcon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", groupIconTone)} />
             <div className="min-w-0 flex-1 flex flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -353,12 +353,7 @@ export const LeagueActivityFeed = () => {
                 )}
               </div>
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs text-muted-foreground truncate">
-                  {t("activity.groupSummary", {
-                    count: entry.items.length,
-                    points: Math.round(totalPoints),
-                  })}
-                </p>
+                <p className="text-xs text-muted-foreground truncate">{summary}</p>
                 <span className="shrink-0 text-[10px] text-muted-foreground">
                   {timeAgo(entry.occurredAt)}
                 </span>
@@ -382,7 +377,7 @@ export const LeagueActivityFeed = () => {
           onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
           className="w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
         >
-          <Trophy className="h-4 w-4 shrink-0 text-bordure-gold" />
+          <GroupIcon className={cn("h-4 w-4 shrink-0", groupIconTone)} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-semibold">{entry.courseNom}</span>
@@ -392,12 +387,7 @@ export const LeagueActivityFeed = () => {
                 </Badge>
               )}
             </div>
-            <p className="truncate text-xs text-muted-foreground">
-              {t("activity.groupSummary", {
-                count: entry.items.length,
-                points: Math.round(totalPoints),
-              })}
-            </p>
+            <p className="truncate text-xs text-muted-foreground">{summary}</p>
           </div>
           <span className="shrink-0 text-[11px] text-muted-foreground">
             {timeAgo(entry.occurredAt)}
