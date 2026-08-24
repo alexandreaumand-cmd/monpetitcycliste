@@ -156,6 +156,11 @@
       "all": "All",
       "mine": "My riders",
       "pronostics": "Pronostics"
-    }
+    },
+    "pronosticCorrect": "Pick successful",
+    "pronosticWrong": "Pick missed",
+    "stageLabel": "Stage {{stage}}",
+    "finalClassifications": "Final classifications",
+    "groupSummary": "{{count}} results — {{points}} pts for you"
   }
 }
