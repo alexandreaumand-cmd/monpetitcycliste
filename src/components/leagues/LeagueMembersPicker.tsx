@@ -92,8 +92,9 @@ export function LeagueMembersPicker({
           <p className="text-xs font-medium uppercase text-muted-foreground">
             {t('members.fromSource')}
           </p>
-          <ScrollArea className="max-h-56">
-            <div className="space-y-1 pr-2">
+          <ScrollArea className="h-56 rounded-md border">
+            <div className="space-y-1 p-2">
+
               {otherSourceMembers.map((m) => {
                 const checked = selectedUserIds.includes(m.userId);
                 return (
