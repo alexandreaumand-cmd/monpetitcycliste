@@ -142,7 +142,7 @@
     "closesIn": "Closes in {{time}}",
     "showMore": "Show more",
     "showLess": "Show less",
-    "resultWithPoints": "You scored {{points}} pts — rank {{rank}} in the league",
+    "resultWithPoints": "You scored {{points}} pts — rank {{rank}} in the standings",
     "resultNoPoints": "No points for you in this classification",
     "pronosticDone": "Pick saved",
     "pronosticTodo": "You haven't picked yet",
