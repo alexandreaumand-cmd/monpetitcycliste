@@ -7209,6 +7209,27 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_league_activity_feed: {
+        Args: {
+          p_days?: number
+          p_league_id: string
+          p_limit?: number
+          p_manager_id: string
+        }
+        Returns: {
+          count_value: number
+          course_id: string
+          etape_numero: number
+          is_mine: boolean
+          kind: string
+          link_path: string
+          my_points: number
+          my_rank: number
+          occurred_at: string
+          subtitle: string
+          title: string
+        }[]
+      }
       get_league_course_ids: {
         Args: { p_league_id: string }
         Returns: {
