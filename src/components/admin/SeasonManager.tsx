@@ -208,7 +208,7 @@ export const SeasonManager = () => {
               <div className="space-y-1">
                 {categorizedSeasons.past.map((saison: any) => (
                   <div key={saison.id} className="text-sm text-muted-foreground">
-                    {saison.annee} ({saison.phases?.length || 0} phases)
+                    {saison.annee} ({saison.phases?.length || 0} phase{(saison.phases?.length || 0) > 1 ? "s" : ""})
                   </div>
                 ))}
               </div>
