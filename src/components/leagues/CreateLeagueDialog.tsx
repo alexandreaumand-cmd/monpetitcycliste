@@ -19,6 +19,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { LeagueTemplateSelector } from "./LeagueTemplateSelector";
 import { CourseSelector } from "./CourseSelector";
+import { LeagueSourceSelector } from "./LeagueSourceSelector";
+import { LeagueMembersPicker, type PickedMember } from "./LeagueMembersPicker";
+import { useLeagueSourceSettings } from "@/hooks/useLeagueSourceSettings";
+import { remapCourseNames } from "@/lib/leagues/cloneMapping";
 import { type GameMode, type FivePhasesVariant } from "@/lib/leagues/types";
 import { computeFivePhasesSettings, computePerCourseSettings } from "@/lib/leagues/templates";
 import {
