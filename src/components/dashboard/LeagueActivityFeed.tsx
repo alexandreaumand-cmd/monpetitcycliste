@@ -175,8 +175,17 @@ export const LeagueActivityFeed = () => {
       }
       case "injury":
         return item.subtitle || t("activity.injury");
-      case "startlist":
-        return t("activity.startlist", { change: item.subtitle ?? "" });
+      case "startlist": {
+        const change =
+          item.subtitle === "added"
+            ? t("activity.startlistAdded")
+            : item.subtitle === "removed"
+              ? t("activity.startlistRemoved")
+              : (item.subtitle ?? "");
+        const owner = item.manager_is_me ? t("activity.me") : item.manager_nom;
+        const parts = [change, item.league_name, owner].filter(Boolean);
+        return parts.join(" · ");
+      }
       case "chat":
         return t("activity.chat", { count: item.count_value ?? 0 });
       case "auction":
@@ -192,10 +201,13 @@ export const LeagueActivityFeed = () => {
     return item.title;
   };
 
-  const subRowTitle = (item: ActivityItem) =>
-    item.etape_numero != null
+  const subRowTitle = (item: ActivityItem) => {
+    if (item.kind === "startlist") return item.riders ?? item.title;
+    return item.etape_numero != null
       ? t("activity.stageLabel", { stage: item.etape_numero })
       : t("activity.finalClassifications");
+  };
+
 
   const isNewAt = (iso: string) => {
     const ts = new Date(iso).getTime();
