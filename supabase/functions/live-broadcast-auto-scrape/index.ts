@@ -33,9 +33,30 @@ type RaceSituation = {
   kmRemaining?: number;
 };
 
+const PARIS_TZ = "Europe/Paris";
+
+// Schedules are entered by admins in Paris local time; evaluate them in that zone
+// (handles DST automatically) instead of the server's UTC clock.
+function getParisMinutes(now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: PARIS_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+function formatParisTime(now: Date): string {
+  const m = getParisMinutes(now);
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
 function getActiveInterval(schedule: ScrapeWindow[] | null, now: Date): number | null {
   if (!Array.isArray(schedule) || schedule.length === 0) return null;
-  const minutes = now.getHours() * 60 + now.getMinutes();
+  const minutes = getParisMinutes(now);
   const toMin = (s: string) => {
     const [h, m] = s.split(":").map(Number);
     return (h || 0) * 60 + (m || 0);
