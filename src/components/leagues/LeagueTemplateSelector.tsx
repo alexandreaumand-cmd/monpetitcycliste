@@ -1,12 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getTemplates, type GameMode } from "@/lib/leagues/templates";
-import { Check, Calendar, MapPin } from "lucide-react";
+import { Check, Calendar, MapPin, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 type LeagueTemplateSelectorProps = {
   selectedMode: GameMode | null;
   onSelect: (mode: GameMode) => void;
+  /** Show a third card to start from an existing league. */
+  showCloneOption?: boolean;
+  isCloneSelected?: boolean;
+  onSelectClone?: () => void;
 };
 
 const MODE_ICONS: Record<string, React.ElementType> = {
@@ -14,7 +18,13 @@ const MODE_ICONS: Record<string, React.ElementType> = {
   per_course: MapPin,
 };
 
-export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplateSelectorProps) {
+export function LeagueTemplateSelector({
+  selectedMode,
+  onSelect,
+  showCloneOption = false,
+  isCloneSelected = false,
+  onSelectClone,
+}: LeagueTemplateSelectorProps) {
   const { t } = useTranslation('leagues');
   const templates = getTemplates();
 
@@ -22,7 +32,7 @@ export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplat
     <div className="grid grid-cols-1 gap-4">
       {templates.map((template) => {
         const Icon = MODE_ICONS[template.id] || Calendar;
-        const isSelected = selectedMode === template.id;
+        const isSelected = !isCloneSelected && selectedMode === template.id;
 
         return (
           <Card
@@ -75,6 +85,32 @@ export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplat
           </Card>
         );
       })}
+
+      {showCloneOption && (
+        <Card
+          className={`p-5 cursor-pointer transition-all hover:border-primary ${
+            isCloneSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''
+          }`}
+          onClick={() => onSelectClone?.()}
+        >
+          <div className="flex items-start gap-4">
+            <div className={`p-3 rounded-xl ${isCloneSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+              <Copy className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg mb-1">{t('clone.title')}</h3>
+              <p className="text-sm text-muted-foreground">{t('clone.description')}</p>
+            </div>
+            {isCloneSelected && (
+              <div className="flex-shrink-0">
+                <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                  <Check className="h-4 w-4 text-primary-foreground" />
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

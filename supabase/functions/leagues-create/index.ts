@@ -52,6 +52,13 @@ Deno.serve(async (req) => {
       
       // per_course specific
       selectedCourseIds, // string[]
+
+      // target season (optional, defaults to the latest season)
+      seasonId,
+
+      // clone flow
+      sourceLeagueId,   // string | undefined
+      memberUserIds,    // string[] - members added directly (excluding owner)
     } = body;
 
     if (!name || !gameMode || !maxPlayers || !firstAuctionStartsAt) {
@@ -67,9 +74,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get active season
-    const { data: season } = await supabase
-      .from('saisons').select('id').order('annee', { ascending: false }).limit(1).single();
+    // Target season: explicit if provided, otherwise the most recent one
+    const { data: season } = seasonId
+      ? await supabase.from('saisons').select('id').eq('id', seasonId).maybeSingle()
+      : await supabase
+          .from('saisons').select('id').order('annee', { ascending: false }).limit(1).maybeSingle();
 
     if (!season) {
       return new Response(JSON.stringify({ error: 'Aucune saison active' }), {
@@ -240,6 +249,59 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Clone flow: add the selected members straight away (requester must administrate the source league)
+    if (sourceLeagueId && Array.isArray(memberUserIds) && memberUserIds.length > 0) {
+      const { data: sourceRole } = await supabase
+        .from('league_members')
+        .select('role_in_league')
+        .eq('league_id', sourceLeagueId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const isSourceAdmin = ['owner', 'admin'].includes(sourceRole?.role_in_league ?? '');
+
+      if (!isSourceAdmin) {
+        console.warn('Clone requested without admin rights on source league', sourceLeagueId);
+      } else {
+        const uniqueIds = [...new Set(memberUserIds.filter((id: string) => id && id !== user.id))]
+          .slice(0, Math.max(0, maxPlayers - 1));
+
+        if (uniqueIds.length > 0) {
+          const { error: bulkError } = await supabase
+            .from('league_members')
+            .insert(uniqueIds.map((id: string) => ({
+              league_id: league.id,
+              user_id: id,
+              role_in_league: 'member',
+            })));
+
+          if (bulkError) {
+            console.error('Bulk member insert error:', bulkError);
+          } else {
+            // Notify the newly added members
+            const { data: addedManagers } = await supabase
+              .from('managers').select('id').in('user_id', uniqueIds);
+
+            if (addedManagers?.length) {
+              await supabase.from('notifications').insert(
+                addedManagers.map((m: any) => ({
+                  manager_id: m.id,
+                  type: 'league_added',
+                  title: 'Nouvelle ligue',
+                  message: `Tu as été ajouté à la ligue "${name}".`,
+                  metadata: { league_id: league.id, league_name: name },
+                  is_read: false,
+                }))
+              ).then(({ error }) => {
+                if (error) console.error('Notification insert error:', error);
+              });
+            }
+          }
+        }
+      }
+    }
+
 
     // Create auction(s)
     const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);

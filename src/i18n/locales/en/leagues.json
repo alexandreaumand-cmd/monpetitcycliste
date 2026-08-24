@@ -49,7 +49,12 @@
     "recapAuction": "Auction start",
     "recapStartingPhase": "Starting phase",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "stepSource": "Template league",
+    "stepGameMode": "Game mode",
+    "stepMembers": "Players",
+    "recapSource": "Template league",
+    "recapMembers": "Added players"
   },
   "join": {
     "title": "Join a League",
@@ -200,5 +205,24 @@
     "shareMessage": "🚴 Join my league \"{{leagueName}}\" on La Bordure!\n\n{{url}}\n\nUse this link to join us.",
     "shareTitle": "La Bordure Invitation",
     "shareText": "Join my league \"{{leagueName}}\"!"
+  },
+  "clone": {
+    "title": "Start from an existing league",
+    "description": "Reuse the settings and players of one of your leagues, then adjust anything you want.",
+    "sourceDesc": "Pick the league to use as a template.",
+    "noSourceLeagues": "You don't administrate any league that can be used as a template.",
+    "missingCourses": "Races not found in the target season: {{list}}"
+  },
+  "members": {
+    "desc": "Pick which players of the previous league to carry over, and add others.",
+    "counter": "{{count}}/{{max}} players",
+    "fromSource": "Players from the template league",
+    "addOthers": "Add other managers",
+    "searchPlaceholder": "Search a manager by name...",
+    "searching": "Searching...",
+    "noResults": "No manager found",
+    "add": "Add",
+    "remove": "Remove",
+    "inviteHint": "You can also share an invite link once the league is created."
   }
 }

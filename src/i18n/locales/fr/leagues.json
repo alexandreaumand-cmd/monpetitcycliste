@@ -49,7 +49,12 @@
     "recapAuction": "Début des enchères",
     "recapStartingPhase": "Phase de départ",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "stepSource": "Ligue modèle",
+    "stepGameMode": "Mode de jeu",
+    "stepMembers": "Joueurs",
+    "recapSource": "Ligue modèle",
+    "recapMembers": "Joueurs ajoutés"
   },
   "join": {
     "title": "Rejoindre une ligue",
@@ -200,5 +205,24 @@
     "shareMessage": "🚴 Rejoins ma ligue \"{{leagueName}}\" sur La Bordure !\n\n{{url}}\n\nUtilise ce lien pour nous rejoindre.",
     "shareTitle": "Invitation La Bordure",
     "shareText": "Rejoins ma ligue \"{{leagueName}}\" !"
+  },
+  "clone": {
+    "title": "Repartir d'une ligue existante",
+    "description": "Reprends les réglages et les joueurs d'une de tes ligues, puis ajuste tout ce que tu veux.",
+    "sourceDesc": "Choisis la ligue à reprendre comme modèle.",
+    "noSourceLeagues": "Tu n'administres aucune ligue pouvant servir de modèle.",
+    "missingCourses": "Courses introuvables dans la saison cible : {{list}}"
+  },
+  "members": {
+    "desc": "Choisis les joueurs de la ligue précédente à reprendre, et ajoute-en d'autres.",
+    "counter": "{{count}}/{{max}} joueurs",
+    "fromSource": "Joueurs de la ligue modèle",
+    "addOthers": "Ajouter d'autres managers",
+    "searchPlaceholder": "Rechercher un manager par nom...",
+    "searching": "Recherche...",
+    "noResults": "Aucun manager trouvé",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "inviteHint": "Tu pourras aussi partager un lien d'invitation après la création de la ligue."
   }
 }
