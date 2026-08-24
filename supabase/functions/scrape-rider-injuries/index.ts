@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchPcs } from "../_shared/pcsFetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,14 +130,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     // Fetch PCS page
-    const res = await fetch(PCS_URL, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
+    const res = await fetchPcs(PCS_URL);
 
     if (!res.ok) {
       return new Response(

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,24 @@ import { TrackerChangeMatchDialog } from "./TrackerChangeMatchDialog";
 import { TrackerCoursesTab } from "./TrackerCoursesTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Extrait le message d'erreur réel renvoyé par la fonction edge
+async function readEdgeError(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return String(body.error);
+    } catch {
+      try {
+        const text = await error.context.text();
+        if (text) return text;
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return error instanceof Error ? error.message : "Erreur inconnue";
+}
 
 interface TrackerChange {
   id: string;
@@ -78,7 +97,7 @@ export const StartlistTracker = () => {
       const { data, error } = await supabase.functions.invoke("startlist-tracker", {
         body: { source_type: "global" },
       });
-      if (error) throw error;
+      if (error) throw new Error(await readEdgeError(error));
       return data;
     },
     onSuccess: (data) => {
@@ -108,7 +127,7 @@ export const StartlistTracker = () => {
       const { data, error } = await supabase.functions.invoke("startlist-tracker", {
         body: { source_type: "race", race_url: url },
       });
-      if (error) throw error;
+      if (error) throw new Error(await readEdgeError(error));
       return data;
     },
     onSuccess: (data) => {

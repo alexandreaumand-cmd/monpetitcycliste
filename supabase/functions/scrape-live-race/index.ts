@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 import { normalize, tokenSig } from "../_shared/normalization.ts";
+import { fetchPcs } from "../_shared/pcsFetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1073,12 +1074,7 @@ serve(async (req) => {
 
     // 1. Fetch the page
     console.log(`[scrape-live-race] Fetching ${url}`);
-    const resp = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "text/html",
-      },
-    });
+    const resp = await fetchPcs(url);
 
     if (!resp.ok) {
       return new Response(JSON.stringify({ error: `HTTP ${resp.status} fetching URL` }), {
