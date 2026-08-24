@@ -616,7 +616,7 @@ export const SuperAdminLiveBroadcastPage = () => {
 
           {isMobile ? (
             <Tabs defaultValue="situation" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="situation">Situation</TabsTrigger>
                 <TabsTrigger value="timeline">
                   Timeline
@@ -626,6 +626,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="planning">Planning</TabsTrigger>
               </TabsList>
               <TabsContent value="situation" className="mt-3">
                 {situationPanel}
@@ -633,13 +634,28 @@ export const SuperAdminLiveBroadcastPage = () => {
               <TabsContent value="timeline" className="mt-3">
                 {timelinePanel}
               </TabsContent>
+              <TabsContent value="planning" className="mt-3">
+                {stagePlanPanel}
+              </TabsContent>
             </Tabs>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4 items-start">
-              {situationPanel}
-              {timelinePanel}
-            </div>
+            <Tabs defaultValue="broadcast" className="w-full">
+              <TabsList>
+                <TabsTrigger value="broadcast">Diffusion</TabsTrigger>
+                <TabsTrigger value="planning">Planning des étapes</TabsTrigger>
+              </TabsList>
+              <TabsContent value="broadcast" className="mt-3">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4 items-start">
+                  {situationPanel}
+                  {timelinePanel}
+                </div>
+              </TabsContent>
+              <TabsContent value="planning" className="mt-3">
+                {stagePlanPanel}
+              </TabsContent>
+            </Tabs>
           )}
+
 
           {isScraping && (
             <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-md bg-background border shadow-lg text-xs">
