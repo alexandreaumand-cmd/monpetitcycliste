@@ -7219,6 +7219,7 @@ export type Database = {
         Returns: {
           count_value: number
           course_id: string
+          course_nom: string
           etape_numero: number
           is_mine: boolean
           kind: string
@@ -7226,6 +7227,7 @@ export type Database = {
           my_points: number
           my_rank: number
           occurred_at: string
+          riders: string
           subtitle: string
           title: string
         }[]
