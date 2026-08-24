@@ -109,7 +109,7 @@ export const SeasonManager = () => {
   });
 
   const setPhaseStatus = useMutation({
-    mutationFn: async ({ phaseId, newStatus }: { phaseId: string; newStatus: string }) => {
+    mutationFn: async ({ phaseId, newStatus }: { phaseId: string; newStatus: 'draft' | 'active' | 'completed' }) => {
       const { error } = await supabase
         .from('phases')
         .update({ statut: newStatus })
