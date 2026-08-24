@@ -570,6 +570,16 @@ export const RankingsMobile = () => {
                             <span className="text-muted-foreground">{t('mobile.victories')}</span>
                             <span className="font-semibold">{(standing as any).nb_victoires ?? (standing as any).victories_count ?? 0}</span>
                           </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">{t('standings.gap')}</span>
+                            <span className="font-semibold">
+                              {rank === 1 ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <span className="text-red-600 font-mono">-{Math.round(gapToPrevious)}</span>
+                              )}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Full detail button */}
