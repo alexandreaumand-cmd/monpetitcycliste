@@ -161,6 +161,11 @@
     "pronosticWrong": "Pick missed",
     "stageLabel": "Stage {{stage}}",
     "finalClassifications": "Final classifications",
-    "groupSummary": "{{count}} results — {{points}} pts for you"
+    "groupSummary": "{{count}} results — {{points}} pts for you",
+    "startlistGroupSummary_one": "{{count}} move",
+    "startlistGroupSummary_other": "{{count}} moves",
+    "startlistAdded": "added",
+    "startlistRemoved": "removed",
+    "me": "me"
   }
 }

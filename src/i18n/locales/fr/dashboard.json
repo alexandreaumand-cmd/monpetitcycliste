@@ -161,6 +161,11 @@
     "pronosticWrong": "Pronostic manqué",
     "stageLabel": "Étape {{stage}}",
     "finalClassifications": "Classements finaux",
-    "groupSummary": "{{count}} résultats — {{points}} pts pour toi"
+    "groupSummary": "{{count}} résultats — {{points}} pts pour toi",
+    "startlistGroupSummary_one": "{{count}} mouvement",
+    "startlistGroupSummary_other": "{{count}} mouvements",
+    "startlistAdded": "ajouté",
+    "startlistRemoved": "retiré",
+    "me": "moi"
   }
 }
