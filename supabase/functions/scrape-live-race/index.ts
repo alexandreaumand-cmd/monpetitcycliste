@@ -1073,12 +1073,7 @@ serve(async (req) => {
 
     // 1. Fetch the page
     console.log(`[scrape-live-race] Fetching ${url}`);
-    const resp = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "text/html",
-      },
-    });
+    const resp = await fetchPcs(url);
 
     if (!resp.ok) {
       return new Response(JSON.stringify({ error: `HTTP ${resp.status} fetching URL` }), {

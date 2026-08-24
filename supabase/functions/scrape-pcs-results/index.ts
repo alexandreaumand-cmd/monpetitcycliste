@@ -293,11 +293,22 @@ serve(async (req) => {
     console.log(`Fetching PCS results from: ${pcsUrl}`);
 
     // 3. Fetch HTML
-    const response = await fetch(pcsUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetchPcs(pcsUrl);
+    } catch (e) {
+      const status = e instanceof PcsFetchError ? e.status : 502;
+      const message = e instanceof PcsFetchError ? e.message : String(e);
+      return new Response(
+        JSON.stringify({
+          error: message,
+          error_type: status === 403 || status === 429 ? "pcs_blocked" : "slug_error",
+          pcs_status: status,
+          slug_used: pcsSlug,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!response.ok) {
       return new Response(

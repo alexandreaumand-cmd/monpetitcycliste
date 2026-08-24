@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+import { fetchPcs, PcsFetchError } from "../_shared/pcsFetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1149,17 +1150,10 @@ function normalizeRiderName(name: string): string {
 async function fetchPcsPdfWhitelist(pcsRaceId: string, referer: string): Promise<Set<string> | null> {
   try {
     const pdfUrl = `https://www.procyclingstats.com/pdf/startlist.php?id=${pcsRaceId}`;
-    const resp = await fetch(pdfUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": referer,
-        "Accept": "application/pdf,text/html,*/*",
-      },
+    const resp = await fetchPcs(pdfUrl, {
+      referer,
+      extraHeaders: { Accept: "application/pdf,text/html,*/*" },
     });
-    if (!resp.ok) {
-      console.warn(`[PDF] fetch failed: ${resp.status} for ${pdfUrl}`);
-      return null;
-    }
     // PCS returns a binary PDF. The content stream uses (string) Tj operators
     // with strings encoded as UTF-16BE (each char prefixed by a null byte).
     // We decode the bytes as latin-1 (preserves all 256 values), extract each
@@ -1248,15 +1242,7 @@ async function fetchPcsPdfWhitelist(pcsRaceId: string, referer: string): Promise
 }
 
 async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string; team_confirmed: boolean }[]> {
-  const response = await fetch(raceUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch race page: ${response.status} for ${raceUrl}`);
-  }
+  const response = await fetchPcs(raceUrl);
 
   const html = await response.text();
   console.log(`Fetched race HTML: ${html.length} characters`);

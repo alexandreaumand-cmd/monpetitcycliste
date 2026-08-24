@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { fetchPcs, PcsFetchError } from '../_shared/pcsFetch.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,12 +84,6 @@ function buildStartlistUrl(race: { pcs_slug: string | null; year: number; file_u
   return null;
 }
 
-const PCS_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-};
-
 async function processRace(
   supabase: any,
   race: { id: string; nom: string; pcs_slug: string | null; year: number; startlist_id: string; file_url: string | null }
@@ -100,10 +95,13 @@ async function processRace(
       return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: 'no PCS URL' };
     }
     console.log(`[abandons] Fetching ${url}`);
-    const res = await fetch(url, { headers: PCS_HEADERS });
-    if (!res.ok) {
-      console.warn(`[abandons] PCS HTTP ${res.status} for ${race.pcs_slug}`);
-      return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: `HTTP ${res.status}` };
+    let res: Response;
+    try {
+      res = await fetchPcs(url);
+    } catch (e) {
+      const status = e instanceof PcsFetchError ? e.status : 0;
+      console.warn(`[abandons] PCS fetch failed for ${race.pcs_slug}:`, e);
+      return { race_id: race.id, nom: race.nom, dnf: 0, dns: 0, matched: 0, total_flagged: 0, error: status ? `HTTP ${status}` : 'fetch error' };
     }
     const html = await res.text();
     const flagged = parsePcsStartlist(html);
