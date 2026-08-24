@@ -1,6 +1,7 @@
-# 3 propositions d'amélioration
+# 3 améliorations à construire
 
-Trois pistes indépendantes. Dis-moi laquelle (ou lesquelles) tu veux que je construise — je peux tout à fait n'en faire qu'une.
+Les trois pistes ci-dessous seront implémentées, dans cet ordre (1 puis 2 puis 3), chacune livrée de façon autonome.
+
 
 ## 1. Fil d'actualité de la ligue (« Ce qui s'est passé »)
 
