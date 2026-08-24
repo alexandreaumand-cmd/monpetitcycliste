@@ -156,6 +156,11 @@
       "all": "Tout",
       "mine": "Mes coureurs",
       "pronostics": "Pronostics"
-    }
+    },
+    "pronosticCorrect": "Pronostic réussi",
+    "pronosticWrong": "Pronostic manqué",
+    "stageLabel": "Étape {{stage}}",
+    "finalClassifications": "Classements finaux",
+    "groupSummary": "{{count}} résultats — {{points}} pts pour toi"
   }
 }

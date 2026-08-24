@@ -24,6 +24,9 @@ import {
   MessageCircle,
   Gavel,
   ChevronRight,
+  ChevronDown,
+  Check,
+  X,
 } from "lucide-react";
 
 type FilterKey = "all" | "mine" | "pronostics";
@@ -34,11 +37,17 @@ const KIND_META: Record<
 > = {
   result: { icon: Trophy, tone: "text-bordure-gold" },
   pronostic: { icon: Target, tone: "text-primary" },
+  pronostic_result: { icon: Target, tone: "text-bordure-gold" },
   injury: { icon: HeartPulse, tone: "text-destructive" },
   startlist: { icon: ListChecks, tone: "text-muted-foreground" },
   chat: { icon: MessageCircle, tone: "text-secondary-foreground" },
   auction: { icon: Gavel, tone: "text-primary" },
 };
+
+/** A timeline entry is either a race group (several result rows) or a single item. */
+type TimelineEntry =
+  | { type: "group"; key: string; courseNom: string; occurredAt: string; items: ActivityItem[] }
+  | { type: "single"; key: string; item: ActivityItem };
 
 export const LeagueActivityFeed = () => {
   const { t } = useTranslation("dashboard");
@@ -49,6 +58,7 @@ export const LeagueActivityFeed = () => {
   const { data: items, isLoading } = useLeagueActivityFeed(leagueId, managerId);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [expanded, setExpanded] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // Snapshot of the previous visit, kept stable for this render session.
   const lastSeenRef = useRef<number | null>(null);
@@ -71,9 +81,43 @@ export const LeagueActivityFeed = () => {
     );
     let rest = all.filter((i) => !todoItems.includes(i));
     if (filter === "mine") rest = rest.filter((i) => i.is_mine);
-    if (filter === "pronostics") rest = rest.filter((i) => i.kind === "pronostic");
+    if (filter === "pronostics") {
+      rest = rest.filter((i) => i.kind === "pronostic" || i.kind === "pronostic_result");
+    }
     rest = rest.filter((i) => new Date(i.occurred_at).getTime() <= now || i.kind !== "pronostic");
-    return { todo: todoItems, timeline: rest };
+
+    // Group result rows by race, keeping the overall chronological order.
+    const entries: TimelineEntry[] = [];
+    const groupIndex = new Map<string, number>();
+    rest.forEach((item, idx) => {
+      if (item.kind === "result" && item.course_id) {
+        const key = `course-${item.course_id}`;
+        const existing = groupIndex.get(key);
+        if (existing !== undefined) {
+          (entries[existing] as Extract<TimelineEntry, { type: "group" }>).items.push(item);
+          return;
+        }
+        groupIndex.set(key, entries.length);
+        entries.push({
+          type: "group",
+          key,
+          courseNom: item.course_nom ?? item.title,
+          occurredAt: item.occurred_at,
+          items: [item],
+        });
+        return;
+      }
+      entries.push({ type: "single", key: `${item.kind}-${idx}`, item });
+    });
+
+    // Sub-rows: final classifications first, then stages ascending.
+    entries.forEach((e) => {
+      if (e.type === "group") {
+        e.items.sort((a, b) => (a.etape_numero ?? -1) - (b.etape_numero ?? -1));
+      }
+    });
+
+    return { todo: todoItems, timeline: entries };
   }, [items, filter]);
 
   const go = (path: string) => {
@@ -82,15 +126,25 @@ export const LeagueActivityFeed = () => {
 
   const describe = (item: ActivityItem) => {
     switch (item.kind) {
-      case "result":
-        return item.my_points && item.my_points > 0
-          ? t("activity.resultWithPoints", {
-              points: Math.round(item.my_points),
-              rank: item.my_rank ?? "-",
-            })
-          : t("activity.resultNoPoints");
+      case "result": {
+        if (!item.my_points || item.my_points <= 0) return t("activity.resultNoPoints");
+        const base = t("activity.resultWithPoints", {
+          points: Math.round(item.my_points),
+          rank: item.my_rank ?? "-",
+        });
+        return item.riders ? `${base} — ${item.riders}` : base;
+      }
       case "pronostic":
         return item.is_mine ? t("activity.pronosticDone") : t("activity.pronosticTodo");
+      case "pronostic_result": {
+        const outcome =
+          item.count_value === 1
+            ? t("activity.pronosticCorrect")
+            : item.count_value === 0
+              ? t("activity.pronosticWrong")
+              : t("activity.pronosticDone");
+        return item.riders ? `${outcome} — ${item.riders}` : outcome;
+      }
       case "injury":
         return item.subtitle || t("activity.injury");
       case "startlist":
@@ -110,21 +164,48 @@ export const LeagueActivityFeed = () => {
     return item.title;
   };
 
-  const renderRow = (item: ActivityItem, idx: number) => {
+  const subRowTitle = (item: ActivityItem) =>
+    item.etape_numero != null
+      ? t("activity.stageLabel", { stage: item.etape_numero })
+      : t("activity.finalClassifications");
+
+  const isNewAt = (iso: string) => {
+    const ts = new Date(iso).getTime();
+    return ts > lastSeen && ts <= Date.now();
+  };
+
+  const renderRow = (item: ActivityItem, key: string, title: string, nested = false) => {
     const meta = KIND_META[item.kind];
     const Icon = meta.icon;
-    const ts = new Date(item.occurred_at).getTime();
-    const isNew = ts > lastSeen && ts <= Date.now();
+    const isNew = isNewAt(item.occurred_at);
+    const OutcomeIcon =
+      item.kind === "pronostic_result" && item.count_value === 1
+        ? Check
+        : item.kind === "pronostic_result" && item.count_value === 0
+          ? X
+          : null;
     return (
       <button
-        key={`${item.kind}-${item.title}-${item.occurred_at}-${idx}`}
+        key={key}
         onClick={() => go(item.link_path)}
-        className="w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        className={cn(
+          "w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40",
+          nested && "border-dashed bg-card/60"
+        )}
       >
-        <Icon className={cn("h-4 w-4 shrink-0", meta.tone)} />
+        {OutcomeIcon ? (
+          <OutcomeIcon
+            className={cn(
+              "h-4 w-4 shrink-0",
+              item.count_value === 1 ? "text-bordure-gold" : "text-destructive"
+            )}
+          />
+        ) : (
+          <Icon className={cn("h-4 w-4 shrink-0", meta.tone)} />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{titleOf(item)}</span>
+            <span className="truncate text-sm font-medium">{title}</span>
             {isNew && (
               <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] leading-tight">
                 {t("activity.new")}
@@ -141,7 +222,56 @@ export const LeagueActivityFeed = () => {
     );
   };
 
+  const renderGroup = (entry: Extract<TimelineEntry, { type: "group" }>) => {
+    const isOpen = openGroups[entry.key] ?? false;
+    const totalPoints = entry.items.reduce((sum, i) => sum + (i.my_points ?? 0), 0);
+    const hasNew = entry.items.some((i) => isNewAt(i.occurred_at));
+    return (
+      <div key={entry.key} className="space-y-1.5">
+        <button
+          onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
+          className="w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        >
+          <Trophy className="h-4 w-4 shrink-0 text-bordure-gold" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold">{entry.courseNom}</span>
+              {hasNew && (
+                <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] leading-tight">
+                  {t("activity.new")}
+                </Badge>
+              )}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {t("activity.groupSummary", {
+                count: entry.items.length,
+                points: Math.round(totalPoints),
+              })}
+            </p>
+          </div>
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            {formatDistanceToNow(new Date(entry.occurredAt), { addSuffix: true, locale })}
+          </span>
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+        </button>
+        {isOpen && (
+          <div className="ml-4 space-y-1.5 border-l pl-3">
+            {entry.items.map((item, idx) =>
+              renderRow(item, `${entry.key}-${idx}`, subRowTitle(item), true)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!leagueId) return null;
+
+  const visible = expanded ? timeline : timeline.slice(0, 8);
 
   return (
     <Card>
@@ -212,7 +342,11 @@ export const LeagueActivityFeed = () => {
               </p>
             ) : (
               <div className="space-y-1.5">
-                {(expanded ? timeline : timeline.slice(0, 8)).map(renderRow)}
+                {visible.map((entry) =>
+                  entry.type === "group"
+                    ? renderGroup(entry)
+                    : renderRow(entry.item, entry.key, titleOf(entry.item))
+                )}
               </div>
             )}
 
