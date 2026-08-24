@@ -375,9 +375,14 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Startlist tracker error:", error);
+    const isPcs = error instanceof PcsFetchError;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+        ...(isPcs ? { error_type: "pcs_blocked", pcs_status: (error as PcsFetchError).status } : {}),
+      }),
+      { status: isPcs ? 502 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+
     );
   }
 });
