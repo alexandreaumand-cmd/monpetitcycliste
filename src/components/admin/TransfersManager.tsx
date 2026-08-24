@@ -103,23 +103,92 @@ export const TransfersManager = () => {
     },
   });
 
+  // Enriched rider search: same names can exist on several fiches (legacy slug ids
+  // vs short codes), so we surface id / last season / team to tell them apart.
   const riderQueries = useQuery({
-    queryKey: ["coureurs", "transfer-search", riderSearch],
+    queryKey: ["coureurs", "transfer-search-v2", riderSearch],
     enabled: Object.values(riderSearch).some((v) => (v ?? "").length >= 2),
     queryFn: async () => {
       const terms = [...new Set(Object.values(riderSearch).filter((v) => (v ?? "").length >= 2))];
-      const result: Record<string, { id: string; nom: string }[]> = {};
+      const result: Record<string, RiderOption[]> = {};
+
       for (const term of terms) {
-        const { data } = await supabase
+        const { data: base } = await supabase
           .from("coureurs")
           .select("id, nom")
           .ilike("nom", `%${term}%`)
           .limit(10);
-        result[term] = (data ?? []) as { id: string; nom: string }[];
+
+        const ids = (base ?? []).map((r: any) => r.id);
+        if (ids.length === 0) {
+          result[term] = [];
+          continue;
+        }
+
+        const { data: cs } = await supabase
+          .from("coureurs_saisons")
+          .select("coureur_id, saison_id, equipe_id, actif, saisons(annee)")
+          .in("coureur_id", ids);
+
+        const equipeIds = [
+          ...new Set((cs ?? []).map((r: any) => r.equipe_id).filter(Boolean)),
+        ] as string[];
+
+        const teamMap = new Map<string, string>();
+        if (equipeIds.length > 0) {
+          const { data: eq } = await supabase
+            .from("equipes_saisons")
+            .select("equipe_id, saison_id, nom_affiche")
+            .in("equipe_id", equipeIds);
+          (eq ?? []).forEach((e: any) =>
+            teamMap.set(`${e.equipe_id}|${e.saison_id}`, e.nom_affiche),
+          );
+        }
+
+        const bySeasons = new Map<string, RiderSeason[]>();
+        (cs ?? []).forEach((row: any) => {
+          const annee = Array.isArray(row.saisons)
+            ? row.saisons[0]?.annee
+            : row.saisons?.annee;
+          const list = bySeasons.get(row.coureur_id) ?? [];
+          list.push({
+            annee: annee ?? 0,
+            actif: !!row.actif,
+            equipe: row.equipe_id ? teamMap.get(`${row.equipe_id}|${row.saison_id}`) ?? null : null,
+          });
+          bySeasons.set(row.coureur_id, list);
+        });
+
+        result[term] = (base ?? [])
+          .map((r: any) => ({
+            id: r.id,
+            nom: r.nom,
+            seasons: (bySeasons.get(r.id) ?? []).sort((a, b) => b.annee - a.annee),
+          }))
+          .sort((a, b) => (b.seasons[0]?.annee ?? 0) - (a.seasons[0]?.annee ?? 0));
       }
       return result;
     },
   });
+
+  // Names of already-matched riders (avoid showing raw ids)
+  const matchedIds = useMemo(
+    () => [...new Set((transfers ?? []).map((t) => t.coureur_id).filter(Boolean) as string[])],
+    [transfers],
+  );
+
+  const { data: matchedNames } = useQuery({
+    queryKey: ["coureurs", "transfer-matched", matchedIds.sort().join(",")],
+    enabled: matchedIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coureurs").select("id, nom").in("id", matchedIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: any) => (map[r.id] = r.nom));
+      return map;
+    },
+  });
+
 
   const runScrape = async () => {
     setScraping(true);
