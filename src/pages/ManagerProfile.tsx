@@ -291,7 +291,7 @@ export default function ManagerProfile() {
           {extraLoading ? (
             <Skeleton className="h-28 w-full" />
           ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               <MiniStat
                 icon={Flag}
                 label={t("managerProfile.leaguesCreated")}
@@ -501,11 +501,11 @@ const MiniStat = ({
   label: string;
   value: string;
 }) => (
-  <div className="flex items-start gap-2">
+  <div className="flex items-start gap-2 rounded-md bg-muted/20 p-2">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-bordure-gold" />
-    <div className="min-w-0">
-      <p className="truncate text-xs text-muted-foreground">{label}</p>
-      <p className="truncate text-sm font-semibold" title={value}>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs leading-tight text-muted-foreground">{label}</p>
+      <p className="break-words text-sm font-semibold leading-snug" title={value}>
         {value}
       </p>
     </div>
