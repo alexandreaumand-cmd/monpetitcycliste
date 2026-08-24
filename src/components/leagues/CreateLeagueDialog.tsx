@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,10 +46,40 @@ type CreateLeagueDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-// Steps differ by game mode
-type StepId = 'mode' | 'name' | 'variant' | 'courses' | 'players' | 'visibility' | 'bonuses' | 'auction' | 'recap';
+// Steps differ by game mode and by creation flow (from scratch vs from an existing league)
+type StepId =
+  | 'mode'
+  | 'source'
+  | 'gamemode'
+  | 'name'
+  | 'variant'
+  | 'courses'
+  | 'members'
+  | 'players'
+  | 'visibility'
+  | 'bonuses'
+  | 'auction'
+  | 'recap';
 
-function getSteps(mode: GameMode | null): StepId[] {
+type CreationFlow = 'direct' | 'clone';
+
+function getSteps(flow: CreationFlow | null, mode: GameMode | null): StepId[] {
+  if (flow === 'clone') {
+    const modeSteps: StepId[] = mode === 'per_course' ? ['courses'] : ['variant'];
+    return [
+      'mode',
+      'source',
+      'name',
+      'gamemode',
+      ...modeSteps,
+      'members',
+      'players',
+      'visibility',
+      'bonuses',
+      'auction',
+      'recap',
+    ];
+  }
   if (!mode) return ['mode'];
   if (mode === 'five_phases') {
     return ['mode', 'name', 'variant', 'players', 'visibility', 'bonuses', 'auction', 'recap'];
@@ -76,6 +106,22 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(1);
+
+  // Clone flow state
+  const [creationFlow, setCreationFlow] = useState<CreationFlow | null>(null);
+  const [sourceLeagueId, setSourceLeagueId] = useState<string | null>(null);
+  const [memberUserIds, setMemberUserIds] = useState<string[]>([]);
+  const [extraMembers, setExtraMembers] = useState<PickedMember[]>([]);
+  const [selfUserId, setSelfUserId] = useState<string | null>(null);
+  const prefilledSourceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setSelfUserId(data.user?.id ?? null));
+  }, []);
+
+  const { data: sourceSettings } = useLeagueSourceSettings(
+    creationFlow === 'clone' ? sourceLeagueId : null
+  );
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
@@ -136,7 +182,46 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     enabled: selectedCourseIds.length > 0,
   });
 
-  const steps = getSteps(selectedMode);
+  // Prefill the wizard from the source league (clone flow)
+  const [missingCourses, setMissingCourses] = useState<string[]>([]);
+  useEffect(() => {
+    if (creationFlow !== 'clone' || !sourceSettings) return;
+    if (prefilledSourceRef.current === sourceSettings.id) return;
+    prefilledSourceRef.current = sourceSettings.id;
+
+    setSelectedMode((sourceSettings.gameMode as GameMode) ?? 'five_phases');
+    setName(sourceSettings.name);
+    setVisibility(sourceSettings.visibility);
+    setPlayerCount(sourceSettings.maxPlayers);
+    setBonusesEnabled(sourceSettings.bonusesEnabled);
+    setVariant(sourceSettings.wtOnly ? 'wt_only' : 'full_season');
+    setMemberUserIds(
+      sourceSettings.members.filter(m => m.userId !== selfUserId).map(m => m.userId)
+    );
+    setExtraMembers([]);
+    setSelectedCourseIds([]);
+    setMissingCourses([]);
+  }, [creationFlow, sourceSettings, selfUserId]);
+
+  // Remap the source races onto the target season (names are stable, ids are not)
+  useEffect(() => {
+    if (creationFlow !== 'clone' || !sourceSettings || !seasonId) return;
+    if (sourceSettings.gameMode !== 'per_course' || sourceSettings.courseNames.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('courses')
+        .select('id, nom')
+        .eq('saison_id', seasonId);
+      if (cancelled) return;
+      const { ids, missing } = remapCourseNames(sourceSettings.courseNames, data || []);
+      setSelectedCourseIds(ids);
+      setMissingCourses(missing);
+    })();
+    return () => { cancelled = true; };
+  }, [creationFlow, sourceSettings, seasonId]);
+
+  const steps = getSteps(creationFlow, selectedMode);
   const currentStep = steps[currentStepIndex];
   const totalSteps = steps.length;
   const progressPercent = ((currentStepIndex) / (totalSteps - 1)) * 100;
@@ -162,15 +247,24 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setSelectedCourseIds([]);
     setStartingPhaseIndex(1);
     setPhaseAutoSet(false);
+    setCreationFlow(null);
+    setSourceLeagueId(null);
+    setMemberUserIds([]);
+    setExtraMembers([]);
+    setMissingCourses([]);
+    prefilledSourceRef.current = null;
     onOpenChange(false);
   };
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 'mode': return selectedMode !== null;
+      case 'mode': return creationFlow === 'clone' ? true : selectedMode !== null;
+      case 'source': return !!sourceLeagueId && !!sourceSettings;
+      case 'gamemode': return selectedMode !== null;
       case 'name': return name.trim() !== "" && seasonId !== "";
       case 'variant': return true;
       case 'courses': return selectedCourseIds.length > 0;
+      case 'members': return true;
       case 'players': return true;
       case 'visibility': return true;
       case 'bonuses': return true;
@@ -182,13 +276,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
 
   const handleNext = () => {
     if (currentStepIndex < totalSteps - 1 && canProceed()) {
-      // When moving past mode step, recalculate steps
-      if (currentStep === 'mode' && selectedMode) {
-        const newSteps = getSteps(selectedMode);
-        setCurrentStepIndex(1); // go to step after mode
-      } else {
-        setCurrentStepIndex(prev => prev + 1);
-      }
+      setCurrentStepIndex(prev => prev + 1);
     }
   };
 
@@ -217,8 +305,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           maxPlayers: playerCount,
           bonusesEnabled,
           firstAuctionStartsAt: firstAuctionDate.toISOString(),
+          seasonId,
           ...(selectedMode === 'five_phases' && { variant, startingPhaseIndex }),
           ...(selectedMode === 'per_course' && { selectedCourseIds }),
+          ...(creationFlow === 'clone' && sourceLeagueId && {
+            sourceLeagueId,
+            memberUserIds: [...memberUserIds, ...extraMembers.map(m => m.userId)],
+          }),
         },
       });
 
@@ -240,6 +333,9 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const getStepTitle = (): string => {
     switch (currentStep) {
       case 'mode': return t('create.selectMode');
+      case 'source': return t('wizard.stepSource');
+      case 'gamemode': return t('wizard.stepGameMode');
+      case 'members': return t('wizard.stepMembers');
       case 'name': return t('wizard.stepName');
       case 'variant': return t('wizard.stepVariant');
       case 'courses': return t('wizard.stepCourses');
@@ -258,9 +354,53 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
         return (
           <LeagueTemplateSelector
             selectedMode={selectedMode}
+            onSelect={(mode) => {
+              setCreationFlow('direct');
+              setSourceLeagueId(null);
+              prefilledSourceRef.current = null;
+              setSelectedMode(mode);
+            }}
+            showCloneOption
+            isCloneSelected={creationFlow === 'clone'}
+            onSelectClone={() => {
+              setCreationFlow('clone');
+              setSelectedMode(null);
+            }}
+          />
+        );
+
+      case 'source':
+        return (
+          <LeagueSourceSelector
+            selectedLeagueId={sourceLeagueId}
+            onSelect={(id) => {
+              prefilledSourceRef.current = null;
+              setSourceLeagueId(id);
+            }}
+          />
+        );
+
+      case 'gamemode':
+        return (
+          <LeagueTemplateSelector
+            selectedMode={selectedMode}
             onSelect={setSelectedMode}
           />
         );
+
+      case 'members':
+        return (
+          <LeagueMembersPicker
+            sourceMembers={sourceSettings?.members ?? []}
+            selfUserId={selfUserId}
+            selectedUserIds={memberUserIds}
+            onChange={setMemberUserIds}
+            extraMembers={extraMembers}
+            onExtraMembersChange={setExtraMembers}
+            maxPlayers={playerCount}
+          />
+        );
+
 
       case 'name':
         return (
