@@ -26,7 +26,12 @@ export interface ActivityItem {
   course_nom: string | null;
   /** Riders involved (scoring riders for results, picked rider for pronostics). */
   riders: string | null;
+  /** Startlist moves: owning league / manager. */
+  league_name: string | null;
+  manager_nom: string | null;
+  manager_is_me: boolean | null;
 }
+
 
 /**
  * Unified league activity feed (results, pronostics, injuries, startlist moves,
