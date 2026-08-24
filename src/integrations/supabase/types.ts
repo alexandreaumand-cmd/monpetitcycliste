@@ -3117,6 +3117,77 @@ export type Database = {
           },
         ]
       }
+      live_stage_plans: {
+        Row: {
+          course_id: string
+          created_at: string
+          etape_numero: number | null
+          id: string
+          is_enabled: boolean
+          last_auto_scrape_at: string | null
+          next_auto_scrape_at: string | null
+          scrape_schedule: Json | null
+          scrape_url: string | null
+          stage_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          etape_numero?: number | null
+          id?: string
+          is_enabled?: boolean
+          last_auto_scrape_at?: string | null
+          next_auto_scrape_at?: string | null
+          scrape_schedule?: Json | null
+          scrape_url?: string | null
+          stage_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          etape_numero?: number | null
+          id?: string
+          is_enabled?: boolean
+          last_auto_scrape_at?: string | null
+          next_auto_scrape_at?: string | null
+          scrape_schedule?: Json | null
+          scrape_url?: string | null
+          stage_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_stage_plans_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_stage_plans_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_stage_plans_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "live_stage_plans_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       manager_bonus_points: {
         Row: {
           bonus_coureurs: number
