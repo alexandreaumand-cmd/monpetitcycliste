@@ -60,3 +60,8 @@ La page PCS fournie est exploitable : tableau avec Published / Rider / From / Go
 - Nouveau composant `src/components/admin/SeasonPrepareManager.tsx` monté dans l'onglet Saisons.
 - Nouvelle fonction SQL `clone_season_data(p_source_saison uuid, p_target_saison uuid, p_equipes bool, p_baremes bool, p_coureurs bool)` (SECURITY DEFINER, réservée aux super-admins) qui insère dans `equipes_saisons`, `scoring_rules_saisons` et `coureurs_saisons` avec `ON CONFLICT DO NOTHING`, et renvoie le décompte par table.
 - Aucun changement de la tâche planifiée `auto_update_phase_statuts` (comportement automatique conservé).
+- Nouveau composant `src/components/admin/SeasonPricesImport.tsx` : export du modèle et import xlsx/csv (via `xlsx`), aperçu diff puis application par lots sur `coureurs_saisons`.
+- Nouvelle table `public.rider_transfers` (RLS : lecture/écriture super-admin uniquement, GRANT `authenticated` + `service_role`), avec index unique anti-doublon.
+- Nouvelle fonction edge `supabase/functions/scrape-pcs-transfers/index.ts` utilisant `_shared/pcsFetch.ts`, parsing de `table.basic` (colonnes Published / Rider / From / Goes to / Season + slugs des liens `rider/...` et `team/...-<annee>/transfers`), upsert `ON CONFLICT DO NOTHING`, paramètre `days` (défaut 120).
+- Tâche planifiée quotidienne (pg_cron + pg_net) appelant cette fonction.
+- Nouveau composant `src/components/admin/TransfersManager.tsx` (onglet dans la section Données) : liste, rapprochement coureur/équipe, création d'équipe, application vers `coureurs_saisons`, création d'alias dans `name_aliases`.
