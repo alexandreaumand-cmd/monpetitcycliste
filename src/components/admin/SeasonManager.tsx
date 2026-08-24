@@ -469,7 +469,7 @@ export const SeasonManager = () => {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor={`budget-${saison.id}`}>Budget</Label>
                             <Input
@@ -479,6 +479,21 @@ export const SeasonManager = () => {
                               onChange={(e) => setBudget(e.target.value)}
                               step="100"
                             />
+                          </div>
+                          <div>
+                            <Label>Statut à la création</Label>
+                            <Select
+                              value={phaseStatut}
+                              onValueChange={(v) => setPhaseStatut(v as "draft" | "active")}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="draft">Brouillon (recommandé)</SelectItem>
+                                <SelectItem value="active">Active immédiatement</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-end">
                             <Button
@@ -492,6 +507,7 @@ export const SeasonManager = () => {
                             </Button>
                           </div>
                         </div>
+
                       </div>
                     </div>
                   </TabsContent>
