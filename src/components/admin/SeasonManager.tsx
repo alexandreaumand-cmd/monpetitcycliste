@@ -23,7 +23,7 @@ export const SeasonManager = () => {
   const [budget, setBudget] = useState("2200");
 
   const { data: saisons, isLoading } = useQuery({
-    queryKey: ['saisons'],
+    queryKey: ['saisons', 'with-phases'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('saisons')
