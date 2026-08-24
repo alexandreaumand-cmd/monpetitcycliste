@@ -1,11 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MaintenanceStatus } from "./maintenance/MaintenanceStatus";
 import { BannerConfigSection } from "./maintenance/BannerConfigSection";
-import { PhaseUpdateSection } from "./maintenance/PhaseUpdateSection";
 import { RepairSection } from "./maintenance/RepairSection";
-import { CleanupSection } from "./maintenance/CleanupSection";
 import { ResetSection } from "./maintenance/ResetSection";
-import { AuctionResetManager } from "./AuctionResetManager";
 import { Activity, Settings, Wrench, AlertTriangle } from "lucide-react";
 
 export const MaintenanceTabs = () => {
@@ -44,7 +41,6 @@ export const MaintenanceTabs = () => {
 
         <TabsContent value="config" className="space-y-6">
           <BannerConfigSection />
-          <PhaseUpdateSection />
         </TabsContent>
 
         <TabsContent value="repair" className="space-y-6">
@@ -52,7 +48,6 @@ export const MaintenanceTabs = () => {
         </TabsContent>
 
         <TabsContent value="danger" className="space-y-6">
-          <CleanupSection />
           <ResetSection />
         </TabsContent>
       </Tabs>

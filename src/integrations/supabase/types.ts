@@ -7499,6 +7499,12 @@ export type Database = {
       is_league_admin: { Args: { l_id: string }; Returns: boolean }
       is_league_member: { Args: { l_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      list_public_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
       manager_coureur_points_detail: {
         Args: { p_coureur_id: string; p_phase_id?: string }
         Returns: {

@@ -19,7 +19,7 @@ export const SeasonDeleteManager = () => {
   const [confirmationPhrase, setConfirmationPhrase] = useState("");
 
   const { data: saisons } = useQuery({
-    queryKey: ['saisons'],
+    queryKey: ['saisons', 'list'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('saisons')
