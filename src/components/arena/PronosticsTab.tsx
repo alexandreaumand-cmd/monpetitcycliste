@@ -158,23 +158,34 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   };
 
   return (
-    <div className="space-y-4 max-w-full overflow-hidden">
-      <PronosticUrgencyBanner
-        missing={missingOpen}
-        onGoToUpcoming={() => setActiveTab("upcoming")}
-      />
+    <div className="max-w-full overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:items-start">
+      <div className="space-y-4 min-w-0">
+        <PronosticUrgencyBanner
+          missing={missingOpen}
+          onGoToUpcoming={() => setActiveTab("upcoming")}
+        />
 
-      <TabGroup
-        items={tabItems}
-        selected={activeTab}
-        onSelect={setActiveTab}
-      />
+        <TabGroup items={tabItems} selected={activeTab} onSelect={setActiveTab} />
 
+        {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
+        {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}
+        {activeTab === "past" && renderDeadlineList(evaluatedDeadlines)}
 
-      {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
-      {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}
-      {activeTab === "past" && renderDeadlineList(evaluatedDeadlines)}
-      {activeTab === "standings" && <PronosticStandings leagueId={leagueId} />}
+        {/* Mobile only: standings live behind a dedicated tab instead of a long scroll. */}
+        {activeTab === "standings" && (
+          <div className="space-y-4 lg:hidden">
+            <PronosticStandings leagueId={leagueId} />
+            <HallOfFameSection leagueId={leagueId} variant="compact" />
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: standings + prestige podium always visible in a sticky column. */}
+      <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
+        <PronosticStandings leagueId={leagueId} />
+        <HallOfFameSection leagueId={leagueId} variant="compact" />
+      </aside>
     </div>
   );
 };
+
