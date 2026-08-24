@@ -29,13 +29,13 @@
   "badges": {
     "today": "Aujourd'hui",
     "passed": "Passée",
-    "daysUntil": "Dans {{count}} jour",
-    "daysUntil_plural": "Dans {{count}} jours",
-    "inProgress": "En cours"
+    "inProgress": "En cours",
+    "daysUntil_other": "Dans {{count}} jours",
+    "daysUntil_one": "Dans {{count}} jour"
   },
   "results": {
-    "found": "{{count}} course trouvée",
-    "found_plural": "{{count}} courses trouvées"
+    "found_other": "{{count}} courses trouvées",
+    "found_one": "{{count}} course trouvée"
   },
   "export": {
     "button": "Export Excel",

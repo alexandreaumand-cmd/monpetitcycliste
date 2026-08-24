@@ -18,8 +18,8 @@
     "favoritesOnly": "Favorites only",
     "reset": "Reset",
     "showFilters": "Filters",
-    "activeFilters": "{{count}} active filter",
-    "activeFilters_plural": "{{count}} active filters"
+    "activeFilters_other": "{{count}} active filters",
+    "activeFilters_one": "{{count}} active filter"
   },
   "table": {
     "fav": "Fav",
@@ -31,10 +31,10 @@
     "program": "Program"
   },
   "results": {
-    "ridersShown": "{{count}} rider shown",
-    "ridersShown_plural": "{{count}} riders shown",
     "outOfTotal": "out of {{total}} total",
-    "noRiders": "No riders found"
+    "noRiders": "No riders found",
+    "ridersShown_other": "{{count}} riders shown",
+    "ridersShown_one": "{{count}} rider shown"
   },
   "export": {
     "button": "Excel",
