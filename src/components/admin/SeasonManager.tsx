@@ -81,7 +81,7 @@ export const SeasonManager = () => {
           date_debut: dateDebut,
           date_fin: dateFin,
           budget: parseFloat(budget),
-          statut: 'active'
+          statut: phaseStatut
         });
 
       if (error) throw error;
@@ -91,7 +91,9 @@ export const SeasonManager = () => {
       queryClient.invalidateQueries({ queryKey: ['phases'] });
       toast({
         title: "Phase créée",
-        description: "La phase a été créée et activée"
+        description: phaseStatut === 'draft'
+          ? "La phase est en brouillon : elle s'activera automatiquement à sa date de début, ou manuellement via « Lancer »."
+          : "La phase a été créée et activée"
       });
       setPhaseIndex((prev) => (parseInt(prev) + 1).toString());
       setDateDebut("");
@@ -106,9 +108,8 @@ export const SeasonManager = () => {
     }
   });
 
-  const togglePhaseStatus = useMutation({
-    mutationFn: async ({ phaseId, currentStatus }: { phaseId: string; currentStatus: string }) => {
-      const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+  const setPhaseStatus = useMutation({
+    mutationFn: async ({ phaseId, newStatus }: { phaseId: string; newStatus: string }) => {
       const { error } = await supabase
         .from('phases')
         .update({ statut: newStatus })
@@ -132,6 +133,7 @@ export const SeasonManager = () => {
       });
     }
   });
+
 
   // Categorize seasons
   const categorizedSeasons = useMemo(() => {
