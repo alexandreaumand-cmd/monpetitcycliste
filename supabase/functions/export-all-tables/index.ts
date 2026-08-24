@@ -192,13 +192,25 @@ Deno.serve(async (req) => {
     // Create service role client for exporting all data (bypasses RLS)
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
     
+    // Discover every public table dynamically (falls back to the static list)
+    let tables: string[] = FALLBACK_TABLES;
+    const { data: discovered, error: discoverError } = await userClient.rpc('list_public_tables');
+    if (discoverError) {
+      console.error('Table discovery failed, using fallback list:', discoverError.message);
+    } else if (Array.isArray(discovered) && discovered.length > 0) {
+      tables = (discovered as Array<{ table_name: string }>)
+        .map((r) => r.table_name)
+        .filter((t) => !!t);
+      console.log(`Discovered ${tables.length} public tables`);
+    }
+
     // Create ZIP file
     const zip = new JSZip();
     const metadata: Record<string, { rows: number; exportedAt: string }> = {};
     const exportDate = new Date().toISOString();
     
     // Export each table
-    for (const tableName of TABLES) {
+    for (const tableName of tables) {
       try {
         console.log(`Exporting table: ${tableName}`);
 
