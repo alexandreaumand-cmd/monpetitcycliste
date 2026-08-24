@@ -5,6 +5,8 @@ import { Target } from "lucide-react";
 import { PronosticRaceCard } from "./PronosticRaceCard";
 import { PronosticStandings } from "./PronosticStandings";
 import { PronosticUrgencyBanner } from "./PronosticUrgencyBanner";
+import { HallOfFameSection } from "./HallOfFameSection";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TabGroup } from "@/components/mobile/TabGroup";
 import {
   useCurrentManagerId,
@@ -24,6 +26,7 @@ interface PronosticsTabProps {
 export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   const { t } = useTranslation("arena");
   const [activeTab, setActiveTab] = useState("inprogress");
+  const isDesktop = !useIsMobile();
   const { data: managerId, isLoading: managerLoading } = useCurrentManagerId();
   const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines(leagueId);
   const { data: myPronostics, isLoading: pronosticsLoading } = useMyPronostics(leagueId, managerId || null);
@@ -85,11 +88,12 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     ) || null;
   };
 
+  // The standings tab is mobile-only: on desktop they sit in the sticky sidebar.
   const tabItems = [
     { label: t("pronostics.tabs.inProgress"), value: "inprogress" },
     { label: t("pronostics.tabs.upcoming"), value: "upcoming" },
     { label: t("pronostics.tabs.past"), value: "past" },
-    { label: t("pronostics.tabs.standings"), value: "standings" },
+    ...(isDesktop ? [] : [{ label: t("pronostics.tabs.standings"), value: "standings" }]),
   ];
 
   if (isLoading) {
@@ -158,23 +162,34 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   };
 
   return (
-    <div className="space-y-4 max-w-full overflow-hidden">
-      <PronosticUrgencyBanner
-        missing={missingOpen}
-        onGoToUpcoming={() => setActiveTab("upcoming")}
-      />
+    <div className="max-w-full overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:items-start">
+      <div className="space-y-4 min-w-0">
+        <PronosticUrgencyBanner
+          missing={missingOpen}
+          onGoToUpcoming={() => setActiveTab("upcoming")}
+        />
 
-      <TabGroup
-        items={tabItems}
-        selected={activeTab}
-        onSelect={setActiveTab}
-      />
+        <TabGroup items={tabItems} selected={activeTab} onSelect={setActiveTab} />
 
+        {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
+        {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}
+        {activeTab === "past" && renderDeadlineList(evaluatedDeadlines)}
 
-      {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
-      {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}
-      {activeTab === "past" && renderDeadlineList(evaluatedDeadlines)}
-      {activeTab === "standings" && <PronosticStandings leagueId={leagueId} />}
+        {/* Mobile only: standings live behind a dedicated tab instead of a long scroll. */}
+        {activeTab === "standings" && (
+          <div className="space-y-4 lg:hidden">
+            <PronosticStandings leagueId={leagueId} />
+            <HallOfFameSection leagueId={leagueId} variant="compact" />
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: standings + prestige podium always visible in a sticky column. */}
+      <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
+        <PronosticStandings leagueId={leagueId} showChart={false} />
+        <HallOfFameSection leagueId={leagueId} variant="compact" />
+      </aside>
     </div>
   );
 };
+

@@ -127,7 +127,9 @@
       "requiredFields": "Please fill in all required fields",
       "minOptions": "At least 2 options are required",
       "autoManagerOptions": "League managers ({{count}}) will be automatically added as options"
-    }
+    },
+    "pastPolls_one": "{{count}} past poll",
+    "pastPolls_other": "{{count}} past polls"
   },
   "trashTalk": {
     "title": "Trash Talk",

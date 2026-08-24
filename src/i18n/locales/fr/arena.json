@@ -127,7 +127,9 @@
       "requiredFields": "Veuillez remplir tous les champs obligatoires",
       "minOptions": "Il faut au moins 2 options",
       "autoManagerOptions": "Les managers de la ligue ({{count}}) seront automatiquement ajoutés comme options"
-    }
+    },
+    "pastPolls_one": "{{count}} sondage passé",
+    "pastPolls_other": "{{count}} sondages passés"
   },
   "trashTalk": {
     "title": "Trash Talk",

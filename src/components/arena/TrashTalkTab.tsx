@@ -15,6 +15,7 @@ import {
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
+import { ArenaPollsPanel } from "./ArenaPollsPanel";
 import { toast } from "sonner";
 
 interface TrashTalkTabProps {
@@ -100,7 +101,9 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] border rounded-lg overflow-hidden bg-background">
+    <div className="space-y-2">
+      <ArenaPollsPanel leagueId={leagueId} />
+      <div className="flex flex-col h-[calc(100dvh-230px)] min-h-[420px] border rounded-lg overflow-hidden bg-background">
       {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
         {hasNextPage && (
@@ -155,13 +158,14 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       </div>
 
       {/* Input */}
-      <MessageInput
-        onSend={handleSend}
-        managers={managers}
-        riders={[]}
-        disabled={sendMessage.isPending}
-        readOnly={false}
-      />
+        <MessageInput
+          onSend={handleSend}
+          managers={managers}
+          riders={[]}
+          disabled={sendMessage.isPending}
+          readOnly={false}
+        />
+      </div>
     </div>
   );
 };

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 
 interface HallOfFameSectionProps {
   leagueId: string;
+  /** "compact" renders a slim sidebar card (podium row + top 5) and hides itself when empty. */
+  variant?: "full" | "compact";
 }
 
 const PODIUM_CONFIG = [
@@ -16,9 +18,47 @@ const PODIUM_CONFIG = [
   { rank: 3, icon: "🥉", size: "h-12 w-12", textSize: "text-sm", ring: "ring-2 ring-amber-600" },
 ];
 
-export const HallOfFameSection = ({ leagueId }: HallOfFameSectionProps) => {
+export const HallOfFameSection = ({ leagueId, variant = "full" }: HallOfFameSectionProps) => {
   const { t } = useTranslation("arena");
   const { data: standings, isLoading } = usePrestigeStandings(leagueId);
+  const isCompact = variant === "compact";
+
+  if (isCompact) {
+    if (isLoading) return <Skeleton className="h-24 w-full" />;
+    if (!standings || standings.length === 0) return null;
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Crown className="h-4 w-4 text-bordure-gold" />
+            {t("hallOfFame.title")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1.5">
+          {standings.slice(0, 5).map((entry, idx) => (
+            <div key={entry.manager_id} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-center text-sm">
+                {idx < 3 ? ["🥇", "🥈", "🥉"][idx] : (
+                  <span className="font-mono text-xs text-muted-foreground">{idx + 1}</span>
+                )}
+              </span>
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarImage src={entry.avatar_url || undefined} />
+                <AvatarFallback className="text-[10px]">
+                  {entry.manager_nom.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="min-w-0 flex-1 truncate text-sm">{entry.manager_nom}</span>
+              <Badge variant="secondary" className="shrink-0 gap-1 text-xs">
+                <Trophy className="h-3 w-3" />
+                {entry.total_points}
+              </Badge>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

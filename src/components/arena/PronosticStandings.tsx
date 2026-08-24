@@ -21,6 +21,8 @@ import { PronosticProgressionChart } from "./PronosticProgressionChart";
 
 interface PronosticStandingsProps {
   leagueId: string;
+  /** The progression chart is unreadable in the narrow desktop sidebar. */
+  showChart?: boolean;
 }
 
 const ALL_COURSES = "__all__";
@@ -51,7 +53,7 @@ const getRankEmoji = (index: number) => {
   }
 };
 
-export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
+export const PronosticStandings = ({ leagueId, showChart = true }: PronosticStandingsProps) => {
   const { t } = useTranslation("arena");
   const [courseFilter, setCourseFilter] = useState<string>(ALL_COURSES);
   const [selected, setSelected] = useState<{ id: string; nom: string } | null>(
@@ -138,7 +140,7 @@ export const PronosticStandings = ({ leagueId }: PronosticStandingsProps) => {
         courseId={courseId}
       />
     </Card>
-    <PronosticProgressionChart leagueId={leagueId} courseId={courseId} />
+    {showChart && <PronosticProgressionChart leagueId={leagueId} courseId={courseId} />}
     </div>
   );
 };
