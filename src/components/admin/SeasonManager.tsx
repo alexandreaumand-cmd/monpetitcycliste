@@ -526,8 +526,13 @@ export const SeasonManager = () => {
         </Card>
       )}
 
+      {/* Season preparation tools */}
+      <SeasonPrepareManager />
+      <SeasonPricesImport />
+
       {/* Danger Zone */}
       <SeasonDeleteManager />
+
     </div>
   );
 };
