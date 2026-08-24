@@ -49,6 +49,16 @@ function getParisMinutes(now: Date): number {
   return hour * 60 + minute;
 }
 
+function getParisDate(now: Date): string {
+  // YYYY-MM-DD in Paris timezone
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: PARIS_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
 function formatParisTime(now: Date): string {
   const m = getParisMinutes(now);
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -134,8 +144,7 @@ serve(async (req) => {
     .from("arena_live_courses")
     .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin)")
     .eq("is_active", true)
-    .eq("auto_scrape_enabled", true)
-    .not("live_scrape_url", "is", null);
+    .eq("auto_scrape_enabled", true);
 
   if (error) {
     console.error("[auto-scrape] select error", error);
@@ -147,6 +156,19 @@ serve(async (req) => {
 
   const now = new Date();
   const parisTime = formatParisTime(now);
+  const parisDate = getParisDate(now);
+
+  // Stage plans scheduled for today (Paris) — these override the course-level url/schedule
+  const { data: todayPlans } = await admin
+    .from("live_stage_plans")
+    .select("id, course_id, etape_numero, scrape_url, scrape_schedule, last_auto_scrape_at")
+    .eq("is_enabled", true)
+    .eq("stage_date", parisDate);
+
+  const planByCourse = new Map<string, any>();
+  for (const plan of (todayPlans || []) as any[]) {
+    if (plan.scrape_url) planByCourse.set(plan.course_id, plan);
+  }
 
   if (!rows || rows.length === 0) {
     console.log(`[auto-scrape] ${parisTime} Paris — no active course with auto-scrape enabled`);
@@ -162,7 +184,24 @@ serve(async (req) => {
   console.log(`[auto-scrape] ${parisTime} Paris — ${rows.length} course(s) with auto-scrape enabled`);
 
   for (const row of rows as any[]) {
-    const interval = getActiveInterval(row.scrape_schedule as ScrapeWindow[] | null, now);
+    const plan = planByCourse.get(row.course_id) || null;
+    const source = plan ? "plan" : "fallback";
+    const effectiveUrl: string | null = plan?.scrape_url ?? row.live_scrape_url ?? null;
+    const effectiveSchedule = (plan
+      ? (Array.isArray(plan.scrape_schedule) && plan.scrape_schedule.length > 0
+          ? plan.scrape_schedule
+          : row.scrape_schedule)
+      : row.scrape_schedule) as ScrapeWindow[] | null;
+    const effectiveStage: number | null = plan?.etape_numero ?? row.current_etape ?? null;
+    const lastAt = plan ? (plan.last_auto_scrape_at ?? row.last_auto_scrape_at) : row.last_auto_scrape_at;
+
+    if (!effectiveUrl) {
+      console.log(`[auto-scrape] ${row.course_id}: no scrape url (source=${source}) — skipped`);
+      skipped++;
+      continue;
+    }
+
+    const interval = getActiveInterval(effectiveSchedule, now);
     if (interval == null) {
       console.log(`[auto-scrape] ${row.course_id}: out of schedule window at ${parisTime} Paris — skipped`);
       // Out of window — clear next time
@@ -171,10 +210,13 @@ serve(async (req) => {
         .update({ next_auto_scrape_at: null })
         .eq("course_id", row.course_id)
         .eq("is_active", true);
+      if (plan) {
+        await admin.from("live_stage_plans").update({ next_auto_scrape_at: null }).eq("id", plan.id);
+      }
       skipped++;
       continue;
     }
-    const last = row.last_auto_scrape_at ? new Date(row.last_auto_scrape_at).getTime() : 0;
+    const last = lastAt ? new Date(lastAt).getTime() : 0;
     const elapsed = (now.getTime() - last) / 1000;
     if (elapsed < interval) {
       console.log(
@@ -184,7 +226,22 @@ serve(async (req) => {
       continue;
     }
 
-    console.log(`[auto-scrape] ${row.course_id}: running (window interval ${interval}s, ${Math.round(elapsed)}s elapsed)`);
+    console.log(
+      `[auto-scrape] ${row.course_id}: running (source=${source}, stage=${effectiveStage ?? "-"}, window interval ${interval}s, ${Math.round(elapsed)}s elapsed)`
+    );
+
+    // Keep the course row aligned with the plan of the day so the UI + broadcasts use the right stage
+    if (plan) {
+      const patch: Record<string, unknown> = { live_scrape_url: effectiveUrl };
+      if (plan.etape_numero != null && plan.etape_numero !== row.current_etape) {
+        patch.current_etape = plan.etape_numero;
+      }
+      await admin
+        .from("arena_live_courses")
+        .update(patch)
+        .eq("course_id", row.course_id)
+        .eq("is_active", true);
+    }
 
     const isStageRace =
       row.courses?.type_course === "stage_race" ||
@@ -200,7 +257,7 @@ serve(async (req) => {
         },
 
         body: JSON.stringify({
-          url: row.live_scrape_url,
+          url: effectiveUrl,
           course_id: row.course_id,
           is_stage_race: !!isStageRace,
         }),
@@ -215,7 +272,7 @@ serve(async (req) => {
         throw new Error(data.error);
       }
 
-      const latestStage = row.current_etape ?? null;
+      const latestStage = effectiveStage;
       const { data: recentMessages } = await admin
         .from("arena_messages")
         .select("content, metadata, created_at")
@@ -266,6 +323,12 @@ serve(async (req) => {
         .update({ last_auto_scrape_at: now.toISOString(), next_auto_scrape_at: nextAt })
         .eq("course_id", row.course_id)
         .eq("is_active", true);
+      if (plan) {
+        await admin
+          .from("live_stage_plans")
+          .update({ last_auto_scrape_at: now.toISOString(), next_auto_scrape_at: nextAt })
+          .eq("id", plan.id);
+      }
       ran++;
     } catch (e: any) {
       console.error("[auto-scrape] error for", row.course_id, e);
