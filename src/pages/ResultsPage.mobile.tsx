@@ -240,6 +240,6 @@ export const ResultsPageMobile = () => {
           </>}
       </div>
 
-      <CourseResultsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} courseId={selectedCourseId} />
+      <CourseResultsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} courseId={selectedCourseId} initialEtape={initialEtape} />
     </div>;
 };

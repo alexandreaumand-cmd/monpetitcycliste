@@ -338,6 +338,7 @@ export const ResultsPage = () => {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         courseId={selectedCourseId}
+        initialEtape={initialEtape}
       />
     </div>
   );
