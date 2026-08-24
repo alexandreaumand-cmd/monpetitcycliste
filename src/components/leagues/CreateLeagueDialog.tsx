@@ -39,6 +39,7 @@ import {
   MapPin,
   Trophy,
   Flag,
+  Copy,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
