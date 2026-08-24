@@ -115,6 +115,15 @@ export function AuctionPhaseHistoryView({
               <AuctionDatabaseTab phaseId={phaseId} leagueId={leagueId} />
             </TabsContent>
 
+            <TabsContent value="round-recap" className="animate-fade-in">
+              <RoundRecapTab
+                phaseId={phaseId}
+                managerId={managerId}
+                leagueId={leagueId}
+                rounds={closedRounds}
+              />
+            </TabsContent>
+
             {closedRounds.map((round) => (
           <TabsContent 
             key={round.round_number} 
