@@ -45,9 +45,16 @@ const KIND_META: Record<
   auction: { icon: Gavel, tone: "text-primary" },
 };
 
-/** A timeline entry is either a race group (several result rows) or a single item. */
+/** A timeline entry is either a race group (results / startlist moves) or a single item. */
 type TimelineEntry =
-  | { type: "group"; key: string; courseNom: string; occurredAt: string; items: ActivityItem[] }
+  | {
+      type: "group";
+      variant: "result" | "startlist";
+      key: string;
+      courseNom: string;
+      occurredAt: string;
+      items: ActivityItem[];
+    }
   | { type: "single"; key: string; item: ActivityItem };
 
 export const LeagueActivityFeed = () => {
@@ -81,22 +88,31 @@ export const LeagueActivityFeed = () => {
   const { todo, timeline } = useMemo(() => {
     const now = Date.now();
     const all = items ?? [];
-    const todoItems = all.filter(
-      (i) => i.kind === "pronostic" && !i.is_mine && new Date(i.occurred_at).getTime() > now
-    );
+    const todoItems =
+      filter === "mine"
+        ? []
+        : all.filter(
+            (i) => i.kind === "pronostic" && !i.is_mine && new Date(i.occurred_at).getTime() > now
+          );
     let rest = all.filter((i) => !todoItems.includes(i));
-    if (filter === "mine") rest = rest.filter((i) => i.is_mine);
+    if (filter === "mine") {
+      // No pronostic information at all, and startlist moves limited to my own riders.
+      rest = rest.filter((i) => i.kind !== "pronostic" && i.kind !== "pronostic_result");
+      rest = rest.filter((i) => (i.kind === "startlist" ? i.manager_is_me === true : i.is_mine));
+    }
     if (filter === "pronostics") {
       rest = rest.filter((i) => i.kind === "pronostic" || i.kind === "pronostic_result");
     }
     rest = rest.filter((i) => new Date(i.occurred_at).getTime() <= now || i.kind !== "pronostic");
 
-    // Group result rows by race, keeping the overall chronological order.
+    // Group result rows and startlist moves by race, keeping chronological order.
     const entries: TimelineEntry[] = [];
     const groupIndex = new Map<string, number>();
     rest.forEach((item, idx) => {
-      if (item.kind === "result" && item.course_id) {
-        const key = `course-${item.course_id}`;
+      const groupable =
+        (item.kind === "result" || item.kind === "startlist") && !!item.course_id;
+      if (groupable) {
+        const key = `${item.kind}-${item.course_id}`;
         const existing = groupIndex.get(key);
         if (existing !== undefined) {
           (entries[existing] as Extract<TimelineEntry, { type: "group" }>).items.push(item);
@@ -105,6 +121,7 @@ export const LeagueActivityFeed = () => {
         groupIndex.set(key, entries.length);
         entries.push({
           type: "group",
+          variant: item.kind === "startlist" ? "startlist" : "result",
           key,
           courseNom: item.course_nom ?? item.title,
           occurredAt: item.occurred_at,
@@ -115,15 +132,21 @@ export const LeagueActivityFeed = () => {
       entries.push({ type: "single", key: `${item.kind}-${idx}`, item });
     });
 
-    // Sub-rows: final classifications first, then stages ascending.
+    // Sub-rows: results = final classifications first then stages; startlist = newest first.
     entries.forEach((e) => {
-      if (e.type === "group") {
+      if (e.type !== "group") return;
+      if (e.variant === "startlist") {
+        e.items.sort(
+          (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+        );
+      } else {
         e.items.sort((a, b) => (a.etape_numero ?? -1) - (b.etape_numero ?? -1));
       }
     });
 
     return { todo: todoItems, timeline: entries };
   }, [items, filter]);
+
 
   const go = (path: string) => {
     navigate(leagueId ? `${path}${path.includes("?") ? "&" : "?"}leagueId=${leagueId}` : path);
@@ -152,8 +175,17 @@ export const LeagueActivityFeed = () => {
       }
       case "injury":
         return item.subtitle || t("activity.injury");
-      case "startlist":
-        return t("activity.startlist", { change: item.subtitle ?? "" });
+      case "startlist": {
+        const change =
+          item.subtitle === "added"
+            ? t("activity.startlistAdded")
+            : item.subtitle === "removed"
+              ? t("activity.startlistRemoved")
+              : (item.subtitle ?? "");
+        const owner = item.manager_is_me ? t("activity.me") : item.manager_nom;
+        const parts = [change, item.league_name, owner].filter(Boolean);
+        return parts.join(" · ");
+      }
       case "chat":
         return t("activity.chat", { count: item.count_value ?? 0 });
       case "auction":
@@ -169,10 +201,13 @@ export const LeagueActivityFeed = () => {
     return item.title;
   };
 
-  const subRowTitle = (item: ActivityItem) =>
-    item.etape_numero != null
+  const subRowTitle = (item: ActivityItem) => {
+    if (item.kind === "startlist") return item.riders ?? item.title;
+    return item.etape_numero != null
       ? t("activity.stageLabel", { stage: item.etape_numero })
       : t("activity.finalClassifications");
+  };
+
 
   const isNewAt = (iso: string) => {
     const ts = new Date(iso).getTime();
@@ -278,6 +313,17 @@ export const LeagueActivityFeed = () => {
     const isOpen = openGroups[entry.key] ?? false;
     const totalPoints = entry.items.reduce((sum, i) => sum + (i.my_points ?? 0), 0);
     const hasNew = entry.items.some((i) => isNewAt(i.occurred_at));
+    const isStartlist = entry.variant === "startlist";
+    const GroupIcon = isStartlist ? ListChecks : Trophy;
+    const groupIconTone = isStartlist ? "text-muted-foreground" : "text-bordure-gold";
+    const summary = isStartlist
+      ? t("activity.startlistGroupSummary", { count: entry.items.length })
+      : t("activity.groupSummary", {
+          count: entry.items.length,
+          points: Math.round(totalPoints),
+        });
+
+
 
     if (isMobile) {
       return (
@@ -286,7 +332,7 @@ export const LeagueActivityFeed = () => {
             onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
             className="w-full flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 text-left transition-colors hover:bg-muted/40"
           >
-            <Trophy className="h-3.5 w-3.5 shrink-0 mt-0.5 text-bordure-gold" />
+            <GroupIcon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", groupIconTone)} />
             <div className="min-w-0 flex-1 flex flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -307,12 +353,7 @@ export const LeagueActivityFeed = () => {
                 )}
               </div>
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs text-muted-foreground truncate">
-                  {t("activity.groupSummary", {
-                    count: entry.items.length,
-                    points: Math.round(totalPoints),
-                  })}
-                </p>
+                <p className="text-xs text-muted-foreground truncate">{summary}</p>
                 <span className="shrink-0 text-[10px] text-muted-foreground">
                   {timeAgo(entry.occurredAt)}
                 </span>
@@ -336,7 +377,7 @@ export const LeagueActivityFeed = () => {
           onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
           className="w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
         >
-          <Trophy className="h-4 w-4 shrink-0 text-bordure-gold" />
+          <GroupIcon className={cn("h-4 w-4 shrink-0", groupIconTone)} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-semibold">{entry.courseNom}</span>
@@ -346,12 +387,7 @@ export const LeagueActivityFeed = () => {
                 </Badge>
               )}
             </div>
-            <p className="truncate text-xs text-muted-foreground">
-              {t("activity.groupSummary", {
-                count: entry.items.length,
-                points: Math.round(totalPoints),
-              })}
-            </p>
+            <p className="truncate text-xs text-muted-foreground">{summary}</p>
           </div>
           <span className="shrink-0 text-[11px] text-muted-foreground">
             {timeAgo(entry.occurredAt)}
