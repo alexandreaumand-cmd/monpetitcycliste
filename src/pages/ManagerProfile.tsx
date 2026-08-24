@@ -501,11 +501,11 @@ const MiniStat = ({
   label: string;
   value: string;
 }) => (
-  <div className="flex items-start gap-2">
+  <div className="flex items-start gap-2 rounded-md bg-muted/20 p-2">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-bordure-gold" />
-    <div className="min-w-0">
-      <p className="truncate text-xs text-muted-foreground">{label}</p>
-      <p className="truncate text-sm font-semibold" title={value}>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs leading-tight text-muted-foreground">{label}</p>
+      <p className="break-words text-sm font-semibold leading-snug" title={value}>
         {value}
       </p>
     </div>
