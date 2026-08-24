@@ -121,5 +121,27 @@
     "ridersDescription": "Top riders will appear here",
     "noResults": "No results",
     "noResultsDescription": "No rider matches your search"
+  },
+  "managerProfile": {
+    "back": "Back",
+    "rankOf": "{{rank}} / {{total}}",
+    "gapToLeader": "-{{gap}} pts from leader",
+    "scorers": "Scorers",
+    "wins": "Wins",
+    "pronostics": "Pronostics",
+    "bonus": "Bonus",
+    "byPhase": "Phase by phase",
+    "phase": "Phase",
+    "points": "Points",
+    "rank": "Rank",
+    "roster": "Roster",
+    "allPhases": "All",
+    "rider": "Rider",
+    "team": "Team",
+    "price": "Price",
+    "roi": "Pts/€",
+    "spent": "Budget spent",
+    "bestRoi": "Best ROI",
+    "noData": "No data"
   }
 }
