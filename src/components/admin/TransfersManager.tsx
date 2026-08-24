@@ -34,6 +34,11 @@ type Transfer = {
   notes: string | null;
 };
 
+type RiderSeason = { annee: number; actif: boolean; equipe: string | null };
+type RiderOption = { id: string; nom: string; seasons: RiderSeason[] };
+
+
+
 export const TransfersManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -103,23 +108,92 @@ export const TransfersManager = () => {
     },
   });
 
+  // Enriched rider search: same names can exist on several fiches (legacy slug ids
+  // vs short codes), so we surface id / last season / team to tell them apart.
   const riderQueries = useQuery({
-    queryKey: ["coureurs", "transfer-search", riderSearch],
+    queryKey: ["coureurs", "transfer-search-v2", riderSearch],
     enabled: Object.values(riderSearch).some((v) => (v ?? "").length >= 2),
     queryFn: async () => {
       const terms = [...new Set(Object.values(riderSearch).filter((v) => (v ?? "").length >= 2))];
-      const result: Record<string, { id: string; nom: string }[]> = {};
+      const result: Record<string, RiderOption[]> = {};
+
       for (const term of terms) {
-        const { data } = await supabase
+        const { data: base } = await supabase
           .from("coureurs")
           .select("id, nom")
           .ilike("nom", `%${term}%`)
           .limit(10);
-        result[term] = (data ?? []) as { id: string; nom: string }[];
+
+        const ids = (base ?? []).map((r: any) => r.id);
+        if (ids.length === 0) {
+          result[term] = [];
+          continue;
+        }
+
+        const { data: cs } = await supabase
+          .from("coureurs_saisons")
+          .select("coureur_id, saison_id, equipe_id, actif, saisons(annee)")
+          .in("coureur_id", ids);
+
+        const equipeIds = [
+          ...new Set((cs ?? []).map((r: any) => r.equipe_id).filter(Boolean)),
+        ] as string[];
+
+        const teamMap = new Map<string, string>();
+        if (equipeIds.length > 0) {
+          const { data: eq } = await supabase
+            .from("equipes_saisons")
+            .select("equipe_id, saison_id, nom_affiche")
+            .in("equipe_id", equipeIds);
+          (eq ?? []).forEach((e: any) =>
+            teamMap.set(`${e.equipe_id}|${e.saison_id}`, e.nom_affiche),
+          );
+        }
+
+        const bySeasons = new Map<string, RiderSeason[]>();
+        (cs ?? []).forEach((row: any) => {
+          const annee = Array.isArray(row.saisons)
+            ? row.saisons[0]?.annee
+            : row.saisons?.annee;
+          const list = bySeasons.get(row.coureur_id) ?? [];
+          list.push({
+            annee: annee ?? 0,
+            actif: !!row.actif,
+            equipe: row.equipe_id ? teamMap.get(`${row.equipe_id}|${row.saison_id}`) ?? null : null,
+          });
+          bySeasons.set(row.coureur_id, list);
+        });
+
+        result[term] = (base ?? [])
+          .map((r: any) => ({
+            id: r.id,
+            nom: r.nom,
+            seasons: (bySeasons.get(r.id) ?? []).sort((a, b) => b.annee - a.annee),
+          }))
+          .sort((a, b) => (b.seasons[0]?.annee ?? 0) - (a.seasons[0]?.annee ?? 0));
       }
       return result;
     },
   });
+
+  // Names of already-matched riders (avoid showing raw ids)
+  const matchedIds = useMemo(
+    () => [...new Set((transfers ?? []).map((t) => t.coureur_id).filter(Boolean) as string[])],
+    [transfers],
+  );
+
+  const { data: matchedNames } = useQuery({
+    queryKey: ["coureurs", "transfer-matched", matchedIds.sort().join(",")],
+    enabled: matchedIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coureurs").select("id, nom").in("id", matchedIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: any) => (map[r.id] = r.nom));
+      return map;
+    },
+  });
+
 
   const runScrape = async () => {
     setScraping(true);
@@ -323,7 +397,14 @@ export const TransfersManager = () => {
               {(transfers ?? []).map((t) => {
                 const seasonTeams = (teams ?? []).filter((x) => x.saison_id === t.saison_id);
                 const search = riderSearch[t.id] ?? "";
-                const results = (riderQueries.data ?? {})[search] ?? [];
+                const rawResults = ((riderQueries.data ?? {})[search] ?? []) as RiderOption[];
+                const results = [...rawResults].sort((a, b) => {
+                  const aTarget = a.seasons.some((s) => s.annee === t.target_year) ? 1 : 0;
+                  const bTarget = b.seasons.some((s) => s.annee === t.target_year) ? 1 : 0;
+                  if (aTarget !== bTarget) return bTarget - aTarget;
+                  return (b.seasons[0]?.annee ?? 0) - (a.seasons[0]?.annee ?? 0);
+                });
+
                 return (
                   <div key={t.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -353,8 +434,11 @@ export const TransfersManager = () => {
                       <div className="space-y-1">
                         <Label className="text-xs">Coureur</Label>
                         {t.coureur_id ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{t.coureur_id}</Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary">
+                              {matchedNames?.[t.coureur_id] ?? t.coureur_id}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">{t.coureur_id}</span>
                             {t.statut === "nouveau" && (
                               <Button
                                 size="sm"
@@ -375,21 +459,47 @@ export const TransfersManager = () => {
                               }
                             />
                             {results.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {results.map((r) => (
-                                  <Button
-                                    key={r.id}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      patch.mutate({ id: t.id, values: { coureur_id: r.id } })
-                                    }
-                                  >
-                                    {r.nom}
-                                  </Button>
-                                ))}
+                              <div className="flex flex-col gap-1">
+                                {results.map((r) => {
+                                  const last = r.seasons[0];
+                                  const isTarget = r.seasons.some((s) => s.annee === t.target_year);
+                                  const isStale = !last || last.annee < t.target_year - 1;
+                                  return (
+                                    <Button
+                                      key={r.id}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-auto justify-start py-2 text-left"
+                                      onClick={() =>
+                                        patch.mutate({ id: t.id, values: { coureur_id: r.id } })
+                                      }
+                                    >
+                                      <span className="flex flex-col items-start gap-0.5">
+                                        <span className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium">{r.nom}</span>
+                                          {isTarget && (
+                                            <Badge variant="default" className="text-[10px]">
+                                              recommandée
+                                            </Badge>
+                                          )}
+                                          {isStale && (
+                                            <Badge variant="secondary" className="text-[10px]">
+                                              fiche ancienne
+                                            </Badge>
+                                          )}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground font-normal">
+                                          {r.id}
+                                          {last ? ` · ${last.annee}` : " · aucune saison"}
+                                          {last?.equipe ? ` · ${last.equipe}` : ""}
+                                        </span>
+                                      </span>
+                                    </Button>
+                                  );
+                                })}
                               </div>
                             )}
+
                           </div>
                         )}
                       </div>
