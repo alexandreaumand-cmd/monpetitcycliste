@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Trophy, Database } from "lucide-react";
+import { Loader2, Users, Trophy, Database, ListOrdered } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { PhaseRecapTab } from "./PhaseRecapTab";
 import { FinalTeamTab } from "./FinalTeamTab";
 import { AuctionDatabaseTab } from "./AuctionDatabaseTab";
+import { RoundRecapTab } from "./RoundRecapTab";
 
 interface AuctionPhaseHistoryViewProps {
   phaseId: string;
