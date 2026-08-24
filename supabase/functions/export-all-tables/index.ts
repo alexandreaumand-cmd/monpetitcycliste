@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
         download_url: signed.signedUrl,
         size_bytes: zipContent.length,
         total_rows: totalRows,
-        tables_count: TABLES.length,
+        tables_count: tables.length,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
