@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Calendar, CheckCircle, Play, Rocket } from "lucide-react";
+import { Loader2, Plus, Calendar, CheckCircle, Play, Rocket, FileEdit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SeasonDeleteManager } from "./SeasonDeleteManager";
+import { SeasonPrepareManager } from "./SeasonPrepareManager";
+import { SeasonPricesImport } from "./SeasonPricesImport";
 
 export const SeasonManager = () => {
   const { toast } = useToast();
@@ -21,6 +24,8 @@ export const SeasonManager = () => {
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [budget, setBudget] = useState("2200");
+  const [phaseStatut, setPhaseStatut] = useState<"draft" | "active">("draft");
+
 
   const { data: saisons, isLoading } = useQuery({
     queryKey: ['saisons', 'with-phases'],
@@ -76,7 +81,7 @@ export const SeasonManager = () => {
           date_debut: dateDebut,
           date_fin: dateFin,
           budget: parseFloat(budget),
-          statut: 'active'
+          statut: phaseStatut
         });
 
       if (error) throw error;
@@ -86,7 +91,9 @@ export const SeasonManager = () => {
       queryClient.invalidateQueries({ queryKey: ['phases'] });
       toast({
         title: "Phase créée",
-        description: "La phase a été créée et activée"
+        description: phaseStatut === 'draft'
+          ? "La phase est en brouillon : elle s'activera automatiquement à sa date de début, ou manuellement via « Lancer »."
+          : "La phase a été créée et activée"
       });
       setPhaseIndex((prev) => (parseInt(prev) + 1).toString());
       setDateDebut("");
@@ -101,9 +108,8 @@ export const SeasonManager = () => {
     }
   });
 
-  const togglePhaseStatus = useMutation({
-    mutationFn: async ({ phaseId, currentStatus }: { phaseId: string; currentStatus: string }) => {
-      const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+  const setPhaseStatus = useMutation({
+    mutationFn: async ({ phaseId, newStatus }: { phaseId: string; newStatus: 'draft' | 'active' | 'completed' }) => {
       const { error } = await supabase
         .from('phases')
         .update({ statut: newStatus })
@@ -127,6 +133,7 @@ export const SeasonManager = () => {
       });
     }
   });
+
 
   // Categorize seasons
   const categorizedSeasons = useMemo(() => {
@@ -347,8 +354,16 @@ export const SeasonManager = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium">Phase {phase.index_dans_saison}</span>
-                                  <Badge variant={phase.statut === 'active' ? 'default' : 'secondary'}>
-                                    {phase.statut}
+                                  <Badge
+                                    variant={
+                                      phase.statut === 'active'
+                                        ? 'default'
+                                        : phase.statut === 'draft'
+                                          ? 'outline'
+                                          : 'secondary'
+                                    }
+                                  >
+                                    {phase.statut === 'draft' ? 'brouillon' : phase.statut}
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
@@ -356,19 +371,58 @@ export const SeasonManager = () => {
                                   {" • "}{formatAmount(phase.budget)} de budget
                                 </p>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  togglePhaseStatus.mutate({
-                                    phaseId: phase.id,
-                                    currentStatus: phase.statut
-                                  })
-                                }
-                                disabled={togglePhaseStatus.isPending}
-                              >
-                                {phase.statut === 'active' ? 'Terminer' : 'Activer'}
-                              </Button>
+                              <div className="flex flex-wrap gap-2 justify-end">
+                                {phase.statut === 'draft' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'active' })
+                                    }
+                                    disabled={setPhaseStatus.isPending}
+                                  >
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Lancer la phase
+                                  </Button>
+                                )}
+                                {phase.statut === 'active' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'completed' })
+                                      }
+                                      disabled={setPhaseStatus.isPending}
+                                    >
+                                      Terminer
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'draft' })
+                                      }
+                                      disabled={setPhaseStatus.isPending}
+                                    >
+                                      <FileEdit className="mr-2 h-4 w-4" />
+                                      Brouillon
+                                    </Button>
+                                  </>
+                                )}
+                                {phase.statut === 'completed' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'active' })
+                                    }
+                                    disabled={setPhaseStatus.isPending}
+                                  >
+                                    Activer
+                                  </Button>
+                                )}
+                              </div>
+
                             </div>
                           ))}
                         </div>
@@ -415,7 +469,7 @@ export const SeasonManager = () => {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor={`budget-${saison.id}`}>Budget</Label>
                             <Input
@@ -425,6 +479,21 @@ export const SeasonManager = () => {
                               onChange={(e) => setBudget(e.target.value)}
                               step="100"
                             />
+                          </div>
+                          <div>
+                            <Label>Statut à la création</Label>
+                            <Select
+                              value={phaseStatut}
+                              onValueChange={(v) => setPhaseStatut(v as "draft" | "active")}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="draft">Brouillon (recommandé)</SelectItem>
+                                <SelectItem value="active">Active immédiatement</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-end">
                             <Button
@@ -438,6 +507,7 @@ export const SeasonManager = () => {
                             </Button>
                           </div>
                         </div>
+
                       </div>
                     </div>
                   </TabsContent>
@@ -456,8 +526,13 @@ export const SeasonManager = () => {
         </Card>
       )}
 
+      {/* Season preparation tools */}
+      <SeasonPrepareManager />
+      <SeasonPricesImport />
+
       {/* Danger Zone */}
       <SeasonDeleteManager />
+
     </div>
   );
 };

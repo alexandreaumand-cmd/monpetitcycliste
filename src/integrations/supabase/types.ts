@@ -4722,6 +4722,116 @@ export type Database = {
           },
         ]
       }
+      rider_transfers: {
+        Row: {
+          applied_at: string | null
+          coureur_id: string | null
+          created_at: string
+          equipe_id: string | null
+          from_team_name: string | null
+          from_team_slug: string | null
+          id: string
+          notes: string | null
+          pcs_rider_name: string
+          pcs_rider_slug: string
+          published_at: string | null
+          saison_id: string | null
+          statut: string
+          target_year: number
+          to_team_name: string
+          to_team_slug: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          coureur_id?: string | null
+          created_at?: string
+          equipe_id?: string | null
+          from_team_name?: string | null
+          from_team_slug?: string | null
+          id?: string
+          notes?: string | null
+          pcs_rider_name: string
+          pcs_rider_slug?: string
+          published_at?: string | null
+          saison_id?: string | null
+          statut?: string
+          target_year: number
+          to_team_name: string
+          to_team_slug?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          coureur_id?: string | null
+          created_at?: string
+          equipe_id?: string | null
+          from_team_name?: string | null
+          from_team_slug?: string | null
+          id?: string
+          notes?: string | null
+          pcs_rider_name?: string
+          pcs_rider_slug?: string
+          published_at?: string | null
+          saison_id?: string | null
+          statut?: string
+          target_year?: number
+          to_team_name?: string
+          to_team_slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_transfers_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_coureurs_saisons_admin"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_transfers_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rosters: {
         Row: {
           coureur_id: string | null
@@ -7112,6 +7222,16 @@ export type Database = {
       }
       auto_open_scheduled_auctions: { Args: never; Returns: undefined }
       auto_update_phase_statuts: { Args: never; Returns: undefined }
+      clone_season_data: {
+        Args: {
+          p_baremes?: boolean
+          p_coureurs?: boolean
+          p_equipes?: boolean
+          p_source_saison: string
+          p_target_saison: string
+        }
+        Returns: Json
+      }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
