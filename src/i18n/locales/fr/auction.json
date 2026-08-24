@@ -120,8 +120,8 @@
     "empty": "Aucune enchère pour ce tour",
     "unassigned": "Non attribué",
     "odds": "Cote",
-    "biddersCount": "{{count}} enchérisseur",
-    "biddersCount_plural": "{{count}} enchérisseurs",
+    "biddersCount_one": "{{count}} enchérisseur",
+    "biddersCount_other": "{{count}} enchérisseurs",
     "won": "Gagnée",
     "lost": "Perdue",
     "me": "Moi"
@@ -211,12 +211,10 @@
     "total": "total"
   },
   "availableRiders": "Coureurs disponibles",
-  "results_count": "{{count}} résultat",
-  "results_count_plural": "{{count}} résultats",
-  "riders_count": "{{count}} coureur",
-  "riders_count_plural": "{{count}} coureurs",
-  "missingRiders": "Il manque {{count}} coureur",
-  "missingRiders_plural": "Il manque {{count}} coureurs",
+  "riders_count_one": "{{count}} coureur",
+  "riders_count_other": "{{count}} coureurs",
+  "missingRiders_one": "Il manque {{count}} coureur",
+  "missingRiders_other": "Il manque {{count}} coureurs",
   "budgetExceeded": "Budget dépassé",
   "conditionsNotMet": "Conditions non remplies",
   "validation": {
@@ -241,11 +239,7 @@
     "bidsLost": "enchères perdues",
     "maxBid": "Enchère Max",
     "round1King": "Roi du Tour 1",
-    "victories": "victoire",
-    "victories_plural": "victoires",
     "round1Loser": "Loser du Tour 1",
-    "missed": "raté",
-    "missed_plural": "ratés",
     "fastest": "Les plus rapides",
     "noData": "Aucune donnée",
     "biggestMisses": "Les plus gros loupés",
@@ -255,14 +249,16 @@
     "rider": "Coureur",
     "bid": "Enchère",
     "winningBid": "Enchère gagnante",
-    "gap": "Écart"
+    "gap": "Écart",
+    "victories_other": "victoires",
+    "victories_one": "victoire",
+    "missed_other": "ratés",
+    "missed_one": "raté"
   },
   "live": {
     "resultsRound": "Résultats Round {{round}}",
     "allResultsAnnounced": "Tous les résultats ont été annoncés !",
     "adminRevealing": "L'admin est en train de révéler les résultats...",
-    "congratsWon": "Bravo ! Tu as gagné {{count}} coureur !",
-    "congratsWon_plural": "Bravo ! Tu as gagné {{count}} coureurs !",
     "teamGrowing": "Ton équipe se renforce...",
     "liveAnnouncements": "Annonces en direct",
     "waitingAnnouncements": "En attente des annonces...",
@@ -274,20 +270,22 @@
     "canViewTeam": "Tu peux maintenant consulter ton équipe complète",
     "backToAuction": "Retour aux enchères",
     "myRecruits": "Mes recrues",
-    "otherManagersRecruits": "Recrues des autres managers"
+    "otherManagersRecruits": "Recrues des autres managers",
+    "congratsWon_other": "Bravo ! Tu as gagné {{count}} coureurs !",
+    "congratsWon_one": "Bravo ! Tu as gagné {{count}} coureur !"
   },
   "admin": {
     "liveAnnouncements": "Annonces Live",
     "allPublishedAutoLaunch": "Toutes publiées · Le prochain round sera lancé automatiquement",
-    "remaining": "{{count}} restante",
-    "remaining_plural": "{{count}} restantes",
     "wonBy": "Gagné par {{manager}}",
     "tie": "Égalité",
     "announce": "Annoncer",
     "announceAll": "Tout ({{count}})",
     "allPublished": "Toutes les annonces publiées",
     "timeline": "Timeline ({{count}})",
-    "top10": "Top 10 !"
+    "top10": "Top 10 !",
+    "remaining_other": "{{count}} restantes",
+    "remaining_one": "{{count}} restante"
   },
   "warning": "Attention",
   "error": "Erreur",
@@ -296,5 +294,7 @@
     "premiumTitle": "Fonctionnalité Premium 💎",
     "premiumMessage": "Notre IA analyse en temps réel les cotes, l'historique des enchères et votre budget pour vous proposer les meilleurs coureurs au meilleur prix. Débloquez cette fonctionnalité premium en faisant un virement au BOSS 💸",
     "understood": "Compris"
-  }
+  },
+  "results_count_other": "{{count}} résultats",
+  "results_count_one": "{{count}} résultat"
 }

@@ -120,8 +120,8 @@
     "empty": "No bids for this round",
     "unassigned": "Unassigned",
     "odds": "Odds",
-    "biddersCount": "{{count}} bidder",
-    "biddersCount_plural": "{{count}} bidders",
+    "biddersCount_one": "{{count}} bidder",
+    "biddersCount_other": "{{count}} bidders",
     "won": "Won",
     "lost": "Lost",
     "me": "Me"
@@ -211,12 +211,10 @@
     "total": "total"
   },
   "availableRiders": "Available riders",
-  "results_count": "{{count}} result",
-  "results_count_plural": "{{count}} results",
-  "riders_count": "{{count}} rider",
-  "riders_count_plural": "{{count}} riders",
-  "missingRiders": "{{count}} rider missing",
-  "missingRiders_plural": "{{count}} riders missing",
+  "riders_count_one": "{{count}} rider",
+  "riders_count_other": "{{count}} riders",
+  "missingRiders_one": "{{count}} rider missing",
+  "missingRiders_other": "{{count}} riders missing",
   "budgetExceeded": "Budget exceeded",
   "conditionsNotMet": "Conditions not met",
   "validation": {
@@ -241,11 +239,7 @@
     "bidsLost": "bids lost",
     "maxBid": "Max Bid",
     "round1King": "Round 1 King",
-    "victories": "victory",
-    "victories_plural": "victories",
     "round1Loser": "Round 1 Loser",
-    "missed": "missed",
-    "missed_plural": "missed",
     "fastest": "Fastest",
     "noData": "No data",
     "biggestMisses": "Biggest misses",
@@ -255,14 +249,16 @@
     "rider": "Rider",
     "bid": "Bid",
     "winningBid": "Winning bid",
-    "gap": "Gap"
+    "gap": "Gap",
+    "victories_other": "victories",
+    "victories_one": "victory",
+    "missed_other": "missed",
+    "missed_one": "missed"
   },
   "live": {
     "resultsRound": "Results Round {{round}}",
     "allResultsAnnounced": "All results have been announced!",
     "adminRevealing": "The admin is revealing the results...",
-    "congratsWon": "Congrats! You won {{count}} rider!",
-    "congratsWon_plural": "Congrats! You won {{count}} riders!",
     "teamGrowing": "Your team is getting stronger...",
     "liveAnnouncements": "Live Announcements",
     "waitingAnnouncements": "Waiting for announcements...",
@@ -274,20 +270,22 @@
     "canViewTeam": "You can now view your complete team",
     "backToAuction": "Back to auction",
     "myRecruits": "My recruits",
-    "otherManagersRecruits": "Other managers' recruits"
+    "otherManagersRecruits": "Other managers' recruits",
+    "congratsWon_other": "Congrats! You won {{count}} riders!",
+    "congratsWon_one": "Congrats! You won {{count}} rider!"
   },
   "admin": {
     "liveAnnouncements": "Live Announcements",
     "allPublishedAutoLaunch": "All published - Next round will launch automatically",
-    "remaining": "{{count}} remaining",
-    "remaining_plural": "{{count}} remaining",
     "wonBy": "Won by {{manager}}",
     "tie": "Tie",
     "announce": "Announce",
     "announceAll": "All ({{count}})",
     "allPublished": "All announcements published",
     "timeline": "Timeline ({{count}})",
-    "top10": "Top 10!"
+    "top10": "Top 10!",
+    "remaining_other": "{{count}} remaining",
+    "remaining_one": "{{count}} remaining"
   },
   "warning": "Warning",
   "error": "Error",
@@ -296,5 +294,7 @@
     "premiumTitle": "Premium Feature 💎",
     "premiumMessage": "Our AI analyzes odds, auction history and your budget in real-time to recommend the best riders at the best price. Unlock this premium feature by sending a wire transfer to the BOSS 💸",
     "understood": "Got it"
-  }
+  },
+  "results_count_other": "{{count}} results",
+  "results_count_one": "{{count}} result"
 }

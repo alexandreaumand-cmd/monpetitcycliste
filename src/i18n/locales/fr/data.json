@@ -18,8 +18,8 @@
     "favoritesOnly": "Favoris uniquement",
     "reset": "Réinitialiser",
     "showFilters": "Filtres",
-    "activeFilters": "{{count}} filtre actif",
-    "activeFilters_plural": "{{count}} filtres actifs"
+    "activeFilters_other": "{{count}} filtres actifs",
+    "activeFilters_one": "{{count}} filtre actif"
   },
   "table": {
     "fav": "Fav",
@@ -31,10 +31,10 @@
     "program": "Programme"
   },
   "results": {
-    "ridersShown": "{{count}} coureur affiché",
-    "ridersShown_plural": "{{count}} coureurs affichés",
     "outOfTotal": "sur {{total}} total",
-    "noRiders": "Aucun coureur trouvé"
+    "noRiders": "Aucun coureur trouvé",
+    "ridersShown_other": "{{count}} coureurs affichés",
+    "ridersShown_one": "{{count}} coureur affiché"
   },
   "export": {
     "button": "Excel",

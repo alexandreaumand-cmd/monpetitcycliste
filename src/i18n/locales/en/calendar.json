@@ -29,13 +29,13 @@
   "badges": {
     "today": "Today",
     "passed": "Finished",
-    "daysUntil": "In {{count}} day",
-    "daysUntil_plural": "In {{count}} days",
-    "inProgress": "In progress"
+    "inProgress": "In progress",
+    "daysUntil_other": "In {{count}} days",
+    "daysUntil_one": "In {{count}} day"
   },
   "results": {
-    "found": "{{count}} race found",
-    "found_plural": "{{count}} races found"
+    "found_other": "{{count}} races found",
+    "found_one": "{{count}} race found"
   },
   "export": {
     "button": "Export Excel",
