@@ -744,6 +744,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               <RecapRow icon={<MapPin className="h-4 w-4" />} label={t('wizard.recapCourses')}
                 value={selectedCoursesData.map(c => c.nom).join(', ')} />
             )}
+            {creationFlow === 'clone' && sourceSettings && (
+              <>
+                <RecapRow icon={<Copy className="h-4 w-4" />} label={t('wizard.recapSource')} value={sourceSettings.name} />
+                <RecapRow icon={<Users className="h-4 w-4" />} label={t('wizard.recapMembers')}
+                  value={`${1 + memberUserIds.length + extraMembers.length}`} />
+              </>
+            )}
             <RecapRow icon={<Users className="h-4 w-4" />} label={t('wizard.recapPlayers')} value={`${playerCount}`} />
             <RecapRow icon={<Globe className="h-4 w-4" />} label={t('wizard.recapVisibility')}
               value={visibility === 'public' ? t('visibility.public') : t('visibility.private')} />
