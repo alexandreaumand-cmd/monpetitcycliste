@@ -8,7 +8,7 @@ import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal } from "lucide-react";
+import { Trophy, User, TrendingUp, Shirt, SlidersHorizontal, ExternalLink } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -323,7 +323,20 @@ export const RankingsMobile = () => {
     const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
     return (
       <div className="flex flex-col">
-        <span className="font-semibold">{managerName}</span>
+        <span className="font-semibold inline-flex items-center gap-1.5">
+          {managerName}
+          <button
+            type="button"
+            aria-label={`Profil ${managerName}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/dashboard/manager/${managerId}`);
+            }}
+            className="text-muted-foreground/70 transition-colors hover:text-primary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </span>
         {sponsorData?.sponsor && (
           <span className="text-xs text-muted-foreground italic">
             {sponsorData.sponsor}
@@ -332,6 +345,7 @@ export const RankingsMobile = () => {
       </div>
     );
   };
+
 
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1) {

@@ -4,7 +4,9 @@ import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Shirt } from "lucide-react";
+import { TrendingUp, TrendingDown, Shirt, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -27,6 +29,7 @@ type StandingsProps = {
 const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: string; managerName: string }) => {
   const { selectedSeason } = useSeasonContext();
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  const navigate = useNavigate();
   
   return (
     <div className="flex items-center gap-2">
@@ -43,7 +46,20 @@ const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: str
         <Shirt className="h-8 w-8 text-muted-foreground" />
       )}
       <div className="flex flex-col">
-        <span>{managerName}</span>
+        <span className="inline-flex items-center gap-1.5">
+          {managerName}
+          <button
+            type="button"
+            aria-label={`Profil ${managerName}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/dashboard/manager/${managerId}`);
+            }}
+            className="text-muted-foreground/70 transition-colors hover:text-primary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </span>
         {sponsorData?.sponsor && (
           <span className="text-xs text-muted-foreground italic">
             {sponsorData.sponsor}
@@ -53,6 +69,7 @@ const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: str
     </div>
   );
 });
+
 
 // Note: enrichWithManagerNames removed - now handled directly by views
 
