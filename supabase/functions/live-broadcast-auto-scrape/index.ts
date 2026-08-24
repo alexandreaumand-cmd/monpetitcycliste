@@ -273,7 +273,9 @@ serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ ran, skipped, errors }), {
+  console.log(`[auto-scrape] ${parisTime} Paris — done: ran=${ran}, skipped=${skipped}, errors=${errors.length}`);
+
+  return new Response(JSON.stringify({ ran, skipped, errors, paris_time: parisTime }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
