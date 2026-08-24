@@ -267,6 +267,80 @@ export default function ManagerProfile() {
         />
       </div>
 
+      {/* Palmarès & ligues */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 font-montserrat text-lg">
+            <Medal className="h-5 w-5 text-bordure-gold" />
+            {t("managerProfile.palmares")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {extraLoading ? (
+            <Skeleton className="h-28 w-full" />
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
+              <MiniStat
+                icon={Flag}
+                label={t("managerProfile.leaguesCreated")}
+                value={fmt(extra?.leagues_created)}
+              />
+              <MiniStat
+                icon={Users}
+                label={t("managerProfile.leaguesJoined")}
+                value={fmt(extra?.leagues_joined)}
+              />
+              <MiniStat
+                icon={Trophy}
+                label={t("managerProfile.leaguesWon")}
+                value={fmt(extra?.leagues_won)}
+              />
+              <MiniStat
+                icon={Medal}
+                label={t("managerProfile.leaguesPodium")}
+                value={fmt(extra?.leagues_podium)}
+              />
+              <MiniStat
+                icon={TrendingUp}
+                label={t("managerProfile.bestPhase")}
+                value={
+                  bestPhase
+                    ? `P${bestPhase.index} — ${fmt(bestPhase.total_points)} pts`
+                    : "-"
+                }
+              />
+              <MiniStat
+                icon={Percent}
+                label={t("managerProfile.pronoRate")}
+                value={pronoRate == null ? "-" : `${pronoRate} %`}
+              />
+              <MiniStat
+                icon={Star}
+                label={t("managerProfile.fetishRider")}
+                value={
+                  extra?.fetish_rider_nom
+                    ? `${extra.fetish_rider_nom} (${fmt(extra.fetish_rider_points)} pts)`
+                    : "-"
+                }
+              />
+              <MiniStat
+                icon={Repeat}
+                label={t("managerProfile.favoriteRider")}
+                value={
+                  extra?.favorite_rider_nom
+                    ? `${extra.favorite_rider_nom} (${t("managerProfile.phasesCount", {
+                        count: Number(extra.favorite_rider_count ?? 0),
+                      })})`
+                    : "-"
+                }
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
+
       {/* Phase by phase */}
       <Card>
         <CardHeader className="pb-3">
