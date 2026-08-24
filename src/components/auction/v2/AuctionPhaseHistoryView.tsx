@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Trophy, Database } from "lucide-react";
+import { Loader2, Users, Trophy, Database, ListOrdered } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { PhaseRecapTab } from "./PhaseRecapTab";
 import { FinalTeamTab } from "./FinalTeamTab";
 import { AuctionDatabaseTab } from "./AuctionDatabaseTab";
+import { RoundRecapTab } from "./RoundRecapTab";
 
 interface AuctionPhaseHistoryViewProps {
   phaseId: string;
@@ -73,6 +74,16 @@ export function AuctionPhaseHistoryView({
               <span className="hidden sm:inline">Base de données</span>
               <span className="sm:hidden">DB</span>
             </TabsTrigger>
+
+            <TabsTrigger
+              value="round-recap"
+              className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <ListOrdered className="h-4 w-4" />
+              <span className="hidden sm:inline">Récap par tour</span>
+              <span className="sm:hidden">Tours</span>
+            </TabsTrigger>
+            
             
             {closedRounds.map((round) => (
               <TabsTrigger 
@@ -102,6 +113,15 @@ export function AuctionPhaseHistoryView({
 
             <TabsContent value="database" className="animate-fade-in">
               <AuctionDatabaseTab phaseId={phaseId} leagueId={leagueId} />
+            </TabsContent>
+
+            <TabsContent value="round-recap" className="animate-fade-in">
+              <RoundRecapTab
+                phaseId={phaseId}
+                managerId={managerId}
+                leagueId={leagueId}
+                rounds={closedRounds}
+              />
             </TabsContent>
 
             {closedRounds.map((round) => (

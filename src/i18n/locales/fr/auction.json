@@ -114,6 +114,18 @@
     "lost": "Perdu",
     "noBids": "Aucune mise"
   },
+  "roundRecap": {
+    "title": "Récap par tour",
+    "searchPlaceholder": "Rechercher un coureur, une équipe ou un manager…",
+    "empty": "Aucune enchère pour ce tour",
+    "unassigned": "Non attribué",
+    "odds": "Cote",
+    "biddersCount": "{{count}} enchérisseur",
+    "biddersCount_plural": "{{count}} enchérisseurs",
+    "won": "Gagnée",
+    "lost": "Perdue",
+    "me": "Moi"
+  },
   "history": {
     "title": "Historique des enchères",
     "noHistory": "Aucun historique"

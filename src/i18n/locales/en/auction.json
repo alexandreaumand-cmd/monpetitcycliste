@@ -114,6 +114,18 @@
     "lost": "Lost",
     "noBids": "No bids"
   },
+  "roundRecap": {
+    "title": "Round recap",
+    "searchPlaceholder": "Search a rider, team or manager…",
+    "empty": "No bids for this round",
+    "unassigned": "Unassigned",
+    "odds": "Odds",
+    "biddersCount": "{{count}} bidder",
+    "biddersCount_plural": "{{count}} bidders",
+    "won": "Won",
+    "lost": "Lost",
+    "me": "Me"
+  },
   "history": {
     "title": "Auction History",
     "noHistory": "No history"
