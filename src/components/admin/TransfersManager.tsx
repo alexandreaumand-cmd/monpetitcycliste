@@ -34,6 +34,11 @@ type Transfer = {
   notes: string | null;
 };
 
+type RiderSeason = { annee: number; actif: boolean; equipe: string | null };
+type RiderOption = { id: string; nom: string; seasons: RiderSeason[] };
+
+
+
 export const TransfersManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
