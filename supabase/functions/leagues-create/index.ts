@@ -74,9 +74,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get active season
-    const { data: season } = await supabase
-      .from('saisons').select('id').order('annee', { ascending: false }).limit(1).single();
+    // Target season: explicit if provided, otherwise the most recent one
+    const { data: season } = seasonId
+      ? await supabase.from('saisons').select('id').eq('id', seasonId).maybeSingle()
+      : await supabase
+          .from('saisons').select('id').order('annee', { ascending: false }).limit(1).maybeSingle();
 
     if (!season) {
       return new Response(JSON.stringify({ error: 'Aucune saison active' }), {
