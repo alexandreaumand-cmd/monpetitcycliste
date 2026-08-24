@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
 import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
+import { StagePlanEditor } from "@/components/admin/live/StagePlanEditor";
 
 function hydrateSituationFromMessage(message: any): RaceSituation | null {
   const situation = message?.metadata?.race_situation;
@@ -556,6 +557,15 @@ export const SuperAdminLiveBroadcastPage = () => {
       </CardContent>
     </Card>
   );
+
+  const stagePlanPanel = activeCourseId ? (
+    <StagePlanEditor
+      courseId={activeCourseId}
+      courseStart={selectedCourse?.courses?.date_debut ?? null}
+      courseEnd={selectedCourse?.courses?.date_fin ?? null}
+      isMultiStage={!!isMultiStage}
+    />
+  ) : null;
 
   return (
     <div className="space-y-3">
