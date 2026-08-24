@@ -319,11 +319,11 @@ export const SeasonManager = () => {
             <Tabs defaultValue={sortedSeasonsForTabs[0]?.id} className="w-full">
               <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
                 {sortedSeasonsForTabs.map((saison: any) => {
-                  const hasActivePhase = saison.phases?.some((p: any) => p.statut === 'active');
+                  const isCurrent = categorizedSeasons.current?.id === saison.id;
                   return (
                     <TabsTrigger key={saison.id} value={saison.id}>
                       Saison {saison.annee}
-                      {hasActivePhase && " (Courante)"}
+                      {isCurrent && " (Courante)"}
                     </TabsTrigger>
                   );
                 })}
