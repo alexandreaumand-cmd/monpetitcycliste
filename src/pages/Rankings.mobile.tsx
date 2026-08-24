@@ -459,17 +459,12 @@ export const RankingsMobile = () => {
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))
-            ) : standings && standings.length > 0 ? (
-              [...standings].sort((a, b) => {
-                const getVictories = (s: any) => s.nb_victoires ?? s.victories_count ?? 0;
-                const getScorers = (s: any) => s.nb_scoreurs ?? s.scoreurs_count ?? 0;
-                if (standingsSortBy === 'victories') return getVictories(b) - getVictories(a);
-                if (standingsSortBy === 'scorers') return getScorers(b) - getScorers(a);
-                return (b.total_points || 0) - (a.total_points || 0);
-              }).map((standing, idx) => {
+            ) : sortedStandings.length > 0 ? (
+              sortedStandings.map((standing, idx) => {
                 const rank = idx + 1;
                 const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
                 const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
+                const gapToPrevious = idx > 0 ? sortedStandings[idx - 1].total_points - standing.total_points : 0;
                 
                 // Calculate evolution - ONLY for global view
                 let evolution: number | null = null;
