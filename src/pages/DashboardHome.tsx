@@ -82,9 +82,9 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-64 w-full" />
+                <Skeleton key={i} className="h-52 md:h-64 w-full" />
               ))}
             </div>
           ) : leagues.length === 0 ? (
@@ -97,7 +97,7 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {activeLeagues.map((league) => (
                   <LeagueCard
                     key={league.id}
