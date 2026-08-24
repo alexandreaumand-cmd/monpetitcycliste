@@ -428,27 +428,60 @@ export default function ManagerProfile() {
           </div>
           {rosterLoading ? (
             <Skeleton className="h-40 w-full" />
+          ) : topRiders.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {t("managerProfile.noData")}
+            </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("managerProfile.rider")}</TableHead>
-                    <TableHead>{t("managerProfile.team")}</TableHead>
-                    <TableHead className="text-right">{t("managerProfile.price")}</TableHead>
-                    <TableHead className="text-right">{t("managerProfile.points")}</TableHead>
-                    <TableHead className="text-right">{t("managerProfile.roi")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topRiders.length === 0 ? (
+            <>
+              {/* Mobile: cartes */}
+              <div className="space-y-2 md:hidden">
+                {topRiders.map((r) => (
+                  <div
+                    key={`m-${r.coureur_id}-${r.prix_achat}`}
+                    className="rounded-md border border-border/60 bg-muted/20 p-2.5"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="min-w-0 flex-1 text-sm font-semibold leading-snug">
+                        {r.nom}
+                      </p>
+                      <p className="shrink-0 text-sm font-bold text-bordure-gold">
+                        {fmt(r.points_total)} pts
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                      {r.equipe}
+                    </p>
+                    <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                      <span>
+                        {t("managerProfile.price")}:{" "}
+                        <strong className="text-foreground">{fmt(r.prix_achat)}</strong>
+                      </span>
+                      <span>
+                        {t("managerProfile.roi")}:{" "}
+                        <strong className="text-foreground">
+                          {Number(r.ratio_points_par_prix ?? 0).toFixed(1)}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: tableau */}
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        {t("managerProfile.noData")}
-                      </TableCell>
+                      <TableHead>{t("managerProfile.rider")}</TableHead>
+                      <TableHead>{t("managerProfile.team")}</TableHead>
+                      <TableHead className="text-right">{t("managerProfile.price")}</TableHead>
+                      <TableHead className="text-right">{t("managerProfile.points")}</TableHead>
+                      <TableHead className="text-right">{t("managerProfile.roi")}</TableHead>
                     </TableRow>
-                  ) : (
-                    topRiders.map((r) => (
+                  </TableHeader>
+                  <TableBody>
+                    {topRiders.map((r) => (
                       <TableRow key={`${r.coureur_id}-${r.prix_achat}`}>
                         <TableCell className="font-medium">{r.nom}</TableCell>
                         <TableCell className="text-muted-foreground">{r.equipe}</TableCell>
@@ -460,11 +493,11 @@ export default function ManagerProfile() {
                           {Number(r.ratio_points_par_prix ?? 0).toFixed(1)}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
