@@ -491,3 +491,23 @@ const StatCard = ({
     </CardContent>
   </Card>
 );
+
+const MiniStat = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Trophy;
+  label: string;
+  value: string;
+}) => (
+  <div className="flex items-start gap-2">
+    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-bordure-gold" />
+    <div className="min-w-0">
+      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-sm font-semibold" title={value}>
+        {value}
+      </p>
+    </div>
+  </div>
+);
