@@ -1254,7 +1254,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
           {/* Stage Navigation */}
           {!isOneDay && activeTab === "stages" && (
-            <div className="mb-6 flex items-center gap-2">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
               {Array.from({ length: course.nb_etapes }, (_, i) => i + 1).map((stage) => {
                 const isCompleted = stageCompletion?.completed_stages.includes(stage);
                 const isCurrent = stage === currentStage;
