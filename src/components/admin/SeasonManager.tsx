@@ -136,19 +136,26 @@ export const SeasonManager = () => {
     const future: any[] = [];
     let current: any = null;
 
-    saisons.forEach((saison: any) => {
-      const hasActivePhase = saison.phases?.some((p: any) => p.statut === 'active');
-      const allCompleted = saison.phases?.length > 0 && saison.phases.every((p: any) => p.statut === 'completed');
-      const noPhases = !saison.phases || saison.phases.length === 0;
+    // The current season is the most recent one holding an active phase
+    const withActivePhase = saisons.filter((s: any) => s.phases?.some((p: any) => p.statut === 'active'));
+    if (withActivePhase.length > 0) {
+      current = withActivePhase.reduce((a: any, b: any) => (b.annee > a.annee ? b : a));
+    }
 
-      if (hasActivePhase) {
-        current = saison;
-      } else if (allCompleted) {
-        past.push(saison);
-      } else if (noPhases) {
+    saisons.forEach((saison: any) => {
+      if (current && saison.id === current.id) return;
+
+      const hasPhases = (saison.phases?.length || 0) > 0;
+
+      if (!hasPhases) {
         future.push(saison);
+      } else if (current && saison.annee > current.annee) {
+        future.push(saison);
+      } else {
+        past.push(saison);
       }
     });
+
 
     return { past, current, future };
   }, [saisons]);
