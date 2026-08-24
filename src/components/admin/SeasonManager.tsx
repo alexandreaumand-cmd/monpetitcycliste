@@ -354,8 +354,16 @@ export const SeasonManager = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium">Phase {phase.index_dans_saison}</span>
-                                  <Badge variant={phase.statut === 'active' ? 'default' : 'secondary'}>
-                                    {phase.statut}
+                                  <Badge
+                                    variant={
+                                      phase.statut === 'active'
+                                        ? 'default'
+                                        : phase.statut === 'draft'
+                                          ? 'outline'
+                                          : 'secondary'
+                                    }
+                                  >
+                                    {phase.statut === 'draft' ? 'brouillon' : phase.statut}
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
@@ -363,19 +371,58 @@ export const SeasonManager = () => {
                                   {" • "}{formatAmount(phase.budget)} de budget
                                 </p>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  togglePhaseStatus.mutate({
-                                    phaseId: phase.id,
-                                    currentStatus: phase.statut
-                                  })
-                                }
-                                disabled={togglePhaseStatus.isPending}
-                              >
-                                {phase.statut === 'active' ? 'Terminer' : 'Activer'}
-                              </Button>
+                              <div className="flex flex-wrap gap-2 justify-end">
+                                {phase.statut === 'draft' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'active' })
+                                    }
+                                    disabled={setPhaseStatus.isPending}
+                                  >
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Lancer la phase
+                                  </Button>
+                                )}
+                                {phase.statut === 'active' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'completed' })
+                                      }
+                                      disabled={setPhaseStatus.isPending}
+                                    >
+                                      Terminer
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'draft' })
+                                      }
+                                      disabled={setPhaseStatus.isPending}
+                                    >
+                                      <FileEdit className="mr-2 h-4 w-4" />
+                                      Brouillon
+                                    </Button>
+                                  </>
+                                )}
+                                {phase.statut === 'completed' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      setPhaseStatus.mutate({ phaseId: phase.id, newStatus: 'active' })
+                                    }
+                                    disabled={setPhaseStatus.isPending}
+                                  >
+                                    Activer
+                                  </Button>
+                                )}
+                              </div>
+
                             </div>
                           ))}
                         </div>
