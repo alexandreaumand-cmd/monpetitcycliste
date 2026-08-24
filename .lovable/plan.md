@@ -25,7 +25,7 @@ Correction : donner des clés de cache distinctes et explicites (`['saisons', 'w
 | `AuctionResetManager` | Importé dans `MaintenanceTabs` mais jamais affiché. | Supprimer l'import et le fichier |
 | `CoursesResetManager` | Composant orphelin, plus référencé nulle part. | Supprimer le fichier |
 | Import > sections Courses / Coureurs / Équipes / Barèmes | Doublons des écrans dédiés (Courses, Coureurs, Équipes, Barèmes) qui gèrent déjà la création et l'édition. | À conserver pour l'instant (utile pour les gros imports de début de saison), à revoir si jamais utilisés |
-| Import > Rosters / Résultats | Les rosters viennent des enchères et les résultats de la saisie/scraping ; un import CSV brut contourne les triggers de points. | Supprimer (à confirmer) |
+| Import > Rosters / Résultats | Les rosters viennent des enchères et les résultats de la saisie/scraping ; un import CSV brut contourne les triggers de points. | Conserver (ne pas supprimer) |
 | Export complet de la base | La liste des tables exportées est figée à 43 tables et ne contient plus les tables récentes (arène, pronostics, tweets, e-mails, blessures, planning live…) : la sauvegarde est incomplète. | Rendre la liste dynamique (lecture du catalogue) plutôt que codée en dur |
 
 ## 3. Ce que je propose de faire maintenant
