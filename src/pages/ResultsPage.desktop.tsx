@@ -165,6 +165,7 @@ export const ResultsPage = () => {
 
   const openRaceDrawer = (race: Race) => {
     setSelectedCourseId(race.course_id);
+    setInitialEtape(null);
     setDrawerOpen(true);
   };
 

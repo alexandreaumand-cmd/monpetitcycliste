@@ -167,6 +167,7 @@ export const ResultsPageMobile = () => {
   };
   const openRaceDrawer = (race: Race) => {
     setSelectedCourseId(race.course_id);
+    setInitialEtape(null);
     setDrawerOpen(true);
   };
   return <div className="flex flex-col h-full">
