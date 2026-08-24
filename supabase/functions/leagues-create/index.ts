@@ -52,6 +52,13 @@ Deno.serve(async (req) => {
       
       // per_course specific
       selectedCourseIds, // string[]
+
+      // target season (optional, defaults to the latest season)
+      seasonId,
+
+      // clone flow
+      sourceLeagueId,   // string | undefined
+      memberUserIds,    // string[] - members added directly (excluding owner)
     } = body;
 
     if (!name || !gameMode || !maxPlayers || !firstAuctionStartsAt) {
