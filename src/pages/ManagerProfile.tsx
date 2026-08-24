@@ -153,6 +153,22 @@ export default function ManagerProfile() {
 
   const pronoStat = (pronostics ?? []).find((p) => p.manager_id === managerId);
 
+  const pronoRate =
+    pronoStat && Number(pronoStat.total_count) > 0
+      ? Math.round((Number(pronoStat.correct_count) / Number(pronoStat.total_count)) * 100)
+      : null;
+
+  const bestPhase = useMemo(
+    () =>
+      myPhases.reduce<(typeof myPhases)[number] | null>(
+        (best, p) => (!best || Number(p.total_points) > Number(best.total_points) ? p : best),
+        null
+      ),
+    [myPhases]
+  );
+
+
+
   const topRiders = useMemo(
     () =>
       [...(roster ?? [])].sort(
