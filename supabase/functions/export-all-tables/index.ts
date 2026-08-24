@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// All 44 public tables to export
-const TABLES = [
+// Fallback list, used only if dynamic table discovery fails
+const FALLBACK_TABLES = [
   'annonces',
   'announcement_banner',
   'app_feature_flags',
