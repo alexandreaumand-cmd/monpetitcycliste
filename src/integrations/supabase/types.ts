@@ -7343,7 +7343,10 @@ export type Database = {
           etape_numero: number
           is_mine: boolean
           kind: string
+          league_name: string
           link_path: string
+          manager_is_me: boolean
+          manager_nom: string
           my_points: number
           my_rank: number
           occurred_at: string
