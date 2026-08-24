@@ -52,6 +52,8 @@ export const PronosticRaceCard = ({
   leagueId,
   managerId,
   isCancelled = false,
+  suggestedPick = null,
+
 }: PronosticRaceCardProps) => {
   const { t, i18n } = useTranslation("arena");
   const lang = i18n.language?.split('-')[0] || 'fr';
