@@ -296,6 +296,17 @@ export const RankingsMobile = () => {
     { label: t('tabs.comparison'), value: "comparison" as TabView },
   ];
 
+  const sortedStandings = useMemo(() => {
+    if (!standings) return [];
+    return [...standings].sort((a, b) => {
+      const getVictories = (s: any) => s.nb_victoires ?? s.victories_count ?? 0;
+      const getScorers = (s: any) => s.nb_scoreurs ?? s.scoreurs_count ?? 0;
+      if (standingsSortBy === 'victories') return getVictories(b) - getVictories(a);
+      if (standingsSortBy === 'scorers') return getScorers(b) - getScorers(a);
+      return (b.total_points || 0) - (a.total_points || 0);
+    });
+  }, [standings, standingsSortBy]);
+
   const getRankBadge = (rank: number) => {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
