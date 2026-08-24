@@ -214,12 +214,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     if (sourceSettings.gameMode !== 'per_course' || sourceSettings.courseNames.length === 0) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('courses')
         .select('id, nom')
         .eq('saison_id', seasonId);
       if (cancelled) return;
-      const { ids, missing } = remapCourseNames(sourceSettings.courseNames, data || []);
+      const targetCourses = (data ?? []) as Array<{ id: string; nom: string | null }>;
+      const { ids, missing } = remapCourseNames(sourceSettings.courseNames, targetCourses);
       setSelectedCourseIds(ids);
       setMissingCourses(missing);
     })();
