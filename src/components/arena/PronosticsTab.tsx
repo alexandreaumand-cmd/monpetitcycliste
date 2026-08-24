@@ -5,6 +5,8 @@ import { Target } from "lucide-react";
 import { PronosticRaceCard } from "./PronosticRaceCard";
 import { PronosticStandings } from "./PronosticStandings";
 import { PronosticUrgencyBanner } from "./PronosticUrgencyBanner";
+import { HallOfFameSection } from "./HallOfFameSection";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TabGroup } from "@/components/mobile/TabGroup";
 import {
   useCurrentManagerId,
@@ -24,6 +26,7 @@ interface PronosticsTabProps {
 export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   const { t } = useTranslation("arena");
   const [activeTab, setActiveTab] = useState("inprogress");
+  const isDesktop = !useIsMobile();
   const { data: managerId, isLoading: managerLoading } = useCurrentManagerId();
   const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines(leagueId);
   const { data: myPronostics, isLoading: pronosticsLoading } = useMyPronostics(leagueId, managerId || null);
@@ -85,11 +88,12 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     ) || null;
   };
 
+  // The standings tab is mobile-only: on desktop they sit in the sticky sidebar.
   const tabItems = [
     { label: t("pronostics.tabs.inProgress"), value: "inprogress" },
     { label: t("pronostics.tabs.upcoming"), value: "upcoming" },
     { label: t("pronostics.tabs.past"), value: "past" },
-    { label: t("pronostics.tabs.standings"), value: "standings" },
+    ...(isDesktop ? [] : [{ label: t("pronostics.tabs.standings"), value: "standings" }]),
   ];
 
   if (isLoading) {
