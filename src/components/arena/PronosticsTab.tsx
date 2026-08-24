@@ -182,7 +182,7 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
         )}
       </div>
 
-      {/* Desktop: standings + prestige podium always visible in a sticky column. */}
+      {/* Desktop: standings always visible in a sticky column. */}
       <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
         <PronosticStandings leagueId={leagueId} showChart={false} />
       </aside>
