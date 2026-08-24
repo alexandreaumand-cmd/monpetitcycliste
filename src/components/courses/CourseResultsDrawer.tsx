@@ -264,7 +264,13 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId, initialEtape
         const hasGeneralResults = types.includes('General');
         
         if (isStageRace) {
-          if (hasGeneralResults) {
+          const etapes: number[] = data.meta.etapes_disponibles || [];
+          if (initialEtape != null && etapes.includes(initialEtape)) {
+            // Deep link on a specific stage
+            setActiveTab('stages');
+            setSelectedType('Etape');
+            setSelectedEtape(initialEtape);
+          } else if (hasGeneralResults) {
             // For stage races with General results: show finals tab with General
             setActiveTab('finals');
             setSelectedType('General');
@@ -273,10 +279,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId, initialEtape
             // No General yet: show stages tab with latest stage
             setActiveTab('stages');
             setSelectedType('Etape');
-            const latestEtape = Math.max(...(data.meta.etapes_disponibles || [1]));
+            const latestEtape = Math.max(...(etapes.length ? etapes : [1]));
             setSelectedEtape(latestEtape);
           }
         } else {
+
           // For simple races: start on "results" tab
           setActiveTab('results');
           const defaultType = hasGeneralResults ? 'General' : types[0];
