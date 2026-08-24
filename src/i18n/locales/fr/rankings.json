@@ -121,5 +121,27 @@
     "ridersDescription": "Les meilleurs coureurs apparaîtront ici",
     "noResults": "Aucun résultat",
     "noResultsDescription": "Aucun coureur ne correspond à votre recherche"
+  },
+  "managerProfile": {
+    "back": "Retour",
+    "rankOf": "{{rank}}e / {{total}}",
+    "gapToLeader": "-{{gap}} pts du leader",
+    "scorers": "Scoreurs",
+    "wins": "Victoires",
+    "pronostics": "Pronostics",
+    "bonus": "Bonus",
+    "byPhase": "Progression par phase",
+    "phase": "Phase",
+    "points": "Points",
+    "rank": "Rang",
+    "roster": "Effectif",
+    "allPhases": "Toutes",
+    "rider": "Coureur",
+    "team": "Équipe",
+    "price": "Prix",
+    "roi": "Pts/€",
+    "spent": "Budget dépensé",
+    "bestRoi": "Meilleur ROI",
+    "noData": "Aucune donnée"
   }
 }

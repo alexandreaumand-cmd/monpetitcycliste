@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Target } from "lucide-react";
 import { PronosticRaceCard } from "./PronosticRaceCard";
 import { PronosticStandings } from "./PronosticStandings";
+import { PronosticUrgencyBanner } from "./PronosticUrgencyBanner";
 import { TabGroup } from "@/components/mobile/TabGroup";
 import {
   useCurrentManagerId,
@@ -11,7 +12,9 @@ import {
   useMyPronostics,
   useEvaluatedDeadlineIds,
   useCancelledDeadlineIds,
+  type PronosticDeadline,
 } from "@/hooks/useArenaPronostics";
+
 import { isPast } from "date-fns";
 
 interface PronosticsTabProps {
@@ -107,6 +110,26 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     );
   }
 
+  // Last pick made on the same race (same type), offered as one-click quick fill
+  const getSuggestedPick = (deadline: PronosticDeadline) => {
+    if (deadline.is_ttt || !myPronostics) return null;
+    const candidates = myPronostics
+      .filter(
+        (p) =>
+          p.course_id === deadline.course_id &&
+          p.pronostic_type === deadline.pronostic_type &&
+          p.coureur_id &&
+          p.coureur_nom &&
+          (p.etape_numero ?? -1) !== (deadline.etape_numero ?? -1)
+      )
+      .sort((a, b) => (b.etape_numero ?? 0) - (a.etape_numero ?? 0));
+    const last = candidates[0];
+    return last ? { coureurId: last.coureur_id!, coureurNom: last.coureur_nom! } : null;
+  };
+
+  const missingOpen = openDeadlines.filter((d) => !getPronosticForDeadline(d));
+
+
   const renderDeadlineList = (list: typeof deadlines) => {
     if (!list || list.length === 0) {
       return (
@@ -126,6 +149,7 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
             leagueId={leagueId}
             managerId={managerId}
             isCancelled={cancelledIds?.has(deadline.id) ?? false}
+            suggestedPick={getSuggestedPick(deadline)}
           />
         ))}
 
@@ -135,11 +159,17 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
 
   return (
     <div className="space-y-4 max-w-full overflow-hidden">
+      <PronosticUrgencyBanner
+        missing={missingOpen}
+        onGoToUpcoming={() => setActiveTab("upcoming")}
+      />
+
       <TabGroup
         items={tabItems}
         selected={activeTab}
         onSelect={setActiveTab}
       />
+
 
       {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
       {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}

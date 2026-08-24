@@ -133,5 +133,29 @@
     "youthClassification": "Youth",
     "stagePlaceholder": "Select a stage",
     "stage": "Stage"
+  },
+  "activity": {
+    "title": "What happened",
+    "new": "New",
+    "empty": "Nothing new right now",
+    "todo": "To do ({{count}})",
+    "closesIn": "Closes in {{time}}",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "resultWithPoints": "You scored {{points}} pts — rank {{rank}} in the league",
+    "resultNoPoints": "No points for you in this classification",
+    "pronosticDone": "Pick saved",
+    "pronosticTodo": "You haven't picked yet",
+    "injury": "Injury reported",
+    "startlist": "Startlist: {{change}}",
+    "chat": "{{count}} new messages",
+    "trashTalkTitle": "Trash talk",
+    "auctionTitle": "Auction — round {{round}}",
+    "auction": "Auction round ({{round}})",
+    "filters": {
+      "all": "All",
+      "mine": "My riders",
+      "pronostics": "Pronostics"
+    }
   }
 }

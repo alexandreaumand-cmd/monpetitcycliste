@@ -30,6 +30,8 @@ import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
 import LivePage from "./LivePage";
 import TeamStartlistMovements from "./TeamStartlistMovements";
+import ManagerProfile from "./ManagerProfile";
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -124,6 +126,8 @@ const Dashboard = () => {
             <Route path="arene" element={<ArenaPage />} />
             <Route path="live" element={<LivePage />} />
             <Route path="compte" element={<AccountPage />} />
+            <Route path="manager/:managerId" element={<ManagerProfile />} />
+
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isSuperAdmin && (
               <Route 
@@ -182,6 +186,8 @@ const Dashboard = () => {
             <Route path="arene" element={<ArenaPage />} />
             <Route path="live" element={<LivePage />} />
             <Route path="compte" element={<AccountPage />} />
+            <Route path="manager/:managerId" element={<ManagerProfile />} />
+
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isSuperAdmin && (
               <Route 

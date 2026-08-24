@@ -133,5 +133,29 @@
     "youthClassification": "Jeunes",
     "stagePlaceholder": "Sélectionner une étape",
     "stage": "Étape"
+  },
+  "activity": {
+    "title": "Ce qui s'est passé",
+    "new": "Nouveau",
+    "empty": "Rien de neuf pour le moment",
+    "todo": "À faire ({{count}})",
+    "closesIn": "Clôture dans {{time}}",
+    "showMore": "Voir plus",
+    "showLess": "Voir moins",
+    "resultWithPoints": "Tu as marqué {{points}} pts — {{rank}}e de la ligue",
+    "resultNoPoints": "Aucun point pour toi sur ce classement",
+    "pronosticDone": "Pronostic enregistré",
+    "pronosticTodo": "Tu n'as pas encore joué",
+    "injury": "Blessure signalée",
+    "startlist": "Startlist : {{change}}",
+    "chat": "{{count}} nouveaux messages",
+    "trashTalkTitle": "Trash talk",
+    "auctionTitle": "Enchères — tour {{round}}",
+    "auction": "Tour d'enchères ({{round}})",
+    "filters": {
+      "all": "Tout",
+      "mine": "Mes coureurs",
+      "pronostics": "Pronostics"
+    }
   }
 }

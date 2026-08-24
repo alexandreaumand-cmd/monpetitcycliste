@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users, Ban, Image as ImageIcon, ExternalLink, Repeat } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { useCourseRouteImages, pickRouteImage } from "@/hooks/useCourseRouteImage";
@@ -27,7 +27,10 @@ interface PronosticRaceCardProps {
   leagueId: string;
   managerId: string;
   isCancelled?: boolean;
+  /** Last pick made on the same race, offered as a one-click quick fill */
+  suggestedPick?: { coureurId: string; coureurNom: string } | null;
 }
+
 
 
 function formatShortDeadline(deadline: Date, lang: string): string {
@@ -49,6 +52,8 @@ export const PronosticRaceCard = ({
   leagueId,
   managerId,
   isCancelled = false,
+  suggestedPick = null,
+
 }: PronosticRaceCardProps) => {
   const { t, i18n } = useTranslation("arena");
   const lang = i18n.language?.split('-')[0] || 'fr';
@@ -207,6 +212,22 @@ export const PronosticRaceCard = ({
             <span className="text-xs text-muted-foreground italic">{t("pronostics.noPick")}</span>
           )}
         </div>
+
+        {/* Quick-fill: reuse the last pick made on this race */}
+        {!isExpired && !pronostic && suggestedPick && !isTTT && (
+          <button
+            type="button"
+            disabled={savePronostic.isPending}
+            onClick={() => handleSelectRider(suggestedPick.coureurId, suggestedPick.coureurNom)}
+            className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline disabled:opacity-50"
+          >
+            <Repeat className="h-3 w-3 shrink-0" />
+            <span className="truncate">
+              {t("pronostics.reusePick", { rider: suggestedPick.coureurNom })}
+            </span>
+          </button>
+        )}
+
 
         {/* Route image link (open pronostics only) */}
         {!isExpired && routeImage && (

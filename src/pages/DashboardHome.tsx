@@ -7,6 +7,8 @@ import { useLeagueCardsData } from "@/hooks/useLeagueCardsData";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
+import { LeagueActivityFeed } from "@/components/dashboard/LeagueActivityFeed";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Archive, ChevronDown, ChevronUp } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -146,10 +148,14 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
           )}
         </div>
 
+        {/* League activity feed */}
+        <LeagueActivityFeed />
+
         {/* Recent Results Widget */}
         <div className="w-full">
           <RecentResultsWidget />
         </div>
+
       </div>
     </div>
   );

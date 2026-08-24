@@ -69,7 +69,13 @@
     "noPicksYet": "Aucun pronostic pour cette course",
     "routeImage": "Profil de l'étape",
     "routeImageOpen": "Ouvrir dans un nouvel onglet",
-    "you": "(vous)"
+    "you": "(vous)",
+    "reusePick": "Reprendre {{rider}}",
+    "urgency": {
+      "title": "{{count}} pronostic(s) à remplir",
+      "next": "Prochaine clôture : {{race}} dans {{time}}",
+      "cta": "Remplir"
+    }
   },
   "votes": {
     "title": "Votes de la Communauté",
