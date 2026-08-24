@@ -27,7 +27,10 @@ interface PronosticRaceCardProps {
   leagueId: string;
   managerId: string;
   isCancelled?: boolean;
+  /** Last pick made on the same race, offered as a one-click quick fill */
+  suggestedPick?: { coureurId: string; coureurNom: string } | null;
 }
+
 
 
 function formatShortDeadline(deadline: Date, lang: string): string {
