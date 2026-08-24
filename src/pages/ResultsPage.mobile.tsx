@@ -70,21 +70,26 @@ export const ResultsPageMobile = () => {
   } = useManagerJerseys(allPodiumManagerIds, selectedSeason?.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [initialEtape, setInitialEtape] = useState<number | null>(null);
   
   // URL params for deep linking from notifications
   const [searchParams, setSearchParams] = useSearchParams();
   const courseIdFromUrl = searchParams.get('courseId');
+  const etapeFromUrl = searchParams.get('etape');
 
   // Open drawer automatically if courseId is in URL
   useEffect(() => {
     if (courseIdFromUrl) {
       setSelectedCourseId(courseIdFromUrl);
+      setInitialEtape(etapeFromUrl ? Number(etapeFromUrl) : null);
       setDrawerOpen(true);
       // Clean up URL after opening
       searchParams.delete('courseId');
+      searchParams.delete('etape');
       setSearchParams(searchParams, { replace: true });
     }
   }, [courseIdFromUrl]);
+
 
   useEffect(() => {
     if (!isLoadingContext && leagueId) {
