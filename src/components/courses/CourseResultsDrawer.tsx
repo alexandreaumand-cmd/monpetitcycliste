@@ -136,9 +136,12 @@ interface CourseResultsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   courseId: string | null;
+  /** Deep link: open directly on this stage's results */
+  initialEtape?: number | null;
 }
 
-export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
+export const CourseResultsDrawer = ({ open, onOpenChange, courseId, initialEtape }: CourseResultsDrawerProps) => {
+
   const { leagueId } = useLeague();
   const isMobile = useIsMobile();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
