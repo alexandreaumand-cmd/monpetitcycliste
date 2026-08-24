@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 import { normalize, tokenSig } from "../_shared/normalization.ts";
+import { fetchPcs } from "../_shared/pcsFetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
