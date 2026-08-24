@@ -67,39 +67,39 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
         onClick={() => onViewDetails(true)}
         className={
           auctionStatus.isAnnouncementsPending 
-            ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+            ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-3 md:p-4 space-y-2 md:space-y-3 cursor-pointer hover:shadow-md transition-shadow"
             : auctionStatus.isPastScheduled
-              ? "bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+              ? "bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-lg p-3 md:p-4 space-y-2 md:space-y-3 cursor-pointer hover:shadow-md transition-shadow"
               : auctionStatus.isScheduled 
-                ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
-                : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-3 md:p-4 space-y-2 md:space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-3 md:p-4 space-y-2 md:space-y-3 cursor-pointer hover:shadow-md transition-shadow"
         }
       >
         <div className="flex items-center gap-2">
           {auctionStatus.isAnnouncementsPending ? (
             <>
-              <PartyPopper className="h-5 w-5 text-orange-600" />
+              <PartyPopper className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
               <h3 className="font-montserrat font-bold text-orange-900">
                 {t('leagueCard.auction.resultsInProgress')}
               </h3>
             </>
           ) : auctionStatus.isPastScheduled ? (
             <>
-              <Clock className="h-5 w-5 text-gray-600" />
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               <h3 className="font-montserrat font-bold text-gray-800">
                 {t('leagueCard.auction.awaitingOpening')}
               </h3>
             </>
           ) : auctionStatus.isScheduled ? (
             <>
-              <Clock className="h-5 w-5 text-blue-600" />
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
               <h3 className="font-montserrat font-bold text-blue-900">
                 {t('leagueCard.auction.scheduled')}
               </h3>
             </>
           ) : (
             <>
-              <Gavel className="h-5 w-5 text-amber-900" />
+              <Gavel className="h-4 w-4 md:h-5 md:w-5 text-amber-900" />
               <h3 className="font-montserrat font-bold text-amber-900">
                 {t('leagueCard.auction.inProgress')}
               </h3>
@@ -117,7 +117,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               }`}>
                 Phase
               </span>
-              <span className={`text-lg font-montserrat font-bold ${
+              <span className={`text-base md:text-lg font-montserrat font-bold ${
                 auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
                   : auctionStatus.isScheduled ? 'text-blue-900' 
                   : 'text-amber-900'
@@ -135,7 +135,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             }`}>
               {t('leagueCard.auction.round')}
             </span>
-            <span className={`text-lg font-montserrat font-bold ${
+            <span className={`text-base md:text-lg font-montserrat font-bold ${
               auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
                 : auctionStatus.isScheduled ? 'text-blue-900' 
                 : 'text-amber-900'
@@ -159,10 +159,10 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             <>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-inter text-amber-900 flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   {t('leagueCard.auction.validatedManagers')}
                 </span>
-                <span className="text-lg font-montserrat font-bold text-amber-900">
+                <span className="text-base md:text-lg font-montserrat font-bold text-amber-900">
                   {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
                 </span>
               </div>
@@ -202,30 +202,30 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   <div className="text-center">
-                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                    <div className={`text-xl md:text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                       {String(countdown.days).padStart(2, '0')}
                     </div>
                     <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>
                       {countdown.days > 1 ? t('leagueCard.auction.days') : t('leagueCard.auction.day')}
                     </div>
                   </div>
-                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className={`text-lg md:text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                   <div className="text-center">
-                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                    <div className={`text-xl md:text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                       {String(countdown.hours).padStart(2, '0')}
                     </div>
                     <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>h</div>
                   </div>
-                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className={`text-lg md:text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                   <div className="text-center">
-                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                    <div className={`text-xl md:text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                       {String(countdown.minutes).padStart(2, '0')}
                     </div>
                     <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>min</div>
                   </div>
-                  <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
+                  <div className={`text-lg md:text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                   <div className="text-center">
-                    <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
+                    <div className={`text-xl md:text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                       {String(countdown.seconds).padStart(2, '0')}
                     </div>
                     <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>sec</div>
@@ -242,10 +242,10 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200">
-      <CardHeader className="space-y-3">
+      <CardHeader className="p-4 md:p-6 space-y-2 md:space-y-3">
         {/* Ligne 1 : Nom + Statut + Visibilité */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-border">
-          <CardTitle className="text-lg">{league.name}</CardTitle>
+        <div className="flex items-start justify-between gap-3 pb-2 md:pb-3 border-b border-border">
+          <CardTitle className="text-base md:text-lg">{league.name}</CardTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
             {league.status !== 'active' && (
               <LeagueStatusBadge 
@@ -269,12 +269,12 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
         </div>
 
         {/* Ligne 2 : Type de ligue + Saison + Joueurs */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-wrap min-w-0">
             {gameMode && (
               <Badge 
                 variant="outline" 
-                className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
+                className="gap-1 text-[10px] md:text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
               >
                 <Zap className="h-3 w-3" />
                 {t(`leagueCard.gameMode.${gameMode.id}`)}
@@ -291,7 +291,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             ) : leagueSeason?.season?.annee ? (
               <Badge 
                 variant="outline" 
-                className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
+                className="gap-1 text-[10px] md:text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
               >
                 <Calendar className="h-3 w-3" />
                 {leagueSeason.season.annee}
@@ -299,7 +299,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             ) : null}
             <Badge 
               variant="outline" 
-              className={`gap-1 text-xs shrink-0 font-inter ${
+              className={`gap-1 text-[10px] md:text-xs shrink-0 font-inter ${
                 league.bonuses_enabled 
                   ? "text-amber-600 border-amber-300" 
                   : "text-muted-foreground border-muted-foreground/30"
@@ -336,7 +336,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
         {/* EN ATTENTE DE JOUEURS */}
         {isWaitingForPlayers && (
           <>
@@ -344,7 +344,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               {loadingMembersList ? (
                 <Skeleton className="h-20 w-full" />
               ) : (
-                <div className="bg-muted/50 rounded-lg p-3">
+                <div className="bg-muted/50 rounded-lg p-2 md:p-3">
                   {members.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center">
                       {t('leagueCard.waitingForFirstPlayer')}
@@ -363,7 +363,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               )}
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-3">
+            <div className="bg-muted/50 rounded-lg p-2 md:p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">{t('leagueCard.remainingSpots')}</span>
                 <span className="text-3xl font-bold">{remainingSpots}</span>
@@ -373,9 +373,9 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             {isAdmin && (
               <Button 
                 onClick={() => setInvitesSheetOpen(true)}
-                className="w-full bg-bordure-gold text-foreground border-2 border-foreground font-montserrat font-semibold hover:bg-bordure-gold gap-2"
+                className="w-full h-9 md:h-10 bg-bordure-gold text-foreground border-2 border-foreground font-montserrat font-semibold hover:bg-bordure-gold gap-2"
               >
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 {t('leagueCard.invitePlayers')}
               </Button>
             )}
@@ -387,7 +387,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
         {/* PRÊT À LANCER */}
         {isReadyToLaunch && (
           <>
-            <div className="bg-bordure-gold border-2 border-black rounded-lg p-4 text-center shadow-md">
+            <div className="bg-bordure-gold border-2 border-black rounded-lg p-3 md:p-4 text-center shadow-md">
               <CheckCircle className="h-8 w-8 text-foreground mx-auto mb-2" />
               <p className="font-montserrat font-bold text-foreground">
                 {t('leagueCard.allPlayersHere')}
@@ -398,7 +398,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             </div>
 
             <div>
-              <div className="bg-muted/50 rounded-lg p-3">
+              <div className="bg-muted/50 rounded-lg p-2 md:p-3">
                 {loadingMembersList ? (
                   <Skeleton className="h-20 w-full" />
                 ) : (
@@ -432,11 +432,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             ) : stats ? (
               <div className="space-y-3">
                 {stats.mySeasonRank && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-primary" />
+                      <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">{t('leagueCard.generalRanking')}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground">{t('leagueCard.generalRanking')}</p>
                         <p className="font-semibold">
                           #{stats.mySeasonRank}
                           {stats.mySeasonRank === 1 && ' 🥇'}
@@ -446,33 +446,33 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{t('leagueCard.points')}</p>
                       <p className="font-semibold">{Math.round(stats.mySeasonPoints).toLocaleString('fr-FR')}</p>
                     </div>
                   </div>
                 )}
 
                 {stats.myPhaseRank && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">{t('leagueCard.phaseRanking')}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground">{t('leagueCard.phaseRanking')}</p>
                         <p className="font-semibold">#{stats.myPhaseRank}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{t('leagueCard.points')}</p>
                       <p className="font-semibold">{stats.myPhasePoints != null ? Math.round(stats.myPhasePoints).toLocaleString('fr-FR') : '-'}</p>
                     </div>
                   </div>
                 )}
 
                 {stats.seasonLeader && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                    <Crown className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2 p-2 md:p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <Crown className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                     <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">{t('leagueCard.leader')}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{t('leagueCard.leader')}</p>
                       <p className="font-semibold text-sm">{stats.seasonLeader.name}</p>
                     </div>
                     <p className="text-sm font-semibold">{Math.round(stats.seasonLeader.points).toLocaleString('fr-FR')} pts</p>
@@ -511,7 +511,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 <Button 
                   onClick={() => onViewDetails(true)} 
                   variant="outline" 
-                  className="flex-1 min-w-0 truncate"
+                  className="flex-1 min-w-0 truncate h-9 md:h-10 text-xs md:text-sm"
                 >
                   {t('leagueCard.goToAuction')}
                 </Button>
@@ -520,7 +520,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 <Button
                   onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
                   variant="outline"
-                  className={`relative gap-1.5 shrink-0 ${auctionStatus.isAnnouncementsPending ? 'border-[#E8A0B4] ring-2 ring-[#E8A0B4]/30' : ''}`}
+                  className={`relative h-9 md:h-10 gap-1.5 shrink-0 ${auctionStatus.isAnnouncementsPending ? 'border-[#E8A0B4] ring-2 ring-[#E8A0B4]/30' : ''}`}
                 >
                   <Megaphone className="h-4 w-4" />
                   <span className={auctionStatus.isAnnouncementsPending ? "inline" : "hidden sm:inline"}>Annonces</span>
@@ -536,7 +536,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             <Button 
               onClick={() => onViewDetails(false)} 
               variant="outline" 
-              className="w-full"
+              className="w-full h-9 md:h-10 text-xs md:text-sm"
             >
               {t('leagueCard.viewMyLeague')}
             </Button>
@@ -546,7 +546,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
         {/* TERMINÉE */}
         {isCompleted && (
           <>
-            <div className="bg-gradient-to-br from-secondary to-gray-900 rounded-lg p-4 border-2 border-bordure-gold text-center shadow-lg">
+            <div className="bg-gradient-to-br from-secondary to-gray-900 rounded-lg p-3 md:p-4 border-2 border-bordure-gold text-center shadow-lg">
               <Trophy className="h-8 w-8 text-bordure-gold mx-auto mb-2" />
               <p className="font-montserrat font-bold text-white">
                 {t('leagueCard.leagueEnded')}
@@ -559,7 +559,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             </div>
 
             {stats?.mySeasonRank && (
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-center p-2 md:p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground">{t('leagueCard.yourFinalRanking')}</p>
                 <p className="text-2xl font-bold text-primary">#{stats.mySeasonRank}</p>
               </div>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -53,6 +54,7 @@ export const LeagueActivityFeed = () => {
   const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
   const locale = useDateLocale();
+  const isMobile = useIsMobile();
   const { leagueId } = useLeague();
   const { data: managerId } = useCurrentManagerId();
   const { data: items, isLoading } = useLeagueActivityFeed(leagueId, managerId);
@@ -72,6 +74,9 @@ export const LeagueActivityFeed = () => {
       setActivityLastSeen(leagueId);
     }
   }, [leagueId, items]);
+
+  const timeAgo = (iso: string) =>
+    formatDistanceToNow(new Date(iso), { addSuffix: true, locale });
 
   const { todo, timeline } = useMemo(() => {
     const now = Date.now();
@@ -184,6 +189,53 @@ export const LeagueActivityFeed = () => {
         : item.kind === "pronostic_result" && item.count_value === 0
           ? X
           : null;
+
+    if (isMobile) {
+      return (
+        <button
+          key={key}
+          onClick={() => go(item.link_path)}
+          className={cn(
+            "w-full flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 text-left transition-colors hover:bg-muted/40",
+            nested && "border-dashed bg-card/60"
+          )}
+        >
+          {OutcomeIcon ? (
+            <OutcomeIcon
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 mt-0.5",
+                item.count_value === 1 ? "text-bordure-gold" : "text-destructive"
+              )}
+            />
+          ) : (
+            <Icon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", meta.tone)} />
+          )}
+          <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-medium truncate">{title}</span>
+                {isNew && (
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 px-1 py-0 text-[9px] leading-tight"
+                  >
+                    {t("activity.new")}
+                  </Badge>
+                )}
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-muted-foreground truncate">{describe(item)}</p>
+              <span className="shrink-0 text-[10px] text-muted-foreground">
+                {timeAgo(item.occurred_at)}
+              </span>
+            </div>
+          </div>
+        </button>
+      );
+    }
+
     return (
       <button
         key={key}
@@ -215,7 +267,7 @@ export const LeagueActivityFeed = () => {
           <p className="truncate text-xs text-muted-foreground">{describe(item)}</p>
         </div>
         <span className="shrink-0 text-[11px] text-muted-foreground">
-          {formatDistanceToNow(new Date(item.occurred_at), { addSuffix: true, locale })}
+          {timeAgo(item.occurred_at)}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
@@ -226,6 +278,58 @@ export const LeagueActivityFeed = () => {
     const isOpen = openGroups[entry.key] ?? false;
     const totalPoints = entry.items.reduce((sum, i) => sum + (i.my_points ?? 0), 0);
     const hasNew = entry.items.some((i) => isNewAt(i.occurred_at));
+
+    if (isMobile) {
+      return (
+        <div key={entry.key} className="space-y-1">
+          <button
+            onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.key]: !isOpen }))}
+            className="w-full flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 text-left transition-colors hover:bg-muted/40"
+          >
+            <Trophy className="h-3.5 w-3.5 shrink-0 mt-0.5 text-bordure-gold" />
+            <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-semibold truncate">{entry.courseNom}</span>
+                  {hasNew && (
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 px-1 py-0 text-[9px] leading-tight"
+                    >
+                      {t("activity.new")}
+                    </Badge>
+                  )}
+                </div>
+                {isOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs text-muted-foreground truncate">
+                  {t("activity.groupSummary", {
+                    count: entry.items.length,
+                    points: Math.round(totalPoints),
+                  })}
+                </p>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {timeAgo(entry.occurredAt)}
+                </span>
+              </div>
+            </div>
+          </button>
+          {isOpen && (
+            <div className="ml-2 space-y-1 border-l pl-2 md:ml-4 md:pl-3">
+              {entry.items.map((item, idx) =>
+                renderRow(item, `${entry.key}-${idx}`, subRowTitle(item), true)
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div key={entry.key} className="space-y-1.5">
         <button
@@ -250,7 +354,7 @@ export const LeagueActivityFeed = () => {
             </p>
           </div>
           <span className="shrink-0 text-[11px] text-muted-foreground">
-            {formatDistanceToNow(new Date(entry.occurredAt), { addSuffix: true, locale })}
+            {timeAgo(entry.occurredAt)}
           </span>
           {isOpen ? (
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -275,9 +379,9 @@ export const LeagueActivityFeed = () => {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="p-4 md:p-6 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 font-montserrat text-lg">
+          <CardTitle className="flex items-center gap-2 font-montserrat text-base md:text-lg">
             <Activity className="h-5 w-5 text-bordure-gold" />
             {t("activity.title")}
           </CardTitle>
@@ -287,7 +391,7 @@ export const LeagueActivityFeed = () => {
                 key={key}
                 onClick={() => setFilter(key)}
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  "rounded-full px-2 md:px-3 py-1 text-xs font-medium transition-colors",
                   filter === key
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
@@ -299,7 +403,7 @@ export const LeagueActivityFeed = () => {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="p-4 pt-0 md:p-6 space-y-3">
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
@@ -318,7 +422,7 @@ export const LeagueActivityFeed = () => {
                     <button
                       key={`todo-${idx}`}
                       onClick={() => go(item.link_path)}
-                      className="flex w-full items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-left transition-colors hover:bg-primary/10"
+                      className="flex w-full items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 md:px-3 md:py-2 text-left transition-colors hover:bg-primary/10"
                     >
                       <Target className="h-4 w-4 shrink-0 text-primary" />
                       <div className="min-w-0 flex-1">
