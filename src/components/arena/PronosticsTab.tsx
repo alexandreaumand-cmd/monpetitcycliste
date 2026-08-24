@@ -127,11 +127,8 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     return last ? { coureurId: last.coureur_id!, coureurNom: last.coureur_nom! } : null;
   };
 
-  const missingOpen = useMemo(
-    () => openDeadlines.filter((d) => !getPronosticForDeadline(d)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [openDeadlines, myPronostics]
-  );
+  const missingOpen = openDeadlines.filter((d) => !getPronosticForDeadline(d));
+
 
   const renderDeadlineList = (list: typeof deadlines) => {
     if (!list || list.length === 0) {
