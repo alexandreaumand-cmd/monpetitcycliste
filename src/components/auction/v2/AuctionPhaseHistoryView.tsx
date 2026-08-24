@@ -74,6 +74,16 @@ export function AuctionPhaseHistoryView({
               <span className="hidden sm:inline">Base de données</span>
               <span className="sm:hidden">DB</span>
             </TabsTrigger>
+
+            <TabsTrigger
+              value="round-recap"
+              className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <ListOrdered className="h-4 w-4" />
+              <span className="hidden sm:inline">Récap par tour</span>
+              <span className="sm:hidden">Tours</span>
+            </TabsTrigger>
+            
             
             {closedRounds.map((round) => (
               <TabsTrigger 
