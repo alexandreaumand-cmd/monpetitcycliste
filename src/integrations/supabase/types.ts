@@ -7318,6 +7318,19 @@ export type Database = {
           saison_annee: number
         }[]
       }
+      get_manager_extra_stats: {
+        Args: { _league_id?: string; _manager_id: string; _saison_id?: string }
+        Returns: {
+          favorite_rider_count: number
+          favorite_rider_nom: string
+          fetish_rider_nom: string
+          fetish_rider_points: number
+          leagues_created: number
+          leagues_joined: number
+          leagues_podium: number
+          leagues_won: number
+        }[]
+      }
       get_manager_public_info: {
         Args: { manager_id: string }
         Returns: {

@@ -20,7 +20,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trophy, Target, Users, Coins, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  Trophy,
+  Target,
+  Users,
+  Coins,
+  TrendingUp,
+  Medal,
+  Flag,
+  Percent,
+  Star,
+  Repeat,
+} from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
   n == null ? "-" : Math.round(Number(n)).toLocaleString("fr-FR");
@@ -106,6 +118,21 @@ export default function ManagerProfile() {
     enabled: !!leagueId,
   });
 
+  const { data: extra, isLoading: extraLoading } = useQuery({
+    queryKey: ["mp-extra-stats", managerId, leagueId, selectedSeason?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_manager_extra_stats", {
+        _manager_id: managerId!,
+        _league_id: leagueId ?? undefined,
+        _saison_id: selectedSeason?.id ?? undefined,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+    enabled: !!managerId,
+  });
+
+
   const sorted = useMemo(
     () =>
       [...(seasonStandings ?? [])].sort(
@@ -137,6 +164,22 @@ export default function ManagerProfile() {
   }, [phaseStandings, managerId, seasonPhases]);
 
   const pronoStat = (pronostics ?? []).find((p) => p.manager_id === managerId);
+
+  const pronoRate =
+    pronoStat && Number(pronoStat.total_count) > 0
+      ? Math.round((Number(pronoStat.correct_count) / Number(pronoStat.total_count)) * 100)
+      : null;
+
+  const bestPhase = useMemo(
+    () =>
+      myPhases.reduce<(typeof myPhases)[number] | null>(
+        (best, p) => (!best || Number(p.total_points) > Number(best.total_points) ? p : best),
+        null
+      ),
+    [myPhases]
+  );
+
+
 
   const topRiders = useMemo(
     () =>
@@ -235,6 +278,80 @@ export default function ManagerProfile() {
           value={fmt(Number(me?.rider_bonus ?? 0) + Number(me?.manager_bonus ?? 0))}
         />
       </div>
+
+      {/* Palmarès & ligues */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 font-montserrat text-lg">
+            <Medal className="h-5 w-5 text-bordure-gold" />
+            {t("managerProfile.palmares")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {extraLoading ? (
+            <Skeleton className="h-28 w-full" />
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
+              <MiniStat
+                icon={Flag}
+                label={t("managerProfile.leaguesCreated")}
+                value={fmt(extra?.leagues_created)}
+              />
+              <MiniStat
+                icon={Users}
+                label={t("managerProfile.leaguesJoined")}
+                value={fmt(extra?.leagues_joined)}
+              />
+              <MiniStat
+                icon={Trophy}
+                label={t("managerProfile.leaguesWon")}
+                value={fmt(extra?.leagues_won)}
+              />
+              <MiniStat
+                icon={Medal}
+                label={t("managerProfile.leaguesPodium")}
+                value={fmt(extra?.leagues_podium)}
+              />
+              <MiniStat
+                icon={TrendingUp}
+                label={t("managerProfile.bestPhase")}
+                value={
+                  bestPhase
+                    ? `P${bestPhase.index} — ${fmt(bestPhase.total_points)} pts`
+                    : "-"
+                }
+              />
+              <MiniStat
+                icon={Percent}
+                label={t("managerProfile.pronoRate")}
+                value={pronoRate == null ? "-" : `${pronoRate} %`}
+              />
+              <MiniStat
+                icon={Star}
+                label={t("managerProfile.fetishRider")}
+                value={
+                  extra?.fetish_rider_nom
+                    ? `${extra.fetish_rider_nom} (${fmt(extra.fetish_rider_points)} pts)`
+                    : "-"
+                }
+              />
+              <MiniStat
+                icon={Repeat}
+                label={t("managerProfile.favoriteRider")}
+                value={
+                  extra?.favorite_rider_nom
+                    ? `${extra.favorite_rider_nom} (${t("managerProfile.phasesCount", {
+                        count: Number(extra.favorite_rider_count ?? 0),
+                      })})`
+                    : "-"
+                }
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
 
       {/* Phase by phase */}
       <Card>
@@ -373,4 +490,24 @@ const StatCard = ({
       </div>
     </CardContent>
   </Card>
+);
+
+const MiniStat = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Trophy;
+  label: string;
+  value: string;
+}) => (
+  <div className="flex items-start gap-2">
+    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-bordure-gold" />
+    <div className="min-w-0">
+      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-sm font-semibold" title={value}>
+        {value}
+      </p>
+    </div>
+  </div>
 );

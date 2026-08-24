@@ -142,6 +142,17 @@
     "roi": "Pts/€",
     "spent": "Budget spent",
     "bestRoi": "Best ROI",
-    "noData": "No data"
+    "noData": "No data",
+    "palmares": "Honours & leagues",
+    "leaguesCreated": "Leagues created",
+    "leaguesJoined": "Leagues joined",
+    "leaguesWon": "Leagues won",
+    "leaguesPodium": "Podiums",
+    "bestPhase": "Best phase",
+    "pronoRate": "Pronostic accuracy",
+    "fetishRider": "Favourite performer",
+    "favoriteRider": "Most drafted rider",
+    "phasesCount": "{{count}} phase",
+    "phasesCount_plural": "{{count}} phases"
   }
 }

@@ -142,6 +142,17 @@
     "roi": "Pts/€",
     "spent": "Budget dépensé",
     "bestRoi": "Meilleur ROI",
-    "noData": "Aucune donnée"
+    "noData": "Aucune donnée",
+    "palmares": "Palmarès & ligues",
+    "leaguesCreated": "Ligues créées",
+    "leaguesJoined": "Ligues rejointes",
+    "leaguesWon": "Ligues gagnées",
+    "leaguesPodium": "Podiums",
+    "bestPhase": "Meilleure phase",
+    "pronoRate": "Réussite pronostics",
+    "fetishRider": "Coureur fétiche",
+    "favoriteRider": "Coureur préféré",
+    "phasesCount": "{{count}} phase",
+    "phasesCount_plural": "{{count}} phases"
   }
 }
