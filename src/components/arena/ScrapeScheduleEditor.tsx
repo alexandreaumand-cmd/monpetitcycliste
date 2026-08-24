@@ -95,6 +95,9 @@ export const ScrapeScheduleEditor = ({ schedule, onChange, disabled }: Props) =>
       >
         <Plus className="h-3 w-3" /> Ajouter une plage
       </Button>
+      <p className="text-[10px] text-muted-foreground">
+        Horaires exprimés en heure de Paris. L'import automatique tourne côté serveur : la page n'a pas besoin d'être ouverte.
+      </p>
     </div>
   );
 };

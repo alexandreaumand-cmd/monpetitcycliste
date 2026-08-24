@@ -33,9 +33,30 @@ type RaceSituation = {
   kmRemaining?: number;
 };
 
+const PARIS_TZ = "Europe/Paris";
+
+// Schedules are entered by admins in Paris local time; evaluate them in that zone
+// (handles DST automatically) instead of the server's UTC clock.
+function getParisMinutes(now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: PARIS_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+function formatParisTime(now: Date): string {
+  const m = getParisMinutes(now);
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
 function getActiveInterval(schedule: ScrapeWindow[] | null, now: Date): number | null {
   if (!Array.isArray(schedule) || schedule.length === 0) return null;
-  const minutes = now.getHours() * 60 + now.getMinutes();
+  const minutes = getParisMinutes(now);
   const toMin = (s: string) => {
     const [h, m] = s.split(":").map(Number);
     return (h || 0) * 60 + (m || 0);
@@ -124,20 +145,26 @@ serve(async (req) => {
     });
   }
 
+  const now = new Date();
+  const parisTime = formatParisTime(now);
+
   if (!rows || rows.length === 0) {
-    return new Response(JSON.stringify({ ran: 0, skipped: 0 }), {
+    console.log(`[auto-scrape] ${parisTime} Paris — no active course with auto-scrape enabled`);
+    return new Response(JSON.stringify({ ran: 0, skipped: 0, paris_time: parisTime }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const now = new Date();
   let ran = 0;
   let skipped = 0;
   const errors: Array<{ course_id: string; error: string }> = [];
 
+  console.log(`[auto-scrape] ${parisTime} Paris — ${rows.length} course(s) with auto-scrape enabled`);
+
   for (const row of rows as any[]) {
     const interval = getActiveInterval(row.scrape_schedule as ScrapeWindow[] | null, now);
     if (interval == null) {
+      console.log(`[auto-scrape] ${row.course_id}: out of schedule window at ${parisTime} Paris — skipped`);
       // Out of window — clear next time
       await admin
         .from("arena_live_courses")
@@ -150,9 +177,14 @@ serve(async (req) => {
     const last = row.last_auto_scrape_at ? new Date(row.last_auto_scrape_at).getTime() : 0;
     const elapsed = (now.getTime() - last) / 1000;
     if (elapsed < interval) {
+      console.log(
+        `[auto-scrape] ${row.course_id}: in window (every ${interval}s) but only ${Math.round(elapsed)}s elapsed — skipped`
+      );
       skipped++;
       continue;
     }
+
+    console.log(`[auto-scrape] ${row.course_id}: running (window interval ${interval}s, ${Math.round(elapsed)}s elapsed)`);
 
     const isStageRace =
       row.courses?.type_course === "stage_race" ||
@@ -241,7 +273,9 @@ serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ ran, skipped, errors }), {
+  console.log(`[auto-scrape] ${parisTime} Paris — done: ran=${ran}, skipped=${skipped}, errors=${errors.length}`);
+
+  return new Response(JSON.stringify({ ran, skipped, errors, paris_time: parisTime }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
