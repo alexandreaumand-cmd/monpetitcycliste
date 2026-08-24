@@ -434,8 +434,11 @@ export const TransfersManager = () => {
                       <div className="space-y-1">
                         <Label className="text-xs">Coureur</Label>
                         {t.coureur_id ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{t.coureur_id}</Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary">
+                              {matchedNames?.[t.coureur_id] ?? t.coureur_id}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">{t.coureur_id}</span>
                             {t.statut === "nouveau" && (
                               <Button
                                 size="sm"
@@ -456,21 +459,47 @@ export const TransfersManager = () => {
                               }
                             />
                             {results.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {results.map((r) => (
-                                  <Button
-                                    key={r.id}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      patch.mutate({ id: t.id, values: { coureur_id: r.id } })
-                                    }
-                                  >
-                                    {r.nom}
-                                  </Button>
-                                ))}
+                              <div className="flex flex-col gap-1">
+                                {results.map((r) => {
+                                  const last = r.seasons[0];
+                                  const isTarget = r.seasons.some((s) => s.annee === t.target_year);
+                                  const isStale = !last || last.annee < t.target_year - 1;
+                                  return (
+                                    <Button
+                                      key={r.id}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-auto justify-start py-2 text-left"
+                                      onClick={() =>
+                                        patch.mutate({ id: t.id, values: { coureur_id: r.id } })
+                                      }
+                                    >
+                                      <span className="flex flex-col items-start gap-0.5">
+                                        <span className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium">{r.nom}</span>
+                                          {isTarget && (
+                                            <Badge variant="default" className="text-[10px]">
+                                              recommandée
+                                            </Badge>
+                                          )}
+                                          {isStale && (
+                                            <Badge variant="secondary" className="text-[10px]">
+                                              fiche ancienne
+                                            </Badge>
+                                          )}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground font-normal">
+                                          {r.id}
+                                          {last ? ` · ${last.annee}` : " · aucune saison"}
+                                          {last?.equipe ? ` · ${last.equipe}` : ""}
+                                        </span>
+                                      </span>
+                                    </Button>
+                                  );
+                                })}
                               </div>
                             )}
+
                           </div>
                         )}
                       </div>
