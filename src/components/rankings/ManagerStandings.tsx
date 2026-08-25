@@ -30,6 +30,8 @@ const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: str
   const { selectedSeason } = useSeasonContext();
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   const navigate = useNavigate();
+  const { leagueId } = useLeague();
+  
   
   return (
     <div className="flex items-center gap-2">
@@ -53,7 +55,7 @@ const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: str
             aria-label={`Profil ${managerName}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/dashboard/manager/${managerId}`);
+              navigate(`/dashboard/manager/${managerId}${leagueId ? `?leagueId=${leagueId}` : ""}`);
             }}
             className="text-muted-foreground/70 transition-colors hover:text-primary"
           >

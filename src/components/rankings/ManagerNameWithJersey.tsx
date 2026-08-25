@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ExternalLink } from "lucide-react";
 
@@ -19,6 +20,7 @@ export function ManagerNameWithJersey({
   const { selectedSeason } = useSeasonContext();
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   const navigate = useNavigate();
+  const { leagueId } = useLeague();
 
   return (
     <div className="flex items-center gap-2">
@@ -39,7 +41,7 @@ export function ManagerNameWithJersey({
           aria-label={`Profil ${managerName}`}
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/dashboard/manager/${managerId}`);
+            navigate(`/dashboard/manager/${managerId}${leagueId ? `?leagueId=${leagueId}` : ""}`);
           }}
           className="text-muted-foreground/60 transition-colors hover:text-primary"
         >
