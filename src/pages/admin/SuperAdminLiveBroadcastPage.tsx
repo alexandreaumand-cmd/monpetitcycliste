@@ -29,6 +29,7 @@ import { RaceTimeline, type TimelineEvent } from "@/components/arena/RaceTimelin
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
+import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
 import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
 import { StagePlanEditor } from "@/components/admin/live/StagePlanEditor";
 
@@ -83,6 +84,7 @@ export const SuperAdminLiveBroadcastPage = () => {
   const selectedCourse = liveCourses?.find(
     (lc) => lc.course_id === activeCourseId
   );
+  const stageStatus = useLiveStageStatus(activeCourseId, selectedCourse?.current_etape ?? null);
   const isMultiStage =
     selectedCourse?.courses?.type_course === "stage_race" ||
     (selectedCourse?.courses?.date_debut &&
@@ -95,11 +97,11 @@ export const SuperAdminLiveBroadcastPage = () => {
       return;
     }
     if (isMultiStage) {
-      setSelectedEtape(selectedCourse?.current_etape ?? 1);
+      setSelectedEtape(stageStatus.etape ?? 1);
     } else {
       setSelectedEtape(null);
     }
-  }, [activeCourseId, isMultiStage, selectedCourse?.current_etape]);
+  }, [activeCourseId, isMultiStage, stageStatus.etape]);
 
   const handleStageChange = useCallback(
     (etape: number) => {
@@ -592,6 +594,7 @@ export const SuperAdminLiveBroadcastPage = () => {
         onDeactivate={handleDeactivate}
         deactivatePending={deactivate.isPending}
         isMultiStage={!!isMultiStage}
+        stageState={stageStatus.state}
         selectedEtape={selectedEtape}
         onStageChange={handleStageChange}
       />

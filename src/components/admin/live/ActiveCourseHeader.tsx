@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { LiveStageBadge } from "@/components/arena/LiveStageBadge";
+import type { LiveStageState } from "@/hooks/useLiveStageStatus";
 
 interface LiveCourseLite {
   course_id: string;
@@ -46,6 +48,7 @@ interface ActiveCourseHeaderProps {
   isMultiStage: boolean;
   selectedEtape: number | null;
   onStageChange: (etape: number) => void;
+  stageState?: LiveStageState;
 }
 
 export const ActiveCourseHeader = ({
@@ -63,6 +66,7 @@ export const ActiveCourseHeader = ({
   deactivatePending,
   isMultiStage,
   selectedEtape,
+  stageState = "live",
   onStageChange,
 }: ActiveCourseHeaderProps) => {
   const activeCourse = liveCourses?.find((lc) => lc.course_id === activeCourseId);
@@ -100,6 +104,9 @@ export const ActiveCourseHeader = ({
                     className="w-12 h-7 rounded border border-input bg-background px-1.5 text-sm text-center font-bold"
                   />
                 </div>
+              )}
+              {isMultiStage && (
+                <LiveStageBadge etape={selectedEtape} state={stageState} />
               )}
               <Button
                 variant="ghost"
