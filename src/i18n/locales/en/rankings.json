@@ -157,6 +157,8 @@
     "fetishRiderLeague": "Favourite performer (this league)",
     "fetishRiderAll": "Favourite performer (all-time)",
     "favoriteRiderLeague": "Most drafted rider (this league)",
-    "favoriteRiderAll": "Most drafted rider (all-time)"
+    "favoriteRiderAll": "Most drafted rider (all-time)",
+    "bestRatioLeague": "Best ratio (this league)",
+    "bestRatioAll": "Best ratio (all-time)"
   }
 }
