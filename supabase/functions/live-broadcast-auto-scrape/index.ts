@@ -253,18 +253,6 @@ serve(async (req) => {
       `[auto-scrape] ${row.course_id}: running (source=${source}, stage=${effectiveStage ?? "-"}, window interval ${interval}s, ${Math.round(elapsed)}s elapsed)`
     );
 
-    // Keep the course row aligned with the plan of the day so the UI + broadcasts use the right stage
-    if (plan) {
-      const patch: Record<string, unknown> = { live_scrape_url: effectiveUrl };
-      if (plan.etape_numero != null && plan.etape_numero !== row.current_etape) {
-        patch.current_etape = plan.etape_numero;
-      }
-      await admin
-        .from("arena_live_courses")
-        .update(patch)
-        .eq("course_id", row.course_id)
-        .eq("is_active", true);
-    }
 
     const isStageRace =
       row.courses?.type_course === "stage_race" ||
