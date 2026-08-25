@@ -32,6 +32,7 @@ import {
   Percent,
   Star,
   Repeat,
+  Gauge,
 } from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
