@@ -41,7 +41,7 @@ export function ManagerNameWithJersey({
           aria-label={`Profil ${managerName}`}
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/dashboard/manager/${managerId}`);
+            navigate(`/dashboard/manager/${managerId}${leagueId ? `?leagueId=${leagueId}` : ""}`);
           }}
           className="text-muted-foreground/60 transition-colors hover:text-primary"
         >
