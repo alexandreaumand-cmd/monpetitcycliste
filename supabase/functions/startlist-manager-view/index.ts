@@ -260,84 +260,86 @@ Deno.serve(async (req) => {
 
     // Get points from last 5 weeks for each coureur in the startlist
     const pointsCoureurIds = enrichedEntries.map(e => e.coureur_id).filter(Boolean);
-    
-    // Get all points for coureurs in startlist with course info
-    // Points are global - no league_id filter needed (filtering done via coureur_id from startlist entries)
-    const { data: allPoints } = await supabase
-      .from('points_ledger')
-      .select('coureur_id, points, course_id')
-      .in('coureur_id', pointsCoureurIds);
 
-    // Get course dates
-    const courseIds = [...new Set(allPoints?.map(p => p.course_id) || [])];
-    const { data: courseDates } = await supabase
-      .from('courses')
-      .select('id, date_fin')
-      .in('id', courseIds);
-
-    // Build course date map
-    const courseDateMap = new Map();
-    courseDates?.forEach(c => {
-      courseDateMap.set(c.id, c.date_fin);
-    });
-
-    // Filter to last 5 weeks and build weekly points map
-    const resultsMap = new Map();
     const now = new Date();
     const fiveWeeksAgo = new Date();
     fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35);
+    const fiveWeeksAgoStr = fiveWeeksAgo.toISOString().split('T')[0];
+
+    // OPTIMIZED: courses first (last 5 weeks only), then points restricted to those courses
+    // Standings now come from fast RPCs instead of the slow v_manager_standings_* views
+    const [recentCoursesRes, phaseStandingsRes, totalStandingsRes, ratingsRes, routeImagesRes] = await Promise.all([
+      supabase
+        .from('courses')
+        .select('id, date_fin')
+        .gte('date_fin', fiveWeeksAgoStr),
+      supabase.rpc('get_manager_standings_by_phase', {
+        _league_id: league_id,
+        _phase_id: phaseId
+      }),
+      supabase.rpc('get_manager_standings_by_season', {
+        _league_id: league_id,
+        _saison_id: saisonId
+      }),
+      supabase
+        .from('startlist_manager_ratings')
+        .select('manager_id, stars')
+        .eq('startlist_id', startlist_id)
+        .eq('league_id', league_id),
+      supabase
+        .from('course_route_images')
+        .select('etape_numero, image_url, label, sort_order')
+        .eq('course_id', race.id)
+        .order('sort_order', { ascending: true })
+    ]);
+
+    const recentCourses = recentCoursesRes.data || [];
+    const courseDateMap = new Map<string, string>();
+    recentCourses.forEach((c: any) => courseDateMap.set(c.id, c.date_fin));
+
+    const recentCourseIds = recentCourses.map((c: any) => c.id);
+    let allPoints: any[] | null = null;
+    if (pointsCoureurIds.length > 0 && recentCourseIds.length > 0) {
+      const { data } = await supabase
+        .from('points_ledger')
+        .select('coureur_id, points, course_id')
+        .in('coureur_id', pointsCoureurIds)
+        .in('course_id', recentCourseIds);
+      allPoints = data;
+    }
+
+    // Build weekly points map
+    const resultsMap = new Map();
 
     if (allPoints) {
       for (const point of allPoints) {
         const courseDateFin = courseDateMap.get(point.course_id);
         if (!courseDateFin) continue;
-        
+
         const courseDate = new Date(courseDateFin);
         if (courseDate < fiveWeeksAgo) continue; // Skip courses older than 5 weeks
-        
+
         if (!resultsMap.has(point.coureur_id)) {
           resultsMap.set(point.coureur_id, [0, 0, 0, 0, 0]); // 5 weeks
         }
-        
+
         const daysDiff = Math.floor((now.getTime() - courseDate.getTime()) / (1000 * 60 * 60 * 24));
-        const weekIndex = Math.min(Math.floor(daysDiff / 7), 4); // Max 4 (5th week)
-        
+        const weekIndex = Math.min(Math.max(Math.floor(daysDiff / 7), 0), 4); // Max 4 (5th week)
+
         resultsMap.get(point.coureur_id)[weekIndex] += point.points;
       }
     }
 
-    // Get phase standings
-    let phaseStandingsQuery = supabase
-      .from('v_manager_standings_by_phase_v2')
-      .select('*')
-      .eq('phase_id', phaseId);
-    
-    if (league_id) {
-      phaseStandingsQuery = phaseStandingsQuery.eq('league_id', league_id);
-    }
-    
-    const { data: phaseStandings } = await phaseStandingsQuery
-      .order('total_points', { ascending: false });
+    const phaseStandings = (phaseStandingsRes.data || [])
+      .slice()
+      .sort((a: any, b: any) => (b.total_points || 0) - (a.total_points || 0));
 
-    // Get total standings (season-wide)
-    let totalStandingsQuery = supabase
-      .from('v_manager_standings_by_season_v2')
-      .select('*')
-      .eq('saison_id', saisonId);
-    
-    if (league_id) {
-      totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
-    }
-    
-    const { data: totalStandings } = await totalStandingsQuery
-      .order('total_points', { ascending: false });
+    const totalStandings = (totalStandingsRes.data || [])
+      .slice()
+      .sort((a: any, b: any) => (b.total_points || 0) - (a.total_points || 0));
 
-    // Get ratings for managers filtered by league
-    const { data: ratings } = await supabase
-      .from('startlist_manager_ratings')
-      .select('manager_id, stars')
-      .eq('startlist_id', startlist_id)
-      .eq('league_id', league_id);
+    const ratings = ratingsRes.data;
+
 
     // Calculate average ratings per manager
     const ratingsMap = new Map();
