@@ -389,9 +389,7 @@ export default function ManagerProfile() {
                         extra.best_ratio_league_nom_all
                           ? ` · ${extra.best_ratio_league_nom_all}`
                           : ""
-                      } (${Number(extra.best_ratio_value_all ?? 0).toFixed(1)} pts/cr — ${fmt(
-                        extra.best_ratio_points_all
-                      )} pts / ${fmt(extra.best_ratio_price_all)})`
+                      } (${fmt(extra.best_ratio_points_all)} pts / ${fmt(extra.best_ratio_price_all)})`
                     : "-"
                 }
               />
