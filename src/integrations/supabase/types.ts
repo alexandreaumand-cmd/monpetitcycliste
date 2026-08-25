@@ -7444,6 +7444,17 @@ export type Database = {
       get_manager_extra_stats: {
         Args: { _league_id?: string; _manager_id: string; _saison_id?: string }
         Returns: {
+          best_ratio_league_nom_all: string
+          best_ratio_phase_label: string
+          best_ratio_phase_label_all: string
+          best_ratio_points: number
+          best_ratio_points_all: number
+          best_ratio_price: number
+          best_ratio_price_all: number
+          best_ratio_rider_nom: string
+          best_ratio_rider_nom_all: string
+          best_ratio_value: number
+          best_ratio_value_all: number
           favorite_rider_count: number
           favorite_rider_count_all: number
           favorite_rider_nom: string
