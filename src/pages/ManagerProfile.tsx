@@ -32,6 +32,7 @@ import {
   Percent,
   Star,
   Repeat,
+  Gauge,
 } from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
@@ -368,8 +369,36 @@ export default function ManagerProfile() {
                     : "-"
                 }
               />
-
+              <MiniStat
+                icon={Gauge}
+                label={t("managerProfile.bestRatioLeague")}
+                value={
+                  extra?.best_ratio_rider_nom
+                    ? `${extra.best_ratio_rider_nom} — ${extra.best_ratio_phase_label} (${Number(
+                        extra.best_ratio_value ?? 0
+                      ).toFixed(1)} pts/cr — ${fmt(extra.best_ratio_points)} pts / ${fmt(
+                        extra.best_ratio_price
+                      )})`
+                    : "-"
+                }
+              />
+              <MiniStat
+                icon={Gauge}
+                label={t("managerProfile.bestRatioAll")}
+                value={
+                  extra?.best_ratio_rider_nom_all
+                    ? `${extra.best_ratio_rider_nom_all} — ${extra.best_ratio_phase_label_all}${
+                        extra.best_ratio_league_nom_all
+                          ? ` · ${extra.best_ratio_league_nom_all}`
+                          : ""
+                      } (${Number(extra.best_ratio_value_all ?? 0).toFixed(1)} pts/cr — ${fmt(
+                        extra.best_ratio_points_all
+                      )} pts / ${fmt(extra.best_ratio_price_all)})`
+                    : "-"
+                }
+              />
             </div>
+
           )}
         </CardContent>
       </Card>
