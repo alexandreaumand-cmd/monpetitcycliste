@@ -30,6 +30,8 @@ const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: str
   const { selectedSeason } = useSeasonContext();
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   const navigate = useNavigate();
+  const { leagueId } = useLeague();
+  
   
   return (
     <div className="flex items-center gap-2">

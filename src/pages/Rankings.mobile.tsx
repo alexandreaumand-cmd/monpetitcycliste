@@ -341,7 +341,7 @@ export const RankingsMobile = () => {
             aria-label={`Profil ${managerName}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/dashboard/manager/${managerId}`);
+              navigate(`/dashboard/manager/${managerId}${leagueId ? `?leagueId=${leagueId}` : ""}`);
             }}
             className="text-muted-foreground/70 transition-colors hover:text-primary"
           >
