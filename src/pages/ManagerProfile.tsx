@@ -130,6 +130,8 @@ export default function ManagerProfile() {
       return data?.[0] ?? null;
     },
     enabled: !!managerId,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
 
