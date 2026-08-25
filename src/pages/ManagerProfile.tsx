@@ -291,8 +291,9 @@ export default function ManagerProfile() {
   }, [roster, rosterSort]);
 
   const totalSpent = (roster ?? []).reduce((s, r) => s + Number(r.prix_achat ?? 0), 0);
-
+  const bestRoi = topRiders.reduce<any>(
     (best, r) =>
+
       !best || Number(r.ratio_points_par_prix ?? 0) > Number(best.ratio_points_par_prix ?? 0)
         ? r
         : best,
