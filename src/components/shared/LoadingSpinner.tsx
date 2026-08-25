@@ -1,10 +1,6 @@
 import splashLogo from "@/assets/logo-carre-sans-marque.png";
-import { getRandomQuote } from "@/lib/cycling-quotes";
-
-const quote = getRandomQuote();
 
 export const LoadingSpinner = () => {
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-[hsl(37,38%,93%)]">
       <div className="text-center max-w-sm px-4">
@@ -16,13 +12,7 @@ export const LoadingSpinner = () => {
           className="mx-auto mb-8"
           loading="eager"
         />
-        <div className="w-10 h-10 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin mx-auto mb-8" />
-        <p className="text-sm italic text-muted-foreground">
-          « {quote.text} »
-          <span className="block mt-1 text-xs not-italic font-medium text-bordure-gold">
-            — {quote.author}
-          </span>
-        </p>
+        <div className="w-10 h-10 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     </div>
   );
