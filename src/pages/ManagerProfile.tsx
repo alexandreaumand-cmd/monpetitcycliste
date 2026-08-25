@@ -632,15 +632,46 @@ export default function ManagerProfile() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("managerProfile.rider")}</TableHead>
-                      <TableHead>{t("managerProfile.team")}</TableHead>
-                      <TableHead className="text-right">{t("managerProfile.price")}</TableHead>
-                      <TableHead className="text-right">{t("managerProfile.points")}</TableHead>
-                      <TableHead className="text-right">{t("managerProfile.roi")}</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => toggleRosterSort("nom")}
+                      >
+                        {t("managerProfile.rider")}
+                        {sortIcon("nom")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => toggleRosterSort("equipe")}
+                      >
+                        {t("managerProfile.team")}
+                        {sortIcon("equipe")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none text-right hover:bg-muted/50"
+                        onClick={() => toggleRosterSort("prix_achat")}
+                      >
+                        {t("managerProfile.price")}
+                        {sortIcon("prix_achat")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none text-right hover:bg-muted/50"
+                        onClick={() => toggleRosterSort("points_total")}
+                      >
+                        {t("managerProfile.points")}
+                        {sortIcon("points_total")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none text-right hover:bg-muted/50"
+                        onClick={() => toggleRosterSort("ratio_points_par_prix")}
+                      >
+                        {t("managerProfile.roi")}
+                        {sortIcon("ratio_points_par_prix")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topRiders.map((r) => (
+                    {sortedRoster.map((r) => (
+
                       <TableRow key={`${r.coureur_id}-${r.prix_achat}`}>
                         <TableCell className="font-medium">{r.nom}</TableCell>
                         <TableCell className="text-muted-foreground">{r.equipe}</TableCell>
