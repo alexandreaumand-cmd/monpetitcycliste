@@ -194,5 +194,10 @@
       "cancel": "Annuler",
       "delete": "Supprimer"
     }
+  },
+  "liveStage": {
+    "live": "Étape {{etape}} en direct",
+    "upcoming": "Étape {{etape}} — départ prévu",
+    "finished": "Étape {{etape}} — terminée"
   }
 }

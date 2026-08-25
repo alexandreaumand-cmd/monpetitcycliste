@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, MessageCircle, Radio, MapPin, Route, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { LiveStageBadge } from "./LiveStageBadge";
+import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
@@ -40,6 +42,7 @@ export const LiveCoursePanel = ({
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, courseId);
   const { data: liveCourses } = useLiveCourses();
   const currentEtape = liveCourses?.find((lc) => lc.course_id === courseId)?.current_etape ?? null;
+  const stageStatus = useLiveStageStatus(courseId, currentEtape);
 
   const {
     data: messagesData,
@@ -59,7 +62,7 @@ export const LiveCoursePanel = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  const activeEtape = selectedEtape ?? currentEtape;
+  const activeEtape = selectedEtape ?? stageStatus.etape;
   const stageImage = useMemo(() => {
     if (!routeImages || routeImages.length === 0) return null;
     if (activeEtape != null) {
@@ -81,14 +84,14 @@ export const LiveCoursePanel = ({
       const etape = (msg.metadata as any)?.etape_numero;
       if (etape != null) stages.add(etape);
     });
-    if (currentEtape != null) stages.add(currentEtape);
+    if (stageStatus.etape != null) stages.add(stageStatus.etape);
     return Array.from(stages).sort((a, b) => a - b);
-  }, [allMessages, currentEtape]);
+  }, [allMessages, stageStatus.etape]);
 
   // Auto-select the stage currently being broadcast live (admin's choice)
   useEffect(() => {
-    setSelectedEtape(currentEtape);
-  }, [courseId, currentEtape]);
+    setSelectedEtape(stageStatus.etape);
+  }, [courseId, stageStatus.etape]);
 
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
@@ -123,7 +126,7 @@ export const LiveCoursePanel = ({
         Toutes
       </Badge>
       {availableStages.map((stage) => {
-        const isLive = stage === currentEtape;
+        const isLive = stage === stageStatus.etape;
         return (
           <Badge
             key={stage}
@@ -196,15 +199,10 @@ export const LiveCoursePanel = ({
   return (
     <div className="flex flex-col flex-1 border rounded-xl overflow-hidden bg-background min-w-0">
       {/* Course name header */}
-      {(courseName || currentEtape != null) && (
+      {(courseName || stageStatus.etape != null) && (
         <div className="px-3 py-2 border-b bg-primary/5 flex items-center gap-2 flex-wrap">
           {courseName && <span className="text-xs font-bold text-primary truncate">{courseName}</span>}
-          {currentEtape != null && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/30 rounded-full px-2 py-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-              Étape {currentEtape} en direct
-            </span>
-          )}
+          <LiveStageBadge etape={stageStatus.etape} state={stageStatus.state} />
         </div>
       )}
 
