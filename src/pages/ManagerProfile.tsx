@@ -246,9 +246,7 @@ export default function ManagerProfile() {
 
 
   const topRiders = useMemo(
-    () =>
-      [...(roster ?? [])].sort(
-  const topRiders = useMemo(
+
     () =>
       [...(roster ?? [])].sort(
         (a, b) => Number(b.points_total ?? 0) - Number(a.points_total ?? 0)
