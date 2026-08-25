@@ -374,9 +374,14 @@ export default function ManagerProfile() {
                 label={t("managerProfile.bestRatioLeague")}
                 value={
                   extra?.best_ratio_rider_nom
-                    ? `${extra.best_ratio_rider_nom} — ${extra.best_ratio_phase_label} (${fmt(
-                        extra.best_ratio_points
-                      )} pts / ${fmt(extra.best_ratio_price)})`
+                    ? `${Number(extra.best_ratio_value ?? 0).toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })} — ${extra.best_ratio_rider_nom} — ${
+                        extra.best_ratio_phase_label
+                      } (${fmt(extra.best_ratio_points)} pts / ${fmt(
+                        extra.best_ratio_price
+                      )})`
                     : "-"
                 }
               />
@@ -385,11 +390,18 @@ export default function ManagerProfile() {
                 label={t("managerProfile.bestRatioAll")}
                 value={
                   extra?.best_ratio_rider_nom_all
-                    ? `${extra.best_ratio_rider_nom_all} — ${extra.best_ratio_phase_label_all}${
+                    ? `${Number(extra.best_ratio_value_all ?? 0).toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })} — ${extra.best_ratio_rider_nom_all} — ${
+                        extra.best_ratio_phase_label_all
+                      }${
                         extra.best_ratio_league_nom_all
                           ? ` · ${extra.best_ratio_league_nom_all}`
                           : ""
-                      } (${fmt(extra.best_ratio_points_all)} pts / ${fmt(extra.best_ratio_price_all)})`
+                      } (${fmt(extra.best_ratio_points_all)} pts / ${fmt(
+                        extra.best_ratio_price_all
+                      )})`
                     : "-"
                 }
               />
