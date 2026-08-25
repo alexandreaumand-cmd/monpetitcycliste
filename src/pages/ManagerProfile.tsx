@@ -35,7 +35,7 @@ import {
   Gauge,
 } from "lucide-react";
 
-const fmt = (n: number | null | undefined) =>
+const fmt = (n: number | string | null | undefined) =>
   n == null ? "-" : Math.round(Number(n)).toLocaleString("fr-FR");
 
 type ManagerRosterRow = {
