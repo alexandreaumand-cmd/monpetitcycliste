@@ -153,6 +153,10 @@
     "fetishRider": "Coureur fétiche",
     "favoriteRider": "Coureur préféré",
     "phasesCount_one": "{{count}} phase",
-    "phasesCount_other": "{{count}} phases"
+    "phasesCount_other": "{{count}} phases",
+    "fetishRiderLeague": "Coureur fétiche (cette ligue)",
+    "fetishRiderAll": "Coureur fétiche (all-time)",
+    "favoriteRiderLeague": "Coureur préféré (cette ligue)",
+    "favoriteRiderAll": "Coureur préféré (all-time)"
   }
 }

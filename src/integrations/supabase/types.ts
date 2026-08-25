@@ -7445,9 +7445,13 @@ export type Database = {
         Args: { _league_id?: string; _manager_id: string; _saison_id?: string }
         Returns: {
           favorite_rider_count: number
+          favorite_rider_count_all: number
           favorite_rider_nom: string
+          favorite_rider_nom_all: string
           fetish_rider_nom: string
+          fetish_rider_nom_all: string
           fetish_rider_points: number
+          fetish_rider_points_all: number
           leagues_created: number
           leagues_joined: number
           leagues_podium: number
