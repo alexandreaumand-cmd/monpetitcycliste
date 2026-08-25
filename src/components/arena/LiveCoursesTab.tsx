@@ -4,6 +4,8 @@ import { ChevronDown, Image as ImageIcon, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { LiveStageBadge } from "./LiveStageBadge";
+import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveCourseSelector, useLiveCourses } from "./LiveCourseSelector";
@@ -43,6 +45,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, activeCourseId);
   const { data: liveCourses } = useLiveCourses();
   const currentEtape = liveCourses?.find((lc) => lc.course_id === activeCourseId)?.current_etape ?? null;
+  const stageStatus = useLiveStageStatus(activeCourseId, currentEtape);
 
   const liveChannel = channels?.find((c) => c.slug === "live-courses");
   const channelId = liveChannel?.id || null;
@@ -158,11 +161,8 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           activeCourseId={activeCourseId}
           onSelect={setActiveCourseId}
         />
-        {activeCourseId && currentEtape != null && (
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/30 rounded-full px-2.5 py-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-            Étape {currentEtape} en direct
-          </div>
+        {activeCourseId && (
+          <LiveStageBadge etape={stageStatus.etape} state={stageStatus.state} className="text-[11px] px-2.5 py-1" />
         )}
       </div>
     );
