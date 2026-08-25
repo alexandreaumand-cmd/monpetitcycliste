@@ -38,6 +38,16 @@ import {
 const fmt = (n: number | null | undefined) =>
   n == null ? "-" : Math.round(Number(n)).toLocaleString("fr-FR");
 
+type ManagerRosterRow = {
+  coureur_id: string;
+  nom: string | null;
+  equipe: string | null;
+  prix_achat: number | string | null;
+  cote_initiale: number | string | null;
+  points_total: number | string | null;
+  ratio_points_par_prix: number | string | null;
+};
+
 export default function ManagerProfile() {
   const { managerId } = useParams<{ managerId: string }>();
   const navigate = useNavigate();
@@ -102,6 +112,8 @@ export default function ManagerProfile() {
       rosterPhaseId === "all" ? seasonPhases.map((p) => p.id).join(",") : "",
     ],
     queryFn: async () => {
+      if (!managerId) return [];
+
       if (rosterPhaseId === "all") {
         const phaseIds = seasonPhases.map((p) => p.id);
         if (phaseIds.length === 0) return [];
@@ -109,7 +121,7 @@ export default function ManagerProfile() {
         const results = await Promise.all(
           phaseIds.map((phaseId) =>
             supabase.rpc("manager_team_by_id", {
-              p_manager_id: managerId!,
+              p_manager_id: managerId,
               p_league_id: leagueId ?? undefined,
               p_phase_id: phaseId,
             })
@@ -119,9 +131,9 @@ export default function ManagerProfile() {
         const firstError = results.find((result) => result.error)?.error;
         if (firstError) throw firstError;
 
-        const byRider = new Map<string, (typeof results)[number]["data"][number]>();
+        const byRider = new Map<string, ManagerRosterRow>();
 
-        results.flatMap((result) => result.data ?? []).forEach((r) => {
+        results.flatMap((result) => (result.data ?? []) as ManagerRosterRow[]).forEach((r) => {
           const existing = byRider.get(r.coureur_id);
           if (!existing) {
             byRider.set(r.coureur_id, { ...r });
@@ -143,7 +155,7 @@ export default function ManagerProfile() {
       }
 
       const { data, error } = await supabase.rpc("manager_team_by_id", {
-        p_manager_id: managerId!,
+        p_manager_id: managerId,
         p_league_id: leagueId ?? undefined,
         p_phase_id: rosterPhaseId,
       });
