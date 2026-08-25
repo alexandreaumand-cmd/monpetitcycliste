@@ -74,14 +74,14 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       const etape = (msg.metadata as any)?.etape_numero;
       if (etape != null) stages.add(etape);
     });
-    if (currentEtape != null) stages.add(currentEtape);
+    if (stageStatus.etape != null) stages.add(stageStatus.etape);
     return Array.from(stages).sort((a, b) => a - b);
-  }, [allMessages, currentEtape]);
+  }, [allMessages, stageStatus.etape]);
 
   // Auto-select the stage being broadcast live whenever it changes
   useEffect(() => {
-    setSelectedEtape(currentEtape);
-  }, [activeCourseId, currentEtape]);
+    setSelectedEtape(stageStatus.etape);
+  }, [activeCourseId, stageStatus.etape]);
 
   const filteredMessages = useMemo(() => {
     if (selectedEtape == null) return allMessages;
@@ -118,7 +118,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const activeEtape = selectedEtape ?? currentEtape;
+  const activeEtape = selectedEtape ?? stageStatus.etape;
   const stageImage = useMemo(() => {
     if (!routeImages || routeImages.length === 0) return null;
     if (activeEtape != null) {
@@ -181,7 +181,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           Toutes
         </Badge>
         {availableStages.map((stage) => {
-          const isLive = stage === currentEtape;
+          const isLive = stage === stageStatus.etape;
           return (
             <Badge
               key={stage}
