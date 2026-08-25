@@ -146,13 +146,15 @@ const StartlistDesktop = () => {
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 5 * 60 * 1000
   });
 
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
     queryKey: ['startlist-view', selectedStartlistId, isSuperAdmin, leagueId],
     enabled: !!selectedStartlistId && viewMode === 'view',
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 
@@ -163,14 +165,8 @@ const StartlistDesktop = () => {
       
       if (error) throw error;
       
-      // Get PCS validation info only (admin_rating_note comes from edge function as league-scoped)
-      const { data: startlistData } = await supabase
-        .from('startlist_imports')
-        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id')
-        .eq('id', selectedStartlistId)
-        .single();
-      
-      return { ...data, ...startlistData };
+      // PCS validation info + metadata are now returned directly by the edge function
+      return data;
     }
   });
 
@@ -187,23 +183,47 @@ const StartlistDesktop = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedStartlistId && viewMode === 'view'
+    enabled: !!selectedStartlistId && viewMode === 'view',
+    staleTime: 5 * 60 * 1000
   });
 
-  // Fetch startlist metadata (for permission checks)
-  const { data: startlistMeta } = useQuery({
-    queryKey: ['startlist-meta', selectedStartlistId],
-    enabled: !!selectedStartlistId && viewMode === 'view',
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('startlist_imports')
-        .select('id, race_id, created_by_manager_id')
-        .eq('id', selectedStartlistId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Startlist metadata (for permission checks) — derived from the view payload, no extra round-trip
+  const startlistMeta = selectedStartlistId && startlistViewData
+    ? {
+        id: selectedStartlistId,
+        race_id: startlistViewData.race?.id ?? null,
+        created_by_manager_id: startlistViewData.created_by_manager_id ?? null
+      }
+    : null;
+
+  // Prefetch a race's startlist view on hover so the click feels instant
+  const prefetchRaceView = (race: any) => {
+    const startlistId = getStartlistId(race.id);
+    if (!startlistId) return;
+    queryClient.prefetchQuery({
+      queryKey: ['startlist-view', startlistId, isSuperAdmin, leagueId],
+      staleTime: 5 * 60 * 1000,
+      queryFn: async () => {
+        const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
+          body: { startlist_id: startlistId, league_id: leagueId }
+        });
+        if (error) throw error;
+        return data;
+      }
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['startlist-entries', startlistId],
+      staleTime: 5 * 60 * 1000,
+      queryFn: async () => {
+        const { data, error } = await supabase.functions.invoke('startlist-entries-list', {
+          body: { startlist_id: startlistId }
+        });
+        if (error) throw error;
+        return data;
+      }
+    });
+  };
+
 
   const normalizeId = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
