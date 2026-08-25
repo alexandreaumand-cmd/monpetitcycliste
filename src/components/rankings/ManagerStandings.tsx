@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +15,8 @@ import { memo, useState, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
-import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 import { useTranslation } from "react-i18next";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -79,7 +76,6 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   const { t } = useTranslation('rankings');
   const { selectedSeason, activePhase } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
-  const leagueClient = useLeagueClient();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
     id: string;
@@ -92,27 +88,25 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
       if (!leagueId) return [];
 
       if (phaseId) {
-        // Phase-specific standings
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_phase_v2")
-          .select("*")
-          .eq("phase_id", phaseId)
-          .eq("league_id", leagueId)
-          .order("total_points", { ascending: false });
+        const { data, error } = await supabase.rpc('get_league_standings_by_phase', {
+          p_league_id: leagueId,
+          p_phase_id: phaseId,
+        });
         
         if (error) throw error;
-        return data || [];
+        return (data || []).sort(
+          (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+        );
       } else if (selectedSeason) {
-        // Season-specific standings
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_season_v2")
-          .select("*")
-          .eq("saison_id", selectedSeason.id)
-          .eq("league_id", leagueId)
-          .order("total_points", { ascending: false });
+        const { data, error } = await supabase.rpc('get_league_standings_by_season', {
+          p_league_id: leagueId,
+          p_saison_id: selectedSeason.id,
+        });
         
         if (error) throw error;
-        return data || [];
+        return (data || []).sort(
+          (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+        );
       }
       
       return [];

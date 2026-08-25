@@ -130,25 +130,25 @@ export const RankingsMobile = () => {
       if (!leagueId) return [];
       
       if (selectedPhase) {
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_phase_v2")
-          .select("*")
-          .eq("phase_id", selectedPhase)
-          .eq("league_id", leagueId)
-          .order("total_points", { ascending: false });
+        const { data, error } = await supabase.rpc('get_league_standings_by_phase', {
+          p_league_id: leagueId,
+          p_phase_id: selectedPhase,
+        });
         
         if (error) throw error;
-        return data || [];
+        return (data || []).sort(
+          (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+        );
       } else if (selectedSeason) {
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_season_v2")
-          .select("*")
-          .eq("saison_id", selectedSeason.id)
-          .eq("league_id", leagueId)
-          .order("total_points", { ascending: false });
+        const { data, error } = await supabase.rpc('get_league_standings_by_season', {
+          p_league_id: leagueId,
+          p_saison_id: selectedSeason.id,
+        });
         
         if (error) throw error;
-        return data || [];
+        return (data || []).sort(
+          (a: any, b: any) => Number(b.total_points) - Number(a.total_points)
+        );
       } else {
         const { data, error } = await supabase
           .from("v_manager_standings_total")
