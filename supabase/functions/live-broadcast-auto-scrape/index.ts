@@ -195,11 +195,34 @@ serve(async (req) => {
     const effectiveStage: number | null = plan?.etape_numero ?? row.current_etape ?? null;
     const lastAt = plan ? (plan.last_auto_scrape_at ?? row.last_auto_scrape_at) : row.last_auto_scrape_at;
 
+    // Keep the course row aligned with today's plan even when we are outside the
+    // scrape windows, so the UI never shows yesterday's stage as the live one.
+    if (plan) {
+      const patch: Record<string, unknown> = {};
+      if (plan.scrape_url && plan.scrape_url !== row.live_scrape_url) {
+        patch.live_scrape_url = plan.scrape_url;
+      }
+      if (plan.etape_numero != null && plan.etape_numero !== row.current_etape) {
+        patch.current_etape = plan.etape_numero;
+      }
+      if (Object.keys(patch).length > 0) {
+        await admin
+          .from("arena_live_courses")
+          .update(patch)
+          .eq("course_id", row.course_id)
+          .eq("is_active", true);
+        console.log(
+          `[auto-scrape] ${row.course_id}: aligned with today's plan (stage=${plan.etape_numero ?? "-"})`
+        );
+      }
+    }
+
     if (!effectiveUrl) {
       console.log(`[auto-scrape] ${row.course_id}: no scrape url (source=${source}) — skipped`);
       skipped++;
       continue;
     }
+
 
     const interval = getActiveInterval(effectiveSchedule, now);
     if (interval == null) {
