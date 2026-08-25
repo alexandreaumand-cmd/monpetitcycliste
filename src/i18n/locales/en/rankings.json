@@ -153,6 +153,10 @@
     "fetishRider": "Favourite performer",
     "favoriteRider": "Most drafted rider",
     "phasesCount_one": "{{count}} phase",
-    "phasesCount_other": "{{count}} phases"
+    "phasesCount_other": "{{count}} phases",
+    "fetishRiderLeague": "Favourite performer (this league)",
+    "fetishRiderAll": "Favourite performer (all-time)",
+    "favoriteRiderLeague": "Most drafted rider (this league)",
+    "favoriteRiderAll": "Most drafted rider (all-time)"
   }
 }

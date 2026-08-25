@@ -328,7 +328,7 @@ export default function ManagerProfile() {
               />
               <MiniStat
                 icon={Star}
-                label={t("managerProfile.fetishRider")}
+                label={t("managerProfile.fetishRiderLeague")}
                 value={
                   extra?.fetish_rider_nom
                     ? `${extra.fetish_rider_nom} (${fmt(extra.fetish_rider_points)} pts)`
@@ -336,8 +336,17 @@ export default function ManagerProfile() {
                 }
               />
               <MiniStat
+                icon={Star}
+                label={t("managerProfile.fetishRiderAll")}
+                value={
+                  extra?.fetish_rider_nom_all
+                    ? `${extra.fetish_rider_nom_all} (${fmt(extra.fetish_rider_points_all)} pts)`
+                    : "-"
+                }
+              />
+              <MiniStat
                 icon={Repeat}
-                label={t("managerProfile.favoriteRider")}
+                label={t("managerProfile.favoriteRiderLeague")}
                 value={
                   extra?.favorite_rider_nom
                     ? `${extra.favorite_rider_nom} (${t("managerProfile.phasesCount", {
@@ -346,6 +355,18 @@ export default function ManagerProfile() {
                     : "-"
                 }
               />
+              <MiniStat
+                icon={Repeat}
+                label={t("managerProfile.favoriteRiderAll")}
+                value={
+                  extra?.favorite_rider_nom_all
+                    ? `${extra.favorite_rider_nom_all} (${t("managerProfile.phasesCount", {
+                        count: Number(extra.favorite_rider_count_all ?? 0),
+                      })})`
+                    : "-"
+                }
+              />
+
             </div>
           )}
         </CardContent>
