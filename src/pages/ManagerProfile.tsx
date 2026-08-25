@@ -33,6 +33,9 @@ import {
   Star,
   Repeat,
   Gauge,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 const fmt = (n: number | string | null | undefined) =>
