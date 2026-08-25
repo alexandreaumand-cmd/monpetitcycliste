@@ -192,7 +192,9 @@ export const StartlistMobile = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedStartlistId && viewMode === "view"
+    enabled: !!selectedStartlistId && viewMode === "view",
+    staleTime: 5 * 60 * 1000
+
   });
 
   // Auto-expand current user's manager accordion when data loads
