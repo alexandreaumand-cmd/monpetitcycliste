@@ -374,11 +374,9 @@ export default function ManagerProfile() {
                 label={t("managerProfile.bestRatioLeague")}
                 value={
                   extra?.best_ratio_rider_nom
-                    ? `${extra.best_ratio_rider_nom} — ${extra.best_ratio_phase_label} (${Number(
-                        extra.best_ratio_value ?? 0
-                      ).toFixed(1)} pts/cr — ${fmt(extra.best_ratio_points)} pts / ${fmt(
-                        extra.best_ratio_price
-                      )})`
+                    ? `${extra.best_ratio_rider_nom} — ${extra.best_ratio_phase_label} (${fmt(
+                        extra.best_ratio_points
+                      )} pts / ${fmt(extra.best_ratio_price)})`
                     : "-"
                 }
               />
