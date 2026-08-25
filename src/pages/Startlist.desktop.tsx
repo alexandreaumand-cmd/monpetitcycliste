@@ -521,6 +521,8 @@ const StartlistDesktop = () => {
                   key={course.id} 
                   className="cursor-pointer hover:shadow-lg transition-shadow"
                   onClick={() => handleSelectRace(course)}
+                  onMouseEnter={() => prefetchRaceView(course)}
+
                 >
                   <CardHeader>
                     <div className="flex justify-between items-start gap-2 mb-2">
