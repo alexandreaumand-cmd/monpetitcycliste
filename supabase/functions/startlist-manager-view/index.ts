@@ -189,6 +189,11 @@ Deno.serve(async (req) => {
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: null,
       admin_rating_author: null,
+      pcs_validated: startlist.pcs_validated ?? false,
+      pcs_validated_at: startlist.pcs_validated_at || null,
+      pcs_validated_by_manager_id: startlist.pcs_validated_by_manager_id || null,
+      created_by_manager_id: startlist.created_by_manager_id || null,
+
       managers: [],
       starters: starters,
       scoring: {
