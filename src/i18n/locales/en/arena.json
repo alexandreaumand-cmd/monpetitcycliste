@@ -194,5 +194,10 @@
       "cancel": "Cancel",
       "delete": "Delete"
     }
+  },
+  "liveStage": {
+    "live": "Stage {{etape}} live",
+    "upcoming": "Stage {{etape}} — not started",
+    "finished": "Stage {{etape}} — finished"
   }
 }
