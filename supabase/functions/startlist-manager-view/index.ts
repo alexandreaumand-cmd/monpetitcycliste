@@ -455,12 +455,7 @@ Deno.serve(async (req) => {
       return a.manager_nom.localeCompare(b.manager_nom);
     });
     
-    // Fetch multi-stage route images
-    const { data: routeImagesLeague } = await supabase
-      .from('course_route_images')
-      .select('etape_numero, image_url, label, sort_order')
-      .eq('course_id', race.id)
-      .order('sort_order', { ascending: true });
+    const routeImagesLeague = routeImagesRes.data;
 
     const result = {
       race: {
@@ -475,6 +470,10 @@ Deno.serve(async (req) => {
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: leagueNote || null,
       admin_rating_author: ratingAuthorName,
+      pcs_validated: startlist.pcs_validated ?? false,
+      pcs_validated_at: startlist.pcs_validated_at || null,
+      pcs_validated_by_manager_id: startlist.pcs_validated_by_manager_id || null,
+      created_by_manager_id: startlist.created_by_manager_id || null,
       managers,
       scoring: {
         categorie: race.categorie,
@@ -485,6 +484,7 @@ Deno.serve(async (req) => {
         starters_all: managers.reduce((sum, m) => sum + m.starters_count, 0)
       }
     };
+
 
     console.log('Manager view result:', result.totals);
 
