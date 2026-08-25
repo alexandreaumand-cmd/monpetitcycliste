@@ -26,6 +26,11 @@ Deno.serve(async (req) => {
         id,
         race_id,
         startlisteur_note,
+        pcs_validated,
+        pcs_validated_at,
+        pcs_validated_by_manager_id,
+        created_by_manager_id,
+
         courses!inner(
           id,
           nom,
