@@ -94,17 +94,63 @@ export default function ManagerProfile() {
   });
 
   const { data: roster, isLoading: rosterLoading } = useQuery({
-    queryKey: ["mp-roster", managerId, leagueId, rosterPhaseId],
+    queryKey: [
+      "mp-roster",
+      managerId,
+      leagueId,
+      rosterPhaseId,
+      rosterPhaseId === "all" ? seasonPhases.map((p) => p.id).join(",") : "",
+    ],
     queryFn: async () => {
+      if (rosterPhaseId === "all") {
+        const phaseIds = seasonPhases.map((p) => p.id);
+        if (phaseIds.length === 0) return [];
+
+        const results = await Promise.all(
+          phaseIds.map((phaseId) =>
+            supabase.rpc("manager_team_by_id", {
+              p_manager_id: managerId!,
+              p_league_id: leagueId ?? undefined,
+              p_phase_id: phaseId,
+            })
+          )
+        );
+
+        const firstError = results.find((result) => result.error)?.error;
+        if (firstError) throw firstError;
+
+        const byRider = new Map<string, (typeof results)[number]["data"][number]>();
+
+        results.flatMap((result) => result.data ?? []).forEach((r) => {
+          const existing = byRider.get(r.coureur_id);
+          if (!existing) {
+            byRider.set(r.coureur_id, { ...r });
+            return;
+          }
+
+          const prixAchat = Number(existing.prix_achat ?? 0) + Number(r.prix_achat ?? 0);
+          const pointsTotal = Number(existing.points_total ?? 0) + Number(r.points_total ?? 0);
+          byRider.set(r.coureur_id, {
+            ...existing,
+            equipe: r.equipe && r.equipe !== "N/A" ? r.equipe : existing.equipe,
+            prix_achat: prixAchat,
+            points_total: pointsTotal,
+            ratio_points_par_prix: prixAchat > 0 ? Number((pointsTotal / prixAchat).toFixed(2)) : 0,
+          });
+        });
+
+        return Array.from(byRider.values());
+      }
+
       const { data, error } = await supabase.rpc("manager_team_by_id", {
         p_manager_id: managerId!,
         p_league_id: leagueId ?? undefined,
-        p_phase_id: rosterPhaseId === "all" ? undefined : rosterPhaseId,
+        p_phase_id: rosterPhaseId,
       });
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!managerId,
+    enabled: !!managerId && (rosterPhaseId !== "all" || seasonPhases.length > 0),
   });
 
   const { data: pronostics } = useQuery({
