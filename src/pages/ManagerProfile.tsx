@@ -248,13 +248,52 @@ export default function ManagerProfile() {
   const topRiders = useMemo(
     () =>
       [...(roster ?? [])].sort(
+  const topRiders = useMemo(
+    () =>
+      [...(roster ?? [])].sort(
         (a, b) => Number(b.points_total ?? 0) - Number(a.points_total ?? 0)
       ),
     [roster]
   );
 
+  type RosterSortKey = "nom" | "equipe" | "prix_achat" | "points_total" | "ratio_points_par_prix";
+  const [rosterSort, setRosterSort] = useState<{ key: RosterSortKey; dir: "asc" | "desc" }>({
+    key: "points_total",
+    dir: "desc",
+  });
+
+  const toggleRosterSort = (key: RosterSortKey) =>
+    setRosterSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "nom" || key === "equipe" ? "asc" : "desc" }
+    );
+
+  const sortIcon = (key: RosterSortKey) => {
+    if (rosterSort.key !== key)
+      return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 opacity-40" />;
+    return rosterSort.dir === "asc" ? (
+      <ArrowUp className="ml-1 inline h-3.5 w-3.5" />
+    ) : (
+      <ArrowDown className="ml-1 inline h-3.5 w-3.5" />
+    );
+  };
+
+  const sortedRoster = useMemo(() => {
+    const rows = [...(roster ?? [])];
+    const { key, dir } = rosterSort;
+    const mul = dir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      if (key === "nom" || key === "equipe") {
+        return mul * String(a[key] ?? "").localeCompare(String(b[key] ?? ""), "fr");
+      }
+      return mul * (Number(a[key] ?? 0) - Number(b[key] ?? 0));
+    });
+    return rows;
+  }, [roster, rosterSort]);
+
   const totalSpent = (roster ?? []).reduce((s, r) => s + Number(r.prix_achat ?? 0), 0);
-  const bestRoi = topRiders.reduce<any>(
+
     (best, r) =>
       !best || Number(r.ratio_points_par_prix ?? 0) > Number(best.ratio_points_par_prix ?? 0)
         ? r
