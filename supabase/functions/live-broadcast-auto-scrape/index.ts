@@ -311,10 +311,23 @@ async function notifyIncidents(params: {
 
   const { error: insertError } = await admin.from("notifications").insert(notifications);
   if (insertError) {
-    console.error(`[auto-scrape] incident notification insert failed: ${insertError.message}`);
-    return;
+    console.error(`[auto-scrape] incident notification batch insert failed: ${insertError.message}`);
+    // Retry one by one so a single rejected row (e.g. unknown type) doesn't drop the whole batch
+    let inserted = 0;
+    for (const notif of notifications) {
+      const { error: rowError } = await admin.from("notifications").insert(notif);
+      if (rowError) {
+        console.error(`[auto-scrape] notification insert failed (type=${notif.type}): ${rowError.message}`);
+      } else {
+        inserted++;
+      }
+    }
+    if (inserted === 0) return;
+    console.log(`[auto-scrape] Created ${inserted}/${notifications.length} incident notification(s) for ${courseId} (fallback)`);
+  } else {
+    console.log(`[auto-scrape] Created ${notifications.length} incident notification(s) for ${courseId}`);
   }
-  console.log(`[auto-scrape] Created ${notifications.length} incident notification(s) for ${courseId}`);
+
 
   // Each manager gets their own wording (their price, their league)
   for (const push of pushes) {
