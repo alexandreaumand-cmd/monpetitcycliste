@@ -583,7 +583,13 @@ export type LiveTextEventType =
   | "crash"
   | "team_car"
   | "abandon"
-  | "attack";
+  | "attack"
+  | "counter_attack"
+  | "acceleration"
+  | "dropped"
+  | "join_group"
+  | "struggling"
+  | "caught";
 
 export interface LiveTextEvent {
   uid: string;
@@ -594,17 +600,50 @@ export interface LiveTextEvent {
   km_to_go: number | null;
   ts: number | null;
   position?: number;
+  group_label?: string;
   raw: string;
   rider_nom?: string;
   coureur_id?: string;
   manager_name?: string;
 }
 
-function classifyLiveText(text: string): { type: LiveTextEventType; position?: number } | null {
+// Translate PCS group labels into French for the timeline
+function frGroup(label: string): string {
+  const l = label.toLowerCase().trim();
+  if (/^peloton$/.test(l)) return "le peloton";
+  if (/first chase group/.test(l)) return "le premier groupe de chasse";
+  if (/second chase group/.test(l)) return "le deuxième groupe de chasse";
+  if (/chase group/.test(l)) return "le groupe de chasse";
+  if (/lead(ing)? group|front group/.test(l)) return "le groupe de tête";
+  if (/break(away)?/.test(l)) return "l'échappée";
+  if (/grupetto/.test(l)) return "le grupetto";
+  return label.trim();
+}
+
+function classifyLiveText(
+  text: string
+): { type: LiveTextEventType; position?: number; group_label?: string } | null {
   const t = text.replace(/\s+/g, " ").trim();
+  const grp = (re: RegExp) => {
+    const m = t.match(re);
+    return m?.[1] ? frGroup(m[1]) : undefined;
+  };
+
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
   if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
-  if (/\battack(s|ed|ing)?\s+by\b/i.test(t) || /^attack\b/i.test(t)) return { type: "attack" };
+  if (/\bis dropped from\b/i.test(t) || /\bdropped from\b/i.test(t))
+    return { type: "dropped", group_label: grp(/dropped from\s+(.+?)(?:[.,]|$)/i) };
+  if (/\bjoins?\b/i.test(t) && /group|peloton|break/i.test(t))
+    return { type: "join_group", group_label: grp(/joins?\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/\bcaught by\b/i.test(t))
+    return { type: "caught", group_label: grp(/caught by\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/struggling to hold on/i.test(t)) return { type: "struggling" };
+  if (/counter[-\s]?attack/i.test(t))
+    return { type: "counter_attack", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/\bacceleration\b/i.test(t))
+    return { type: "acceleration", group_label: grp(/acceleration in\s+(?:the\s+)?(.+?)\s+by\b/i) };
+  if (/\battack(s|ed|ing)?\s+(by|in)\b/i.test(t) || /^attack\b/i.test(t))
+    return { type: "attack", group_label: grp(/\bin\s+(?:the\s+)?([a-z\s]+?)(?:[.,]|$)/i) };
   if (/at the team car/i.test(t)) return { type: "team_car" };
   if (/at the back of the (peloton|group|bunch)/i.test(t)) return { type: "back_of_peloton" };
   const pos = t.match(/in position\s+(\d+)/i);
@@ -612,6 +651,7 @@ function classifyLiveText(text: string): { type: LiveTextEventType; position?: n
   if (/\bpulling\b/i.test(t)) return { type: "pulling" };
   return null;
 }
+
 
 function parsePCSLiveText(doc: any): LiveTextEvent[] {
   const out: LiveTextEvent[] = [];
