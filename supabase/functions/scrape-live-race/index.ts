@@ -572,6 +572,99 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
 }
 
 // ============================================================
+// PCS LIVETEXT PARSER — extracts the 6 tracked rider events
+// from the live commentary feed (ul > li.event blocks)
+// ============================================================
+
+export type LiveTextEventType =
+  | "pulling"
+  | "position"
+  | "back_of_peloton"
+  | "crash"
+  | "team_car"
+  | "abandon";
+
+export interface LiveTextEvent {
+  uid: string;
+  type: LiveTextEventType;
+  rider_name: string;
+  rider_slug: string;
+  team: string;
+  km_to_go: number | null;
+  ts: number | null;
+  position?: number;
+  raw: string;
+  coureur_id?: string;
+  manager_name?: string;
+}
+
+function classifyLiveText(text: string): { type: LiveTextEventType; position?: number } | null {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
+  if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
+  if (/at the team car/i.test(t)) return { type: "team_car" };
+  if (/at the back of the (peloton|group|bunch)/i.test(t)) return { type: "back_of_peloton" };
+  const pos = t.match(/in position\s+(\d+)/i);
+  if (pos) return { type: "position", position: Number(pos[1]) };
+  if (/\bpulling\b/i.test(t)) return { type: "pulling" };
+  return null;
+}
+
+function parsePCSLiveText(doc: any): LiveTextEvent[] {
+  const out: LiveTextEvent[] = [];
+  const items = doc.querySelectorAll("li.event");
+  for (const li of items) {
+    const uid = li.getAttribute?.("data-uid") || li.getAttribute?.("data-tid") || "";
+    if (!uid) continue;
+
+    const textCont = li.querySelector?.("div.textCont");
+    if (!textCont) continue;
+    const rawText = (textCont.textContent || "").replace(/\s+/g, " ").trim();
+    if (!rawText || rawText.length < 5) continue;
+
+    const classified = classifyLiveText(rawText);
+    if (!classified) continue;
+
+    // Rider link — team-only events (e.g. "Team X pulling in peloton") are skipped
+    const riderLink = textCont.querySelector?.("a[href*='rider/']");
+    if (!riderLink) continue;
+    const href = riderLink.getAttribute("href") || "";
+    const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
+    const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
+    const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
+    const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
+    const riderName = firstName ? `${firstName} ${lastName}` : fullText;
+    if (!riderName || riderName.length < 3) continue;
+
+    const team = rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "";
+
+    const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
+    const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
+
+    const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
+    const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
+
+    out.push({
+      uid: String(uid),
+      type: classified.type,
+      position: classified.position,
+      rider_name: riderName,
+      rider_slug: slug,
+      team,
+      km_to_go: kmToGo,
+      ts,
+      raw: rawText.slice(0, 300),
+    });
+  }
+
+  // Oldest first (PCS lists newest first)
+  out.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+  console.log(`[PCS Livetext] ${out.length} tracked event(s) parsed`);
+  return out;
+}
+
+
+// ============================================================
 // FIRSTCYCLING PARSER — matches actual firstcycling.com HTML
 // ============================================================
 
