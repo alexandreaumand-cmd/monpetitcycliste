@@ -280,7 +280,7 @@ async function notifyIncidents(params: {
           ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}),
         },
       });
-      if (manager.user_id) pushes.push({ user_id: manager.user_id, title, message });
+      if (manager.user_id) pushes.push({ user_id: manager.user_id, title, message, type: notifType });
     }
   }
 
