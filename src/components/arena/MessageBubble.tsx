@@ -54,8 +54,23 @@ export const MessageBubble = ({
     return map;
   }, [message.metadata]);
 
+  // Crash / abandon events also show the auction price paid by the owner
+  const showBidPrice = useMemo(() => {
+    const type = (message.metadata as any)?.live_event_type;
+    return type === "crash" || type === "abandon";
+  }, [message.metadata]);
+
   // Render content with @mentions and {rider} mentions
   const renderedContent = useMemo(() => {
+    const normalizeName = (v: string) =>
+      v
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\./g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
     // Split on @mentions, {RiderName}, and **bold** patterns
     return message.content.split(/([@][^\s@#]+|\{[^}]+\}|\*\*[^*]+\*\*)/g).map((part, i) => {
       if (part.startsWith("@")) {
@@ -73,7 +88,13 @@ export const MessageBubble = ({
       if (part.startsWith("{") && part.endsWith("}")) {
         const riderName = part.slice(1, -1);
         const coureurId = riderMentionMap[riderName];
-        const ownerName = coureurId && rosterOwners?.[coureurId];
+        const ownerName =
+          (coureurId && rosterOwners?.[coureurId]) ||
+          rosterOwners?.[`name:${normalizeName(riderName)}`];
+        const rawPrice =
+          (coureurId && rosterOwners?.[`price:${coureurId}`]) ||
+          rosterOwners?.[`price:name:${normalizeName(riderName)}`];
+        const price = showBidPrice && rawPrice != null ? Number(rawPrice) : null;
 
         return (
           <span key={i} className="inline-flex items-baseline gap-0.5">
@@ -85,12 +106,18 @@ export const MessageBubble = ({
                 ({ownerName})
               </span>
             )}
+            {ownerName && price != null && Number.isFinite(price) && (
+              <span className="text-[10px] font-medium text-muted-foreground">
+                acheté {price}M
+              </span>
+            )}
           </span>
         );
       }
       return part;
     });
-  }, [message.content, riderMentionMap, rosterOwners]);
+  }, [message.content, riderMentionMap, rosterOwners, showBidPrice]);
+
 
   // System message
   if (isSystem) {
