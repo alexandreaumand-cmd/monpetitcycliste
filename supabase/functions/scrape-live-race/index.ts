@@ -1187,6 +1187,7 @@ serve(async (req) => {
 
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
+    let liveTextEvents: LiveTextEvent[] = [];
 
     let liveSituation: any = null;
     const isPCSLive = isPCS && /\/live\b/i.test(url);
@@ -1201,6 +1202,7 @@ serve(async (req) => {
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
       liveSituation = result.situation;
+      liveTextEvents = parsePCSLiveText(doc);
     } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
