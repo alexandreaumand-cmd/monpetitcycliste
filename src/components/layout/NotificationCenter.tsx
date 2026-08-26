@@ -124,7 +124,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       if (leagueId) params.set('leagueId', leagueId);
       if (courseId) params.set('courseId', courseId);
       navigate(`/dashboard/resultats?${params.toString()}`);
-    } else if (notification.type === 'rider_incident') {
+    } else if (notification.type === 'rider_incident' || notification.type === 'rider_win') {
       const leagueId = notification.metadata?.league_id || currentLeagueId;
       navigate(`/dashboard/live${leagueId ? `?leagueId=${leagueId}` : ''}`);
     } else if (notification.type === 'auction_closed') {
