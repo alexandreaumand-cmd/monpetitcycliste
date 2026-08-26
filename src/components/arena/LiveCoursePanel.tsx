@@ -102,7 +102,24 @@ export const LiveCoursePanel = ({
     );
   }, [allMessages, selectedEtape]);
 
-  const latestSituation = useMemo(() => {
+  // Live situation stored on arena_live_courses (refreshed by the auto-scraper)
+  const { data: liveSituationRow } = useQuery({
+    queryKey: ["arena-live-situation", courseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("arena_live_courses")
+        .select("current_race_situation, situation_updated_at")
+        .eq("course_id", courseId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!courseId,
+    refetchInterval: 30 * 1000,
+    staleTime: 20 * 1000,
+  });
+
+  const messageSituation = useMemo(() => {
     for (const msg of filteredMessages) {
       const sit = (msg.metadata as any)?.race_situation;
       const km = Number(sit?.kmRemaining);
@@ -110,6 +127,19 @@ export const LiveCoursePanel = ({
     }
     return null;
   }, [filteredMessages]);
+
+  const liveSituation = (liveSituationRow?.current_race_situation as any) ?? null;
+  const liveSituationMatchesStage =
+    liveSituation &&
+    (selectedEtape == null ||
+      liveSituation.etape_numero == null ||
+      liveSituation.etape_numero === selectedEtape);
+
+  const latestSituation = liveSituationMatchesStage ? liveSituation : messageSituation;
+  const situationUpdatedAt = liveSituationMatchesStage
+    ? (liveSituationRow?.situation_updated_at as string | null)
+    : null;
+
 
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId);
