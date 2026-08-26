@@ -1377,8 +1377,36 @@ serve(async (req) => {
         }
       : { groups: enrichGroupsWithIds(groups), kmRemaining: 0 };
 
+    // Resolve livetext rider events → coureur_id + manager name
+    if (liveTextEvents.length > 0) {
+      const sigMap = new Map<string, { coureur_id: string; rider_nom: string }>();
+      const normMap = new Map<string, { coureur_id: string; rider_nom: string }>();
+      for (const e of startlistEntries || []) {
+        if (!e.rider_nom) continue;
+        sigMap.set(tokenSig(e.rider_nom), e);
+        normMap.set(normalize(e.rider_nom), e);
+      }
+      liveTextEvents = liveTextEvents.map((ev) => {
+        const entry =
+          sigMap.get(tokenSig(ev.rider_name)) ||
+          normMap.get(normalize(ev.rider_name)) ||
+          null;
+        const coureurId = entry?.coureur_id || nameToIdMap[ev.rider_name.toLowerCase()] || "";
+        return {
+          ...ev,
+          rider_nom: entry?.rider_nom || ev.rider_name,
+          coureur_id: coureurId || undefined,
+          manager_name: coureurId ? rosterMap[coureurId] || undefined : undefined,
+        } as LiveTextEvent;
+      });
+      console.log(
+        `[scrape-live-race] Livetext: ${liveTextEvents.length} events, ${liveTextEvents.filter((e) => e.coureur_id).length} matched to riders`
+      );
+    }
+
     const result = {
       timeline: scrapedEvents,
+      live_events: liveTextEvents,
       situation: finalSituation,
       matched_riders: matchedRiders,
       unmatched_names: unmatchedNames,
