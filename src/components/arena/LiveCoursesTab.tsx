@@ -182,22 +182,31 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
         </Badge>
         {availableStages.map((stage) => {
           const isLive = stage === stageStatus.etape;
+          const isSelected = selectedEtape === stage;
           return (
             <Badge
               key={stage}
-              variant={selectedEtape === stage ? "default" : "outline"}
+              variant={isSelected ? "default" : "outline"}
               className={cn(
                 "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap gap-1",
                 "active:scale-95 transition-all",
-                isLive && "border-red-500 text-red-600 dark:text-red-400"
+                isLive && !isSelected && "border-destructive text-destructive"
               )}
               onClick={() => setSelectedEtape(stage)}
             >
-              {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
+              {isLive && (
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full animate-pulse",
+                    isSelected ? "bg-primary-foreground" : "bg-destructive"
+                  )}
+                />
+              )}
               É{stage}
             </Badge>
           );
         })}
+
       </div>
     );
 
