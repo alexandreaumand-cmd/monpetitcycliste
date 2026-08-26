@@ -617,11 +617,16 @@ serve(async (req) => {
           const meta: any = (m as any)?.metadata || {};
           if (typeof meta.live_event_uid === "string") publishedUids.add(meta.live_event_uid);
           const content: string = (m as any)?.content || "";
-          const rider =
-            meta?.rider_mentions?.[0]?.rider_nom || content.match(/\{([^}]+)\}/)?.[1] || "";
+          const names: string[] = Array.isArray(meta?.rider_mentions) && meta.rider_mentions.length
+            ? meta.rider_mentions.map((r: any) => r?.rider_nom).filter(Boolean)
+            : Array.from(content.matchAll(/\{([^}]+)\}/g)).map((mm) => mm[1]);
           const kmMatch = content.match(/à\s+(\d+(?:[.,]\d+)?)\s*km/);
           const km = kmMatch ? Number(kmMatch[1].replace(",", ".")) : null;
-          if (meta?.live_event_type) publishedKeys.add(stableKey(meta.live_event_type, rider, km));
+          if (meta?.live_event_type) {
+            for (const n of names.length ? names : [""]) {
+              publishedKeys.add(stableKey(meta.live_event_type, n, km));
+            }
+          }
         }
 
         // Chronological order: earliest first (most km remaining first), so the
@@ -633,9 +638,13 @@ serve(async (req) => {
           .filter((ev) => {
             if (!ev?.uid) return false;
             if (publishedUids.has(ev.uid)) return false;
-            const key = stableKey(ev.type, ev.rider_nom || ev.rider_name, ev.km_to_go);
-            if (publishedKeys.has(key)) return false;
-            publishedKeys.add(key);
+            const riders = eventRiders(ev);
+            const keys = (riders.length ? riders.map((r) => r.rider_nom || r.rider_name) : [""]).map(
+              (n) => stableKey(ev.type, n, ev.km_to_go)
+            );
+            // Already published as a grouped message or as per-rider messages
+            if (keys.some((k) => publishedKeys.has(k))) return false;
+            keys.forEach((k) => publishedKeys.add(k));
             return true;
           })
           .slice(-MAX_LIVE_EVENTS_PER_RUN)
@@ -650,10 +659,11 @@ serve(async (req) => {
               live_event_uid: ev.uid,
               live_event_type: ev.type,
               ...(latestStage != null ? { etape_numero: latestStage } : {}),
-              rider_mentions: ev.coureur_id
-                ? [{ rider_nom: ev.rider_nom || ev.rider_name, coureur_id: ev.coureur_id }]
-                : [],
+              rider_mentions: eventRiders(ev)
+                .filter((r) => r.coureur_id)
+                .map((r) => ({ rider_nom: r.rider_nom || r.rider_name, coureur_id: r.coureur_id })),
             };
+
             const batchId = crypto.randomUUID();
             const createdAt = new Date(baseTime + idx * 1000).toISOString();
             return broadcastChannels.map((channel: any) => ({
