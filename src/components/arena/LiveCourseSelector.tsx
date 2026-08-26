@@ -12,7 +12,9 @@ interface LiveCourseSelectorProps {
   multiSelect?: boolean;
   activeCourseIds?: string[];
   onSelectMulti?: (courseIds: string[]) => void;
+  compact?: boolean;
 }
+
 
 interface LiveCourse {
   id: string;
