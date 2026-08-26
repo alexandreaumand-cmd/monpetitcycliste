@@ -630,7 +630,7 @@ serve(async (req) => {
           } else {
             console.log(`[auto-scrape] Published ${fresh.length} livetext event(s) for ${row.course_id}`);
           }
-        }
+
 
           // Notify the owning manager (per league) on crashes & abandons
           if (!eventsError) {
