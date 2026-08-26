@@ -152,15 +152,17 @@ export const LiveCourseSelector = ({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          {t("trashTalk.liveCourses.selectCourse")}
-        </span>
-        {multiSelect && (
-          <span className="text-[10px] text-muted-foreground/70">(max 2)</span>
-        )}
-      </div>
+    <div className={compact ? undefined : "space-y-2"}>
+      {!compact && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {t("trashTalk.liveCourses.selectCourse")}
+          </span>
+          {multiSelect && (
+            <span className="text-[10px] text-muted-foreground/70">(max 2)</span>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {liveCourses.map((lc) => {
           const selected = isSelected(lc.course_id);
@@ -170,7 +172,8 @@ export const LiveCourseSelector = ({
               key={lc.course_id}
               onClick={() => handleClick(lc.course_id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                "flex items-center gap-1.5 rounded-lg text-xs font-medium transition-all border",
+                compact ? "px-2 py-1" : "px-3 py-1.5",
                 selected
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                   : "bg-background text-foreground border-border hover:border-primary/50"
