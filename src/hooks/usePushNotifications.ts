@@ -10,6 +10,7 @@ export interface PushPreferences {
   startlists: boolean;
   auctions: boolean;
   pronostics: boolean;
+  incidents: boolean;
 }
 
 export interface PushDebugInfo {
@@ -54,6 +55,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     startlists: true,
     auctions: true,
     pronostics: true,
+    incidents: true,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<PushDebugInfo>({
@@ -117,6 +119,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
               startlists: prefs.startlists ?? true,
               auctions: prefs.auctions ?? true,
               pronostics: prefs.pronostics ?? true,
+              incidents: prefs.incidents ?? true,
             });
           }
         } else {
@@ -169,6 +172,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         startlists: preferences.startlists,
         auctions: preferences.auctions,
         pronostics: preferences.pronostics,
+        incidents: preferences.incidents,
       };
 
       // Check if subscription exists
@@ -318,6 +322,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         startlists: updatedPreferences.startlists,
         auctions: updatedPreferences.auctions,
         pronostics: updatedPreferences.pronostics,
+        incidents: updatedPreferences.incidents,
       };
 
       const { error } = await supabase
