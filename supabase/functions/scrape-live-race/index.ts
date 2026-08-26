@@ -680,13 +680,29 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
 
     // All rider links — some events list several riders (e.g. "Attack by 2 riders in peloton")
     const riderLinks = textCont.querySelectorAll?.("a[href*='rider/']") || [];
-    if (!riderLinks || riderLinks.length === 0) continue;
 
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
 
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
+
+    // "Finish" has no rider link — publish it as a standalone timeline event
+    if (!riderLinks || riderLinks.length === 0) {
+      if (classified.type !== "finish") continue;
+      out.push({
+        uid: String(uid),
+        type: "finish",
+        rider_name: "",
+        rider_slug: "",
+        team: "",
+        km_to_go: kmToGo,
+        ts,
+        raw: rawText.slice(0, 300),
+      });
+      continue;
+    }
+
 
     const seenSlugs = new Set<string>();
     for (const riderLink of riderLinks) {
