@@ -145,6 +145,32 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     [liveCourses]
   );
 
+  // Desktop top profile: stage profile of the first selected live course, shown next to the selector
+  const desktopCourseId = activeCourseIds[0] || null;
+  const desktopCurrentEtape = liveCourses?.find((lc) => lc.course_id === desktopCourseId)?.current_etape ?? null;
+  const desktopStageStatus = useLiveStageStatus(desktopCourseId, desktopCurrentEtape);
+  const { data: desktopRouteImages } = useQuery({
+    queryKey: ["course-route-images", desktopCourseId],
+    queryFn: async () => {
+      if (!desktopCourseId) return [];
+      const { data } = await supabase
+        .from("course_route_images")
+        .select("etape_numero, image_url, label")
+        .eq("course_id", desktopCourseId);
+      return data ?? [];
+    },
+    enabled: !!desktopCourseId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const desktopStageImage = useMemo(() => {
+    if (!desktopRouteImages || desktopRouteImages.length === 0) return null;
+    if (desktopStageStatus.etape != null) {
+      const match = desktopRouteImages.find((img) => img.etape_numero === desktopStageStatus.etape);
+      if (match) return match;
+    }
+    return desktopRouteImages.find((img) => img.etape_numero == null) ?? null;
+  }, [desktopRouteImages, desktopStageStatus.etape]);
+
   if (!managerId) {
     return (
       <div className="text-center py-12 text-muted-foreground">
