@@ -220,7 +220,7 @@ async function notifyIncidents(params: {
   } = params;
 
   const incidents = events.filter(
-    (ev) => (ev.type === "crash" || ev.type === "abandon") && ev.coureur_id
+    (ev) => (ev.type === "crash" || ev.type === "abandon" || ev.type === "win") && ev.coureur_id
   );
   if (incidents.length === 0 || channels.length === 0) return;
 
