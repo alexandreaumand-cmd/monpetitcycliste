@@ -303,7 +303,35 @@ serve(async (req) => {
       const newSituationKey = buildSituationKey(newSituation);
       const lastSituationKey = buildSituationKey(latestSituationMessage?.metadata?.race_situation as RaceSituation | undefined);
 
-      if (newSituationKey && newSituationKey !== lastSituationKey && row.activated_by && broadcastChannels.length > 0) {
+      // Always keep the live "Situation" panel fresh (independent of the timeline)
+      if (newSituationKey) {
+        await admin
+          .from("arena_live_courses")
+          .update({
+            current_race_situation: {
+              ...(newSituation as any),
+              ...(latestStage != null ? { etape_numero: latestStage } : {}),
+            },
+            situation_updated_at: now.toISOString(),
+          })
+          .eq("course_id", row.course_id)
+          .eq("is_active", true);
+      }
+
+      // Copy the situation into the timeline at most every 30 minutes
+      const lastTimelineCopyAt = latestSituationMessage?.created_at
+        ? new Date(latestSituationMessage.created_at).getTime()
+        : null;
+      const timelineCopyDue =
+        lastTimelineCopyAt == null || now.getTime() - lastTimelineCopyAt >= SITUATION_TIMELINE_INTERVAL_MS;
+
+      if (
+        newSituationKey &&
+        newSituationKey !== lastSituationKey &&
+        timelineCopyDue &&
+        row.activated_by &&
+        broadcastChannels.length > 0
+      ) {
         const content = `🏁 Situation à ${Number(newSituation?.kmRemaining || 0)} km de l'arrivée`;
         const metadata = {
           race_situation: newSituation,
@@ -327,6 +355,7 @@ serve(async (req) => {
         }
         console.log(`[auto-scrape] Broadcasted new situation for ${row.course_id}`);
       }
+
 
       const nextAt = new Date(now.getTime() + interval * 1000).toISOString();
       await admin
