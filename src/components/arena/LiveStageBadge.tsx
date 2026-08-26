@@ -18,9 +18,9 @@ export const LiveStageBadge = ({ etape, state, className }: LiveStageBadgeProps)
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 border",
+        "inline-flex items-center gap-1 shrink-0 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 border whitespace-nowrap",
         isLive
-          ? "text-destructive bg-destructive/10 border-destructive/30"
+          ? "text-destructive-foreground bg-destructive border-destructive"
           : "text-muted-foreground bg-muted border-border",
         className
       )}
@@ -28,7 +28,8 @@ export const LiveStageBadge = ({ etape, state, className }: LiveStageBadgeProps)
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          isLive ? "bg-destructive animate-pulse" : "bg-muted-foreground/60"
+          isLive ? "bg-destructive-foreground animate-pulse" : "bg-muted-foreground/60"
+
         )}
       />
       {t(`liveStage.${state}`, { etape })}
