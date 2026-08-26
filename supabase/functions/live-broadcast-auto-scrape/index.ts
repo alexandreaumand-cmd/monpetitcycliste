@@ -184,6 +184,16 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `🎯 ${rider} est repris par${grp || " le peloton"}${km}`;
     case "abandon":
       return `❌ ${rider} abandonne${km}`;
+    case "finish":
+      return `🏁 Arrivée !`;
+    case "win":
+      return `🥇 ${rider} remporte l'étape !`;
+    case "sprint_launch":
+      return `💥 ${rider} lance le sprint${km}`;
+    case "second_place":
+      return `🥈 ${rider} prend la 2e place`;
+    case "third_place":
+      return `🥉 ${rider} prend la 3e place`;
     default:
       return `${rider}${km}`;
   }
