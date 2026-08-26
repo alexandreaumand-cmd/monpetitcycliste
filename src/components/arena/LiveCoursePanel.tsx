@@ -36,6 +36,7 @@ export const LiveCoursePanel = ({
   courseName,
   onToggleReaction,
   compact = false,
+  showProfile = true,
 }: LiveCoursePanelProps) => {
   const { t } = useTranslation("arena");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
