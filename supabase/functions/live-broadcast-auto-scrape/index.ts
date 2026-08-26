@@ -141,6 +141,8 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `⚠️ Chute de ${rider}${km}`;
     case "team_car":
       return `🚗 ${rider} est à la voiture d'équipe${km}`;
+    case "attack":
+      return `🚀 Attaque de ${rider}${km}`;
     case "abandon":
       return `❌ ${rider} abandonne${km}`;
     default:
