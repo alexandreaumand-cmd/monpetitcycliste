@@ -582,7 +582,8 @@ export type LiveTextEventType =
   | "back_of_peloton"
   | "crash"
   | "team_car"
-  | "abandon";
+  | "abandon"
+  | "attack";
 
 export interface LiveTextEvent {
   uid: string;
