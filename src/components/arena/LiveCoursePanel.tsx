@@ -240,9 +240,6 @@ export const LiveCoursePanel = ({
               />
             </div>
 
-                loading="lazy"
-              />
-            </div>
           </CollapsibleContent>
         </Collapsible>
       )}
