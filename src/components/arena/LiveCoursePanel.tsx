@@ -113,7 +113,7 @@ export const LiveCoursePanel = ({
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId);
 
   const stageFilter = availableStages.length > 1 && (
-    <div className="px-3 py-2 border-b flex items-center gap-1.5 overflow-x-auto bg-muted/10">
+    <div className="flex items-center gap-1.5 overflow-x-auto ml-auto">
       <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
       <Badge
         variant={selectedEtape == null ? "default" : "outline"}
@@ -127,24 +127,33 @@ export const LiveCoursePanel = ({
       </Badge>
       {availableStages.map((stage) => {
         const isLive = stage === stageStatus.etape;
+        const isSelected = selectedEtape === stage;
         return (
           <Badge
             key={stage}
-            variant={selectedEtape === stage ? "default" : "outline"}
+            variant={isSelected ? "default" : "outline"}
             className={cn(
               "cursor-pointer min-h-[24px] px-2 py-0.5 text-xs whitespace-nowrap gap-1",
               "active:scale-95 transition-all",
-              isLive && "border-red-500 text-red-600 dark:text-red-400"
+              isLive && !isSelected && "border-destructive text-destructive"
             )}
             onClick={() => setSelectedEtape(stage)}
           >
-            {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
+            {isLive && (
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full animate-pulse",
+                  isSelected ? "bg-primary-foreground" : "bg-destructive"
+                )}
+              />
+            )}
             É{stage}
           </Badge>
         );
       })}
     </div>
   );
+
 
   const messagesContent = messagesLoading ? (
     <div className="flex items-center justify-center py-12">
