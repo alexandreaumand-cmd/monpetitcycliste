@@ -5,7 +5,7 @@ import { useCurrentManager } from './useCurrentManager';
 
 export interface Notification {
   id: string;
-  type: 'startlist_validated' | 'results_added' | 'auction_opened' | 'auction_closed' | 'rider_incident';
+  type: 'startlist_validated' | 'results_added' | 'auction_opened' | 'auction_closed' | 'rider_incident' | 'rider_win';
   title: string;
   message: string;
   metadata: {
