@@ -583,7 +583,13 @@ export type LiveTextEventType =
   | "crash"
   | "team_car"
   | "abandon"
-  | "attack";
+  | "attack"
+  | "counter_attack"
+  | "acceleration"
+  | "dropped"
+  | "join_group"
+  | "struggling"
+  | "caught";
 
 export interface LiveTextEvent {
   uid: string;
@@ -594,17 +600,50 @@ export interface LiveTextEvent {
   km_to_go: number | null;
   ts: number | null;
   position?: number;
+  group_label?: string;
   raw: string;
   rider_nom?: string;
   coureur_id?: string;
   manager_name?: string;
 }
 
-function classifyLiveText(text: string): { type: LiveTextEventType; position?: number } | null {
+// Translate PCS group labels into French for the timeline
+function frGroup(label: string): string {
+  const l = label.toLowerCase().trim();
+  if (/^peloton$/.test(l)) return "le peloton";
+  if (/first chase group/.test(l)) return "le premier groupe de chasse";
+  if (/second chase group/.test(l)) return "le deuxième groupe de chasse";
+  if (/chase group/.test(l)) return "le groupe de chasse";
+  if (/lead(ing)? group|front group/.test(l)) return "le groupe de tête";
+  if (/break(away)?/.test(l)) return "l'échappée";
+  if (/grupetto/.test(l)) return "le grupetto";
+  return label.trim();
+}
+
+function classifyLiveText(
+  text: string
+): { type: LiveTextEventType; position?: number; group_label?: string } | null {
   const t = text.replace(/\s+/g, " ").trim();
+  const grp = (re: RegExp) => {
+    const m = t.match(re);
+    return m?.[1] ? frGroup(m[1]) : undefined;
+  };
+
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
   if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
-  if (/\battack(s|ed|ing)?\s+by\b/i.test(t) || /^attack\b/i.test(t)) return { type: "attack" };
+  if (/\bis dropped from\b/i.test(t) || /\bdropped from\b/i.test(t))
+    return { type: "dropped", group_label: grp(/dropped from\s+(.+?)(?:[.,]|$)/i) };
+  if (/\bjoins?\b/i.test(t) && /group|peloton|break/i.test(t))
+    return { type: "join_group", group_label: grp(/joins?\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/\bcaught by\b/i.test(t))
+    return { type: "caught", group_label: grp(/caught by\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/struggling to hold on/i.test(t)) return { type: "struggling" };
+  if (/counter[-\s]?attack/i.test(t))
+    return { type: "counter_attack", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/\bacceleration\b/i.test(t))
+    return { type: "acceleration", group_label: grp(/acceleration in\s+(?:the\s+)?(.+?)\s+by\b/i) };
+  if (/\battack(s|ed|ing)?\s+(by|in)\b/i.test(t) || /^attack\b/i.test(t))
+    return { type: "attack", group_label: grp(/\bin\s+(?:the\s+)?([a-z\s]+?)(?:[.,]|$)/i) };
   if (/at the team car/i.test(t)) return { type: "team_car" };
   if (/at the back of the (peloton|group|bunch)/i.test(t)) return { type: "back_of_peloton" };
   const pos = t.match(/in position\s+(\d+)/i);
@@ -612,6 +651,7 @@ function classifyLiveText(text: string): { type: LiveTextEventType; position?: n
   if (/\bpulling\b/i.test(t)) return { type: "pulling" };
   return null;
 }
+
 
 function parsePCSLiveText(doc: any): LiveTextEvent[] {
   const out: LiveTextEvent[] = [];
@@ -628,18 +668,9 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     const classified = classifyLiveText(rawText);
     if (!classified) continue;
 
-    // Rider link — team-only events (e.g. "Team X pulling in peloton") are skipped
-    const riderLink = textCont.querySelector?.("a[href*='rider/']");
-    if (!riderLink) continue;
-    const href = riderLink.getAttribute("href") || "";
-    const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
-    const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
-    const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
-    const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
-    const riderName = firstName ? `${firstName} ${lastName}` : fullText;
-    if (!riderName || riderName.length < 3) continue;
-
-    const team = rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "";
+    // All rider links — some events list several riders (e.g. "Attack by 2 riders in peloton")
+    const riderLinks = textCont.querySelectorAll?.("a[href*='rider/']") || [];
+    if (!riderLinks || riderLinks.length === 0) continue;
 
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
@@ -647,18 +678,40 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
 
-    out.push({
-      uid: String(uid),
-      type: classified.type,
-      position: classified.position,
-      rider_name: riderName,
-      rider_slug: slug,
-      team,
-      km_to_go: kmToGo,
-      ts,
-      raw: rawText.slice(0, 300),
-    });
+    const seenSlugs = new Set<string>();
+    for (const riderLink of riderLinks) {
+      const href = riderLink.getAttribute?.("href") || "";
+      const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
+      const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
+      const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
+      const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
+      const riderName = firstName ? `${firstName} ${lastName}` : fullText;
+      if (!riderName || riderName.length < 3) continue;
+      const dedupKey = slug || riderName.toLowerCase();
+      if (seenSlugs.has(dedupKey)) continue;
+      seenSlugs.add(dedupKey);
+
+      // Team shown right after the rider link, when present
+      const escaped = riderName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const team =
+        rawText.match(new RegExp(`${escaped}\\s*\\(([^)]{2,60})\\)`, "i"))?.[1]?.trim() ||
+        (riderLinks.length === 1 ? rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "" : "");
+
+      out.push({
+        uid: riderLinks.length > 1 || slug ? `${uid}#${dedupKey}` : String(uid),
+        type: classified.type,
+        position: classified.position,
+        group_label: classified.group_label,
+        rider_name: riderName,
+        rider_slug: slug,
+        team,
+        km_to_go: kmToGo,
+        ts,
+        raw: rawText.slice(0, 300),
+      });
+    }
   }
+
 
   // Oldest first (PCS lists newest first)
   out.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
