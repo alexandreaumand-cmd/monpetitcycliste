@@ -589,7 +589,12 @@ export type LiveTextEventType =
   | "dropped"
   | "join_group"
   | "struggling"
-  | "caught";
+  | "caught"
+  | "finish"
+  | "win"
+  | "sprint_launch"
+  | "second_place"
+  | "third_place";
 
 export interface LiveTextEvent {
   uid: string;
@@ -629,6 +634,11 @@ function classifyLiveText(
     return m?.[1] ? frGroup(m[1]) : undefined;
   };
 
+  if (/^finish\.?$/i.test(t)) return { type: "finish" };
+  if (/\bwins!?\s*$/i.test(t) || /\bwins\b/i.test(t)) return { type: "win" };
+  if (/launch(es|ed|ing)?\s+the\s+sprint/i.test(t)) return { type: "sprint_launch" };
+  if (/(comes\s+in\s+second\s+place|second\s+place\s+for)/i.test(t)) return { type: "second_place" };
+  if (/(comes\s+in\s+third\s+place|third\s+place\s+for)/i.test(t)) return { type: "third_place" };
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
   if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
   if (/\bis dropped from\b/i.test(t) || /\bdropped from\b/i.test(t))
@@ -670,13 +680,29 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
 
     // All rider links — some events list several riders (e.g. "Attack by 2 riders in peloton")
     const riderLinks = textCont.querySelectorAll?.("a[href*='rider/']") || [];
-    if (!riderLinks || riderLinks.length === 0) continue;
 
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
 
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
+
+    // "Finish" has no rider link — publish it as a standalone timeline event
+    if (!riderLinks || riderLinks.length === 0) {
+      if (classified.type !== "finish") continue;
+      out.push({
+        uid: String(uid),
+        type: "finish",
+        rider_name: "",
+        rider_slug: "",
+        team: "",
+        km_to_go: kmToGo,
+        ts,
+        raw: rawText.slice(0, 300),
+      });
+      continue;
+    }
+
 
     const seenSlugs = new Set<string>();
     for (const riderLink of riderLinks) {
