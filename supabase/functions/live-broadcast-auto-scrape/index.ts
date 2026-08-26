@@ -139,28 +139,44 @@ type LiveEvent = {
   group_label?: string;
   coureur_id?: string;
   manager_name?: string;
+  riders?: Array<{ rider_name: string; rider_nom?: string; coureur_id?: string }>;
 };
 
 // Max new livetext events published per course per run, to avoid flooding the timeline
 const MAX_LIVE_EVENTS_PER_RUN = 20;
 
+function eventRiders(ev: LiveEvent) {
+  const list = ev.riders?.length
+    ? ev.riders
+    : [{ rider_name: ev.rider_name, rider_nom: ev.rider_nom, coureur_id: ev.coureur_id }];
+  return list.filter((r) => (r.rider_nom || r.rider_name || "").trim().length > 0);
+}
+
 function formatLiveEvent(ev: LiveEvent): string {
-  const name = ev.rider_nom || ev.rider_name;
+  const riders = eventRiders(ev);
   // {Rider} mentions are rendered by the UI, which appends the league's manager name
-  const rider = ev.coureur_id ? `{${name}}` : name;
+  const names = riders.map((r) => {
+    const n = r.rider_nom || r.rider_name;
+    return r.coureur_id ? `{${n}}` : n;
+  });
+  const rider =
+    names.length <= 1
+      ? names[0] || ""
+      : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
+  const many = names.length > 1;
   const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
   const grp = ev.group_label ? ` ${ev.group_label}` : "";
   switch (ev.type) {
     case "pulling":
-      return `🔧 ${rider} fait le relais dans le peloton${km}`;
+      return `🔧 ${rider} ${many ? "font" : "fait"} le relais dans le peloton${km}`;
     case "position":
       return `#️⃣ ${rider} est en position ${ev.position ?? "?"}${km}`;
     case "back_of_peloton":
-      return `⬇️ ${rider} est en queue de peloton${km}`;
+      return `⬇️ ${rider} ${many ? "sont" : "est"} en queue de peloton${km}`;
     case "crash":
       return `⚠️ Chute de ${rider}${km}`;
     case "team_car":
-      return `🚗 ${rider} est à la voiture d'équipe${km}`;
+      return `🚗 ${rider} ${many ? "sont" : "est"} à la voiture d'équipe${km}`;
     case "attack":
       return `🚀 Attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "counter_attack":
@@ -174,16 +190,16 @@ function formatLiveEvent(ev: LiveEvent): string {
           ? ` du ${ev.group_label.slice(3)}`
           : ` de ${ev.group_label}`
         : "";
-      return `🪃 ${rider} est décroché${from}${km}`;
+      return `🪃 ${rider} ${many ? "sont décrochés" : "est décroché"}${from}${km}`;
     }
     case "join_group":
-      return `🤝 ${rider} rejoint${grp || " le groupe"}${km}`;
+      return `🤝 ${rider} ${many ? "rejoignent" : "rejoint"}${grp || " le groupe"}${km}`;
     case "struggling":
-      return `😣 ${rider} est en difficulté pour s'accrocher${km}`;
+      return `😣 ${rider} ${many ? "sont" : "est"} en difficulté pour s'accrocher${km}`;
     case "caught":
-      return `🎯 ${rider} est repris par${grp || " le peloton"}${km}`;
+      return `🎯 ${rider} ${many ? "sont repris" : "est repris"} par${grp || " le peloton"}${km}`;
     case "abandon":
-      return `❌ ${rider} abandonne${km}`;
+      return `❌ ${rider} ${many ? "abandonnent" : "abandonne"}${km}`;
     case "finish":
       return `🏁 Arrivée !`;
     case "win":
@@ -198,6 +214,7 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `${rider}${km}`;
   }
 }
+
 
 
 
