@@ -306,7 +306,7 @@ async function notifyIncidents(params: {
           user_ids: [push.user_id],
           title: push.title,
           message: push.message,
-          type: "rider_incident",
+          type: push.type,
           metadata: { course_id: courseId, ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}) },
         }),
       });
