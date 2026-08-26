@@ -30,7 +30,7 @@ export const RaceSituationDisplay = ({ groups, kmRemaining, rosterOwners }: Race
   return (
     <div className="w-full space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground px-1 pb-2 border-b border-border/50">
+      <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground px-1 pb-2 border-b border-border/50">
         <span>🏁</span>
         <span>{kmRemaining} km restants</span>
       </div>
@@ -58,7 +58,7 @@ function GapSeparator({ gap }: { gap: string }) {
   return (
     <div className="flex items-center gap-2 py-1.5 px-1">
       <div className="h-px flex-1 bg-border" />
-      <span className="text-xs font-bold font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+      <span className="text-sm font-bold font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">
         {gap}
       </span>
       <div className="h-px flex-1 bg-border" />
@@ -105,10 +105,10 @@ function GroupRow({
   return (
     <div className="flex gap-2 py-2 px-1">
       {/* Left column: badge + rider count */}
-      <div className="flex flex-col items-center w-9 flex-shrink-0 pt-0.5">
+      <div className="flex flex-col items-center w-10 flex-shrink-0 pt-0.5">
         <div
           className={cn(
-            "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
+            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
             group.isPeloton
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-foreground border border-border"
@@ -117,7 +117,7 @@ function GroupRow({
           {badgeLabel}
         </div>
         {!group.isPeloton && (
-          <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+          <span className="text-xs text-muted-foreground mt-0.5 leading-tight">
             ({group.riderCount || group.riders.length})
           </span>
         )}
@@ -127,7 +127,7 @@ function GroupRow({
       <div className="flex-1 min-w-0">
         {/* Group name label */}
         {group.name && (
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
             {group.name}
           </div>
         )}
@@ -148,8 +148,8 @@ function GroupRow({
                     <RiderRow key={ri} rank={visibleRiders.length + ri + 1} name={item.name} ownerName={item.ownerName} bib={item.bib} gcGap={item.gcGap} />
                   ))}
                 </CollapsibleContent>
-                <CollapsibleTrigger className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-0.5">
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+                <CollapsibleTrigger className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5">
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
                   {open ? "Réduire" : `+${hiddenRiders.length} autres`}
                 </CollapsibleTrigger>
               </Collapsible>
@@ -163,10 +163,10 @@ function GroupRow({
 
 function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: string; ownerName?: string; bib?: string; gcGap?: string }) {
   return (
-    <div className="flex items-center gap-1 sm:gap-1.5 text-xs leading-relaxed min-w-0 overflow-hidden">
-      <span className="w-3.5 text-right text-[11px] text-muted-foreground flex-shrink-0">{rank}</span>
+    <div className="flex items-center gap-1 sm:gap-1.5 text-sm leading-relaxed min-w-0 overflow-hidden">
+      <span className="w-4 text-right text-xs text-muted-foreground flex-shrink-0">{rank}</span>
       {bib && (
-        <span className="w-6 text-right text-[10px] text-muted-foreground/60 flex-shrink-0">{bib}</span>
+        <span className="w-6 text-right text-xs text-muted-foreground/60 flex-shrink-0">{bib}</span>
       )}
       <span className={cn(
         "truncate",
@@ -174,11 +174,11 @@ function RiderRow({ rank, name, ownerName, bib, gcGap }: { rank: number; name: s
       )}>
         {name}
       </span>
-      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+      <span className="text-xs text-muted-foreground flex-shrink-0">
         {ownerName ? `(${ownerName})` : "(-)"}
       </span>
       {gcGap && (
-        <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 ml-auto">
+        <span className="text-xs font-mono text-muted-foreground flex-shrink-0 ml-auto">
           {gcGap}
         </span>
       )}
