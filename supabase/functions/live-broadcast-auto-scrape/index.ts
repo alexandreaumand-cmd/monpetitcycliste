@@ -186,6 +186,122 @@ function formatLiveEvent(ev: LiveEvent): string {
 
 
 
+// ── Crash / abandon notifications to the owning manager ────────────────
+async function notifyIncidents(params: {
+  admin: any;
+  supabaseUrl: string;
+  serviceKey: string;
+  events: LiveEvent[];
+  channels: Array<{ id: string; league_id: string }>;
+  leagueNameById: Map<string, string>;
+  courseId: string;
+  courseName: string;
+  phaseId: string | null;
+  etapeNumero: number | null;
+}) {
+  const {
+    admin, supabaseUrl, serviceKey, events, channels, leagueNameById,
+    courseId, courseName, phaseId, etapeNumero,
+  } = params;
+
+  const incidents = events.filter(
+    (ev) => (ev.type === "crash" || ev.type === "abandon") && ev.coureur_id
+  );
+  if (incidents.length === 0 || channels.length === 0) return;
+
+  const leagueIds = channels.map((c) => c.league_id);
+  const riderIds = Array.from(new Set(incidents.map((ev) => ev.coureur_id as string)));
+
+  let rosterQuery = admin
+    .from("rosters")
+    .select("league_id, coureur_id, prix_signature, manager_id, managers!rosters_manager_id_fkey(id, nom, user_id)")
+    .in("league_id", leagueIds)
+    .in("coureur_id", riderIds);
+  if (phaseId) rosterQuery = rosterQuery.eq("phase_id", phaseId);
+
+  const { data: rosterRows, error: rosterError } = await rosterQuery;
+  if (rosterError) {
+    console.error(`[auto-scrape] roster lookup failed: ${rosterError.message}`);
+    return;
+  }
+  if (!rosterRows || rosterRows.length === 0) return;
+
+  const notifications: any[] = [];
+  const userIds = new Set<string>();
+  let pushTitle = "";
+  let pushMessage = "";
+
+  for (const ev of incidents) {
+    const riderName = ev.rider_nom || ev.rider_name || "";
+    const isCrash = ev.type === "crash";
+    for (const roster of rosterRows as any[]) {
+      if (roster.coureur_id !== ev.coureur_id) continue;
+      const manager = roster.managers;
+      if (!manager?.id) continue;
+      const leagueName = leagueNameById.get(roster.league_id) || "votre ligue";
+      const price = roster.prix_signature != null ? Number(roster.prix_signature) : null;
+      const hook = price != null
+        ? `Tu la sens la douille à ${price}M ? `
+        : "";
+      const title = isCrash ? "💥 Chute d'un de tes coureurs" : "❌ Abandon d'un de tes coureurs";
+      const message = `${hook}${isCrash ? "Chute" : "Abandon"} de ${riderName} sur ${courseName} - Ligue ${leagueName}`;
+      notifications.push({
+        manager_id: manager.id,
+        type: "rider_incident",
+        title,
+        message,
+        is_read: false,
+        metadata: {
+          course_id: courseId,
+          league_id: roster.league_id,
+          coureur_id: ev.coureur_id,
+          event_type: ev.type,
+          live_event_uid: ev.uid,
+          prix_signature: price,
+          ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}),
+        },
+      });
+      if (manager.user_id) userIds.add(manager.user_id);
+      if (!pushTitle) {
+        pushTitle = title;
+        pushMessage = message;
+      }
+    }
+  }
+
+  if (notifications.length === 0) return;
+
+  const { error: insertError } = await admin.from("notifications").insert(notifications);
+  if (insertError) {
+    console.error(`[auto-scrape] incident notification insert failed: ${insertError.message}`);
+    return;
+  }
+  console.log(`[auto-scrape] Created ${notifications.length} incident notification(s) for ${courseId}`);
+
+  if (userIds.size === 0) return;
+  try {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        user_ids: Array.from(userIds),
+        title: pushTitle,
+        message: pushMessage,
+        type: "rider_incident",
+        metadata: { course_id: courseId, ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}) },
+      }),
+    });
+    if (!resp.ok) {
+      console.error(`[auto-scrape] incident push failed: ${(await resp.text()).slice(0, 200)}`);
+    }
+  } catch (pushError) {
+    console.error(`[auto-scrape] incident push error: ${(pushError as Error).message}`);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -204,7 +320,7 @@ serve(async (req) => {
 
   const [{ data: liveChannels, error: channelsError }, { data: activeLeagues, error: leaguesError }] = await Promise.all([
     admin.from("arena_channels").select("id, league_id").eq("slug", "live-courses"),
-    admin.from("leagues").select("id").eq("status", "active"),
+    admin.from("leagues").select("id, name").eq("status", "active"),
   ]);
 
   if (channelsError || leaguesError) {
@@ -216,11 +332,14 @@ serve(async (req) => {
   }
 
   const activeLeagueIds = new Set((activeLeagues || []).map((league: any) => league.id));
+  const leagueNameById = new Map<string, string>(
+    (activeLeagues || []).map((league: any) => [league.id, league.name as string])
+  );
   const broadcastChannels = (liveChannels || []).filter((channel: any) => activeLeagueIds.has(channel.league_id));
 
   const { data: rows, error } = await admin
     .from("arena_live_courses")
-    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin)")
+    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin, nom, phase_id)")
     .eq("is_active", true)
     .eq("auto_scrape_enabled", true);
 
@@ -515,6 +634,27 @@ serve(async (req) => {
             console.error(`[auto-scrape] livetext insert failed: ${eventsError.message}`);
           } else {
             console.log(`[auto-scrape] Published ${fresh.length} livetext event(s) for ${row.course_id}`);
+          }
+        }
+
+          // Notify the owning manager (per league) on crashes & abandons
+          if (!eventsError) {
+            try {
+              await notifyIncidents({
+                admin,
+                supabaseUrl: SUPABASE_URL,
+                serviceKey: SERVICE_KEY,
+                events: fresh,
+                channels: broadcastChannels,
+                leagueNameById,
+                courseId: row.course_id,
+                courseName: row.courses?.nom || "la course",
+                phaseId: row.courses?.phase_id || null,
+                etapeNumero: latestStage,
+              });
+            } catch (notifyError) {
+              console.error(`[auto-scrape] incident notifications failed: ${(notifyError as Error).message}`);
+            }
           }
         }
       }

@@ -26,15 +26,17 @@ interface PushSubscription {
     startlists?: boolean;
     auctions?: boolean;
     pronostics?: boolean;
+    incidents?: boolean;
   } | null;
 }
 
 // Helper to determine preference key from notification type
-function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' | 'pronostics' | null {
+function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' | 'pronostics' | 'incidents' | null {
   if (type === 'results_added') return 'results';
   if (type === 'startlist_validated') return 'startlists';
   if (type.startsWith('auction_')) return 'auctions';
   if (type === 'pronostic_reminder') return 'pronostics';
+  if (type === 'rider_incident') return 'incidents';
   return null;
 }
 
