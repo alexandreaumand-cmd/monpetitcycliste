@@ -1495,19 +1495,22 @@ serve(async (req) => {
         sigMap.set(tokenSig(e.rider_nom), e);
         normMap.set(normalize(e.rider_nom), e);
       }
-      liveTextEvents = liveTextEvents.map((ev) => {
-        const entry =
-          sigMap.get(tokenSig(ev.rider_name)) ||
-          normMap.get(normalize(ev.rider_name)) ||
-          null;
-        const coureurId = entry?.coureur_id || nameToIdMap[ev.rider_name.toLowerCase()] || "";
+      const resolve = (name: string) => {
+        const entry = sigMap.get(tokenSig(name)) || normMap.get(normalize(name)) || null;
+        const coureurId = entry?.coureur_id || nameToIdMap[name.toLowerCase()] || "";
         return {
-          ...ev,
-          rider_nom: entry?.rider_nom || ev.rider_name,
+          rider_nom: entry?.rider_nom || name,
           coureur_id: coureurId || undefined,
           manager_name: coureurId ? rosterMap[coureurId] || undefined : undefined,
-        } as LiveTextEvent;
+        };
+      };
+      liveTextEvents = liveTextEvents.map((ev) => {
+        const main = resolve(ev.rider_name);
+        const riders = (ev.riders?.length ? ev.riders : [{ rider_name: ev.rider_name, rider_slug: ev.rider_slug }])
+          .map((r) => ({ ...r, ...resolve(r.rider_name) }));
+        return { ...ev, ...main, riders } as LiveTextEvent;
       });
+
       console.log(
         `[scrape-live-race] Livetext: ${liveTextEvents.length} events, ${liveTextEvents.filter((e) => e.coureur_id).length} matched to riders`
       );
