@@ -668,18 +668,9 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     const classified = classifyLiveText(rawText);
     if (!classified) continue;
 
-    // Rider link — team-only events (e.g. "Team X pulling in peloton") are skipped
-    const riderLink = textCont.querySelector?.("a[href*='rider/']");
-    if (!riderLink) continue;
-    const href = riderLink.getAttribute("href") || "";
-    const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
-    const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
-    const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
-    const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
-    const riderName = firstName ? `${firstName} ${lastName}` : fullText;
-    if (!riderName || riderName.length < 3) continue;
-
-    const team = rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "";
+    // All rider links — some events list several riders (e.g. "Attack by 2 riders in peloton")
+    const riderLinks = textCont.querySelectorAll?.("a[href*='rider/']") || [];
+    if (!riderLinks || riderLinks.length === 0) continue;
 
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
@@ -687,18 +678,40 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
 
-    out.push({
-      uid: String(uid),
-      type: classified.type,
-      position: classified.position,
-      rider_name: riderName,
-      rider_slug: slug,
-      team,
-      km_to_go: kmToGo,
-      ts,
-      raw: rawText.slice(0, 300),
-    });
+    const seenSlugs = new Set<string>();
+    for (const riderLink of riderLinks) {
+      const href = riderLink.getAttribute?.("href") || "";
+      const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
+      const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
+      const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
+      const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
+      const riderName = firstName ? `${firstName} ${lastName}` : fullText;
+      if (!riderName || riderName.length < 3) continue;
+      const dedupKey = slug || riderName.toLowerCase();
+      if (seenSlugs.has(dedupKey)) continue;
+      seenSlugs.add(dedupKey);
+
+      // Team shown right after the rider link, when present
+      const escaped = riderName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const team =
+        rawText.match(new RegExp(`${escaped}\\s*\\(([^)]{2,60})\\)`, "i"))?.[1]?.trim() ||
+        (riderLinks.length === 1 ? rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "" : "");
+
+      out.push({
+        uid: riderLinks.length > 1 || slug ? `${uid}#${dedupKey}` : String(uid),
+        type: classified.type,
+        position: classified.position,
+        group_label: classified.group_label,
+        rider_name: riderName,
+        rider_slug: slug,
+        team,
+        km_to_go: kmToGo,
+        ts,
+        raw: rawText.slice(0, 300),
+      });
+    }
   }
+
 
   // Oldest first (PCS lists newest first)
   out.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
