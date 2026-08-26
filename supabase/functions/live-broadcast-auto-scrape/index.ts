@@ -162,8 +162,15 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `🔁 Contre-attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "acceleration":
       return `⚡ Accélération de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
-    case "dropped":
-      return `🪃 ${rider} est décroché${grp ? ` de${grp === " le peloton" ? " du peloton" : grp}` : ""}${km}`;
+    case "dropped": {
+      // "le peloton" → "du peloton", "l'échappée" → "de l'échappée"
+      const from = ev.group_label
+        ? ev.group_label.startsWith("le ")
+          ? ` du ${ev.group_label.slice(3)}`
+          : ` de ${ev.group_label}`
+        : "";
+      return `🪃 ${rider} est décroché${from}${km}`;
+    }
     case "join_group":
       return `🤝 ${rider} rejoint${grp || " le groupe"}${km}`;
     case "struggling":
