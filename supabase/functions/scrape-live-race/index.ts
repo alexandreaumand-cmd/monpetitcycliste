@@ -634,6 +634,11 @@ function classifyLiveText(
     return m?.[1] ? frGroup(m[1]) : undefined;
   };
 
+  if (/^finish\.?$/i.test(t)) return { type: "finish" };
+  if (/\bwins!?\s*$/i.test(t) || /\bwins\b/i.test(t)) return { type: "win" };
+  if (/launch(es|ed|ing)?\s+the\s+sprint/i.test(t)) return { type: "sprint_launch" };
+  if (/(comes\s+in\s+second\s+place|second\s+place\s+for)/i.test(t)) return { type: "second_place" };
+  if (/(comes\s+in\s+third\s+place|third\s+place\s+for)/i.test(t)) return { type: "third_place" };
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
   if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
   if (/\bis dropped from\b/i.test(t) || /\bdropped from\b/i.test(t))
