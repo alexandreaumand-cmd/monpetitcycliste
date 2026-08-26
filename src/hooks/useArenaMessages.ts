@@ -317,7 +317,7 @@ export function useLeagueRosterOwners(leagueId: string, courseId?: string | null
 
       let query = supabase
         .from("rosters")
-        .select("coureur_id, managers!rosters_manager_id_fkey(nom)")
+        .select("coureur_id, prix_signature, managers!rosters_manager_id_fkey(nom)")
         .eq("league_id", leagueId);
 
       if (phaseId) {
@@ -328,6 +328,8 @@ export function useLeagueRosterOwners(leagueId: string, courseId?: string | null
 
       if (error) throw error;
 
+      // Values are manager names; prices live under `price:` prefixed keys so
+      // existing consumers of the name map keep working unchanged.
       const ownersMap: Record<string, string> = {};
       const riderIds = Array.from(
         new Set((data || []).map((r) => r.coureur_id).filter(Boolean))
@@ -337,6 +339,9 @@ export function useLeagueRosterOwners(leagueId: string, courseId?: string | null
       for (const r of data || []) {
         if (r.coureur_id && (r.managers as any)?.nom) {
           ownersMap[r.coureur_id] = (r.managers as any).nom;
+          if (r.prix_signature != null) {
+            ownersMap[`price:${r.coureur_id}`] = String(r.prix_signature);
+          }
         }
       }
 
@@ -353,14 +358,17 @@ export function useLeagueRosterOwners(leagueId: string, courseId?: string | null
       for (const rider of riders || []) {
         const manager = ownersMap[rider.id];
         if (!manager || !rider.nom) continue;
+        const price = ownersMap[`price:${rider.id}`];
 
         const addVariant = (name: string) => {
           const normalized = normalizeName(name);
           if (!normalized) return;
           ownersMap[`name:${normalized}`] = manager;
+          if (price != null) ownersMap[`price:name:${normalized}`] = price;
         };
 
         addVariant(rider.nom);
+
 
         const parts = rider.nom.split(/\s+/).filter(Boolean);
         if (parts.length >= 2) {
