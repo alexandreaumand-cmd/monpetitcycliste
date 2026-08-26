@@ -25,6 +25,7 @@ interface LiveCoursePanelProps {
   courseName?: string;
   onToggleReaction: (messageId: string, emoji: string) => void;
   compact?: boolean;
+  showProfile?: boolean;
 }
 
 export const LiveCoursePanel = ({
