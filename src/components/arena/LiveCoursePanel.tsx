@@ -281,11 +281,17 @@ export const LiveCoursePanel = ({
         {/* Timeline column */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="px-3 py-1.5 border-b bg-muted/20">
-            <div className="flex items-center gap-1.5">
-              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-              <h3 className="text-xs font-semibold">Timeline</h3>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <MessageCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+              <h3 className="text-xs font-semibold shrink-0">Timeline</h3>
+              {situationUpdatedAt && (
+                <span className="text-[10px] text-muted-foreground truncate ml-auto">
+                  Situation mise à jour {formatRelativeFr(situationUpdatedAt, nowTick)}
+                </span>
+              )}
             </div>
           </div>
+
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
             {messagesContent}
           </div>
