@@ -17,6 +17,16 @@ import { useLiveCourses } from "./LiveCourseSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+const formatRelativeFr = (iso: string, _tick: number) => {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const sec = Math.max(0, Math.round(diffMs / 1000));
+  if (sec < 60) return `il y a ${sec} s`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  return `il y a ${h} h ${min % 60} min`;
+};
+
 interface LiveCoursePanelProps {
   leagueId: string;
   courseId: string;
