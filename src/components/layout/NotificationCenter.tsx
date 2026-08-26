@@ -53,6 +53,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
         return '📋';
       case 'rider_incident':
         return '💥';
+      case 'rider_win':
+        return '🥇';
       case 'auction_opened':
       case 'auction_closed':
       case 'auction_ready_to_close':
