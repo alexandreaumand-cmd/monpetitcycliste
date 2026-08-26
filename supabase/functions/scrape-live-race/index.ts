@@ -596,6 +596,14 @@ export type LiveTextEventType =
   | "second_place"
   | "third_place";
 
+export interface LiveTextRider {
+  rider_name: string;
+  rider_slug: string;
+  rider_nom?: string;
+  coureur_id?: string;
+  manager_name?: string;
+}
+
 export interface LiveTextEvent {
   uid: string;
   type: LiveTextEventType;
@@ -610,11 +618,18 @@ export interface LiveTextEvent {
   rider_nom?: string;
   coureur_id?: string;
   manager_name?: string;
+  /** All riders mentioned by the event (multi-rider events are grouped into one) */
+  riders?: LiveTextRider[];
 }
 
 // Translate PCS group labels into French for the timeline
 function frGroup(label: string): string {
-  const l = label.toLowerCase().trim();
+  // PCS sometimes appends the group composition ("peloton are: X (Team) Y (Team)")
+  const cleaned = label
+    .split(/\s+(?:are|is)\b|:/i)[0]
+    .replace(/\([^)]*\)/g, "")
+    .trim();
+  const l = cleaned.toLowerCase().trim();
   if (/^peloton$/.test(l)) return "le peloton";
   if (/first chase group/.test(l)) return "le premier groupe de chasse";
   if (/second chase group/.test(l)) return "le deuxième groupe de chasse";
@@ -622,8 +637,9 @@ function frGroup(label: string): string {
   if (/lead(ing)? group|front group/.test(l)) return "le groupe de tête";
   if (/break(away)?/.test(l)) return "l'échappée";
   if (/grupetto/.test(l)) return "le grupetto";
-  return label.trim();
+  return cleaned;
 }
+
 
 function classifyLiveText(
   text: string
@@ -705,6 +721,8 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
 
 
     const seenSlugs = new Set<string>();
+    const riders: LiveTextRider[] = [];
+    const teams: string[] = [];
     for (const riderLink of riderLinks) {
       const href = riderLink.getAttribute?.("href") || "";
       const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
@@ -723,20 +741,29 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
         rawText.match(new RegExp(`${escaped}\\s*\\(([^)]{2,60})\\)`, "i"))?.[1]?.trim() ||
         (riderLinks.length === 1 ? rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "" : "");
 
-      out.push({
-        uid: riderLinks.length > 1 || slug ? `${uid}#${dedupKey}` : String(uid),
-        type: classified.type,
-        position: classified.position,
-        group_label: classified.group_label,
-        rider_name: riderName,
-        rider_slug: slug,
-        team,
-        km_to_go: kmToGo,
-        ts,
-        raw: rawText.slice(0, 300),
-      });
+      riders.push({ rider_name: riderName, rider_slug: slug });
+      teams.push(team);
     }
+
+    if (riders.length === 0) continue;
+
+    // One single event per livetext line, even when several riders are involved
+    const groupKey = riders.map((r) => r.rider_slug || r.rider_name.toLowerCase()).join("+");
+    out.push({
+      uid: `${uid}#${groupKey}`,
+      type: classified.type,
+      position: classified.position,
+      group_label: classified.group_label,
+      rider_name: riders[0].rider_name,
+      rider_slug: riders[0].rider_slug,
+      team: teams[0] || "",
+      riders,
+      km_to_go: kmToGo,
+      ts,
+      raw: rawText.slice(0, 300),
+    });
   }
+
 
 
   // Oldest first (PCS lists newest first)
@@ -1468,19 +1495,22 @@ serve(async (req) => {
         sigMap.set(tokenSig(e.rider_nom), e);
         normMap.set(normalize(e.rider_nom), e);
       }
-      liveTextEvents = liveTextEvents.map((ev) => {
-        const entry =
-          sigMap.get(tokenSig(ev.rider_name)) ||
-          normMap.get(normalize(ev.rider_name)) ||
-          null;
-        const coureurId = entry?.coureur_id || nameToIdMap[ev.rider_name.toLowerCase()] || "";
+      const resolve = (name: string) => {
+        const entry = sigMap.get(tokenSig(name)) || normMap.get(normalize(name)) || null;
+        const coureurId = entry?.coureur_id || nameToIdMap[name.toLowerCase()] || "";
         return {
-          ...ev,
-          rider_nom: entry?.rider_nom || ev.rider_name,
+          rider_nom: entry?.rider_nom || name,
           coureur_id: coureurId || undefined,
           manager_name: coureurId ? rosterMap[coureurId] || undefined : undefined,
-        } as LiveTextEvent;
+        };
+      };
+      liveTextEvents = liveTextEvents.map((ev) => {
+        const main = resolve(ev.rider_name);
+        const riders = (ev.riders?.length ? ev.riders : [{ rider_name: ev.rider_name, rider_slug: ev.rider_slug }])
+          .map((r) => ({ ...r, ...resolve(r.rider_name) }));
+        return { ...ev, ...main, riders } as LiveTextEvent;
       });
+
       console.log(
         `[scrape-live-race] Livetext: ${liveTextEvents.length} events, ${liveTextEvents.filter((e) => e.coureur_id).length} matched to riders`
       );

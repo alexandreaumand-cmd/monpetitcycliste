@@ -139,28 +139,44 @@ type LiveEvent = {
   group_label?: string;
   coureur_id?: string;
   manager_name?: string;
+  riders?: Array<{ rider_name: string; rider_nom?: string; coureur_id?: string }>;
 };
 
 // Max new livetext events published per course per run, to avoid flooding the timeline
 const MAX_LIVE_EVENTS_PER_RUN = 20;
 
+function eventRiders(ev: LiveEvent) {
+  const list = ev.riders?.length
+    ? ev.riders
+    : [{ rider_name: ev.rider_name, rider_nom: ev.rider_nom, coureur_id: ev.coureur_id }];
+  return list.filter((r) => (r.rider_nom || r.rider_name || "").trim().length > 0);
+}
+
 function formatLiveEvent(ev: LiveEvent): string {
-  const name = ev.rider_nom || ev.rider_name;
+  const riders = eventRiders(ev);
   // {Rider} mentions are rendered by the UI, which appends the league's manager name
-  const rider = ev.coureur_id ? `{${name}}` : name;
+  const names = riders.map((r) => {
+    const n = r.rider_nom || r.rider_name;
+    return r.coureur_id ? `{${n}}` : n;
+  });
+  const rider =
+    names.length <= 1
+      ? names[0] || ""
+      : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
+  const many = names.length > 1;
   const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
   const grp = ev.group_label ? ` ${ev.group_label}` : "";
   switch (ev.type) {
     case "pulling":
-      return `🔧 ${rider} fait le relais dans le peloton${km}`;
+      return `🔧 ${rider} ${many ? "font" : "fait"} le relais dans le peloton${km}`;
     case "position":
       return `#️⃣ ${rider} est en position ${ev.position ?? "?"}${km}`;
     case "back_of_peloton":
-      return `⬇️ ${rider} est en queue de peloton${km}`;
+      return `⬇️ ${rider} ${many ? "sont" : "est"} en queue de peloton${km}`;
     case "crash":
       return `⚠️ Chute de ${rider}${km}`;
     case "team_car":
-      return `🚗 ${rider} est à la voiture d'équipe${km}`;
+      return `🚗 ${rider} ${many ? "sont" : "est"} à la voiture d'équipe${km}`;
     case "attack":
       return `🚀 Attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "counter_attack":
@@ -174,16 +190,16 @@ function formatLiveEvent(ev: LiveEvent): string {
           ? ` du ${ev.group_label.slice(3)}`
           : ` de ${ev.group_label}`
         : "";
-      return `🪃 ${rider} est décroché${from}${km}`;
+      return `🪃 ${rider} ${many ? "sont décrochés" : "est décroché"}${from}${km}`;
     }
     case "join_group":
-      return `🤝 ${rider} rejoint${grp || " le groupe"}${km}`;
+      return `🤝 ${rider} ${many ? "rejoignent" : "rejoint"}${grp || " le groupe"}${km}`;
     case "struggling":
-      return `😣 ${rider} est en difficulté pour s'accrocher${km}`;
+      return `😣 ${rider} ${many ? "sont" : "est"} en difficulté pour s'accrocher${km}`;
     case "caught":
-      return `🎯 ${rider} est repris par${grp || " le peloton"}${km}`;
+      return `🎯 ${rider} ${many ? "sont repris" : "est repris"} par${grp || " le peloton"}${km}`;
     case "abandon":
-      return `❌ ${rider} abandonne${km}`;
+      return `❌ ${rider} ${many ? "abandonnent" : "abandonne"}${km}`;
     case "finish":
       return `🏁 Arrivée !`;
     case "win":
@@ -198,6 +214,7 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `${rider}${km}`;
   }
 }
+
 
 
 
@@ -219,13 +236,19 @@ async function notifyIncidents(params: {
     courseId, courseName, phaseId, etapeNumero,
   } = params;
 
-  const incidents = events.filter(
-    (ev) => (ev.type === "crash" || ev.type === "abandon" || ev.type === "win") && ev.coureur_id
-  );
+  // Multi-rider events are notified rider by rider
+  const incidents = events
+    .filter((ev) => ev.type === "crash" || ev.type === "abandon" || ev.type === "win")
+    .flatMap((ev) =>
+      eventRiders(ev)
+        .filter((r) => r.coureur_id)
+        .map((r) => ({ ...ev, rider_name: r.rider_name, rider_nom: r.rider_nom, coureur_id: r.coureur_id }))
+    );
   if (incidents.length === 0 || channels.length === 0) return;
 
   const leagueIds = channels.map((c) => c.league_id);
   const riderIds = Array.from(new Set(incidents.map((ev) => ev.coureur_id as string)));
+
 
   let rosterQuery = admin
     .from("rosters")
@@ -594,11 +617,16 @@ serve(async (req) => {
           const meta: any = (m as any)?.metadata || {};
           if (typeof meta.live_event_uid === "string") publishedUids.add(meta.live_event_uid);
           const content: string = (m as any)?.content || "";
-          const rider =
-            meta?.rider_mentions?.[0]?.rider_nom || content.match(/\{([^}]+)\}/)?.[1] || "";
+          const names: string[] = Array.isArray(meta?.rider_mentions) && meta.rider_mentions.length
+            ? meta.rider_mentions.map((r: any) => r?.rider_nom).filter(Boolean)
+            : Array.from(content.matchAll(/\{([^}]+)\}/g)).map((mm) => mm[1]);
           const kmMatch = content.match(/à\s+(\d+(?:[.,]\d+)?)\s*km/);
           const km = kmMatch ? Number(kmMatch[1].replace(",", ".")) : null;
-          if (meta?.live_event_type) publishedKeys.add(stableKey(meta.live_event_type, rider, km));
+          if (meta?.live_event_type) {
+            for (const n of names.length ? names : [""]) {
+              publishedKeys.add(stableKey(meta.live_event_type, n, km));
+            }
+          }
         }
 
         // Chronological order: earliest first (most km remaining first), so the
@@ -610,9 +638,13 @@ serve(async (req) => {
           .filter((ev) => {
             if (!ev?.uid) return false;
             if (publishedUids.has(ev.uid)) return false;
-            const key = stableKey(ev.type, ev.rider_nom || ev.rider_name, ev.km_to_go);
-            if (publishedKeys.has(key)) return false;
-            publishedKeys.add(key);
+            const riders = eventRiders(ev);
+            const keys = (riders.length ? riders.map((r) => r.rider_nom || r.rider_name) : [""]).map(
+              (n) => stableKey(ev.type, n, ev.km_to_go)
+            );
+            // Already published as a grouped message or as per-rider messages
+            if (keys.some((k) => publishedKeys.has(k))) return false;
+            keys.forEach((k) => publishedKeys.add(k));
             return true;
           })
           .slice(-MAX_LIVE_EVENTS_PER_RUN)
@@ -627,10 +659,11 @@ serve(async (req) => {
               live_event_uid: ev.uid,
               live_event_type: ev.type,
               ...(latestStage != null ? { etape_numero: latestStage } : {}),
-              rider_mentions: ev.coureur_id
-                ? [{ rider_nom: ev.rider_nom || ev.rider_name, coureur_id: ev.coureur_id }]
-                : [],
+              rider_mentions: eventRiders(ev)
+                .filter((r) => r.coureur_id)
+                .map((r) => ({ rider_nom: r.rider_nom || r.rider_name, coureur_id: r.coureur_id })),
             };
+
             const batchId = crypto.randomUUID();
             const createdAt = new Date(baseTime + idx * 1000).toISOString();
             return broadcastChannels.map((channel: any) => ({
