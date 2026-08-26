@@ -110,6 +110,45 @@ function buildRiderMentions(situation: RaceSituation | null | undefined) {
   return mentions;
 }
 
+type LiveEvent = {
+  uid: string;
+  type: "pulling" | "position" | "back_of_peloton" | "crash" | "team_car" | "abandon";
+  rider_name: string;
+  rider_nom?: string;
+  team?: string;
+  km_to_go?: number | null;
+  position?: number;
+  coureur_id?: string;
+  manager_name?: string;
+};
+
+// Max new livetext events published per course per run, to avoid flooding the timeline
+const MAX_LIVE_EVENTS_PER_RUN = 10;
+
+function formatLiveEvent(ev: LiveEvent): string {
+  const name = ev.rider_nom || ev.rider_name;
+  // {Rider} mentions are rendered by the UI, which appends the league's manager name
+  const rider = ev.coureur_id ? `{${name}}` : name;
+  const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
+  switch (ev.type) {
+    case "pulling":
+      return `🔧 ${rider} fait le relais dans le peloton${km}`;
+    case "position":
+      return `#️⃣ ${rider} est en position ${ev.position ?? "?"}${km}`;
+    case "back_of_peloton":
+      return `⬇️ ${rider} est en queue de peloton${km}`;
+    case "crash":
+      return `⚠️ Chute de ${rider}${km}`;
+    case "team_car":
+      return `🚗 ${rider} est à la voiture d'équipe${km}`;
+    case "abandon":
+      return `❌ ${rider} abandonne${km}`;
+    default:
+      return `${rider}${km}`;
+  }
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -357,6 +396,63 @@ serve(async (req) => {
         }
         console.log(`[auto-scrape] Broadcasted new situation for ${row.course_id}`);
       }
+
+      // Publish new PCS livetext rider events (pulling, position, back of peloton,
+      // crash, team car, abandon) into the arena timeline — once per event uid.
+      const liveEvents = (Array.isArray(data?.live_events) ? data.live_events : []) as LiveEvent[];
+      if (liveEvents.length > 0 && row.activated_by && broadcastChannels.length > 0) {
+        const { data: publishedRows } = await admin
+          .from("arena_messages")
+          .select("metadata")
+          .eq("course_id", row.course_id)
+          .eq("message_type", "admin_broadcast")
+          .not("metadata->>live_event_uid", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(500);
+
+        const publishedUids = new Set(
+          (publishedRows || [])
+            .map((m: any) => m?.metadata?.live_event_uid)
+            .filter((uid: any) => typeof uid === "string")
+        );
+
+        const fresh = liveEvents
+          .filter((ev) => ev?.uid && !publishedUids.has(ev.uid))
+          .slice(-MAX_LIVE_EVENTS_PER_RUN);
+
+        if (fresh.length > 0) {
+          const inserts = fresh.flatMap((ev) => {
+            const content = formatLiveEvent(ev);
+            const metadata = {
+              live_event_uid: ev.uid,
+              live_event_type: ev.type,
+              ...(latestStage != null ? { etape_numero: latestStage } : {}),
+              rider_mentions: ev.coureur_id
+                ? [{ rider_nom: ev.rider_nom || ev.rider_name, coureur_id: ev.coureur_id }]
+                : [],
+            };
+            const batchId = crypto.randomUUID();
+            return broadcastChannels.map((channel: any) => ({
+              channel_id: channel.id,
+              league_id: channel.league_id,
+              author_manager_id: row.activated_by,
+              message_type: "admin_broadcast",
+              content,
+              metadata,
+              course_id: row.course_id,
+              source_message_id: batchId,
+            }));
+          });
+
+          const { error: eventsError } = await admin.from("arena_messages").insert(inserts);
+          if (eventsError) {
+            console.error(`[auto-scrape] livetext insert failed: ${eventsError.message}`);
+          } else {
+            console.log(`[auto-scrape] Published ${fresh.length} livetext event(s) for ${row.course_id}`);
+          }
+        }
+      }
+
 
 
       const nextAt = new Date(now.getTime() + interval * 1000).toISOString();
