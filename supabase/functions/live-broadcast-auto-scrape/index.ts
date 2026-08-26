@@ -227,9 +227,7 @@ async function notifyIncidents(params: {
   if (!rosterRows || rosterRows.length === 0) return;
 
   const notifications: any[] = [];
-  const userIds = new Set<string>();
-  let pushTitle = "";
-  let pushMessage = "";
+  const pushes: Array<{ user_id: string; title: string; message: string }> = [];
 
   for (const ev of incidents) {
     const riderName = ev.rider_nom || ev.rider_name || "";
@@ -240,9 +238,7 @@ async function notifyIncidents(params: {
       if (!manager?.id) continue;
       const leagueName = leagueNameById.get(roster.league_id) || "votre ligue";
       const price = roster.prix_signature != null ? Number(roster.prix_signature) : null;
-      const hook = price != null
-        ? `Tu la sens la douille à ${price}M ? `
-        : "";
+      const hook = price != null ? `Tu la sens la douille à ${price}M ? ` : "";
       const title = isCrash ? "💥 Chute d'un de tes coureurs" : "❌ Abandon d'un de tes coureurs";
       const message = `${hook}${isCrash ? "Chute" : "Abandon"} de ${riderName} sur ${courseName} - Ligue ${leagueName}`;
       notifications.push({
@@ -261,11 +257,7 @@ async function notifyIncidents(params: {
           ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}),
         },
       });
-      if (manager.user_id) userIds.add(manager.user_id);
-      if (!pushTitle) {
-        pushTitle = title;
-        pushMessage = message;
-      }
+      if (manager.user_id) pushes.push({ user_id: manager.user_id, title, message });
     }
   }
 
@@ -278,29 +270,32 @@ async function notifyIncidents(params: {
   }
   console.log(`[auto-scrape] Created ${notifications.length} incident notification(s) for ${courseId}`);
 
-  if (userIds.size === 0) return;
-  try {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({
-        user_ids: Array.from(userIds),
-        title: pushTitle,
-        message: pushMessage,
-        type: "rider_incident",
-        metadata: { course_id: courseId, ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}) },
-      }),
-    });
-    if (!resp.ok) {
-      console.error(`[auto-scrape] incident push failed: ${(await resp.text()).slice(0, 200)}`);
+  // Each manager gets their own wording (their price, their league)
+  for (const push of pushes) {
+    try {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          user_ids: [push.user_id],
+          title: push.title,
+          message: push.message,
+          type: "rider_incident",
+          metadata: { course_id: courseId, ...(etapeNumero != null ? { etape_numero: etapeNumero } : {}) },
+        }),
+      });
+      if (!resp.ok) {
+        console.error(`[auto-scrape] incident push failed: ${(await resp.text()).slice(0, 200)}`);
+      }
+    } catch (pushError) {
+      console.error(`[auto-scrape] incident push error: ${(pushError as Error).message}`);
     }
-  } catch (pushError) {
-    console.error(`[auto-scrape] incident push error: ${(pushError as Error).message}`);
   }
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
