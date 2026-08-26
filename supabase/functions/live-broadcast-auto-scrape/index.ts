@@ -110,6 +110,45 @@ function buildRiderMentions(situation: RaceSituation | null | undefined) {
   return mentions;
 }
 
+type LiveEvent = {
+  uid: string;
+  type: "pulling" | "position" | "back_of_peloton" | "crash" | "team_car" | "abandon";
+  rider_name: string;
+  rider_nom?: string;
+  team?: string;
+  km_to_go?: number | null;
+  position?: number;
+  coureur_id?: string;
+  manager_name?: string;
+};
+
+// Max new livetext events published per course per run, to avoid flooding the timeline
+const MAX_LIVE_EVENTS_PER_RUN = 10;
+
+function formatLiveEvent(ev: LiveEvent): string {
+  const name = ev.rider_nom || ev.rider_name;
+  const owner = ev.manager_name ? ` (${ev.manager_name})` : " (-)";
+  const rider = `${name}${owner}`;
+  const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
+  switch (ev.type) {
+    case "pulling":
+      return `🔧 ${rider} fait le relais dans le peloton${km}`;
+    case "position":
+      return `#️⃣ ${rider} est en position ${ev.position ?? "?"}${km}`;
+    case "back_of_peloton":
+      return `⬇️ ${rider} est en queue de peloton${km}`;
+    case "crash":
+      return `⚠️ Chute de ${rider}${km}`;
+    case "team_car":
+      return `🚗 ${rider} est à la voiture d'équipe${km}`;
+    case "abandon":
+      return `❌ ${rider} abandonne${km}`;
+    default:
+      return `${rider}${km}`;
+  }
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
