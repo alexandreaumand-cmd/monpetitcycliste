@@ -36,7 +36,7 @@ function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' |
   if (type === 'startlist_validated') return 'startlists';
   if (type.startsWith('auction_')) return 'auctions';
   if (type === 'pronostic_reminder') return 'pronostics';
-  if (type === 'rider_incident') return 'incidents';
+  if (type === 'rider_incident' || type === 'rider_win') return 'incidents';
   return null;
 }
 

@@ -53,6 +53,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
         return '📋';
       case 'rider_incident':
         return '💥';
+      case 'rider_win':
+        return '🥇';
       case 'auction_opened':
       case 'auction_closed':
       case 'auction_ready_to_close':
@@ -69,7 +71,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       
       // For results_added and startlist_validated, use the enriched 
       // values directly from the database (contains winner name, race name, etc.)
-      if (type === 'results_added' || type === 'startlist_validated' || type === 'rider_incident') {
+      if (type === 'results_added' || type === 'startlist_validated' || type === 'rider_incident' || type === 'rider_win') {
         return {
           title: notification.title,
           message: notification.message
@@ -122,7 +124,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       if (leagueId) params.set('leagueId', leagueId);
       if (courseId) params.set('courseId', courseId);
       navigate(`/dashboard/resultats?${params.toString()}`);
-    } else if (notification.type === 'rider_incident') {
+    } else if (notification.type === 'rider_incident' || notification.type === 'rider_win') {
       const leagueId = notification.metadata?.league_id || currentLeagueId;
       navigate(`/dashboard/live${leagueId ? `?leagueId=${leagueId}` : ''}`);
     } else if (notification.type === 'auction_closed') {
