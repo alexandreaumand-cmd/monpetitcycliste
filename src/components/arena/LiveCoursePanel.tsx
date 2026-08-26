@@ -235,7 +235,7 @@ export const LiveCoursePanel = ({
     </div>
   );
 
-  const situationWidth = compact ? "w-[260px]" : "w-[320px]";
+  const situationWidth = compact ? "w-[320px]" : "w-[420px]";
 
   return (
     <div className="flex flex-col flex-1 border rounded-xl overflow-hidden bg-background min-w-0">
