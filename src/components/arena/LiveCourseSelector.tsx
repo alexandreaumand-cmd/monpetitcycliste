@@ -100,6 +100,7 @@ export const LiveCourseSelector = ({
   multiSelect = false,
   activeCourseIds = [],
   onSelectMulti,
+  compact = false,
 }: LiveCourseSelectorProps) => {
   const { t } = useTranslation("arena");
   const { data: liveCourses, isLoading } = useLiveCourses();
