@@ -17,6 +17,16 @@ import { useLiveCourses } from "./LiveCourseSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+const formatRelativeFr = (iso: string, _tick: number) => {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const sec = Math.max(0, Math.round(diffMs / 1000));
+  if (sec < 60) return `il y a ${sec} s`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  return `il y a ${h} h ${min % 60} min`;
+};
+
 interface LiveCoursePanelProps {
   leagueId: string;
   courseId: string;
@@ -45,6 +55,15 @@ export const LiveCoursePanel = ({
   const { data: liveCourses } = useLiveCourses();
   const currentEtape = liveCourses?.find((lc) => lc.course_id === courseId)?.current_etape ?? null;
   const stageStatus = useLiveStageStatus(courseId, currentEtape);
+
+  // Ticks every 15s so the "mise à jour il y a …" label stays fresh
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+
 
   const {
     data: messagesData,
@@ -102,7 +121,24 @@ export const LiveCoursePanel = ({
     );
   }, [allMessages, selectedEtape]);
 
-  const latestSituation = useMemo(() => {
+  // Live situation stored on arena_live_courses (refreshed by the auto-scraper)
+  const { data: liveSituationRow } = useQuery({
+    queryKey: ["arena-live-situation", courseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("arena_live_courses")
+        .select("current_race_situation, situation_updated_at")
+        .eq("course_id", courseId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!courseId,
+    refetchInterval: 30 * 1000,
+    staleTime: 20 * 1000,
+  });
+
+  const messageSituation = useMemo(() => {
     for (const msg of filteredMessages) {
       const sit = (msg.metadata as any)?.race_situation;
       const km = Number(sit?.kmRemaining);
@@ -110,6 +146,19 @@ export const LiveCoursePanel = ({
     }
     return null;
   }, [filteredMessages]);
+
+  const liveSituation = (liveSituationRow?.current_race_situation as any) ?? null;
+  const liveSituationMatchesStage =
+    liveSituation &&
+    (selectedEtape == null ||
+      liveSituation.etape_numero == null ||
+      liveSituation.etape_numero === selectedEtape);
+
+  const latestSituation = liveSituationMatchesStage ? liveSituation : messageSituation;
+  const situationUpdatedAt = liveSituationMatchesStage
+    ? (liveSituationRow?.situation_updated_at as string | null)
+    : null;
+
 
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId);
@@ -205,7 +254,7 @@ export const LiveCoursePanel = ({
     </div>
   );
 
-  const situationWidth = compact ? "w-[260px]" : "w-[320px]";
+  const situationWidth = compact ? "w-[320px]" : "w-[420px]";
 
   return (
     <div className="flex flex-col flex-1 border rounded-xl overflow-hidden bg-background min-w-0">
@@ -251,11 +300,17 @@ export const LiveCoursePanel = ({
         {/* Timeline column */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="px-3 py-1.5 border-b bg-muted/20">
-            <div className="flex items-center gap-1.5">
-              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-              <h3 className="text-xs font-semibold">Timeline</h3>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <MessageCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+              <h3 className="text-xs font-semibold shrink-0">Timeline</h3>
+              {situationUpdatedAt && (
+                <span className="text-[10px] text-muted-foreground truncate ml-auto">
+                  Situation mise à jour {formatRelativeFr(situationUpdatedAt, nowTick)}
+                </span>
+              )}
             </div>
           </div>
+
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
             {messagesContent}
           </div>

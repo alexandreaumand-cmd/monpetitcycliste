@@ -315,12 +315,14 @@ export type Database = {
           course_id: string
           created_at: string
           current_etape: number | null
+          current_race_situation: Json | null
           id: string
           is_active: boolean
           last_auto_scrape_at: string | null
           live_scrape_url: string | null
           next_auto_scrape_at: string | null
           scrape_schedule: Json | null
+          situation_updated_at: string | null
         }
         Insert: {
           activated_by: string
@@ -328,12 +330,14 @@ export type Database = {
           course_id: string
           created_at?: string
           current_etape?: number | null
+          current_race_situation?: Json | null
           id?: string
           is_active?: boolean
           last_auto_scrape_at?: string | null
           live_scrape_url?: string | null
           next_auto_scrape_at?: string | null
           scrape_schedule?: Json | null
+          situation_updated_at?: string | null
         }
         Update: {
           activated_by?: string
@@ -341,12 +345,14 @@ export type Database = {
           course_id?: string
           created_at?: string
           current_etape?: number | null
+          current_race_situation?: Json | null
           id?: string
           is_active?: boolean
           last_auto_scrape_at?: string | null
           live_scrape_url?: string | null
           next_auto_scrape_at?: string | null
           scrape_schedule?: Json | null
+          situation_updated_at?: string | null
         }
         Relationships: [
           {
