@@ -112,24 +112,39 @@ function buildRiderMentions(situation: RaceSituation | null | undefined) {
 
 type LiveEvent = {
   uid: string;
-  type: "pulling" | "position" | "back_of_peloton" | "crash" | "team_car" | "abandon" | "attack";
+  type:
+    | "pulling"
+    | "position"
+    | "back_of_peloton"
+    | "crash"
+    | "team_car"
+    | "abandon"
+    | "attack"
+    | "counter_attack"
+    | "acceleration"
+    | "dropped"
+    | "join_group"
+    | "struggling"
+    | "caught";
   rider_name: string;
   rider_nom?: string;
   team?: string;
   km_to_go?: number | null;
   position?: number;
+  group_label?: string;
   coureur_id?: string;
   manager_name?: string;
 };
 
 // Max new livetext events published per course per run, to avoid flooding the timeline
-const MAX_LIVE_EVENTS_PER_RUN = 10;
+const MAX_LIVE_EVENTS_PER_RUN = 20;
 
 function formatLiveEvent(ev: LiveEvent): string {
   const name = ev.rider_nom || ev.rider_name;
   // {Rider} mentions are rendered by the UI, which appends the league's manager name
   const rider = ev.coureur_id ? `{${name}}` : name;
   const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
+  const grp = ev.group_label ? ` ${ev.group_label}` : "";
   switch (ev.type) {
     case "pulling":
       return `🔧 ${rider} fait le relais dans le peloton${km}`;
@@ -142,13 +157,26 @@ function formatLiveEvent(ev: LiveEvent): string {
     case "team_car":
       return `🚗 ${rider} est à la voiture d'équipe${km}`;
     case "attack":
-      return `🚀 Attaque de ${rider}${km}`;
+      return `🚀 Attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+    case "counter_attack":
+      return `🔁 Contre-attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+    case "acceleration":
+      return `⚡ Accélération de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+    case "dropped":
+      return `🪃 ${rider} est décroché${grp ? ` de${grp === " le peloton" ? " du peloton" : grp}` : ""}${km}`;
+    case "join_group":
+      return `🤝 ${rider} rejoint${grp || " le groupe"}${km}`;
+    case "struggling":
+      return `😣 ${rider} est en difficulté pour s'accrocher${km}`;
+    case "caught":
+      return `🎯 ${rider} est repris par${grp || " le peloton"}${km}`;
     case "abandon":
       return `❌ ${rider} abandonne${km}`;
     default:
       return `${rider}${km}`;
   }
 }
+
 
 
 serve(async (req) => {
