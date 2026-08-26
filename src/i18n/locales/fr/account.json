@@ -35,7 +35,9 @@
       "auctions": "Enchères",
       "auctionsDescription": "Ouverture, fermeture et validation des enchères",
       "pronostics": "Pronostics",
-      "pronosticsDescription": "Rappels avant la clôture des pronostics"
+      "pronosticsDescription": "Rappels avant la clôture des pronostics",
+      "incidents": "Chutes & abandons de mes coureurs",
+      "incidentsDescription": "Être alerté quand un de vos coureurs chute ou abandonne"
     }
   },
   "profile": {

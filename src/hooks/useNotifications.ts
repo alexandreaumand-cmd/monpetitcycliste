@@ -5,7 +5,7 @@ import { useCurrentManager } from './useCurrentManager';
 
 export interface Notification {
   id: string;
-  type: 'startlist_validated' | 'results_added' | 'auction_opened' | 'auction_closed';
+  type: 'startlist_validated' | 'results_added' | 'auction_opened' | 'auction_closed' | 'rider_incident';
   title: string;
   message: string;
   metadata: {
@@ -18,6 +18,9 @@ export interface Notification {
     round_number?: number;
     phase_id?: string;
     league_id?: string;
+    coureur_id?: string;
+    event_type?: string;
+    prix_signature?: number | null;
   };
   created_at: string;
   is_read: boolean;

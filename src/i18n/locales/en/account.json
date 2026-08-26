@@ -35,7 +35,9 @@
       "auctions": "Auctions",
       "auctionsDescription": "Auction opening, closing and validation",
       "pronostics": "Predictions",
-      "pronosticsDescription": "Reminders before prediction deadlines close"
+      "pronosticsDescription": "Reminders before prediction deadlines close",
+      "incidents": "Crashes & abandons of my riders",
+      "incidentsDescription": "Get alerted when one of your riders crashes or abandons"
     }
   },
   "profile": {
