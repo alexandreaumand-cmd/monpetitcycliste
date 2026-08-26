@@ -418,12 +418,19 @@ serve(async (req) => {
             .filter((uid: any) => typeof uid === "string")
         );
 
+        // Chronological order: earliest first (most km remaining first), so the
+        // most recent event (fewest km to go) ends up on top of the timeline.
+        const chronoRank = (ev: LiveEvent) =>
+          typeof ev.km_to_go === "number" ? -ev.km_to_go : Number.POSITIVE_INFINITY;
+
         const fresh = liveEvents
           .filter((ev) => ev?.uid && !publishedUids.has(ev.uid))
-          .slice(-MAX_LIVE_EVENTS_PER_RUN);
+          .slice(-MAX_LIVE_EVENTS_PER_RUN)
+          .sort((a, b) => chronoRank(a) - chronoRank(b));
 
         if (fresh.length > 0) {
-          const inserts = fresh.flatMap((ev) => {
+          const baseTime = now.getTime() - fresh.length * 1000;
+          const inserts = fresh.flatMap((ev, idx) => {
             const content = formatLiveEvent(ev);
             const metadata = {
               live_event_uid: ev.uid,
@@ -434,6 +441,7 @@ serve(async (req) => {
                 : [],
             };
             const batchId = crypto.randomUUID();
+            const createdAt = new Date(baseTime + idx * 1000).toISOString();
             return broadcastChannels.map((channel: any) => ({
               channel_id: channel.id,
               league_id: channel.league_id,
@@ -442,9 +450,11 @@ serve(async (req) => {
               content,
               metadata,
               course_id: row.course_id,
+              created_at: createdAt,
               source_message_id: batchId,
             }));
           });
+
 
           const { error: eventsError } = await admin.from("arena_messages").insert(inserts);
           if (eventsError) {
