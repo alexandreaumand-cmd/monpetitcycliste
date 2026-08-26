@@ -440,18 +440,29 @@ serve(async (req) => {
       if (liveEvents.length > 0 && row.activated_by && broadcastChannels.length > 0) {
         const { data: publishedRows } = await admin
           .from("arena_messages")
-          .select("metadata")
+          .select("content, metadata")
           .eq("course_id", row.course_id)
           .eq("message_type", "admin_broadcast")
           .not("metadata->>live_event_uid", "is", null)
           .order("created_at", { ascending: false })
-          .limit(500);
+          .limit(5000);
 
-        const publishedUids = new Set(
-          (publishedRows || [])
-            .map((m: any) => m?.metadata?.live_event_uid)
-            .filter((uid: any) => typeof uid === "string")
-        );
+        const publishedUids = new Set<string>();
+        const publishedKeys = new Set<string>();
+        // Stable key, insensitive to uid format or wording changes in the parser.
+        const stableKey = (type: string, rider: string, km: number | null | undefined) =>
+          `${type}|${(rider || "").trim().toLowerCase()}|${km ?? ""}`;
+
+        for (const m of publishedRows || []) {
+          const meta: any = (m as any)?.metadata || {};
+          if (typeof meta.live_event_uid === "string") publishedUids.add(meta.live_event_uid);
+          const content: string = (m as any)?.content || "";
+          const rider =
+            meta?.rider_mentions?.[0]?.rider_nom || content.match(/\{([^}]+)\}/)?.[1] || "";
+          const kmMatch = content.match(/à\s+(\d+(?:[.,]\d+)?)\s*km/);
+          const km = kmMatch ? Number(kmMatch[1].replace(",", ".")) : null;
+          if (meta?.live_event_type) publishedKeys.add(stableKey(meta.live_event_type, rider, km));
+        }
 
         // Chronological order: earliest first (most km remaining first), so the
         // most recent event (fewest km to go) ends up on top of the timeline.
@@ -459,9 +470,17 @@ serve(async (req) => {
           typeof ev.km_to_go === "number" ? -ev.km_to_go : Number.POSITIVE_INFINITY;
 
         const fresh = liveEvents
-          .filter((ev) => ev?.uid && !publishedUids.has(ev.uid))
+          .filter((ev) => {
+            if (!ev?.uid) return false;
+            if (publishedUids.has(ev.uid)) return false;
+            const key = stableKey(ev.type, ev.rider_nom || ev.rider_name, ev.km_to_go);
+            if (publishedKeys.has(key)) return false;
+            publishedKeys.add(key);
+            return true;
+          })
           .slice(-MAX_LIVE_EVENTS_PER_RUN)
           .sort((a, b) => chronoRank(a) - chronoRank(b));
+
 
         if (fresh.length > 0) {
           const baseTime = now.getTime() - fresh.length * 1000;
