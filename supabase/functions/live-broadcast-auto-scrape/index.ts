@@ -112,7 +112,7 @@ function buildRiderMentions(situation: RaceSituation | null | undefined) {
 
 type LiveEvent = {
   uid: string;
-  type: "pulling" | "position" | "back_of_peloton" | "crash" | "team_car" | "abandon";
+  type: "pulling" | "position" | "back_of_peloton" | "crash" | "team_car" | "abandon" | "attack";
   rider_name: string;
   rider_nom?: string;
   team?: string;
@@ -141,6 +141,8 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `⚠️ Chute de ${rider}${km}`;
     case "team_car":
       return `🚗 ${rider} est à la voiture d'équipe${km}`;
+    case "attack":
+      return `🚀 Attaque de ${rider}${km}`;
     case "abandon":
       return `❌ ${rider} abandonne${km}`;
     default:

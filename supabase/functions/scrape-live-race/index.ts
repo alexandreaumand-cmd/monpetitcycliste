@@ -582,7 +582,8 @@ export type LiveTextEventType =
   | "back_of_peloton"
   | "crash"
   | "team_car"
-  | "abandon";
+  | "abandon"
+  | "attack";
 
 export interface LiveTextEvent {
   uid: string;
@@ -603,6 +604,7 @@ function classifyLiveText(text: string): { type: LiveTextEventType; position?: n
   const t = text.replace(/\s+/g, " ").trim();
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
   if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
+  if (/\battack(s|ed|ing)?\s+by\b/i.test(t) || /^attack\b/i.test(t)) return { type: "attack" };
   if (/at the team car/i.test(t)) return { type: "team_car" };
   if (/at the back of the (peloton|group|bunch)/i.test(t)) return { type: "back_of_peloton" };
   const pos = t.match(/in position\s+(\d+)/i);
