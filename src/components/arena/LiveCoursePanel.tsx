@@ -56,6 +56,15 @@ export const LiveCoursePanel = ({
   const currentEtape = liveCourses?.find((lc) => lc.course_id === courseId)?.current_etape ?? null;
   const stageStatus = useLiveStageStatus(courseId, currentEtape);
 
+  // Ticks every 15s so the "mise à jour il y a …" label stays fresh
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+
+
   const {
     data: messagesData,
     isLoading: messagesLoading,
