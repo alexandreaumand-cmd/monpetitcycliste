@@ -207,20 +207,21 @@ export const LiveCoursePanel = ({
 
   return (
     <div className="flex flex-col flex-1 border rounded-xl overflow-hidden bg-background min-w-0">
-      {/* Course name header */}
-      {(courseName || stageStatus.etape != null) && (
-        <div className="px-3 py-2 border-b bg-primary/5 flex items-center gap-2 flex-wrap">
-          {courseName && <span className="text-xs font-bold text-primary truncate">{courseName}</span>}
+      {/* Single header row: course name + live state + stage filter */}
+      {(courseName || stageStatus.etape != null || stageFilter) && (
+        <div className="px-3 py-1.5 border-b bg-primary/5 flex items-center gap-2 min-w-0">
+          {courseName && (
+            <span className="text-xs font-bold text-primary truncate shrink">{courseName}</span>
+          )}
           <LiveStageBadge etape={stageStatus.etape} state={stageStatus.state} />
+          {stageFilter}
         </div>
       )}
-
-      {stageFilter}
 
       {stageImage && (
         <Collapsible defaultOpen className="border-b bg-background shrink-0">
           <CollapsibleTrigger className="w-full px-3 py-1.5 flex items-center justify-between bg-muted/20">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
               <Route className="h-3.5 w-3.5 text-primary" />
               <h3 className="text-xs font-semibold">Profil</h3>
               {stageImage.etape_numero != null && (
@@ -234,7 +235,11 @@ export const LiveCoursePanel = ({
               <img
                 src={stageImage.image_url}
                 alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                className="w-full h-auto max-h-56 object-contain rounded-md border"
+                className="w-full h-auto max-h-56 object-cover object-center rounded-md border bg-muted"
+                loading="lazy"
+              />
+            </div>
+
                 loading="lazy"
               />
             </div>
