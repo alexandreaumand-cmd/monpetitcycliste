@@ -589,7 +589,12 @@ export type LiveTextEventType =
   | "dropped"
   | "join_group"
   | "struggling"
-  | "caught";
+  | "caught"
+  | "finish"
+  | "win"
+  | "sprint_launch"
+  | "second_place"
+  | "third_place";
 
 export interface LiveTextEvent {
   uid: string;
