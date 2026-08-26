@@ -454,6 +454,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
               courseName={hasMultipleCourses ? getCourseNameById(courseId) : undefined}
               onToggleReaction={handleToggleReaction}
               compact={hasMultipleCourses}
+              showProfile={activeCourseIds.length > 1}
             />
           ))}
         </div>
