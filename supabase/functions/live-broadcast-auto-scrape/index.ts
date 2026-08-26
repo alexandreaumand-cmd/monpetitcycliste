@@ -127,8 +127,8 @@ const MAX_LIVE_EVENTS_PER_RUN = 10;
 
 function formatLiveEvent(ev: LiveEvent): string {
   const name = ev.rider_nom || ev.rider_name;
-  const owner = ev.manager_name ? ` (${ev.manager_name})` : " (-)";
-  const rider = `${name}${owner}`;
+  // {Rider} mentions are rendered by the UI, which appends the league's manager name
+  const rider = ev.coureur_id ? `{${name}}` : name;
   const km = typeof ev.km_to_go === "number" && ev.km_to_go > 0 ? ` — à ${ev.km_to_go} km` : "";
   switch (ev.type) {
     case "pulling":
