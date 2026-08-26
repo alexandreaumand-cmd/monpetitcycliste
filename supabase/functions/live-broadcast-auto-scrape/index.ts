@@ -242,11 +242,12 @@ async function notifyIncidents(params: {
   if (!rosterRows || rosterRows.length === 0) return;
 
   const notifications: any[] = [];
-  const pushes: Array<{ user_id: string; title: string; message: string }> = [];
+  const pushes: Array<{ user_id: string; title: string; message: string; type: string }> = [];
 
   for (const ev of incidents) {
     const riderName = ev.rider_nom || ev.rider_name || "";
     const isCrash = ev.type === "crash";
+    const isWin = ev.type === "win";
     for (const roster of rosterRows as any[]) {
       if (roster.coureur_id !== ev.coureur_id) continue;
       const manager = roster.managers;
@@ -254,11 +255,18 @@ async function notifyIncidents(params: {
       const leagueName = leagueNameById.get(roster.league_id) || "votre ligue";
       const price = roster.prix_signature != null ? Number(roster.prix_signature) : null;
       const hook = price != null ? `Tu la sens la douille à ${price}M ? ` : "";
-      const title = isCrash ? "💥 Chute d'un de tes coureurs" : "❌ Abandon d'un de tes coureurs";
-      const message = `${hook}${isCrash ? "Chute" : "Abandon"} de ${riderName} sur ${courseName} - Ligue ${leagueName}`;
+      const notifType = isWin ? "rider_win" : "rider_incident";
+      const title = isWin
+        ? "😻 Victoire d'un de tes coureurs"
+        : isCrash
+          ? "💥 Chute d'un de tes coureurs"
+          : "❌ Abandon d'un de tes coureurs";
+      const message = isWin
+        ? `Bravo ! Ton coureur ${riderName} a gagné ! 😻 - ${leagueName}`
+        : `${hook}${isCrash ? "Chute" : "Abandon"} de ${riderName} sur ${courseName} - Ligue ${leagueName}`;
       notifications.push({
         manager_id: manager.id,
-        type: "rider_incident",
+        type: notifType,
         title,
         message,
         is_read: false,
