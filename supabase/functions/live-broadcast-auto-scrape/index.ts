@@ -125,7 +125,12 @@ type LiveEvent = {
     | "dropped"
     | "join_group"
     | "struggling"
-    | "caught";
+    | "caught"
+    | "finish"
+    | "win"
+    | "sprint_launch"
+    | "second_place"
+    | "third_place";
   rider_name: string;
   rider_nom?: string;
   team?: string;
