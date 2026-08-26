@@ -596,6 +596,14 @@ export type LiveTextEventType =
   | "second_place"
   | "third_place";
 
+export interface LiveTextRider {
+  rider_name: string;
+  rider_slug: string;
+  rider_nom?: string;
+  coureur_id?: string;
+  manager_name?: string;
+}
+
 export interface LiveTextEvent {
   uid: string;
   type: LiveTextEventType;
@@ -610,11 +618,18 @@ export interface LiveTextEvent {
   rider_nom?: string;
   coureur_id?: string;
   manager_name?: string;
+  /** All riders mentioned by the event (multi-rider events are grouped into one) */
+  riders?: LiveTextRider[];
 }
 
 // Translate PCS group labels into French for the timeline
 function frGroup(label: string): string {
-  const l = label.toLowerCase().trim();
+  // PCS sometimes appends the group composition ("peloton are: X (Team) Y (Team)")
+  const cleaned = label
+    .split(/\s+(?:are|is)\b|:/i)[0]
+    .replace(/\([^)]*\)/g, "")
+    .trim();
+  const l = cleaned.toLowerCase().trim();
   if (/^peloton$/.test(l)) return "le peloton";
   if (/first chase group/.test(l)) return "le premier groupe de chasse";
   if (/second chase group/.test(l)) return "le deuxième groupe de chasse";
@@ -622,8 +637,9 @@ function frGroup(label: string): string {
   if (/lead(ing)? group|front group/.test(l)) return "le groupe de tête";
   if (/break(away)?/.test(l)) return "l'échappée";
   if (/grupetto/.test(l)) return "le grupetto";
-  return label.trim();
+  return cleaned;
 }
+
 
 function classifyLiveText(
   text: string
