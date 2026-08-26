@@ -12,7 +12,9 @@ interface LiveCourseSelectorProps {
   multiSelect?: boolean;
   activeCourseIds?: string[];
   onSelectMulti?: (courseIds: string[]) => void;
+  compact?: boolean;
 }
+
 
 interface LiveCourse {
   id: string;
@@ -98,6 +100,7 @@ export const LiveCourseSelector = ({
   multiSelect = false,
   activeCourseIds = [],
   onSelectMulti,
+  compact = false,
 }: LiveCourseSelectorProps) => {
   const { t } = useTranslation("arena");
   const { data: liveCourses, isLoading } = useLiveCourses();
@@ -133,7 +136,7 @@ export const LiveCourseSelector = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-2">
+    <div className={cn("flex items-center gap-2", compact ? "py-1" : "py-2")}>
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{t("trashTalk.loading")}</span>
       </div>
@@ -142,22 +145,24 @@ export const LiveCourseSelector = ({
 
   if (!liveCourses?.length) {
     return (
-      <div className="text-center py-4 text-sm text-muted-foreground">
+    <div className={cn("text-center text-sm text-muted-foreground", compact ? "py-2" : "py-4")}>
         <p>{t("trashTalk.liveCourses.noCoursesUser")}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          {t("trashTalk.liveCourses.selectCourse")}
-        </span>
-        {multiSelect && (
-          <span className="text-[10px] text-muted-foreground/70">(max 2)</span>
-        )}
-      </div>
+    <div className={compact ? undefined : "space-y-2"}>
+      {!compact && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {t("trashTalk.liveCourses.selectCourse")}
+          </span>
+          {multiSelect && (
+            <span className="text-[10px] text-muted-foreground/70">(max 2)</span>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {liveCourses.map((lc) => {
           const selected = isSelected(lc.course_id);
@@ -167,7 +172,8 @@ export const LiveCourseSelector = ({
               key={lc.course_id}
               onClick={() => handleClick(lc.course_id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                "flex items-center gap-1.5 rounded-lg text-xs font-medium transition-all border",
+                compact ? "px-2 py-1" : "px-3 py-1.5",
                 selected
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                   : "bg-background text-foreground border-border hover:border-primary/50"

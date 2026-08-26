@@ -25,6 +25,7 @@ interface LiveCoursePanelProps {
   courseName?: string;
   onToggleReaction: (messageId: string, emoji: string) => void;
   compact?: boolean;
+  showProfile?: boolean;
 }
 
 export const LiveCoursePanel = ({
@@ -35,6 +36,7 @@ export const LiveCoursePanel = ({
   courseName,
   onToggleReaction,
   compact = false,
+  showProfile = true,
 }: LiveCoursePanelProps) => {
   const { t } = useTranslation("arena");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
@@ -218,7 +220,7 @@ export const LiveCoursePanel = ({
         </div>
       )}
 
-      {stageImage && (
+      {showProfile && stageImage && (
         <Collapsible defaultOpen className="border-b bg-background shrink-0">
           <CollapsibleTrigger className="w-full px-3 py-1.5 flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -235,7 +237,7 @@ export const LiveCoursePanel = ({
               <img
                 src={stageImage.image_url}
                 alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                className="w-full h-auto max-h-56 object-cover object-center rounded-md border bg-muted"
+                className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted"
                 loading="lazy"
               />
             </div>

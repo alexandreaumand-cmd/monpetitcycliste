@@ -145,6 +145,32 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     [liveCourses]
   );
 
+  // Desktop top profile: stage profile of the first selected live course, shown next to the selector
+  const desktopCourseId = activeCourseIds[0] || null;
+  const desktopCurrentEtape = liveCourses?.find((lc) => lc.course_id === desktopCourseId)?.current_etape ?? null;
+  const desktopStageStatus = useLiveStageStatus(desktopCourseId, desktopCurrentEtape);
+  const { data: desktopRouteImages } = useQuery({
+    queryKey: ["course-route-images", desktopCourseId],
+    queryFn: async () => {
+      if (!desktopCourseId) return [];
+      const { data } = await supabase
+        .from("course_route_images")
+        .select("etape_numero, image_url, label")
+        .eq("course_id", desktopCourseId);
+      return data ?? [];
+    },
+    enabled: !!desktopCourseId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const desktopStageImage = useMemo(() => {
+    if (!desktopRouteImages || desktopRouteImages.length === 0) return null;
+    if (desktopStageStatus.etape != null) {
+      const match = desktopRouteImages.find((img) => img.etape_numero === desktopStageStatus.etape);
+      if (match) return match;
+    }
+    return desktopRouteImages.find((img) => img.etape_numero == null) ?? null;
+  }, [desktopRouteImages, desktopStageStatus.etape]);
+
   if (!managerId) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -354,30 +380,59 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
   return (
     <div className="flex flex-col gap-2 h-[calc(100vh-160px)] min-h-[400px]">
-      {/* Course selector — multi-select on desktop */}
-      <Collapsible defaultOpen={activeCourseIds.length === 0} className="border rounded-xl overflow-hidden bg-background shrink-0">
-        <CollapsibleTrigger className="w-full px-3 py-2 flex items-center justify-between bg-muted/20 border-b">
-          <div className="flex items-center gap-2">
-            <Radio className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Choisir une course</h3>
-            {activeCourseIds.length > 0 && (
-              <span className="text-[11px] text-muted-foreground">{activeCourseIds.length} sélectionnée{activeCourseIds.length > 1 ? 's' : ''}</span>
-            )}
+      {/* Course selector — compact, with stage profile alongside when a course is selected */}
+      <div className="flex gap-3 shrink-0">
+        <Collapsible
+          defaultOpen={activeCourseIds.length === 0}
+          className="border rounded-xl overflow-hidden bg-background shrink-0"
+          style={{ width: activeCourseIds.length === 1 ? "320px" : "100%" }}
+        >
+          <CollapsibleTrigger className="w-full px-3 py-2 flex items-center justify-between bg-muted/20 border-b">
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Choisir une course</h3>
+              {activeCourseIds.length > 0 && (
+                <span className="text-[11px] text-muted-foreground">{activeCourseIds.length} sélectionnée{activeCourseIds.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-3 py-2 bg-muted/20">
+              <LiveCourseSelector
+                activeCourseId={activeCourseIds[0] || null}
+                onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
+                multiSelect
+                activeCourseIds={activeCourseIds}
+                onSelectMulti={setActiveCourseIds}
+                compact
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {activeCourseIds.length === 1 && desktopStageImage && (
+          <div className="border rounded-xl overflow-hidden bg-background flex-1 min-w-0 flex flex-col">
+            <div className="px-3 py-2 border-b bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Profil</h3>
+                {desktopStageImage.etape_numero != null && (
+                  <span className="text-[11px] text-muted-foreground">Étape {desktopStageImage.etape_numero}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 p-2 bg-background flex items-center justify-center min-h-0">
+              <img
+                src={desktopStageImage.image_url}
+                alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
+                className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted"
+                loading="lazy"
+              />
+            </div>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-3 py-2 bg-muted/20">
-            <LiveCourseSelector
-              activeCourseId={activeCourseIds[0] || null}
-              onSelect={(id) => setActiveCourseIds(id ? [id] : [])}
-              multiSelect
-              activeCourseIds={activeCourseIds}
-              onSelectMulti={setActiveCourseIds}
-            />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+        )}
+      </div>
 
       {/* Panels */}
       {activeCourseIds.length === 0 ? (
@@ -399,6 +454,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
               courseName={hasMultipleCourses ? getCourseNameById(courseId) : undefined}
               onToggleReaction={handleToggleReaction}
               compact={hasMultipleCourses}
+              showProfile={activeCourseIds.length > 1}
             />
           ))}
         </div>
