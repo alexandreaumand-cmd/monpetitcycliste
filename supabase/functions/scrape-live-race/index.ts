@@ -721,6 +721,8 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
 
 
     const seenSlugs = new Set<string>();
+    const riders: LiveTextRider[] = [];
+    const teams: string[] = [];
     for (const riderLink of riderLinks) {
       const href = riderLink.getAttribute?.("href") || "";
       const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
@@ -739,20 +741,29 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
         rawText.match(new RegExp(`${escaped}\\s*\\(([^)]{2,60})\\)`, "i"))?.[1]?.trim() ||
         (riderLinks.length === 1 ? rawText.match(/\(([^)]{2,60})\)/)?.[1]?.trim() || "" : "");
 
-      out.push({
-        uid: riderLinks.length > 1 || slug ? `${uid}#${dedupKey}` : String(uid),
-        type: classified.type,
-        position: classified.position,
-        group_label: classified.group_label,
-        rider_name: riderName,
-        rider_slug: slug,
-        team,
-        km_to_go: kmToGo,
-        ts,
-        raw: rawText.slice(0, 300),
-      });
+      riders.push({ rider_name: riderName, rider_slug: slug });
+      teams.push(team);
     }
+
+    if (riders.length === 0) continue;
+
+    // One single event per livetext line, even when several riders are involved
+    const groupKey = riders.map((r) => r.rider_slug || r.rider_name.toLowerCase()).join("+");
+    out.push({
+      uid: `${uid}#${groupKey}`,
+      type: classified.type,
+      position: classified.position,
+      group_label: classified.group_label,
+      rider_name: riders[0].rider_name,
+      rider_slug: riders[0].rider_slug,
+      team: teams[0] || "",
+      riders,
+      km_to_go: kmToGo,
+      ts,
+      raw: rawText.slice(0, 300),
+    });
   }
+
 
 
   // Oldest first (PCS lists newest first)
