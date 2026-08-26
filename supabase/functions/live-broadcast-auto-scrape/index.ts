@@ -34,6 +34,8 @@ type RaceSituation = {
 };
 
 const PARIS_TZ = "Europe/Paris";
+// Copy the live situation into the arena timeline at most once every 30 minutes
+const SITUATION_TIMELINE_INTERVAL_MS = 30 * 60 * 1000;
 
 // Schedules are entered by admins in Paris local time; evaluate them in that zone
 // (handles DST automatically) instead of the server's UTC clock.
