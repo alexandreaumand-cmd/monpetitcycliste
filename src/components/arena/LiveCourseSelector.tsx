@@ -145,7 +145,7 @@ export const LiveCourseSelector = ({
 
   if (!liveCourses?.length) {
     return (
-      <div className="text-center py-4 text-sm text-muted-foreground">
+    <div className={cn("text-center text-sm text-muted-foreground", compact ? "py-2" : "py-4")}>
         <p>{t("trashTalk.liveCourses.noCoursesUser")}</p>
       </div>
     );
