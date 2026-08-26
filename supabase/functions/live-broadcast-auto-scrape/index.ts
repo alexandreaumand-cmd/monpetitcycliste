@@ -236,13 +236,19 @@ async function notifyIncidents(params: {
     courseId, courseName, phaseId, etapeNumero,
   } = params;
 
-  const incidents = events.filter(
-    (ev) => (ev.type === "crash" || ev.type === "abandon" || ev.type === "win") && ev.coureur_id
-  );
+  // Multi-rider events are notified rider by rider
+  const incidents = events
+    .filter((ev) => ev.type === "crash" || ev.type === "abandon" || ev.type === "win")
+    .flatMap((ev) =>
+      eventRiders(ev)
+        .filter((r) => r.coureur_id)
+        .map((r) => ({ ...ev, rider_name: r.rider_name, rider_nom: r.rider_nom, coureur_id: r.coureur_id }))
+    );
   if (incidents.length === 0 || channels.length === 0) return;
 
   const leagueIds = channels.map((c) => c.league_id);
   const riderIds = Array.from(new Set(incidents.map((ev) => ev.coureur_id as string)));
+
 
   let rosterQuery = admin
     .from("rosters")
