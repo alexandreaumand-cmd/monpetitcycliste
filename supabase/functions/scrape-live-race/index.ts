@@ -594,6 +594,7 @@ export interface LiveTextEvent {
   ts: number | null;
   position?: number;
   raw: string;
+  rider_nom?: string;
   coureur_id?: string;
   manager_name?: string;
 }
