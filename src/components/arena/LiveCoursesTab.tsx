@@ -385,7 +385,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
         <Collapsible
           defaultOpen={activeCourseIds.length === 0}
           className="border rounded-xl overflow-hidden bg-background shrink-0"
-          style={{ width: activeCourseIds.length > 0 ? "320px" : "100%" }}
+          style={{ width: activeCourseIds.length === 1 ? "320px" : "100%" }}
         >
           <CollapsibleTrigger className="w-full px-3 py-2 flex items-center justify-between bg-muted/20 border-b">
             <div className="flex items-center gap-2">
