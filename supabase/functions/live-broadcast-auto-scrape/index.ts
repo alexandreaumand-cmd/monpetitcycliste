@@ -122,6 +122,7 @@ type LiveEvent = {
     | "attack"
     | "counter_attack"
     | "acceleration"
+    | "reaction"
     | "dropped"
     | "join_group"
     | "struggling"
@@ -186,6 +187,9 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `🔁 Contre-attaque de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "acceleration":
       return `⚡ Accélération de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+    case "reaction":
+      return `↩️ Réaction de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+
     case "dropped": {
       // "le peloton" → "du peloton", "l'échappée" → "de l'échappée"
       const from = ev.group_label

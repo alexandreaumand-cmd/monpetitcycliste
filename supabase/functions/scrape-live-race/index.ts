@@ -586,6 +586,7 @@ export type LiveTextEventType =
   | "attack"
   | "counter_attack"
   | "acceleration"
+  | "reaction"
   | "dropped"
   | "join_group"
   | "struggling"
@@ -674,6 +675,8 @@ function classifyLiveText(
   if (/struggling to hold on/i.test(t)) return { type: "struggling" };
   if (/counter[-\s]?attack/i.test(t))
     return { type: "counter_attack", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
+  if (/\breaction\s+(from|by)\b/i.test(t))
+    return { type: "reaction", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
   if (/\bacceleration\b/i.test(t))
     return { type: "acceleration", group_label: grp(/acceleration in\s+(?:the\s+)?(.+?)\s+by\b/i) };
   if (/\battack(s|ed|ing)?\s+(by|in)\b/i.test(t) || /^attack\b/i.test(t))
