@@ -122,7 +122,7 @@ export const LiveCoursePanel = ({
   }, [allMessages, selectedEtape]);
 
   // Live situation stored on arena_live_courses (refreshed by the auto-scraper)
-  const { data: liveSituationRow } = useQuery({
+  const { data: liveSituationRow, refetch: refetchLiveSituation } = useQuery({
     queryKey: ["arena-live-situation", courseId],
     queryFn: async () => {
       const { data } = await supabase
@@ -135,8 +135,26 @@ export const LiveCoursePanel = ({
     },
     enabled: !!courseId,
     refetchInterval: 30 * 1000,
-    staleTime: 20 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    staleTime: 5 * 1000,
   });
+
+  // Mobile : les timers sont gelés en arrière-plan → rattrapage dès le retour
+  useEffect(() => {
+    if (!courseId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refetchLiveSituation();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [courseId, refetchLiveSituation]);
+
 
   const messageSituation = useMemo(() => {
     for (const msg of filteredMessages) {
