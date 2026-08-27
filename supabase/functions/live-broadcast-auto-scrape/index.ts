@@ -126,6 +126,7 @@ type LiveEvent = {
     | "join_group"
     | "struggling"
     | "caught"
+    | "mechanical"
     | "finish"
     | "win"
     | "sprint_launch"
