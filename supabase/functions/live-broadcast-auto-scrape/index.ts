@@ -127,6 +127,7 @@ type LiveEvent = {
     | "struggling"
     | "caught"
     | "mechanical"
+    | "flat_tire"
     | "finish"
     | "win"
     | "sprint_launch"
