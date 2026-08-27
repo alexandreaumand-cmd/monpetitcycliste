@@ -122,7 +122,7 @@ export const LiveCoursePanel = ({
   }, [allMessages, selectedEtape]);
 
   // Live situation stored on arena_live_courses (refreshed by the auto-scraper)
-  const { data: liveSituationRow } = useQuery({
+  const { data: liveSituationRow, refetch: refetchLiveSituation } = useQuery({
     queryKey: ["arena-live-situation", courseId],
     queryFn: async () => {
       const { data } = await supabase
@@ -135,8 +135,26 @@ export const LiveCoursePanel = ({
     },
     enabled: !!courseId,
     refetchInterval: 30 * 1000,
-    staleTime: 20 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    staleTime: 5 * 1000,
   });
+
+  // Mobile : les timers sont gelés en arrière-plan → rattrapage dès le retour
+  useEffect(() => {
+    if (!courseId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refetchLiveSituation();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [courseId, refetchLiveSituation]);
+
 
   const messageSituation = useMemo(() => {
     for (const msg of filteredMessages) {
@@ -158,6 +176,22 @@ export const LiveCoursePanel = ({
   const situationUpdatedAt = liveSituationMatchesStage
     ? (liveSituationRow?.situation_updated_at as string | null)
     : null;
+
+  /** Kilométrage restant du dernier évènement de la timeline (parsé du texte « — à 106 km »). */
+  const latestEventKm = useMemo(() => {
+    for (const msg of filteredMessages) {
+      const m = /à\s+([\d]+(?:[.,]\d+)?)\s*km/.exec(String(msg.content ?? ""));
+      if (m) return Number(m[1].replace(",", "."));
+    }
+    return null;
+  }, [filteredMessages]);
+
+  const situationBehindTimeline =
+    latestEventKm != null &&
+    Number.isFinite(Number(latestSituation?.kmRemaining)) &&
+    Number(latestSituation?.kmRemaining) > latestEventKm + 0.5;
+
+
 
 
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
@@ -304,10 +338,17 @@ export const LiveCoursePanel = ({
               <MessageCircle className="h-3.5 w-3.5 text-primary shrink-0" />
               <h3 className="text-xs font-semibold shrink-0">Timeline</h3>
               {situationUpdatedAt && (
-                <span className="text-[10px] text-muted-foreground truncate ml-auto">
+                <span
+                  className={cn(
+                    "text-[10px] truncate ml-auto",
+                    situationBehindTimeline ? "text-muted-foreground/50 italic" : "text-muted-foreground"
+                  )}
+                >
                   Situation mise à jour {formatRelativeFr(situationUpdatedAt, nowTick)}
+                  {situationBehindTimeline ? " — actualisation…" : ""}
                 </span>
               )}
+
             </div>
           </div>
 
