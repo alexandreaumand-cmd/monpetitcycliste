@@ -586,6 +586,7 @@ export type LiveTextEventType =
   | "attack"
   | "counter_attack"
   | "acceleration"
+  | "reaction"
   | "dropped"
   | "join_group"
   | "struggling"
