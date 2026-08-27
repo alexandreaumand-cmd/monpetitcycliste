@@ -325,6 +325,7 @@ export const LeagueActivityFeed = () => {
       : t("activity.groupSummary", {
           count: entry.items.length,
           points: Math.round(totalPoints),
+          name: myName,
         });
 
 
