@@ -202,6 +202,8 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `🎯 ${rider} ${many ? "sont repris" : "est repris"} par${grp || " le peloton"}${km}`;
     case "mechanical":
       return `🔩 Problème mécanique pour ${rider}${grp ? ` dans${grp}` : ""}${km}`;
+    case "flat_tire":
+      return `🛞 Crevaison pour ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "abandon":
       return `❌ ${rider} ${many ? "abandonnent" : "abandonne"}${km}`;
     case "finish":
