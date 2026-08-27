@@ -712,6 +712,11 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
 
+    // Une "victoire" annoncée alors qu'il reste des km est un sprint/classement en course
+    if (classified.type === "win" && kmToGo != null && kmToGo > 0) {
+      classified.type = "intermediate_sprint";
+    }
+
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
 
