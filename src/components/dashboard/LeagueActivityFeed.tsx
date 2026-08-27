@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import {
   useLeagueActivityFeed,
@@ -64,6 +65,8 @@ export const LeagueActivityFeed = () => {
   const isMobile = useIsMobile();
   const { leagueId } = useLeague();
   const { data: managerId } = useCurrentManagerId();
+  const { data: currentManager } = useCurrentManager();
+  const myName = currentManager?.nom ?? t("activity.me");
   const { data: items, isLoading } = useLeagueActivityFeed(leagueId, managerId);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [expanded, setExpanded] = useState(false);
@@ -155,15 +158,16 @@ export const LeagueActivityFeed = () => {
   const describe = (item: ActivityItem) => {
     switch (item.kind) {
       case "result": {
-        if (!item.my_points || item.my_points <= 0) return t("activity.resultNoPoints");
+        if (!item.my_points || item.my_points <= 0) return t("activity.resultNoPoints", { name: myName });
         const base = t("activity.resultWithPoints", {
           points: Math.round(item.my_points),
           rank: item.my_rank ?? "-",
+          name: myName,
         });
         return item.riders ? `${base} — ${item.riders}` : base;
       }
       case "pronostic":
-        return item.is_mine ? t("activity.pronosticDone") : t("activity.pronosticTodo");
+        return item.is_mine ? t("activity.pronosticDone") : t("activity.pronosticTodo", { name: myName });
       case "pronostic_result": {
         const outcome =
           item.count_value === 1
@@ -182,7 +186,7 @@ export const LeagueActivityFeed = () => {
             : item.subtitle === "removed"
               ? t("activity.startlistRemoved")
               : (item.subtitle ?? "");
-        const owner = item.manager_is_me ? t("activity.me") : item.manager_nom;
+        const owner = item.manager_is_me ? myName : item.manager_nom;
         const parts = [change, item.league_name, owner].filter(Boolean);
         return parts.join(" · ");
       }
