@@ -594,6 +594,7 @@ export type LiveTextEventType =
   | "flat_tire"
   | "finish"
   | "win"
+  | "intermediate_sprint"
   | "sprint_launch"
   | "second_place"
   | "third_place";
