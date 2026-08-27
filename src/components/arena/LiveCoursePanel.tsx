@@ -338,10 +338,17 @@ export const LiveCoursePanel = ({
               <MessageCircle className="h-3.5 w-3.5 text-primary shrink-0" />
               <h3 className="text-xs font-semibold shrink-0">Timeline</h3>
               {situationUpdatedAt && (
-                <span className="text-[10px] text-muted-foreground truncate ml-auto">
+                <span
+                  className={cn(
+                    "text-[10px] truncate ml-auto",
+                    situationBehindTimeline ? "text-muted-foreground/50 italic" : "text-muted-foreground"
+                  )}
+                >
                   Situation mise à jour {formatRelativeFr(situationUpdatedAt, nowTick)}
+                  {situationBehindTimeline ? " — actualisation…" : ""}
                 </span>
               )}
+
             </div>
           </div>
 
