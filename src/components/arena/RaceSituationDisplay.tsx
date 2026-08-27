@@ -98,9 +98,9 @@ function GroupRow({
     });
 
   const showRiders = riderItems.length > 0;
-  const showCollapsible = riderItems.length > 5;
-  const visibleRiders = showCollapsible ? riderItems.slice(0, 5) : riderItems;
-  const hiddenRiders = showCollapsible ? riderItems.slice(5) : [];
+  const showCollapsible = riderItems.length > 10;
+  const visibleRiders = showCollapsible ? riderItems.slice(0, 10) : riderItems;
+  const hiddenRiders = showCollapsible ? riderItems.slice(10) : [];
 
   return (
     <div className="flex gap-2 py-2 px-1">
