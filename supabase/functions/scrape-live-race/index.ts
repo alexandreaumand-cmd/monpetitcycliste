@@ -591,6 +591,7 @@ export type LiveTextEventType =
   | "struggling"
   | "caught"
   | "mechanical"
+  | "flat_tire"
   | "finish"
   | "win"
   | "sprint_launch"
