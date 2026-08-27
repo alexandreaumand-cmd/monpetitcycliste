@@ -673,6 +673,8 @@ function classifyLiveText(
     return { type: "acceleration", group_label: grp(/acceleration in\s+(?:the\s+)?(.+?)\s+by\b/i) };
   if (/\battack(s|ed|ing)?\s+(by|in)\b/i.test(t) || /^attack\b/i.test(t))
     return { type: "attack", group_label: grp(/\bin\s+(?:the\s+)?([a-z\s]+?)(?:[.,]|$)/i) };
+  if (/\b(flat\s+t[iy]re|punctures?|punctured)\b/i.test(t))
+    return { type: "flat_tire", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
   if (/mechanical\s+(problem|issue)/i.test(t))
     return { type: "mechanical", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
   if (/at the team car/i.test(t)) return { type: "team_car" };
