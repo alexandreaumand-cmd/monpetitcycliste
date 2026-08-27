@@ -654,7 +654,11 @@ function classifyLiveText(
   };
 
   if (/^finish\.?$/i.test(t)) return { type: "finish" };
-  if (/\bwins!?\s*$/i.test(t) || /\bwins\b/i.test(t)) return { type: "win" };
+  if (/\bwins\b[^.]*\bsprint\b/i.test(t) || /\bintermediate\s+sprint\b/i.test(t)) {
+    const loc = t.match(/\bsprint\s*\|\s*([^(|]+?)\s*(?:\(|\||$)/i)?.[1]?.trim();
+    return { type: "intermediate_sprint", group_label: loc || undefined };
+  }
+  if (/\bwins\b/i.test(t)) return { type: "win" };
   if (/launch(es|ed|ing)?\s+the\s+sprint/i.test(t)) return { type: "sprint_launch" };
   if (/(comes\s+in\s+second\s+place|second\s+place\s+for)/i.test(t)) return { type: "second_place" };
   if (/(comes\s+in\s+third\s+place|third\s+place\s+for)/i.test(t)) return { type: "third_place" };
