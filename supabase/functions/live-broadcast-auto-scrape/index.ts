@@ -175,7 +175,7 @@ function formatLiveEvent(ev: LiveEvent): string {
     case "back_of_peloton":
       return `⬇️ ${rider} ${many ? "sont" : "est"} en queue de peloton${km}`;
     case "crash":
-      return `⚠️ Chute de ${rider}${km}`;
+      return `⚠️ ${many ? "Chutes" : "Chute"} de ${rider}${grp ? ` dans${grp}` : ""}${km}`;
     case "team_car":
       return `🚗 ${rider} ${many ? "sont" : "est"} à la voiture d'équipe${km}`;
     case "attack":
