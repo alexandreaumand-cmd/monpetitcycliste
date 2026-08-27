@@ -211,6 +211,8 @@ function formatLiveEvent(ev: LiveEvent): string {
       return `🏁 Arrivée !`;
     case "win":
       return `🥇 ${rider} s'impose !`;
+    case "intermediate_sprint":
+      return `🏅 ${rider} remporte le sprint intermédiaire${ev.group_label ? ` (${ev.group_label})` : ""}${km}`;
     case "sprint_launch":
       return `💥 ${rider} lance le sprint${km}`;
     case "second_place":
