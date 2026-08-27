@@ -594,6 +594,7 @@ export type LiveTextEventType =
   | "flat_tire"
   | "finish"
   | "win"
+  | "intermediate_sprint"
   | "sprint_launch"
   | "second_place"
   | "third_place";
@@ -653,7 +654,11 @@ function classifyLiveText(
   };
 
   if (/^finish\.?$/i.test(t)) return { type: "finish" };
-  if (/\bwins!?\s*$/i.test(t) || /\bwins\b/i.test(t)) return { type: "win" };
+  if (/\bwins\b[^.]*\bsprint\b/i.test(t) || /\bintermediate\s+sprint\b/i.test(t)) {
+    const loc = t.match(/\bsprint\s*\|\s*([^(|]+?)\s*(?:\(|\||$)/i)?.[1]?.trim();
+    return { type: "intermediate_sprint", group_label: loc || undefined };
+  }
+  if (/\bwins\b/i.test(t)) return { type: "win" };
   if (/launch(es|ed|ing)?\s+the\s+sprint/i.test(t)) return { type: "sprint_launch" };
   if (/(comes\s+in\s+second\s+place|second\s+place\s+for)/i.test(t)) return { type: "second_place" };
   if (/(comes\s+in\s+third\s+place|third\s+place\s+for)/i.test(t)) return { type: "third_place" };
@@ -706,6 +711,11 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
 
     const bol = li.querySelector?.("div.bol")?.textContent?.trim() || "";
     const kmToGo = /^\d+(\.\d+)?$/.test(bol) ? Number(bol) : null;
+
+    // Une "victoire" annoncée alors qu'il reste des km est un sprint/classement en course
+    if (classified.type === "win" && kmToGo != null && kmToGo > 0) {
+      classified.type = "intermediate_sprint";
+    }
 
     const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
