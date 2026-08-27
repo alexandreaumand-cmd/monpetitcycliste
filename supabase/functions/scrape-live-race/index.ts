@@ -657,7 +657,8 @@ function classifyLiveText(
   if (/(comes\s+in\s+second\s+place|second\s+place\s+for)/i.test(t)) return { type: "second_place" };
   if (/(comes\s+in\s+third\s+place|third\s+place\s+for)/i.test(t)) return { type: "third_place" };
   if (/abandon(ed|s)?\b/i.test(t) || /has left the race/i.test(t)) return { type: "abandon" };
-  if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t)) return { type: "crash" };
+  if (/^crash by\b/i.test(t) || /\bcrash(ed)?\b/i.test(t))
+    return { type: "crash", group_label: grp(/\bin\s+(?:the\s+)?(.+?)(?:[.,]|$)/i) };
   if (/\bis dropped from\b/i.test(t) || /\bdropped from\b/i.test(t))
     return { type: "dropped", group_label: grp(/dropped from\s+(.+?)(?:[.,]|$)/i) };
   if (/\bjoins?\b/i.test(t) && /group|peloton|break/i.test(t))
