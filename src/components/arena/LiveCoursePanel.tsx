@@ -177,6 +177,22 @@ export const LiveCoursePanel = ({
     ? (liveSituationRow?.situation_updated_at as string | null)
     : null;
 
+  /** Kilométrage restant du dernier évènement de la timeline (parsé du texte « — à 106 km »). */
+  const latestEventKm = useMemo(() => {
+    for (const msg of filteredMessages) {
+      const m = /à\s+([\d]+(?:[.,]\d+)?)\s*km/.exec(String(msg.content ?? ""));
+      if (m) return Number(m[1].replace(",", "."));
+    }
+    return null;
+  }, [filteredMessages]);
+
+  const situationBehindTimeline =
+    latestEventKm != null &&
+    Number.isFinite(Number(latestSituation?.kmRemaining)) &&
+    Number(latestSituation?.kmRemaining) > latestEventKm + 0.5;
+
+
+
 
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId);
