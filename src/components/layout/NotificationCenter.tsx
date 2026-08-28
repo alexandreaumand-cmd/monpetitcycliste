@@ -190,7 +190,12 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                         )}>
                           {translated.title}
                         </p>
-                        {(notif.metadata?.race_name || notif.metadata?.league_name) && (() => {
+                        {(notif.type === 'rider_incident' || notif.type === 'rider_win') && translated.message && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {translated.message}
+                          </p>
+                        )}
+                        {notif.type !== 'rider_incident' && notif.type !== 'rider_win' && (notif.metadata?.race_name || notif.metadata?.league_name) && (() => {
                           const isAuctionType =
                             notif.type === 'auction_opened' ||
                             notif.type === 'auction_closed' ||
