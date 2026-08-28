@@ -501,9 +501,10 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                   </p>
                 )}
                 {selectedCoureur && (bonusType === 'first_win' || bonusType === 'itt') && selectedRiderOwners?.length === 0 && (
-                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                  <p className="text-xs text-destructive">
                     Ce coureur n'est possédé par aucun manager sur cette phase : le bonus sera enregistré sans manager ni ligue (aucun point attribué).
                   </p>
+
                 )}
 
               </div>
