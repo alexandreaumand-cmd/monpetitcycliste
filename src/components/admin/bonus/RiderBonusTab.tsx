@@ -59,6 +59,21 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const [editCourseId, setEditCourseId] = useState<string>("");
   const [editCoursePopoverOpen, setEditCoursePopoverOpen] = useState(false);
 
+  // Propriétaires du coureur sélectionné sur la phase (avertissement pré-saisie)
+  const { data: selectedRiderOwners } = useQuery({
+    queryKey: ["rider-bonus-owners", phaseId, selectedCoureur?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rosters")
+        .select("manager_id")
+        .eq("phase_id", phaseId)
+        .eq("coureur_id", selectedCoureur.id);
+      if (error) throw error;
+      return (data || []).filter((r: any) => r.manager_id);
+    },
+    enabled: !!phaseId && !!selectedCoureur?.id,
+  });
+
   const courseRequired = bonusType === 'first_win' || bonusType === 'itt';
 
   // Fetch courses for the selected season
