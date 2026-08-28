@@ -200,39 +200,51 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
         if (rostersError) throw rostersError;
 
-        if (!rostersData || rostersData.length === 0) {
-          toast.error("Ce coureur n'est possédé par aucun manager");
-          setIsSubmitting(false);
-          return;
+        const ownedPairs = (rostersData || []).filter((r: any) => r.manager_id);
+
+        if (ownedPairs.length === 0) {
+          // Aucun propriétaire : on enregistre une trace du bonus sans manager ni ligue
+          const { error } = await supabase.from("bonus_points").insert([{
+            phase_id: phaseId,
+            bonus_type: bonusType,
+            coureur_id: selectedCoureur.id,
+            manager_id: null,
+            league_id: null,
+            course_id: courseIdToSave,
+            points: parseInt(points),
+            commentaire: commentaire || null,
+            created_by: managerData.id,
+          }]);
+          if (error) throw error;
+          toast.success("Bonus enregistré pour le coureur (aucun manager propriétaire sur cette phase)");
+        } else {
+          // Un bonus par couple (manager, ligue), dédoublonné
+          const uniquePairs = Array.from(
+            new Map(
+              ownedPairs.map((r: any) => [`${r.manager_id}|${r.league_id ?? ''}`, r])
+            ).values()
+          ) as Array<{ manager_id: string; league_id: string | null }>;
+
+          const bonusInserts = uniquePairs.map(roster => ({
+            phase_id: phaseId,
+            bonus_type: bonusType,
+            coureur_id: selectedCoureur.id,
+            manager_id: roster.manager_id,
+            league_id: roster.league_id,
+            course_id: courseIdToSave,
+            points: parseInt(points),
+            commentaire: commentaire || null,
+            created_by: managerData.id,
+          }));
+
+          const { error } = await supabase.from("bonus_points").insert(bonusInserts);
+          if (error) throw error;
+
+          const managersCount = new Set(uniquePairs.map(p => p.manager_id)).size;
+          const leaguesCount = new Set(uniquePairs.map(p => p.league_id)).size;
+          toast.success(`Bonus attribué à ${managersCount} manager(s) dans ${leaguesCount} ligue(s)`);
         }
 
-        // Un bonus par couple (manager, ligue), dédoublonné
-        const uniquePairs = Array.from(
-          new Map(
-            rostersData
-              .filter((r: any) => r.manager_id)
-              .map((r: any) => [`${r.manager_id}|${r.league_id ?? ''}`, r])
-          ).values()
-        ) as Array<{ manager_id: string; league_id: string | null }>;
-
-        const bonusInserts = uniquePairs.map(roster => ({
-          phase_id: phaseId,
-          bonus_type: bonusType,
-          coureur_id: selectedCoureur.id,
-          manager_id: roster.manager_id,
-          league_id: roster.league_id,
-          course_id: courseIdToSave,
-          points: parseInt(points),
-          commentaire: commentaire || null,
-          created_by: managerData.id,
-        }));
-
-        const { error } = await supabase.from("bonus_points").insert(bonusInserts);
-        if (error) throw error;
-
-        const managersCount = new Set(uniquePairs.map(p => p.manager_id)).size;
-        const leaguesCount = new Set(uniquePairs.map(p => p.league_id)).size;
-        toast.success(`Bonus attribué à ${managersCount} manager(s) dans ${leaguesCount} ligue(s)`);
 
       } else {
         const { error } = await supabase.from("bonus_points").insert([{
