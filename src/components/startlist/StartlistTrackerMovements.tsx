@@ -265,7 +265,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                             {rosterMap?.get(item.coureur_id || "")?.name || "-"}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
+                            {format(new Date(item.detected_at), "HH:mm", { locale: fr })}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -299,7 +299,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                             {item.rider_name}
                           </span>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
+                            {format(new Date(item.detected_at), "HH:mm", { locale: fr })}
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
