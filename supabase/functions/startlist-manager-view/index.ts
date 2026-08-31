@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
 
     // OPTIMIZED: courses first (last 5 weeks only), then points restricted to those courses
     // Standings now come from fast RPCs instead of the slow v_manager_standings_* views
-    const [recentCoursesRes, phaseStandingsRes, totalStandingsRes, ratingsRes, routeImagesRes] = await Promise.all([
+    const [recentCoursesRes, phaseStandingsRes, totalStandingsRes, ratingsRes, routeImagesRes, coursePointsRes, courseBonusRes] = await Promise.all([
       supabase
         .from('courses')
         .select('id, date_fin')
