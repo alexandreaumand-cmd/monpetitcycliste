@@ -6696,6 +6696,22 @@ export type Database = {
           },
         ]
       }
+      v_manager_standings_by_phase_live: {
+        Row: {
+          avatar_url: string | null
+          league_id: string | null
+          manager_bonus: number | null
+          manager_id: string | null
+          manager_nom: string | null
+          nb_scoreurs: number | null
+          nb_victoires: number | null
+          phase_id: string | null
+          rider_bonus: number | null
+          total_points: number | null
+          total_race_pts: number | null
+        }
+        Relationships: []
+      }
       v_manager_standings_by_phase_v2: {
         Row: {
           avatar_url: string | null
@@ -6707,6 +6723,22 @@ export type Database = {
           nb_victoires: number | null
           phase_id: string | null
           rider_bonus: number | null
+          total_points: number | null
+          total_race_pts: number | null
+        }
+        Relationships: []
+      }
+      v_manager_standings_by_season_live: {
+        Row: {
+          avatar_url: string | null
+          league_id: string | null
+          manager_bonus: number | null
+          manager_id: string | null
+          manager_nom: string | null
+          nb_scoreurs: number | null
+          nb_victoires: number | null
+          rider_bonus: number | null
+          saison_id: string | null
           total_points: number | null
           total_race_pts: number | null
         }
@@ -7699,7 +7731,10 @@ export type Database = {
         }
         Returns: number
       }
+      n_mv: { Args: never; Returns: undefined }
+      n_views: { Args: never; Returns: undefined }
       normalize_text: { Args: { txt: string }; Returns: string }
+      purge_old_app_data: { Args: never; Returns: Json }
       purge_old_notifications: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -7713,6 +7748,7 @@ export type Database = {
         Args: { p_league_id: string }
         Returns: undefined
       }
+      refresh_standings_cache: { Args: never; Returns: undefined }
       refresh_standings_mv: { Args: never; Returns: undefined }
       refresh_standings_views: { Args: never; Returns: undefined }
       results_course_meta: {
