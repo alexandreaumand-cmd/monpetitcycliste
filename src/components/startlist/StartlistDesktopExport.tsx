@@ -246,6 +246,11 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                         )}
                       </div>
                     </div>
+                    <div className="text-xs mb-1">
+                      <span className="font-medium">Course:</span>{' '}
+                      <span className="text-muted-foreground">{Math.round(manager.points_course || 0)}pts</span>
+                    </div>
+
                   </div>
                   
                   {/* Liste coureurs triés par cote décroissante */}
