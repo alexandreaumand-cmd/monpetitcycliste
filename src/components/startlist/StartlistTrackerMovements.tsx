@@ -196,12 +196,23 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
         <h3 className="text-lg font-semibold">Mouvements startlists</h3>
       </div>
 
-      {groupedByCourse.length === 0 ? (
+      {groupedByDate.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aucun mouvement détecté pour cette phase.</p>
       ) : (
-        <Accordion type="multiple" className="w-full">
-          {groupedByCourse.map(({ courseId, courseName, items }) => (
-            <AccordionItem key={courseId} value={courseId}>
+        <Accordion type="multiple" defaultValue={groupedByDate[0] ? [groupedByDate[0].dayKey] : []} className="w-full">
+          {groupedByDate.map(({ dayKey, label, total, courses }) => (
+            <AccordionItem key={dayKey} value={dayKey}>
+              <AccordionTrigger className="text-sm py-3 text-left font-semibold uppercase tracking-wide">
+                <span className="flex items-center gap-2 text-left">
+                  <span className="text-left">{label}</span>
+                  <Badge className="text-xs shrink-0">{total}</Badge>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Accordion type="multiple" className="w-full pl-3 border-l">
+                  {courses.map(({ courseId, courseName, items }) => (
+            <AccordionItem key={courseId} value={`${dayKey}-${courseId}`}>
+
               <AccordionTrigger className="text-sm py-3 text-left">
                 <span className="flex items-center gap-2 text-left">
                   <span className="text-left">{courseName}</span>
