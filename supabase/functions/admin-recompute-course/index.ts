@@ -57,7 +57,11 @@ Deno.serve(async (req) => {
           results.push({ course_id: cid, success: false, error: errorMsg });
         }
       }
-      
+
+      // Standings are served from a cached snapshot — refresh once after the whole batch
+      const { error: bulkRefreshErr } = await supabaseClient.rpc('refresh_standings_cache');
+      if (bulkRefreshErr) console.error('[admin-recompute-course] standings refresh error:', bulkRefreshErr.message);
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -86,6 +90,10 @@ Deno.serve(async (req) => {
     }
 
     console.log('Résultat du recalcul:', data);
+
+    // Standings are served from a cached snapshot — refresh it after recomputing
+    const { error: refreshErr } = await supabaseClient.rpc('refresh_standings_cache');
+    if (refreshErr) console.error('[admin-recompute-course] standings refresh error:', refreshErr.message);
 
     return new Response(
       JSON.stringify({

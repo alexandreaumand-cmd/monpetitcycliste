@@ -591,7 +591,7 @@ async function syncCourseStartlist(
   // 2. Load existing entries with their coureur names
   const { data: existingEntries, error: entriesError } = await supabase
     .from("startlist_entries")
-    .select("id, source_name, coureur_id, coureurs(nom)")
+    .select("id, source_name, coureur_id, team_confirmed, coureurs(nom)")
     .eq("startlist_id", startlistId);
 
   if (entriesError) {
@@ -882,28 +882,54 @@ async function syncCourseStartlist(
   return { added: addedCount, removed: removedCount };
 }
 
-/** Update team_confirmed status on existing entries based on latest scrape data */
+/**
+ * Update team_confirmed status on existing entries based on latest scrape data.
+ * Grouped into two bulk statements (true / false) instead of one UPDATE per entry:
+ * the row-by-row version produced hundreds of thousands of writes per day.
+ */
 async function updateTeamConfirmedStatus(
   supabase: any,
   existing: any[],
-  existingSigMap: Map<string, { id: string; source_name: string; coureur_id: string | null }>,
+  existingSigMap: Map<string, { id: string; source_name: string; coureur_id: string | null; team_confirmed?: boolean }>,
   teamConfirmedBySig: Map<string, boolean>
 ) {
-  let updated = 0;
+  const toTrue: string[] = [];
+  const toFalse: string[] = [];
+  const currentById = new Map<string, boolean | null>(
+    existing.map((e: any) => [e.id, e.team_confirmed ?? false])
+  );
+
   for (const [sig, entry] of existingSigMap) {
     const confirmed = teamConfirmedBySig.get(sig);
-    if (confirmed !== undefined) {
+    if (confirmed === undefined) continue;
+    // Skip rows already in the target state
+    if (currentById.get(entry.id) === confirmed) continue;
+    (confirmed ? toTrue : toFalse).push(entry.id);
+  }
+
+  const CHUNK = 200;
+  let updated = 0;
+
+  for (const [value, ids] of [[true, toTrue], [false, toFalse]] as Array<[boolean, string[]]>) {
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
       const { error } = await supabase
         .from("startlist_entries")
-        .update({ team_confirmed: confirmed })
-        .eq("id", entry.id);
-      if (!error) updated++;
+        .update({ team_confirmed: value })
+        .in("id", slice);
+      if (error) {
+        console.error(`[SYNC] bulk team_confirmed=${value} failed:`, error.message);
+      } else {
+        updated += slice.length;
+      }
     }
   }
+
   if (updated > 0) {
-    console.log(`[SYNC] Updated team_confirmed on ${updated} existing entries`);
+    console.log(`[SYNC] Updated team_confirmed on ${updated} existing entries (bulk)`);
   }
 }
+
 
 // ============================================================
 // PCS URL BUILDING
