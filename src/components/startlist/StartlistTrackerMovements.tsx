@@ -300,9 +300,14 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                 </div>
               </AccordionContent>
             </AccordionItem>
+                  ))}
+                </Accordion>
+              </AccordionContent>
+            </AccordionItem>
           ))}
         </Accordion>
       )}
+
     </div>
   );
 }
