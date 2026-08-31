@@ -385,9 +385,46 @@ serve(async (req) => {
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const [{ data: liveChannels, error: channelsError }, { data: activeLeagues, error: leaguesError }] = await Promise.all([
+  const now = new Date();
+  const parisTime = formatParisTime(now);
+  const parisDate = getParisDate(now);
+
+  // Cheapest possible gate first: most cron ticks have nothing to do, so bail out
+  // before loading channels, leagues and stage plans.
+  const { data: rows, error } = await admin
+    .from("arena_live_courses")
+    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin, nom, phase_id)")
+    .eq("is_active", true)
+    .eq("auto_scrape_enabled", true);
+
+  if (error) {
+    console.error("[auto-scrape] select error", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!rows || rows.length === 0) {
+    console.log(`[auto-scrape] ${parisTime} Paris — no active course with auto-scrape enabled`);
+    return new Response(JSON.stringify({ ran: 0, skipped: 0, paris_time: parisTime }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const [
+    { data: liveChannels, error: channelsError },
+    { data: activeLeagues, error: leaguesError },
+    { data: todayPlans },
+  ] = await Promise.all([
     admin.from("arena_channels").select("id, league_id").eq("slug", "live-courses"),
     admin.from("leagues").select("id, name").eq("status", "active"),
+    // Stage plans scheduled for today (Paris) — these override the course-level url/schedule
+    admin
+      .from("live_stage_plans")
+      .select("id, course_id, etape_numero, scrape_url, scrape_schedule, last_auto_scrape_at")
+      .eq("is_enabled", true)
+      .eq("stage_date", parisDate),
   ]);
 
   if (channelsError || leaguesError) {
@@ -404,42 +441,11 @@ serve(async (req) => {
   );
   const broadcastChannels = (liveChannels || []).filter((channel: any) => activeLeagueIds.has(channel.league_id));
 
-  const { data: rows, error } = await admin
-    .from("arena_live_courses")
-    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin, nom, phase_id)")
-    .eq("is_active", true)
-    .eq("auto_scrape_enabled", true);
-
-  if (error) {
-    console.error("[auto-scrape] select error", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const now = new Date();
-  const parisTime = formatParisTime(now);
-  const parisDate = getParisDate(now);
-
-  // Stage plans scheduled for today (Paris) — these override the course-level url/schedule
-  const { data: todayPlans } = await admin
-    .from("live_stage_plans")
-    .select("id, course_id, etape_numero, scrape_url, scrape_schedule, last_auto_scrape_at")
-    .eq("is_enabled", true)
-    .eq("stage_date", parisDate);
-
   const planByCourse = new Map<string, any>();
   for (const plan of (todayPlans || []) as any[]) {
     if (plan.scrape_url) planByCourse.set(plan.course_id, plan);
   }
 
-  if (!rows || rows.length === 0) {
-    console.log(`[auto-scrape] ${parisTime} Paris — no active course with auto-scrape enabled`);
-    return new Response(JSON.stringify({ ran: 0, skipped: 0, paris_time: parisTime }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   let ran = 0;
   let skipped = 0;
