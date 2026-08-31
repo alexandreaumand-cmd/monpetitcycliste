@@ -126,6 +126,11 @@ Deno.serve(async (req) => {
 
     console.log(`Bonus points saved: ${upserted} upserted, ${deleted} deleted`);
 
+    // Standings are served from a cached snapshot — refresh it so the UI reflects the bonuses
+    const { error: refreshErr } = await supabase.rpc('refresh_standings_cache');
+    if (refreshErr) console.error('[admin-save-bonus-points] standings refresh error:', refreshErr.message);
+
+
     return new Response(
       JSON.stringify({
         success: true,
