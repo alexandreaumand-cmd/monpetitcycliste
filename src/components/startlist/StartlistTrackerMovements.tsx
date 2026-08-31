@@ -143,20 +143,41 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
   const getTeamName = (item: { team_name: string | null; coureur_id: string | null }) =>
     item.team_name || (item.coureur_id ? coureurEquipeMap?.get(item.coureur_id) : null) || "-";
 
-  // Group changes by course
-  const groupedByCourse = useMemo(() => {
+  // Group changes by detection date, then by course
+  const groupedByDate = useMemo(() => {
     if (!changes) return [];
-    const groups = new Map<string, { courseName: string; items: typeof changes }>();
+    const dayGroups = new Map<string, typeof changes>();
     for (const c of changes) {
-      if (!groups.has(c.course_id)) {
-        groups.set(c.course_id, { courseName: c.course_name, items: [] });
-      }
-      groups.get(c.course_id)!.items.push(c);
+      const d = new Date(c.detected_at);
+      const key = format(d, "yyyy-MM-dd");
+      if (!dayGroups.has(key)) dayGroups.set(key, []);
+      dayGroups.get(key)!.push(c);
     }
-    return Array.from(groups.entries())
-      .map(([courseId, { courseName, items }]) => ({ courseId, courseName, items }))
-      .sort((a, b) => (courseOrder.get(a.courseId) ?? 999) - (courseOrder.get(b.courseId) ?? 999));
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const yesterdayKey = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
+    return Array.from(dayGroups.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0))
+      .map(([dayKey, dayItems]) => {
+        const courseMap = new Map<string, { courseName: string; items: typeof changes }>();
+        for (const c of dayItems) {
+          if (!courseMap.has(c.course_id)) {
+            courseMap.set(c.course_id, { courseName: c.course_name, items: [] });
+          }
+          courseMap.get(c.course_id)!.items.push(c);
+        }
+        const courses = Array.from(courseMap.entries())
+          .map(([courseId, { courseName, items }]) => ({ courseId, courseName, items }))
+          .sort((a, b) => (courseOrder.get(a.courseId) ?? 999) - (courseOrder.get(b.courseId) ?? 999));
+        const label =
+          dayKey === todayKey
+            ? "Aujourd'hui"
+            : dayKey === yesterdayKey
+              ? "Hier"
+              : format(new Date(`${dayKey}T12:00:00`), "EEEE d MMMM yyyy", { locale: fr });
+        return { dayKey, label, total: dayItems.length, courses };
+      });
   }, [changes, courseOrder]);
+
 
   if (isLoading) {
     return (
