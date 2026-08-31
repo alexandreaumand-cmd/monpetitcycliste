@@ -432,6 +432,7 @@ Deno.serve(async (req) => {
           rank_total: totalRank,
           points_phase: phaseStanding?.total_points || 0,
           points_total: totalStanding?.total_points || 0,
+          points_course: coursePointsByManager.get(roster.manager_id) || 0,
           gap_prev_phase,
           gap_next_phase,
           avg_stars: rating?.avg_stars || null,
