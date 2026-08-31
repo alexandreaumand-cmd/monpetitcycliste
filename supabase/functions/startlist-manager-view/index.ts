@@ -295,8 +295,35 @@ Deno.serve(async (req) => {
         .from('course_route_images')
         .select('etape_numero, image_url, label, sort_order')
         .eq('course_id', race.id)
-        .order('sort_order', { ascending: true })
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('points_ledger')
+        .select('coureur_id, points')
+        .eq('course_id', race.id)
+        .eq('phase_id', phaseId),
+      supabase
+        .from('bonus_points')
+        .select('manager_id, points')
+        .eq('course_id', race.id)
+        .eq('league_id', league_id)
     ]);
+
+    // Points marqués sur cette course, par manager (roster de la phase dans cette ligue)
+    const coursePointsByManager = new Map<string, number>();
+    {
+      const rosterOwner = new Map<string, string>();
+      (rosters || []).forEach((r: any) => rosterOwner.set(r.coureur_id, r.manager_id));
+      (coursePointsRes.data || []).forEach((p: any) => {
+        const mgr = rosterOwner.get(p.coureur_id);
+        if (!mgr) return;
+        coursePointsByManager.set(mgr, (coursePointsByManager.get(mgr) || 0) + Number(p.points || 0));
+      });
+      (courseBonusRes.data || []).forEach((b: any) => {
+        if (!b.manager_id) return;
+        coursePointsByManager.set(b.manager_id, (coursePointsByManager.get(b.manager_id) || 0) + Number(b.points || 0));
+      });
+    }
+
 
     const recentCourses = recentCoursesRes.data || [];
     const courseDateMap = new Map<string, string>();
