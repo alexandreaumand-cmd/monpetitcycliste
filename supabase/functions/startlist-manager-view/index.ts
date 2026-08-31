@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
 
     // OPTIMIZED: courses first (last 5 weeks only), then points restricted to those courses
     // Standings now come from fast RPCs instead of the slow v_manager_standings_* views
-    const [recentCoursesRes, phaseStandingsRes, totalStandingsRes, ratingsRes, routeImagesRes] = await Promise.all([
+    const [recentCoursesRes, phaseStandingsRes, totalStandingsRes, ratingsRes, routeImagesRes, coursePointsRes, courseBonusRes] = await Promise.all([
       supabase
         .from('courses')
         .select('id, date_fin')
@@ -295,8 +295,35 @@ Deno.serve(async (req) => {
         .from('course_route_images')
         .select('etape_numero, image_url, label, sort_order')
         .eq('course_id', race.id)
-        .order('sort_order', { ascending: true })
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('points_ledger')
+        .select('coureur_id, points')
+        .eq('course_id', race.id)
+        .eq('phase_id', phaseId),
+      supabase
+        .from('bonus_points')
+        .select('manager_id, points')
+        .eq('course_id', race.id)
+        .eq('league_id', league_id)
     ]);
+
+    // Points marqués sur cette course, par manager (roster de la phase dans cette ligue)
+    const coursePointsByManager = new Map<string, number>();
+    {
+      const rosterOwner = new Map<string, string>();
+      (rosters || []).forEach((r: any) => rosterOwner.set(r.coureur_id, r.manager_id));
+      (coursePointsRes.data || []).forEach((p: any) => {
+        const mgr = rosterOwner.get(p.coureur_id);
+        if (!mgr) return;
+        coursePointsByManager.set(mgr, (coursePointsByManager.get(mgr) || 0) + Number(p.points || 0));
+      });
+      (courseBonusRes.data || []).forEach((b: any) => {
+        if (!b.manager_id) return;
+        coursePointsByManager.set(b.manager_id, (coursePointsByManager.get(b.manager_id) || 0) + Number(b.points || 0));
+      });
+    }
+
 
     const recentCourses = recentCoursesRes.data || [];
     const courseDateMap = new Map<string, string>();
@@ -405,6 +432,7 @@ Deno.serve(async (req) => {
           rank_total: totalRank,
           points_phase: phaseStanding?.total_points || 0,
           points_total: totalStanding?.total_points || 0,
+          points_course: coursePointsByManager.get(roster.manager_id) || 0,
           gap_prev_phase,
           gap_next_phase,
           avg_stars: rating?.avg_stars || null,
@@ -446,7 +474,10 @@ Deno.serve(async (req) => {
 
     const managers = Array.from(managerMap.values())
       .sort((a, b) => {
-        // Sort by avg_stars DESC (nulls last), then by starters_count DESC, then by name ASC
+        // Sort by points on this course DESC, then avg_stars DESC (nulls last), starters_count DESC, name ASC
+        if ((a.points_course || 0) !== (b.points_course || 0)) {
+          return (b.points_course || 0) - (a.points_course || 0);
+        }
         if (a.avg_stars !== null && b.avg_stars !== null) {
           if (a.avg_stars !== b.avg_stars) return b.avg_stars - a.avg_stars;
         } else if (a.avg_stars !== null) {

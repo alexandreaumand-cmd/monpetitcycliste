@@ -554,7 +554,9 @@ export const StartlistMobile = () => {
                             <div className="flex gap-2 text-xs text-muted-foreground">
                               <span>Ph: #{manager.rank_phase || "-"}{manager.points_phase > 0 && ` (${Math.round(manager.points_phase)}pts)`}</span>
                               <span>CG: #{manager.rank_total || "-"}{manager.points_total > 0 && ` (${Math.round(manager.points_total)}pts)`}</span>
+                              <span>Course: {Math.round(manager.points_course || 0)}pts</span>
                             </div>
+
                           </div>
                         </div>
                       </div>
