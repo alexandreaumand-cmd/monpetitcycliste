@@ -474,7 +474,10 @@ Deno.serve(async (req) => {
 
     const managers = Array.from(managerMap.values())
       .sort((a, b) => {
-        // Sort by avg_stars DESC (nulls last), then by starters_count DESC, then by name ASC
+        // Sort by points on this course DESC, then avg_stars DESC (nulls last), starters_count DESC, name ASC
+        if ((a.points_course || 0) !== (b.points_course || 0)) {
+          return (b.points_course || 0) - (a.points_course || 0);
+        }
         if (a.avg_stars !== null && b.avg_stars !== null) {
           if (a.avg_stars !== b.avg_stars) return b.avg_stars - a.avg_stars;
         } else if (a.avg_stars !== null) {
