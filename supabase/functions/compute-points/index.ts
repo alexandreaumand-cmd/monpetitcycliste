@@ -45,6 +45,10 @@ Deno.serve(async (req) => {
       result = data;
     }
 
+    // Standings are served from a cached snapshot — refresh it so the UI shows the new points
+    const { error: refreshError } = await supabaseClient.rpc('refresh_standings_cache');
+    if (refreshError) console.error('[compute-points] standings refresh error:', refreshError.message);
+
     return new Response(
       JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
