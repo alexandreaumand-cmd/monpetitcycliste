@@ -79,7 +79,7 @@ export const LiveCoursePanel = ({
     queryFn: async () => {
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct")
+        .select("etape_numero, image_url, label, distance_km, axis_left_pct, axis_right_pct")
         .eq("course_id", courseId);
       return data ?? [];
     },
@@ -354,8 +354,6 @@ export const LiveCoursePanel = ({
                 <StageProgressOverlay
                   kmRemaining={latestSituation?.kmRemaining}
                   totalKm={stageTotalKm}
-                  axisStartKm={(stageImage as any)?.axis_start_km}
-                  axisEndKm={(stageImage as any)?.axis_end_km}
                   axisLeftPct={(stageImage as any)?.axis_left_pct}
                   axisRightPct={(stageImage as any)?.axis_right_pct}
                   compact
@@ -379,8 +377,6 @@ export const LiveCoursePanel = ({
           alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
           kmRemaining={latestSituation?.kmRemaining}
           totalKm={stageTotalKm}
-          axisStartKm={(stageImage as any)?.axis_start_km}
-          axisEndKm={(stageImage as any)?.axis_end_km}
           axisLeftPct={(stageImage as any)?.axis_left_pct}
           axisRightPct={(stageImage as any)?.axis_right_pct}
 

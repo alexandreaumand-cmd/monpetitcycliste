@@ -78,7 +78,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const loadExistingImages = async () => {
     const { data } = await supabase
       .from('course_route_images')
-      .select('etape_numero, image_url, label, sort_order, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct')
+      .select('etape_numero, image_url, label, sort_order, distance_km, axis_left_pct, axis_right_pct')
       .eq('course_id', raceId)
       .order('sort_order', { ascending: true });
     setExistingImages((data as RouteImage[]) || []);
