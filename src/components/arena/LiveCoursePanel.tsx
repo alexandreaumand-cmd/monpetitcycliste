@@ -1,13 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, MessageCircle, Radio, MapPin, Route, ChevronDown } from "lucide-react";
+import { Loader2, MessageCircle, Radio, MapPin, Route, ChevronDown, Maximize2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LiveStageBadge } from "./LiveStageBadge";
 import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
+import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
 import {
   useArenaMessages,
   useMessageReactions,
@@ -50,6 +51,7 @@ export const LiveCoursePanel = ({
 }: LiveCoursePanelProps) => {
   const { t } = useTranslation("arena");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId, courseId);
   const { data: liveCourses } = useLiveCourses();
