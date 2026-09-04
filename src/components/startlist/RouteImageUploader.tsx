@@ -34,7 +34,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
   const [distanceInput, setDistanceInput] = useState("");
+  const [axis, setAxis] = useState({ startKm: "", endKm: "", leftPct: "", rightPct: "" });
+  const [testKm, setTestKm] = useState("");
   const [isSavingDistance, setIsSavingDistance] = useState(false);
+
   const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
 
 
