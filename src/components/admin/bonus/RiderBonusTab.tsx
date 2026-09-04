@@ -967,11 +967,14 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Recalculer les bonus coureur ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action va <strong>supprimer</strong> tous les bonus « Coureur Bonusé (+25%) » existants pour cette phase
-              et les <strong>régénérer</strong> à partir des points actuels du ledger.
+              Cette action va <strong>supprimer</strong> les bonus « Coureur Bonusé (+25%) » du périmètre suivant
+              et les <strong>régénérer</strong> à partir des points actuels du ledger :
               <br /><br />
-              Les bonus de type First Win et ITT ne sont pas affectés.
+              <strong>{recalcScopeLabel}</strong>
+              <br /><br />
+              Les bonus hors de ce périmètre, ainsi que les bonus First Win et ITT, ne sont pas affectés.
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
