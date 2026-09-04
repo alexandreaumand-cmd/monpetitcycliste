@@ -170,7 +170,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!desktopCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", desktopCourseId);
       return data ?? [];
     },
@@ -185,6 +185,30 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     }
     return desktopRouteImages.find((img) => img.etape_numero == null) ?? null;
   }, [desktopRouteImages, desktopStageStatus.etape]);
+
+  // Situation de course en direct pour le profil desktop (même clé de cache que le panneau)
+  const { data: desktopLiveSituationRow } = useQuery({
+    queryKey: ["arena-live-situation", desktopCourseId],
+    queryFn: async () => {
+      if (!desktopCourseId) return null;
+      const { data } = await supabase
+        .from("arena_live_courses")
+        .select("current_race_situation, situation_updated_at")
+        .eq("course_id", desktopCourseId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!desktopCourseId,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 5 * 1000,
+  });
+  const desktopKmRemaining = Number(
+    (desktopLiveSituationRow?.current_race_situation as any)?.kmRemaining
+  );
+  const desktopTotalKm = Number(desktopStageImage?.distance_km) || null;
+
 
   if (!managerId) {
     return (
