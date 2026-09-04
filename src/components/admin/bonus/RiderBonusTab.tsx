@@ -51,6 +51,41 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const [recalcEtape, setRecalcEtape] = useState<string>("all"); // 'all' | 'final' | numéro
   const [recalcCoureur, setRecalcCoureur] = useState<any>(null);
 
+  // Table filters and sort
+  const [filterCoureur, setFilterCoureur] = useState("");
+  const [filterCourse, setFilterCourse] = useState("");
+  const [filterPointsMin, setFilterPointsMin] = useState("");
+  const [filterPointsMax, setFilterPointsMax] = useState("");
+  const [filterPhase, setFilterPhase] = useState<string>("all");
+  const [filterEtape, setFilterEtape] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<string | null>("points");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const resetFiltersAndSort = () => {
+    setFilterCoureur("");
+    setFilterCourse("");
+    setFilterPointsMin("");
+    setFilterPointsMax("");
+    setFilterPhase("all");
+    setFilterEtape("all");
+    setSortColumn("points");
+    setSortDirection("desc");
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    return sortDirection === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
 
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
