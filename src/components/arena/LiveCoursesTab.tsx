@@ -321,19 +321,41 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                       <span className="text-[11px] text-muted-foreground">Étape {stageImage.etape_numero}</span>
                     )}
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                  <div className="flex items-center gap-2">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      onClick={(e) => { e.stopPropagation(); setZoomOpen(true); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setZoomOpen(true); } }}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Agrandir
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                  </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-3">
                     <img
                       src={stageImage.image_url}
                       alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
-                      className="w-full h-auto rounded-md border"
+                      className="w-full h-auto rounded-md border cursor-zoom-in"
                       loading="lazy"
+                      onClick={() => setZoomOpen(true)}
                     />
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+            {stageImage && (
+              <StageProfileZoomDialog
+                open={zoomOpen}
+                onOpenChange={setZoomOpen}
+                imageUrl={stageImage.image_url}
+                title={stageImage.etape_numero != null ? `Profil — Étape ${stageImage.etape_numero}` : "Profil du parcours"}
+                alt={stageImage.label || "Profil de l'étape"}
+              />
             )}
 
             <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background">
