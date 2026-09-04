@@ -2,6 +2,8 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Image as ImageIcon, Route, Maximize2 } from "lucide-react";
 import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
+import { StageProgressOverlay } from "./StageProgressOverlay";
+
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
