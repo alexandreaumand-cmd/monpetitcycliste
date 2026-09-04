@@ -213,9 +213,14 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                     (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A';
           }
 
+          const phaseObj = bonus.phase as any;
+          const phaseIndex = phaseObj?.index_dans_saison ?? null;
+
           return {
             ...bonus,
             equipe,
+            phase_index: phaseIndex,
+            phase_label: phaseIndex ? `P${phaseIndex}` : '—',
             league_name: bonus.league_id ? (leaguesMap.get(bonus.league_id) || '—') : '—'
           };
         })
