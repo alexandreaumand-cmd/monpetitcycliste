@@ -200,7 +200,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   // Simple mode for one-day races
   if (!isStageRace) {
     return (
-      <div>
+      <div className="space-y-2">
         <input
           type="file"
           id={inputId}
@@ -217,8 +217,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? 'Téléchargement...' : currentImageUrl ? 'Modifier le parcours' : 'Ajouter le parcours'}
         </Button>
+        {distanceField}
       </div>
     );
+
   }
 
   // Multi-stage mode
