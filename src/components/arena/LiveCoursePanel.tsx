@@ -305,28 +305,49 @@ export const LiveCoursePanel = ({
 
       {showProfile && stageImage && (
         <Collapsible defaultOpen className="border-b bg-background shrink-0">
-          <CollapsibleTrigger className="w-full px-3 py-1.5 flex items-center justify-between bg-muted/20">
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <div className="w-full px-3 py-1.5 flex items-center justify-between bg-muted/20 gap-2">
+            <CollapsibleTrigger className="flex items-center gap-1.5 whitespace-nowrap flex-1 min-w-0">
               <Route className="h-3.5 w-3.5 text-primary" />
               <h3 className="text-xs font-semibold">Profil</h3>
               {stageImage.etape_numero != null && (
                 <span className="text-[10px] text-muted-foreground">Étape {stageImage.etape_numero}</span>
               )}
-            </div>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-          </CollapsibleTrigger>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+            </CollapsibleTrigger>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors shrink-0"
+              onClick={() => setZoomOpen(true)}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Agrandir
+            </button>
+          </div>
           <CollapsibleContent>
             <div className="p-2">
               <img
                 src={stageImage.image_url}
                 alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted"
+                className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted cursor-zoom-in"
                 loading="lazy"
+                onClick={() => setZoomOpen(true)}
               />
             </div>
 
           </CollapsibleContent>
         </Collapsible>
+      )}
+
+      {stageImage && (
+        <StageProfileZoomDialog
+          open={zoomOpen}
+          onOpenChange={setZoomOpen}
+          imageUrl={stageImage.image_url}
+          title={[courseName, stageImage.etape_numero != null ? `Étape ${stageImage.etape_numero}` : stageImage.label]
+            .filter(Boolean)
+            .join(" — ") || "Profil du parcours"}
+          alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+        />
       )}
 
       {/* Content: timeline + situation side by side */}
