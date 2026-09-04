@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Image as ImageIcon, Check } from "lucide-react";
@@ -13,8 +13,6 @@ interface RouteImage {
   label: string | null;
   sort_order: number;
   distance_km: number | null;
-  axis_start_km: number | null;
-  axis_end_km: number | null;
   axis_left_pct: number | null;
   axis_right_pct: number | null;
 }
@@ -34,9 +32,11 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
   const [distanceInput, setDistanceInput] = useState("");
-  const [axis, setAxis] = useState({ startKm: "", endKm: "", leftPct: "", rightPct: "" });
+  const [handles, setHandles] = useState({ left: 0, right: 100 });
   const [testKm, setTestKm] = useState("");
   const [isSavingDistance, setIsSavingDistance] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef<"left" | "right" | null>(null);
 
   const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
 
@@ -76,33 +76,22 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const loadExistingImages = async () => {
     const { data } = await supabase
       .from('course_route_images')
-      .select('etape_numero, image_url, label, sort_order, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct')
+      .select('etape_numero, image_url, label, sort_order, distance_km, axis_left_pct, axis_right_pct')
       .eq('course_id', raceId)
       .order('sort_order', { ascending: true });
     setExistingImages((data as RouteImage[]) || []);
   };
 
-  // Distance + calage de l'axe de l'étape sélectionnée (place le repère d'avancée sur le profil)
+  // Distance de l'étape + position du départ / de l'arrivée sur l'image (repère d'avancée du Live)
   const currentImage = existingImages.find((img) => img.etape_numero === selectedStage) ?? null;
 
-  const str = (v: number | null | undefined) => (v != null ? String(v) : "");
-
   useEffect(() => {
-    setDistanceInput(str(currentImage?.distance_km));
-    setAxis({
-      startKm: str(currentImage?.axis_start_km),
-      endKm: str(currentImage?.axis_end_km),
-      leftPct: str(currentImage?.axis_left_pct),
-      rightPct: str(currentImage?.axis_right_pct),
+    setDistanceInput(currentImage?.distance_km != null ? String(currentImage.distance_km) : "");
+    setHandles({
+      left: currentImage?.axis_left_pct != null ? Number(currentImage.axis_left_pct) : 0,
+      right: currentImage?.axis_right_pct != null ? Number(currentImage.axis_right_pct) : 100,
     });
-  }, [
-    currentImage?.distance_km,
-    currentImage?.axis_start_km,
-    currentImage?.axis_end_km,
-    currentImage?.axis_left_pct,
-    currentImage?.axis_right_pct,
-    selectedStage,
-  ]);
+  }, [currentImage?.distance_km, currentImage?.axis_left_pct, currentImage?.axis_right_pct, selectedStage]);
 
   const num = (v: string) => {
     const raw = v.trim().replace(',', '.');
@@ -111,6 +100,28 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
     return Number.isFinite(n) ? n : NaN;
   };
 
+  const persist = useCallback(
+    async (payload: { distance_km?: number | null; axis_left_pct?: number; axis_right_pct?: number }) => {
+      setIsSavingDistance(true);
+      let query = supabase
+        .from('course_route_images')
+        .update({ ...payload, axis_start_km: null, axis_end_km: null })
+        .eq('course_id', raceId);
+      query = selectedStage == null
+        ? query.is('etape_numero', null)
+        : query.eq('etape_numero', selectedStage);
+      const { error } = await query;
+      setIsSavingDistance(false);
+      if (error) {
+        toast.error("Enregistrement impossible", { description: error.message });
+        return false;
+      }
+      loadExistingImages();
+      return true;
+    },
+    [raceId, selectedStage]
+  );
+
   const saveDistance = async () => {
     if (!currentImage) return;
     const value = num(distanceInput);
@@ -118,68 +129,53 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
       toast.error("Distance invalide");
       return;
     }
-    const startKm = num(axis.startKm);
-    const endKm = num(axis.endKm);
-    const leftPct = num(axis.leftPct);
-    const rightPct = num(axis.rightPct);
-    if ([startKm, endKm, leftPct, rightPct].some((n) => Number.isNaN(n))) {
-      toast.error("Calage invalide", { description: "Vérifiez les valeurs saisies" });
-      return;
-    }
-    setIsSavingDistance(true);
-    let query = supabase
-      .from('course_route_images')
-      .update({
-        distance_km: value,
-        axis_start_km: startKm,
-        axis_end_km: endKm,
-        axis_left_pct: leftPct,
-        axis_right_pct: rightPct,
-      })
-      .eq('course_id', raceId);
-    query = selectedStage == null
-      ? query.is('etape_numero', null)
-      : query.eq('etape_numero', selectedStage);
-    const { error } = await query;
-    setIsSavingDistance(false);
-    if (error) {
-      toast.error("Enregistrement impossible", { description: error.message });
-      return;
-    }
-    toast.success("Réglages enregistrés");
-    loadExistingImages();
+    const ok = await persist({
+      distance_km: value,
+      axis_left_pct: handles.left,
+      axis_right_pct: handles.right,
+    });
+    if (ok) toast.success("Réglages enregistrés");
   };
 
-  const previewLeft = num(axis.leftPct);
-  const previewRight = num(axis.rightPct);
-  const previewStart = num(axis.startKm);
-  const previewEnd = num(axis.endKm);
+  const pctFromEvent = (clientX: number) => {
+    const el = previewRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0) return null;
+    return Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+  };
+
+  const onHandleMove = (e: React.PointerEvent) => {
+    const which = draggingRef.current;
+    if (!which) return;
+    const pct = pctFromEvent(e.clientX);
+    if (pct == null) return;
+    setHandles((h) =>
+      which === "left"
+        ? { ...h, left: Math.min(pct, h.right - 1) }
+        : { ...h, right: Math.max(pct, h.left + 1) }
+    );
+  };
+
+  const onHandleUp = async (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = null;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    await persist({ axis_left_pct: handles.left, axis_right_pct: handles.right });
+  };
+
   const previewTotal = num(distanceInput);
-  const previewDone = num(testKm) != null && !Number.isNaN(num(testKm)) && previewTotal
-    ? (previewTotal as number) - (num(testKm) as number)
-    : null;
+  const previewRemaining = num(testKm);
   const previewPct =
-    previewDone != null &&
-    previewLeft != null && !Number.isNaN(previewLeft) &&
-    previewRight != null && !Number.isNaN(previewRight) &&
-    previewStart != null && !Number.isNaN(previewStart) &&
-    previewEnd != null && !Number.isNaN(previewEnd) &&
-    (previewEnd as number) > (previewStart as number) &&
-    (previewRight as number) > (previewLeft as number)
-      ? Math.min(
-          previewRight as number,
-          Math.max(
-            previewLeft as number,
-            (previewLeft as number) +
-              ((previewDone - (previewStart as number)) / ((previewEnd as number) - (previewStart as number))) *
-                ((previewRight as number) - (previewLeft as number))
-          )
-        )
+    previewTotal != null && !Number.isNaN(previewTotal) && previewTotal > 0 &&
+    previewRemaining != null && !Number.isNaN(previewRemaining) &&
+    previewRemaining >= 0 && previewRemaining <= previewTotal
+      ? handles.left + ((previewTotal - previewRemaining) / previewTotal) * (handles.right - handles.left)
       : null;
 
   const distanceField = currentImage && (
     <div className="space-y-2 w-full">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <label className="text-xs text-muted-foreground whitespace-nowrap">
           Distance {selectedStage != null ? `Ét. ${selectedStage}` : ''} (km)
         </label>
@@ -197,30 +193,8 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           <Check className="h-3.5 w-3.5 mr-1" />
           Enregistrer
         </Button>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-2">
-        {[
-          { key: 'startKm' as const, label: 'km repère gauche', ph: 'ex. 61' },
-          { key: 'endKm' as const, label: 'km repère droit', ph: 'ex. 192,8' },
-          { key: 'leftPct' as const, label: 'position gauche (%)', ph: 'ex. 1' },
-          { key: 'rightPct' as const, label: 'position droite (%)', ph: 'ex. 96' },
-        ].map((f) => (
-          <div key={f.key} className="space-y-0.5">
-            <label className="block text-[10px] text-muted-foreground">{f.label}</label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              value={axis[f.key]}
-              onChange={(e) => setAxis((a) => ({ ...a, [f.key]: e.target.value }))}
-              placeholder={f.ph}
-              className="h-7 w-28 text-xs"
-            />
-          </div>
-        ))}
-        <div className="space-y-0.5">
-          <label className="block text-[10px] text-muted-foreground">km restants (test)</label>
+        <div className="flex items-center gap-1.5">
+          <label className="text-[10px] text-muted-foreground whitespace-nowrap">km restants (test)</label>
           <Input
             type="number"
             inputMode="decimal"
@@ -228,25 +202,44 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
             value={testKm}
             onChange={(e) => setTestKm(e.target.value)}
             placeholder="ex. 40,2"
-            className="h-7 w-28 text-xs"
+            className="h-7 w-24 text-xs"
           />
         </div>
       </div>
 
-      <div className="relative inline-block max-w-full">
-        <img src={currentImage.image_url} alt="Aperçu du calage" className="max-w-full h-auto rounded-md border" />
-        {previewLeft != null && !Number.isNaN(previewLeft) && (
-          <div className="absolute inset-y-0 w-px bg-muted-foreground" style={{ left: `${previewLeft}%` }} />
-        )}
-        {previewRight != null && !Number.isNaN(previewRight) && (
-          <div className="absolute inset-y-0 w-px bg-muted-foreground" style={{ left: `${previewRight}%` }} />
-        )}
+      <div
+        ref={previewRef}
+        className="relative inline-block max-w-full select-none"
+        style={{ touchAction: "none" }}
+        onPointerMove={onHandleMove}
+        onPointerUp={onHandleUp}
+        onPointerCancel={onHandleUp}
+      >
+        <img src={currentImage.image_url} alt="Aperçu du calage" className="max-w-full h-auto rounded-md border" draggable={false} />
+
+        {(["left", "right"] as const).map((which) => (
+          <div
+            key={which}
+            className="absolute inset-y-0 w-4 -translate-x-1/2 cursor-ew-resize flex justify-center"
+            style={{ left: `${which === "left" ? handles.left : handles.right}%` }}
+            onPointerDown={(e) => {
+              draggingRef.current = which;
+              (e.target as Element).setPointerCapture?.(e.pointerId);
+            }}
+          >
+            <div className="w-px h-full bg-muted-foreground" />
+            <div className="absolute -top-0.5 rounded-sm bg-muted-foreground px-1 text-[9px] font-semibold text-background">
+              {which === "left" ? "0" : "fin"}
+            </div>
+          </div>
+        ))}
+
         {previewPct != null && (
-          <div className="absolute inset-y-0 w-[2px] bg-primary" style={{ left: `${previewPct}%` }} />
+          <div className="absolute inset-y-0 w-[2px] bg-primary pointer-events-none" style={{ left: `${previewPct}%` }} />
         )}
       </div>
       <p className="text-[10px] text-muted-foreground">
-        Saisissez deux repères lus sur l'axe de l'image et leur position en % de la largeur. Le trait coloré montre le repère de course pour les km restants de test.
+        Glissez les deux poignées sur le départ (0 km) et l'arrivée du dessin. Saisissez des km restants de test pour vérifier le trait coloré.
       </p>
     </div>
   );

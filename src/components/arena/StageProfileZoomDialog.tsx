@@ -27,8 +27,6 @@ export const StageProfileZoomDialog = ({
   alt,
   kmRemaining,
   totalKm,
-  axisStartKm,
-  axisEndKm,
   axisLeftPct,
   axisRightPct,
 }: StageProfileZoomDialogProps) => {
@@ -172,8 +170,6 @@ export const StageProfileZoomDialog = ({
               <StageProgressOverlay
                 kmRemaining={kmRemaining}
                 totalKm={totalKm}
-                axisStartKm={axisStartKm}
-                axisEndKm={axisEndKm}
                 axisLeftPct={axisLeftPct}
                 axisRightPct={axisRightPct}
               />
