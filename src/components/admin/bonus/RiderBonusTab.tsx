@@ -391,6 +391,18 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     }
   };
 
+  const recalcScopeLabel = [
+    recalcCourseId === "all"
+      ? "toutes les courses"
+      : `course « ${(coursesMap.get(recalcCourseId) as any)?.nom || recalcCourseId} »`,
+    recalcEtape === "all"
+      ? "toutes les étapes"
+      : recalcEtape === "final"
+        ? "classements finaux uniquement"
+        : `étape ${recalcEtape}`,
+    recalcCoureur ? `coureur « ${recalcCoureur.nom || recalcCoureur.coureur_nom} »` : "tous les coureurs",
+  ].join(" · ");
+
   const handleRecalculate = async () => {
     if (!phaseId) {
       toast.error("Sélectionne une phase précise (pas « Toutes les phases ») pour lancer le recalcul.");
@@ -400,8 +412,15 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     setIsRecalculating(true);
     try {
       const { data, error } = await supabase.functions.invoke('recalculate-rider-bonuses', {
-        body: { phase_id: phaseId },
+        body: {
+          phase_id: phaseId,
+          course_id: recalcCourseId === "all" ? null : recalcCourseId,
+          etape_scope: recalcEtape === "all" ? "all" : recalcEtape === "final" ? "final" : "stage",
+          etape_numero: recalcEtape === "all" || recalcEtape === "final" ? null : Number(recalcEtape),
+          coureur_id: recalcCoureur ? (recalcCoureur.id || recalcCoureur.coureur_id) : null,
+        },
       });
+
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
