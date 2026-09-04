@@ -13,8 +13,6 @@ interface RouteImage {
   label: string | null;
   sort_order: number;
   distance_km: number | null;
-  axis_start_km: number | null;
-  axis_end_km: number | null;
   axis_left_pct: number | null;
   axis_right_pct: number | null;
 }
