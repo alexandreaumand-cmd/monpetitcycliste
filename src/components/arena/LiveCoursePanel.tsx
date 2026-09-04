@@ -9,6 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
+import { StageProgressOverlay } from "./StageProgressOverlay";
+
 import {
   useArenaMessages,
   useMessageReactions,
@@ -77,13 +79,14 @@ export const LiveCoursePanel = ({
     queryFn: async () => {
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", courseId);
       return data ?? [];
     },
     enabled: !!courseId,
     staleTime: 5 * 60 * 1000,
   });
+
 
   const activeEtape = selectedEtape ?? stageStatus.etape;
   const stageImage = useMemo(() => {
@@ -178,6 +181,19 @@ export const LiveCoursePanel = ({
   const situationUpdatedAt = liveSituationMatchesStage
     ? (liveSituationRow?.situation_updated_at as string | null)
     : null;
+
+  /** Distance totale : saisie admin, sinon plus grand « km restants » observé sur l'étape. */
+  const observedTotalKm = useMemo(() => {
+    let max: number | null = null;
+    for (const msg of filteredMessages) {
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [filteredMessages]);
+  const stageTotalKm = Number((stageImage as any)?.distance_km) || observedTotalKm;
+
+
 
   /** Kilométrage restant du dernier évènement de la timeline (parsé du texte « — à 106 km »). */
   const latestEventKm = useMemo(() => {
@@ -327,13 +343,20 @@ export const LiveCoursePanel = ({
           </div>
           <CollapsibleContent>
             <div className="p-2">
-              <img
-                src={stageImage.image_url}
-                alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted cursor-zoom-in"
-                loading="lazy"
-                onClick={() => setZoomOpen(true)}
-              />
+              <div className="relative inline-block max-w-full">
+                <img
+                  src={stageImage.image_url}
+                  alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+                  className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted cursor-zoom-in block"
+                  loading="lazy"
+                  onClick={() => setZoomOpen(true)}
+                />
+                <StageProgressOverlay
+                  kmRemaining={latestSituation?.kmRemaining}
+                  totalKm={stageTotalKm}
+                  compact
+                />
+              </div>
             </div>
 
           </CollapsibleContent>
@@ -349,8 +372,11 @@ export const LiveCoursePanel = ({
             .filter(Boolean)
             .join(" — ") || "Profil du parcours"}
           alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+          kmRemaining={latestSituation?.kmRemaining}
+          totalKm={stageTotalKm}
         />
       )}
+
 
       {/* Content: timeline + situation side by side */}
       <div className="flex flex-1 overflow-hidden min-h-0">

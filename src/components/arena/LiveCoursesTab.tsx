@@ -2,6 +2,8 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Image as ImageIcon, Route, Maximize2 } from "lucide-react";
 import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
+import { StageProgressOverlay } from "./StageProgressOverlay";
+
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -112,7 +114,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!activeCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", activeCourseId);
       return data ?? [];
     },
@@ -129,6 +131,19 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     }
     return routeImages.find((img) => img.etape_numero == null) ?? null;
   }, [routeImages, activeEtape]);
+
+  /** Distance totale : saisie admin, sinon plus grand « km restants » observé sur l'étape. */
+  const observedTotalKm = useMemo(() => {
+    let max: number | null = null;
+    for (const msg of filteredMessages) {
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [filteredMessages]);
+
+  const stageTotalKm = Number(stageImage?.distance_km) || observedTotalKm;
+
 
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
@@ -157,7 +172,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!desktopCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", desktopCourseId);
       return data ?? [];
     },
@@ -172,6 +187,44 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     }
     return desktopRouteImages.find((img) => img.etape_numero == null) ?? null;
   }, [desktopRouteImages, desktopStageStatus.etape]);
+
+  // Situation de course en direct pour le profil desktop (même clé de cache que le panneau)
+  const { data: desktopLiveSituationRow } = useQuery({
+    queryKey: ["arena-live-situation", desktopCourseId],
+    queryFn: async () => {
+      if (!desktopCourseId) return null;
+      const { data } = await supabase
+        .from("arena_live_courses")
+        .select("current_race_situation, situation_updated_at")
+        .eq("course_id", desktopCourseId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!desktopCourseId,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 5 * 1000,
+  });
+  const desktopKmRemaining = Number(
+    (desktopLiveSituationRow?.current_race_situation as any)?.kmRemaining
+  );
+  // Repli : plus grand « km restants » déjà diffusé sur cette course (messages déjà en cache)
+  const { data: desktopMessagesData } = useArenaMessages(channelId, leagueId, desktopCourseId);
+  const desktopObservedTotalKm = useMemo(() => {
+    const msgs = desktopMessagesData?.pages?.flatMap((p) => p.messages) ?? [];
+    let max: number | null = null;
+    for (const msg of msgs) {
+      const etape = (msg.metadata as any)?.etape_numero;
+      if (desktopStageStatus.etape != null && etape != null && etape !== desktopStageStatus.etape) continue;
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [desktopMessagesData, desktopStageStatus.etape]);
+  const desktopTotalKm = Number(desktopStageImage?.distance_km) || desktopObservedTotalKm;
+
+
 
   if (!managerId) {
     return (
@@ -337,15 +390,22 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-3">
-                    <img
-                      src={stageImage.image_url}
-                      alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
-                      className="w-full h-auto rounded-md border cursor-zoom-in"
-                      loading="lazy"
-                      onClick={() => setZoomOpen(true)}
-                    />
+                    <div className="relative">
+                      <img
+                        src={stageImage.image_url}
+                        alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
+                        className="w-full h-auto rounded-md border cursor-zoom-in block"
+                        loading="lazy"
+                        onClick={() => setZoomOpen(true)}
+                      />
+                      <StageProgressOverlay
+                        kmRemaining={latestSituation?.kmRemaining}
+                        totalKm={stageTotalKm}
+                      />
+                    </div>
                   </div>
                 </CollapsibleContent>
+
               </Collapsible>
             )}
             {stageImage && (
@@ -355,6 +415,9 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                 imageUrl={stageImage.image_url}
                 title={stageImage.etape_numero != null ? `Profil — Étape ${stageImage.etape_numero}` : "Profil du parcours"}
                 alt={stageImage.label || "Profil de l'étape"}
+                kmRemaining={latestSituation?.kmRemaining}
+                totalKm={stageTotalKm}
+
               />
             )}
 
@@ -464,13 +527,19 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 bg-background min-h-0">
               <div className="h-full p-2 flex items-center justify-center min-h-0">
-                <img
-                  src={desktopStageImage.image_url}
-                  alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
-                  className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted cursor-zoom-in"
-                  loading="lazy"
-                  onClick={() => setZoomOpen(true)}
-                />
+                <div className="relative max-w-full">
+                  <img
+                    src={desktopStageImage.image_url}
+                    alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
+                    className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted cursor-zoom-in block"
+                    loading="lazy"
+                    onClick={() => setZoomOpen(true)}
+                  />
+                  <StageProgressOverlay
+                    kmRemaining={desktopKmRemaining}
+                    totalKm={desktopTotalKm}
+                  />
+                </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -482,8 +551,11 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             imageUrl={desktopStageImage.image_url}
             title={desktopStageImage.etape_numero != null ? `Profil — Étape ${desktopStageImage.etape_numero}` : "Profil du parcours"}
             alt={desktopStageImage.label || "Profil de l'étape"}
+            kmRemaining={desktopKmRemaining}
+            totalKm={desktopTotalKm}
           />
         )}
+
       </div>
 
       {/* Panels */}

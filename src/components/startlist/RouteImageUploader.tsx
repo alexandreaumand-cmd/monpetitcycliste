@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Image as ImageIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Upload, Image as ImageIcon, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,9 @@ interface RouteImage {
   image_url: string;
   label: string | null;
   sort_order: number;
+  distance_km: number | null;
 }
+
 
 interface RouteImageUploaderProps {
   raceId: string;
@@ -25,7 +28,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const [isUploading, setIsUploading] = useState(false);
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
+  const [distanceInput, setDistanceInput] = useState("");
+  const [isSavingDistance, setIsSavingDistance] = useState(false);
   const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
+
 
   // Auto-detect stage race from course data if not provided as props
   useEffect(() => {
@@ -56,19 +62,73 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const totalStages = totalStagesProp ?? autoDetected?.totalStages ?? 0;
 
   useEffect(() => {
-    if (isStageRace) {
-      loadExistingImages();
-    }
-  }, [raceId, isStageRace]);
+    loadExistingImages();
+  }, [raceId]);
 
   const loadExistingImages = async () => {
     const { data } = await supabase
       .from('course_route_images')
-      .select('etape_numero, image_url, label, sort_order')
+      .select('etape_numero, image_url, label, sort_order, distance_km')
       .eq('course_id', raceId)
       .order('sort_order', { ascending: true });
     setExistingImages(data || []);
   };
+
+  // Distance de l'étape sélectionnée (sert à placer le repère d'avancée sur le profil)
+  const currentImage = existingImages.find((img) => img.etape_numero === selectedStage) ?? null;
+
+  useEffect(() => {
+    setDistanceInput(currentImage?.distance_km != null ? String(currentImage.distance_km) : "");
+  }, [currentImage?.distance_km, selectedStage]);
+
+  const saveDistance = async () => {
+    if (!currentImage) return;
+    const raw = distanceInput.trim().replace(',', '.');
+    const value = raw === "" ? null : Number(raw);
+    if (value != null && (!Number.isFinite(value) || value <= 0)) {
+      toast.error("Distance invalide");
+      return;
+    }
+    setIsSavingDistance(true);
+    let query = supabase
+      .from('course_route_images')
+      .update({ distance_km: value })
+      .eq('course_id', raceId);
+    query = selectedStage == null
+      ? query.is('etape_numero', null)
+      : query.eq('etape_numero', selectedStage);
+    const { error } = await query;
+    setIsSavingDistance(false);
+    if (error) {
+      toast.error("Enregistrement impossible", { description: error.message });
+      return;
+    }
+    toast.success("Distance enregistrée");
+    loadExistingImages();
+  };
+
+  const distanceField = currentImage && (
+    <div className="flex items-center gap-2">
+      <label className="text-xs text-muted-foreground whitespace-nowrap">
+        Distance {selectedStage != null ? `Ét. ${selectedStage}` : ''} (km)
+      </label>
+      <Input
+        type="number"
+        inputMode="decimal"
+        step="0.1"
+        min="0"
+        value={distanceInput}
+        onChange={(e) => setDistanceInput(e.target.value)}
+        placeholder="ex. 181,5"
+        className="h-7 w-28 text-xs"
+      />
+      <Button variant="outline" size="sm" className="h-7" onClick={saveDistance} disabled={isSavingDistance}>
+        <Check className="h-3.5 w-3.5 mr-1" />
+        Enregistrer
+      </Button>
+    </div>
+  );
+
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,7 +200,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   // Simple mode for one-day races
   if (!isStageRace) {
     return (
-      <div>
+      <div className="space-y-2">
         <input
           type="file"
           id={inputId}
@@ -157,8 +217,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? 'Téléchargement...' : currentImageUrl ? 'Modifier le parcours' : 'Ajouter le parcours'}
         </Button>
+        {distanceField}
       </div>
     );
+
   }
 
   // Multi-stage mode
@@ -203,7 +265,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
       </div>
 
       {/* Upload button for selected stage */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button
           variant="outline"
           size="sm"
@@ -214,7 +276,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           {isUploading ? 'Téléchargement...' : getImageForStage(selectedStage) ? 'Remplacer' : 'Ajouter'}
           {selectedStage !== null ? ` Ét. ${selectedStage}` : ' Vue d\'ensemble'}
         </Button>
+        {distanceField}
       </div>
+
+
 
       {/* Thumbnails of existing images */}
       {existingImages.length > 0 && (

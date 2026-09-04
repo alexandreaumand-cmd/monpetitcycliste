@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { StageProgressOverlay } from "./StageProgressOverlay";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
@@ -14,6 +15,8 @@ interface StageProfileZoomDialogProps {
   imageUrl: string;
   title: string;
   alt: string;
+  kmRemaining?: number | null;
+  totalKm?: number | null;
 }
 
 export const StageProfileZoomDialog = ({
@@ -22,7 +25,10 @@ export const StageProfileZoomDialog = ({
   imageUrl,
   title,
   alt,
+  kmRemaining,
+  totalKm,
 }: StageProfileZoomDialogProps) => {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -145,19 +151,23 @@ export const StageProfileZoomDialog = ({
           onDoubleClick={() => (zoom > 1 ? reset() : zoomButton(2))}
         >
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 flex items-center justify-center"
             style={{
               transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
               transformOrigin: "0 0",
             }}
           >
-            <img
-              src={imageUrl}
-              alt={alt}
-              draggable={false}
-              className="w-full h-full object-contain"
-            />
+            <div className="relative max-w-full max-h-full">
+              <img
+                src={imageUrl}
+                alt={alt}
+                draggable={false}
+                className="max-w-full max-h-full object-contain block"
+              />
+              <StageProgressOverlay kmRemaining={kmRemaining} totalKm={totalKm} />
+            </div>
           </div>
+
         </div>
       </DialogContent>
     </Dialog>

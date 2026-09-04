@@ -2244,6 +2244,7 @@ export type Database = {
         Row: {
           course_id: string
           created_at: string
+          distance_km: number | null
           etape_numero: number | null
           id: string
           image_url: string
@@ -2253,6 +2254,7 @@ export type Database = {
         Insert: {
           course_id: string
           created_at?: string
+          distance_km?: number | null
           etape_numero?: number | null
           id?: string
           image_url: string
@@ -2262,6 +2264,7 @@ export type Database = {
         Update: {
           course_id?: string
           created_at?: string
+          distance_km?: number | null
           etape_numero?: number | null
           id?: string
           image_url?: string
