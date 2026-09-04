@@ -895,8 +895,17 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
       {/* Bonuses Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Bonus Coureur attribués</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFiltersAndSort}
+            disabled={!filterCoureur && !filterCourse && !filterPointsMin && !filterPointsMax && filterPhase === "all" && filterEtape === "all" && sortColumn === "points" && sortDirection === "desc"}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Réinitialiser
+          </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -912,70 +921,172 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Coureur</TableHead>
-                  <TableHead>Équipe</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Ligue</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  <TableHead>Commentaire</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="align-top">Type</TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("coureur")}
+                        className="flex items-center font-semibold"
+                      >
+                        Coureur <SortIcon column="coureur" />
+                      </button>
+                      <Input
+                        placeholder="Filtrer..."
+                        value={filterCoureur}
+                        onChange={(e) => setFilterCoureur(e.target.value)}
+                        className="mt-1 h-7 text-xs"
+                      />
+                    </TableHead>
+                    <TableHead className="align-top">Équipe</TableHead>
+                    <TableHead className="align-top">Manager</TableHead>
+                    <TableHead className="align-top">Ligue</TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("phase")}
+                        className="flex items-center font-semibold"
+                      >
+                        Phase <SortIcon column="phase" />
+                      </button>
+                      <Select value={filterPhase} onValueChange={setFilterPhase}>
+                        <SelectTrigger className="mt-1 h-7 text-xs">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          {phasesFromBonuses.map((label: string) => (
+                            <SelectItem key={label} value={label}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("etape")}
+                        className="flex items-center font-semibold"
+                      >
+                        Étape <SortIcon column="etape" />
+                      </button>
+                      <Select value={filterEtape} onValueChange={setFilterEtape}>
+                        <SelectTrigger className="mt-1 h-7 text-xs">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          <SelectItem value="final">Classements finaux</SelectItem>
+                          {etapesFromBonuses.map((n: number) => (
+                            <SelectItem key={n} value={String(n)}>Étape {n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("course")}
+                        className="flex items-center font-semibold"
+                      >
+                        Course <SortIcon column="course" />
+                      </button>
+                      <Input
+                        placeholder="Filtrer..."
+                        value={filterCourse}
+                        onChange={(e) => setFilterCourse(e.target.value)}
+                        className="mt-1 h-7 text-xs"
+                      />
+                    </TableHead>
+                    <TableHead className="text-right align-top">
+                      <button
+                        onClick={() => handleSort("points")}
+                        className="flex items-center justify-end w-full font-semibold"
+                      >
+                        Points <SortIcon column="points" />
+                      </button>
+                      <div className="flex gap-1 mt-1">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          value={filterPointsMin}
+                          onChange={(e) => setFilterPointsMin(e.target.value)}
+                          className="h-7 text-xs w-1/2"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          value={filterPointsMax}
+                          onChange={(e) => setFilterPointsMax(e.target.value)}
+                          className="h-7 text-xs w-1/2"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead className="align-top">Commentaire</TableHead>
+                    <TableHead className="text-right align-top">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bonuses?.map((bonus: any) => (
-                    <TableRow key={bonus.id}>
-                      <TableCell>
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          {getBonusIcon(bonus.bonus_type)}
-                          {getBonusLabel(bonus.bonus_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {bonus.coureur?.nom || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>{bonus.manager?.nom || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">{bonus.league_name || '—'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {bonus.course_id
-                          ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
-                          : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                        {bonus.commentaire || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(bonus)}
-                          >
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBonusToDelete(bonus.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                  {filteredAndSortedBonuses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        Aucun résultat ne correspond aux filtres
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredAndSortedBonuses.map((bonus: any) => (
+                      <TableRow key={bonus.id}>
+                        <TableCell>
+                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                            {getBonusIcon(bonus.bonus_type)}
+                            {getBonusLabel(bonus.bonus_type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {bonus.coureur?.nom || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>{bonus.manager?.nom || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">{bonus.league_name || '—'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{bonus.phase_label || '—'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {bonus.etape_numero != null ? `Étape ${bonus.etape_numero}` : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {bonus.course_id
+                            ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                          {bonus.commentaire || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(bonus)}
+                            >
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setBonusToDelete(bonus.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
