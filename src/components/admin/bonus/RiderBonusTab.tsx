@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw, Check, ChevronsUpDown, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from "lucide-react";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +50,41 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   const [recalcCoursePopoverOpen, setRecalcCoursePopoverOpen] = useState(false);
   const [recalcEtape, setRecalcEtape] = useState<string>("all"); // 'all' | 'final' | numéro
   const [recalcCoureur, setRecalcCoureur] = useState<any>(null);
+
+  // Table filters and sort
+  const [filterCoureur, setFilterCoureur] = useState("");
+  const [filterCourse, setFilterCourse] = useState("");
+  const [filterPointsMin, setFilterPointsMin] = useState("");
+  const [filterPointsMax, setFilterPointsMax] = useState("");
+  const [filterPhase, setFilterPhase] = useState<string>("all");
+  const [filterEtape, setFilterEtape] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<string | null>("points");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const resetFiltersAndSort = () => {
+    setFilterCoureur("");
+    setFilterCourse("");
+    setFilterPointsMin("");
+    setFilterPointsMax("");
+    setFilterPhase("all");
+    setFilterEtape("all");
+    setSortColumn("points");
+    setSortDirection("desc");
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    return sortDirection === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
 
   // Form state
@@ -137,9 +172,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           manager_id,
           course_id,
           league_id,
+          etape_numero,
           created_at,
           coureur:coureurs!bonus_points_coureur_id_fkey(id, nom),
-          manager:managers!bonus_points_manager_id_fkey(id, nom)
+          manager:managers!bonus_points_manager_id_fkey(id, nom),
+          phase:phases!bonus_points_phase_id_fkey(id, index_dans_saison)
         `)
         .eq("phase_id", phaseId)
         .in("bonus_type", ['first_win', 'coureur_bonuse', 'itt'])
@@ -165,20 +202,31 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           if (bonus.coureur_id) {
             const { data: seasonData } = await supabase
               .from("coureurs_saisons")
-              .select(`
-                equipes_saisons!coureurs_saisons_equipe_id_fkey(nom_affiche, trigramme)
-              `)
+              .select("equipe_id")
               .eq("coureur_id", bonus.coureur_id)
               .eq("saison_id", saisonId)
               .maybeSingle();
 
-            equipe = (seasonData?.equipes_saisons as any)?.trigramme || 
-                    (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A';
+            if (seasonData?.equipe_id) {
+              const { data: equipeSaisonData } = await supabase
+                .from("equipes_saisons")
+                .select("nom_affiche, trigramme")
+                .eq("equipe_id", seasonData.equipe_id)
+                .eq("saison_id", saisonId)
+                .maybeSingle();
+
+              equipe = equipeSaisonData?.trigramme || equipeSaisonData?.nom_affiche || 'N/A';
+            }
           }
+
+          const phaseObj = bonus.phase as any;
+          const phaseIndex = phaseObj?.index_dans_saison ?? null;
 
           return {
             ...bonus,
             equipe,
+            phase_index: phaseIndex,
+            phase_label: phaseIndex ? `P${phaseIndex}` : '—',
             league_name: bonus.league_id ? (leaguesMap.get(bonus.league_id) || '—') : '—'
           };
         })
@@ -188,6 +236,108 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     },
     enabled: !!phaseId,
   });
+
+  // Derived phases and stages lists from bonuses for filters
+  const phasesFromBonuses = useMemo(() => {
+    if (!bonuses) return [];
+    const map = new Map<number, string>();
+    bonuses.forEach((b: any) => {
+      if (b.phase_index != null && !map.has(b.phase_index)) {
+        map.set(b.phase_index, b.phase_label);
+      }
+    });
+    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([_, label]) => label);
+  }, [bonuses]);
+
+  const etapesFromBonuses = useMemo(() => {
+    if (!bonuses) return [];
+    const set = new Set<number>();
+    bonuses.forEach((b: any) => {
+      if (b.etape_numero != null) set.add(Number(b.etape_numero));
+    });
+    return [...set].sort((a, b) => a - b);
+  }, [bonuses]);
+
+  const filteredAndSortedBonuses = useMemo(() => {
+    if (!bonuses) return [];
+
+    let result = [...bonuses];
+
+    // Filters
+    if (filterCoureur.trim()) {
+      const search = filterCoureur.toLowerCase();
+      result = result.filter((b: any) => b.coureur?.nom?.toLowerCase().includes(search));
+    }
+
+    if (filterCourse.trim()) {
+      const search = filterCourse.toLowerCase();
+      result = result.filter((b: any) => {
+        const courseName = b.course_id ? (coursesMap.get(b.course_id)?.nom || b.course_id) : '';
+        return courseName.toLowerCase().includes(search);
+      });
+    }
+
+    if (filterPointsMin.trim()) {
+      const min = parseFloat(filterPointsMin);
+      if (!isNaN(min)) result = result.filter((b: any) => Number(b.points) >= min);
+    }
+
+    if (filterPointsMax.trim()) {
+      const max = parseFloat(filterPointsMax);
+      if (!isNaN(max)) result = result.filter((b: any) => Number(b.points) <= max);
+    }
+
+    if (filterPhase !== "all") {
+      result = result.filter((b: any) => b.phase_label === filterPhase);
+    }
+
+    if (filterEtape !== "all") {
+      if (filterEtape === "final") {
+        result = result.filter((b: any) => b.etape_numero == null);
+      } else {
+        result = result.filter((b: any) => b.etape_numero != null && String(b.etape_numero) === filterEtape);
+      }
+    }
+
+    // Sort
+    if (sortColumn) {
+      result.sort((a: any, b: any) => {
+        let aVal: any;
+        let bVal: any;
+
+        switch (sortColumn) {
+          case "coureur":
+            aVal = a.coureur?.nom || '';
+            bVal = b.coureur?.nom || '';
+            break;
+          case "course":
+            aVal = a.course_id ? (coursesMap.get(a.course_id)?.nom || a.course_id) : '';
+            bVal = b.course_id ? (coursesMap.get(b.course_id)?.nom || b.course_id) : '';
+            break;
+          case "points":
+            aVal = Number(a.points);
+            bVal = Number(b.points);
+            break;
+          case "phase":
+            aVal = a.phase_index ?? -1;
+            bVal = b.phase_index ?? -1;
+            break;
+          case "etape":
+            aVal = a.etape_numero ?? -1;
+            bVal = b.etape_numero ?? -1;
+            break;
+          default:
+            return 0;
+        }
+
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [bonuses, filterCoureur, filterCourse, filterPointsMin, filterPointsMax, filterPhase, filterEtape, sortColumn, sortDirection, coursesMap]);
 
   const resetForm = () => {
     setBonusType("");
@@ -751,8 +901,17 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
       {/* Bonuses Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Bonus Coureur attribués</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFiltersAndSort}
+            disabled={!filterCoureur && !filterCourse && !filterPointsMin && !filterPointsMax && filterPhase === "all" && filterEtape === "all" && sortColumn === "points" && sortDirection === "desc"}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Réinitialiser
+          </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -768,70 +927,172 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Coureur</TableHead>
-                  <TableHead>Équipe</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Ligue</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  <TableHead>Commentaire</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="align-top">Type</TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("coureur")}
+                        className="flex items-center font-semibold"
+                      >
+                        Coureur <SortIcon column="coureur" />
+                      </button>
+                      <Input
+                        placeholder="Filtrer..."
+                        value={filterCoureur}
+                        onChange={(e) => setFilterCoureur(e.target.value)}
+                        className="mt-1 h-7 text-xs"
+                      />
+                    </TableHead>
+                    <TableHead className="align-top">Équipe</TableHead>
+                    <TableHead className="align-top">Manager</TableHead>
+                    <TableHead className="align-top">Ligue</TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("phase")}
+                        className="flex items-center font-semibold"
+                      >
+                        Phase <SortIcon column="phase" />
+                      </button>
+                      <Select value={filterPhase} onValueChange={setFilterPhase}>
+                        <SelectTrigger className="mt-1 h-7 text-xs">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          {phasesFromBonuses.map((label: string) => (
+                            <SelectItem key={label} value={label}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("etape")}
+                        className="flex items-center font-semibold"
+                      >
+                        Étape <SortIcon column="etape" />
+                      </button>
+                      <Select value={filterEtape} onValueChange={setFilterEtape}>
+                        <SelectTrigger className="mt-1 h-7 text-xs">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          <SelectItem value="final">Classements finaux</SelectItem>
+                          {etapesFromBonuses.map((n: number) => (
+                            <SelectItem key={n} value={String(n)}>Étape {n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="align-top">
+                      <button
+                        onClick={() => handleSort("course")}
+                        className="flex items-center font-semibold"
+                      >
+                        Course <SortIcon column="course" />
+                      </button>
+                      <Input
+                        placeholder="Filtrer..."
+                        value={filterCourse}
+                        onChange={(e) => setFilterCourse(e.target.value)}
+                        className="mt-1 h-7 text-xs"
+                      />
+                    </TableHead>
+                    <TableHead className="text-right align-top">
+                      <button
+                        onClick={() => handleSort("points")}
+                        className="flex items-center justify-end w-full font-semibold"
+                      >
+                        Points <SortIcon column="points" />
+                      </button>
+                      <div className="flex gap-1 mt-1">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          value={filterPointsMin}
+                          onChange={(e) => setFilterPointsMin(e.target.value)}
+                          className="h-7 text-xs w-1/2"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          value={filterPointsMax}
+                          onChange={(e) => setFilterPointsMax(e.target.value)}
+                          className="h-7 text-xs w-1/2"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead className="align-top">Commentaire</TableHead>
+                    <TableHead className="text-right align-top">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bonuses?.map((bonus: any) => (
-                    <TableRow key={bonus.id}>
-                      <TableCell>
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          {getBonusIcon(bonus.bonus_type)}
-                          {getBonusLabel(bonus.bonus_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {bonus.coureur?.nom || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>{bonus.manager?.nom || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">{bonus.league_name || '—'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {bonus.course_id
-                          ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
-                          : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                        {bonus.commentaire || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(bonus)}
-                          >
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBonusToDelete(bonus.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                  {filteredAndSortedBonuses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        Aucun résultat ne correspond aux filtres
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredAndSortedBonuses.map((bonus: any) => (
+                      <TableRow key={bonus.id}>
+                        <TableCell>
+                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                            {getBonusIcon(bonus.bonus_type)}
+                            {getBonusLabel(bonus.bonus_type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {bonus.coureur?.nom || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{bonus.equipe || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>{bonus.manager?.nom || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">{bonus.league_name || '—'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{bonus.phase_label || '—'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {bonus.etape_numero != null ? `Étape ${bonus.etape_numero}` : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {bonus.course_id
+                            ? ((coursesMap.get(bonus.course_id) as any)?.nom || bonus.course_id)
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge>{bonus.points > 0 ? `+${bonus.points}` : bonus.points}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                          {bonus.commentaire || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(bonus)}
+                            >
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setBonusToDelete(bonus.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
