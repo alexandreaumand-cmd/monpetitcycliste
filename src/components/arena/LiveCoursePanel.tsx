@@ -79,7 +79,7 @@ export const LiveCoursePanel = ({
     queryFn: async () => {
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label, distance_km")
+        .select("etape_numero, image_url, label, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct")
         .eq("course_id", courseId);
       return data ?? [];
     },
