@@ -207,7 +207,21 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const desktopKmRemaining = Number(
     (desktopLiveSituationRow?.current_race_situation as any)?.kmRemaining
   );
-  const desktopTotalKm = Number(desktopStageImage?.distance_km) || null;
+  // Repli : plus grand « km restants » déjà diffusé sur cette course (messages déjà en cache)
+  const { data: desktopMessagesData } = useArenaMessages(channelId, leagueId, desktopCourseId);
+  const desktopObservedTotalKm = useMemo(() => {
+    const msgs = desktopMessagesData?.pages?.flatMap((p) => p.messages) ?? [];
+    let max: number | null = null;
+    for (const msg of msgs) {
+      const etape = (msg.metadata as any)?.etape_numero;
+      if (desktopStageStatus.etape != null && etape != null && etape !== desktopStageStatus.etape) continue;
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [desktopMessagesData, desktopStageStatus.etape]);
+  const desktopTotalKm = Number(desktopStageImage?.distance_km) || desktopObservedTotalKm;
+
 
 
   if (!managerId) {
