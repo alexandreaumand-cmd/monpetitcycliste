@@ -270,6 +270,10 @@ Deno.serve(async (req) => {
       payload_json: JSON.stringify({
         phase_id,
         coureur_id: coureur_id || 'all',
+        course_id: course_id || 'all',
+        etape_scope: etape_scope || 'all',
+        etape_numero: scopeStage ? stageNum : null,
+        scope: scopeLabel,
         selections_count: selections.length,
         bonuses_created: bonusesCreated,
         total_before: totalBefore,
@@ -280,7 +284,7 @@ Deno.serve(async (req) => {
     const variation = totalAfter - totalBefore;
     const variationLabel = variation >= 0 ? `+${variation.toFixed(2)}` : variation.toFixed(2);
 
-    console.log(`Recalculation complete: ${bonusesCreated} bonuses (${totalBefore.toFixed(2)} -> ${totalAfter.toFixed(2)}, ${variationLabel})`);
+    console.log(`Recalculation complete: ${bonusesCreated} bonuses (${totalBefore.toFixed(2)} -> ${totalAfter.toFixed(2)}, ${variationLabel}) [${scopeLabel}]`);
 
     return new Response(
       JSON.stringify({
@@ -291,9 +295,11 @@ Deno.serve(async (req) => {
         total_after: totalAfter,
         variation,
         selections_processed: selections.length,
+        scope: scopeLabel,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
 
   } catch (error) {
     console.error('Error in recalculate-rider-bonuses:', error);
