@@ -38,6 +38,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   // Multi-select for desktop (max 2)
   const [activeCourseIds, setActiveCourseIds] = useState<string[]>([]);
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: managerId } = useCurrentManagerId();
