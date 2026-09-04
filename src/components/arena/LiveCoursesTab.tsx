@@ -525,13 +525,19 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 bg-background min-h-0">
               <div className="h-full p-2 flex items-center justify-center min-h-0">
-                <img
-                  src={desktopStageImage.image_url}
-                  alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
-                  className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted cursor-zoom-in"
-                  loading="lazy"
-                  onClick={() => setZoomOpen(true)}
-                />
+                <div className="relative max-w-full">
+                  <img
+                    src={desktopStageImage.image_url}
+                    alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
+                    className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted cursor-zoom-in block"
+                    loading="lazy"
+                    onClick={() => setZoomOpen(true)}
+                  />
+                  <StageProgressOverlay
+                    kmRemaining={desktopKmRemaining}
+                    totalKm={desktopTotalKm}
+                  />
+                </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -543,8 +549,11 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             imageUrl={desktopStageImage.image_url}
             title={desktopStageImage.etape_numero != null ? `Profil — Étape ${desktopStageImage.etape_numero}` : "Profil du parcours"}
             alt={desktopStageImage.label || "Profil de l'étape"}
+            kmRemaining={desktopKmRemaining}
+            totalKm={desktopTotalKm}
           />
         )}
+
       </div>
 
       {/* Panels */}
