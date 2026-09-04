@@ -46,6 +46,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   // Recalculate state
   const [recalculateDialogOpen, setRecalculateDialogOpen] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalcCourseId, setRecalcCourseId] = useState<string>("all");
+  const [recalcCoursePopoverOpen, setRecalcCoursePopoverOpen] = useState(false);
+  const [recalcEtape, setRecalcEtape] = useState<string>("all"); // 'all' | 'final' | numéro
+  const [recalcCoureur, setRecalcCoureur] = useState<any>(null);
+
 
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
