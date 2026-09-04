@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Trash2, Loader2, Trophy, Star, Timer, Pencil, RefreshCw, Check, ChevronsUpDown, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from "lucide-react";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { cn } from "@/lib/utils";
 
