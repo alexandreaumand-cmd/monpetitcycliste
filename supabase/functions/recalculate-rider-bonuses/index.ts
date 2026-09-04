@@ -60,7 +60,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phase_id, coureur_id } = await req.json();
+    const body = await req.json();
+    const {
+      phase_id,
+      coureur_id,
+      course_id,
+      etape_numero,
+      etape_scope, // 'all' | 'stage' | 'final'
+    } = body ?? {};
 
     if (!phase_id) {
       return new Response(
@@ -69,7 +76,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Recalculating rider bonuses for phase ${phase_id}${coureur_id ? ` (coureur: ${coureur_id})` : ' (all riders)'}`);
+    const scopeStage = etape_scope === 'stage' && Number.isFinite(Number(etape_numero));
+    const scopeFinal = etape_scope === 'final';
+    const stageNum = scopeStage ? Number(etape_numero) : null;
+
+    const scopeLabel = [
+      course_id ? `course=${course_id}` : 'toutes courses',
+      scopeStage ? `etape=${stageNum}` : scopeFinal ? 'classements finaux' : 'toutes etapes',
+      coureur_id ? `coureur=${coureur_id}` : 'tous coureurs',
+    ].join(' / ');
+
+    console.log(`Recalculating rider bonuses for phase ${phase_id} [${scopeLabel}]`);
+
 
     // 1. Get bonus_rider_selections for this phase
     let selectionsQuery = supabase
@@ -127,28 +145,40 @@ Deno.serve(async (req) => {
     for (const selection of selections) {
       const { coureur_id: riderId, manager_id: managerId, league_id: leagueId } = selection;
 
-      // 2a. Get existing bonuses for this coureur/manager/league/phase to calculate total_before
-      const { data: existingBonuses } = await supabase
-        .from('bonus_points')
-        .select('id, points')
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId)
-        .eq('manager_id', managerId)
-        .eq('league_id', leagueId)
-        .eq('bonus_type', 'coureur_bonuse');
+      // Helper: applique le périmètre (course / étape) à une requête bonus_points ou points_ledger
+      const applyScope = (q: any) => {
+        if (course_id) q = q.eq('course_id', course_id);
+        if (scopeStage) q = q.eq('etape_numero', stageNum);
+        if (scopeFinal) q = q.is('etape_numero', null);
+        return q;
+      };
+
+      // 2a. Get existing bonuses in scope for this coureur/manager/league/phase (total_before)
+      const { data: existingBonuses } = await applyScope(
+        supabase
+          .from('bonus_points')
+          .select('id, points')
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+          .eq('manager_id', managerId)
+          .eq('league_id', leagueId)
+          .eq('bonus_type', 'coureur_bonuse')
+      );
 
       const existingTotal = (existingBonuses || []).reduce((sum, b) => sum + Number(b.points), 0);
       totalBefore += existingTotal;
 
-      // 2b. Delete existing coureur_bonuse for this coureur/manager/league/phase
-      const { error: deleteError } = await supabase
-        .from('bonus_points')
-        .delete()
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId)
-        .eq('manager_id', managerId)
-        .eq('league_id', leagueId)
-        .eq('bonus_type', 'coureur_bonuse');
+      // 2b. Delete existing coureur_bonuse in scope only
+      const { error: deleteError } = await applyScope(
+        supabase
+          .from('bonus_points')
+          .delete()
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+          .eq('manager_id', managerId)
+          .eq('league_id', leagueId)
+          .eq('bonus_type', 'coureur_bonuse')
+      );
 
       if (deleteError) {
         console.error(`Error deleting bonuses for rider ${riderId}:`, deleteError);
@@ -162,12 +192,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 2c. Get all points_ledger entries for this coureur/phase
-      const { data: ledgerEntries, error: ledgerError } = await supabase
-        .from('points_ledger')
-        .select('id, points, course_id, type_classement, etape_numero')
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId);
+      // 2c. Get points_ledger entries in scope for this coureur/phase
+      const { data: ledgerEntries, error: ledgerError } = await applyScope(
+        supabase
+          .from('points_ledger')
+          .select('id, points, course_id, type_classement, etape_numero')
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+      );
 
       if (ledgerError) {
         console.error(`Error fetching ledger for rider ${riderId}:`, ledgerError);
@@ -175,14 +207,14 @@ Deno.serve(async (req) => {
       }
 
       if (!ledgerEntries || ledgerEntries.length === 0) {
-        console.log(`No ledger entries for rider ${riderId} in phase ${phase_id}`);
+        console.log(`No ledger entries for rider ${riderId} in phase ${phase_id} [${scopeLabel}]`);
         continue;
       }
 
       // 2d. Calculate 25% for each entry within league scope and insert
       const bonusInserts = ledgerEntries
-        .filter(entry => Number(entry.points) > 0 && scopeCourses.has(entry.course_id))
-        .map(entry => {
+        .filter((entry: any) => Number(entry.points) > 0 && scopeCourses.has(entry.course_id))
+        .map((entry: any) => {
           const bonusPoints = Math.round(Number(entry.points) * 0.25 * 100) / 100;
           const etapeLabel = entry.etape_numero ? ` Etape ${entry.etape_numero}` : '';
           return {
@@ -190,6 +222,9 @@ Deno.serve(async (req) => {
             coureur_id: riderId,
             manager_id: managerId,
             league_id: leagueId,
+            course_id: entry.course_id,
+            etape_numero: entry.etape_numero ?? null,
+            type_classement: entry.type_classement ?? null,
             bonus_type: 'coureur_bonuse',
             points: bonusPoints,
             commentaire: `Bonus coureur automatique (25%) - ${entry.course_id} - ${entry.type_classement}${etapeLabel} [recalculé]`,
@@ -197,6 +232,7 @@ Deno.serve(async (req) => {
             target_manager_id: null,
           };
         });
+
 
       if (bonusInserts.length > 0) {
         const { error: insertError } = await supabase
@@ -234,6 +270,10 @@ Deno.serve(async (req) => {
       payload_json: JSON.stringify({
         phase_id,
         coureur_id: coureur_id || 'all',
+        course_id: course_id || 'all',
+        etape_scope: etape_scope || 'all',
+        etape_numero: scopeStage ? stageNum : null,
+        scope: scopeLabel,
         selections_count: selections.length,
         bonuses_created: bonusesCreated,
         total_before: totalBefore,
@@ -244,7 +284,7 @@ Deno.serve(async (req) => {
     const variation = totalAfter - totalBefore;
     const variationLabel = variation >= 0 ? `+${variation.toFixed(2)}` : variation.toFixed(2);
 
-    console.log(`Recalculation complete: ${bonusesCreated} bonuses (${totalBefore.toFixed(2)} -> ${totalAfter.toFixed(2)}, ${variationLabel})`);
+    console.log(`Recalculation complete: ${bonusesCreated} bonuses (${totalBefore.toFixed(2)} -> ${totalAfter.toFixed(2)}, ${variationLabel}) [${scopeLabel}]`);
 
     return new Response(
       JSON.stringify({
@@ -255,9 +295,11 @@ Deno.serve(async (req) => {
         total_after: totalAfter,
         variation,
         selections_processed: selections.length,
+        scope: scopeLabel,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
 
   } catch (error) {
     console.error('Error in recalculate-rider-bonuses:', error);

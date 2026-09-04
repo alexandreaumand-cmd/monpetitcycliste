@@ -46,6 +46,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   // Recalculate state
   const [recalculateDialogOpen, setRecalculateDialogOpen] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalcCourseId, setRecalcCourseId] = useState<string>("all");
+  const [recalcCoursePopoverOpen, setRecalcCoursePopoverOpen] = useState(false);
+  const [recalcEtape, setRecalcEtape] = useState<string>("all"); // 'all' | 'final' | numéro
+  const [recalcCoureur, setRecalcCoureur] = useState<any>(null);
+
 
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
@@ -98,6 +103,24 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   });
 
   const coursesMap = new Map(courses.map((c: any) => [c.id, c]));
+
+  // Étapes disponibles (depuis le ledger) pour la course choisie dans le recalcul
+  const { data: recalcEtapes = [] } = useQuery({
+    queryKey: ["recalc-etapes", phaseId, recalcCourseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("points_ledger")
+        .select("etape_numero")
+        .eq("phase_id", phaseId)
+        .eq("course_id", recalcCourseId)
+        .not("etape_numero", "is", null);
+      if (error) throw error;
+      const set = new Set<number>((data || []).map((r: any) => Number(r.etape_numero)));
+      return [...set].sort((a, b) => a - b);
+    },
+    enabled: !!phaseId && recalcCourseId !== "all",
+  });
+
 
   // Fetch existing rider bonuses
   const { data: bonuses, isLoading } = useQuery({
@@ -368,6 +391,18 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     }
   };
 
+  const recalcScopeLabel = [
+    recalcCourseId === "all"
+      ? "toutes les courses"
+      : `course « ${(coursesMap.get(recalcCourseId) as any)?.nom || recalcCourseId} »`,
+    recalcEtape === "all"
+      ? "toutes les étapes"
+      : recalcEtape === "final"
+        ? "classements finaux uniquement"
+        : `étape ${recalcEtape}`,
+    recalcCoureur ? `coureur « ${recalcCoureur.nom || recalcCoureur.coureur_nom} »` : "tous les coureurs",
+  ].join(" · ");
+
   const handleRecalculate = async () => {
     if (!phaseId) {
       toast.error("Sélectionne une phase précise (pas « Toutes les phases ») pour lancer le recalcul.");
@@ -377,8 +412,15 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
     setIsRecalculating(true);
     try {
       const { data, error } = await supabase.functions.invoke('recalculate-rider-bonuses', {
-        body: { phase_id: phaseId },
+        body: {
+          phase_id: phaseId,
+          course_id: recalcCourseId === "all" ? null : recalcCourseId,
+          etape_scope: recalcEtape === "all" ? "all" : recalcEtape === "final" ? "final" : "stage",
+          etape_numero: recalcEtape === "all" || recalcEtape === "final" ? null : Number(recalcEtape),
+          coureur_id: recalcCoureur ? (recalcCoureur.id || recalcCoureur.coureur_id) : null,
+        },
       });
+
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -420,11 +462,118 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
             Recalcul des bonus coureur (+25%)
           </CardTitle>
           <CardDescription>
-            Recalcule tous les bonus « Coureur Bonusé » pour cette phase en se basant sur les points actuels du ledger.
-            Les anciens bonus sont supprimés et régénérés avec les montants corrects (25% des points).
+            Recalcule les bonus « Coureur Bonusé » à partir des points actuels du ledger.
+            Par défaut, toute la phase est traitée ; tu peux restreindre le périmètre à une course,
+            une étape précise ou un seul coureur. Seuls les bonus du périmètre choisi sont supprimés puis régénérés.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Course */}
+            <div className="space-y-2">
+              <Label>Course</Label>
+              <Popover open={recalcCoursePopoverOpen} onOpenChange={setRecalcCoursePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                    disabled={!phaseId}
+                  >
+                    <span className="truncate">
+                      {recalcCourseId === "all"
+                        ? "Toutes les courses"
+                        : (coursesMap.get(recalcCourseId) as any)?.nom || recalcCourseId}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Rechercher une course..." />
+                    <CommandList>
+                      <CommandEmpty>Aucune course trouvée</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="toutes les courses"
+                          onSelect={() => {
+                            setRecalcCourseId("all");
+                            setRecalcEtape("all");
+                            setRecalcCoursePopoverOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", recalcCourseId === "all" ? "opacity-100" : "opacity-0")} />
+                          Toutes les courses
+                        </CommandItem>
+                        {courses.map((c: any) => (
+                          <CommandItem
+                            key={c.id}
+                            value={`${c.nom} ${c.id}`}
+                            onSelect={() => {
+                              setRecalcCourseId(c.id);
+                              setRecalcEtape("all");
+                              setRecalcCoursePopoverOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", recalcCourseId === c.id ? "opacity-100" : "opacity-0")} />
+                            <span className="flex-1 truncate">{c.nom}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Étape */}
+            <div className="space-y-2">
+              <Label>Étape</Label>
+              <Select
+                value={recalcEtape}
+                onValueChange={setRecalcEtape}
+                disabled={recalcCourseId === "all"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Toutes les étapes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les étapes</SelectItem>
+                  <SelectItem value="final">Classements finaux</SelectItem>
+                  {recalcEtapes.map((n: number) => (
+                    <SelectItem key={n} value={String(n)}>Étape {n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {recalcCourseId !== "all" && recalcEtapes.length === 0 && (
+                <p className="text-xs text-muted-foreground">Course sans étapes dans le ledger.</p>
+              )}
+            </div>
+
+            {/* Coureur */}
+            <div className="space-y-2">
+              <Label>Coureur</Label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={recalcCoureur?.id || recalcCoureur?.coureur_id || null}
+                onSelect={(c) => setRecalcCoureur(c)}
+                placeholder="Tous les coureurs"
+                showManager
+                context="super-admin"
+                disabled={!phaseId}
+              />
+              {recalcCoureur && (
+                <Button variant="ghost" size="sm" onClick={() => setRecalcCoureur(null)}>
+                  Réinitialiser (tous les coureurs)
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Périmètre : {recalcScopeLabel}
+          </p>
+
           <Button
             variant="outline"
             onClick={() => setRecalculateDialogOpen(true)}
@@ -432,7 +581,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           >
             {isRecalculating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <RefreshCw className="h-4 w-4 mr-2" />
-            Recalculer tous les bonus coureur
+            Recalculer les bonus coureur
           </Button>
           {!phaseId && (
             <p className="text-sm text-muted-foreground">
@@ -440,6 +589,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
             </p>
           )}
         </CardContent>
+
       </Card>
 
       {/* Add Button */}
@@ -817,11 +967,14 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Recalculer les bonus coureur ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action va <strong>supprimer</strong> tous les bonus « Coureur Bonusé (+25%) » existants pour cette phase
-              et les <strong>régénérer</strong> à partir des points actuels du ledger.
+              Cette action va <strong>supprimer</strong> les bonus « Coureur Bonusé (+25%) » du périmètre suivant
+              et les <strong>régénérer</strong> à partir des points actuels du ledger :
               <br /><br />
-              Les bonus de type First Win et ITT ne sont pas affectés.
+              <strong>{recalcScopeLabel}</strong>
+              <br /><br />
+              Les bonus hors de ce périmètre, ainsi que les bonus First Win et ITT, ne sont pas affectés.
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
