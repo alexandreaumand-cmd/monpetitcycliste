@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Image as ImageIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Upload, Image as ImageIcon, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,9 @@ interface RouteImage {
   image_url: string;
   label: string | null;
   sort_order: number;
+  distance_km: number | null;
 }
+
 
 interface RouteImageUploaderProps {
   raceId: string;
