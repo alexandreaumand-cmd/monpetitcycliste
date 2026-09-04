@@ -265,7 +265,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
       </div>
 
       {/* Upload button for selected stage */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button
           variant="outline"
           size="sm"
@@ -276,7 +276,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           {isUploading ? 'Téléchargement...' : getImageForStage(selectedStage) ? 'Remplacer' : 'Ajouter'}
           {selectedStage !== null ? ` Ét. ${selectedStage}` : ' Vue d\'ensemble'}
         </Button>
+        {distanceField}
       </div>
+
+
 
       {/* Thumbnails of existing images */}
       {existingImages.length > 0 && (
