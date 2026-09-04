@@ -112,7 +112,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!activeCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", activeCourseId);
       return data ?? [];
     },
@@ -129,6 +129,19 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     }
     return routeImages.find((img) => img.etape_numero == null) ?? null;
   }, [routeImages, activeEtape]);
+
+  /** Distance totale : saisie admin, sinon plus grand « km restants » observé sur l'étape. */
+  const observedTotalKm = useMemo(() => {
+    let max: number | null = null;
+    for (const msg of filteredMessages) {
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [filteredMessages]);
+
+  const stageTotalKm = Number(stageImage?.distance_km) || observedTotalKm;
+
 
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
