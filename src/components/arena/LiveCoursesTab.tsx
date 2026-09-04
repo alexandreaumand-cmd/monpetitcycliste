@@ -388,15 +388,22 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-3">
-                    <img
-                      src={stageImage.image_url}
-                      alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
-                      className="w-full h-auto rounded-md border cursor-zoom-in"
-                      loading="lazy"
-                      onClick={() => setZoomOpen(true)}
-                    />
+                    <div className="relative">
+                      <img
+                        src={stageImage.image_url}
+                        alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
+                        className="w-full h-auto rounded-md border cursor-zoom-in block"
+                        loading="lazy"
+                        onClick={() => setZoomOpen(true)}
+                      />
+                      <StageProgressOverlay
+                        kmRemaining={latestSituation?.kmRemaining}
+                        totalKm={stageTotalKm}
+                      />
+                    </div>
                   </div>
                 </CollapsibleContent>
+
               </Collapsible>
             )}
             {stageImage && (
