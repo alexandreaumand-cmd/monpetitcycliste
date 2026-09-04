@@ -28,7 +28,10 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const [isUploading, setIsUploading] = useState(false);
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
+  const [distanceInput, setDistanceInput] = useState("");
+  const [isSavingDistance, setIsSavingDistance] = useState(false);
   const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
+
 
   // Auto-detect stage race from course data if not provided as props
   useEffect(() => {
