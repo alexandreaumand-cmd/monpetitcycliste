@@ -9,6 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { MessageBubble } from "./MessageBubble";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
+import { StageProgressOverlay } from "./StageProgressOverlay";
+
 import {
   useArenaMessages,
   useMessageReactions,
