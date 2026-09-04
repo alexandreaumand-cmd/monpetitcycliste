@@ -202,15 +202,21 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           if (bonus.coureur_id) {
             const { data: seasonData } = await supabase
               .from("coureurs_saisons")
-              .select(`
-                equipes_saisons!coureurs_saisons_equipe_id_fkey(nom_affiche, trigramme)
-              `)
+              .select("equipe_id")
               .eq("coureur_id", bonus.coureur_id)
               .eq("saison_id", saisonId)
               .maybeSingle();
 
-            equipe = (seasonData?.equipes_saisons as any)?.trigramme || 
-                    (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A';
+            if (seasonData?.equipe_id) {
+              const { data: equipeSaisonData } = await supabase
+                .from("equipes_saisons")
+                .select("nom_affiche, trigramme")
+                .eq("equipe_id", seasonData.equipe_id)
+                .eq("saison_id", saisonId)
+                .maybeSingle();
+
+              equipe = equipeSaisonData?.trigramme || equipeSaisonData?.nom_affiche || 'N/A';
+            }
           }
 
           const phaseObj = bonus.phase as any;
