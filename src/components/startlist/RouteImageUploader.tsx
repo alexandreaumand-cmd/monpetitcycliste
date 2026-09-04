@@ -59,19 +59,73 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const totalStages = totalStagesProp ?? autoDetected?.totalStages ?? 0;
 
   useEffect(() => {
-    if (isStageRace) {
-      loadExistingImages();
-    }
-  }, [raceId, isStageRace]);
+    loadExistingImages();
+  }, [raceId]);
 
   const loadExistingImages = async () => {
     const { data } = await supabase
       .from('course_route_images')
-      .select('etape_numero, image_url, label, sort_order')
+      .select('etape_numero, image_url, label, sort_order, distance_km')
       .eq('course_id', raceId)
       .order('sort_order', { ascending: true });
     setExistingImages(data || []);
   };
+
+  // Distance de l'étape sélectionnée (sert à placer le repère d'avancée sur le profil)
+  const currentImage = existingImages.find((img) => img.etape_numero === selectedStage) ?? null;
+
+  useEffect(() => {
+    setDistanceInput(currentImage?.distance_km != null ? String(currentImage.distance_km) : "");
+  }, [currentImage?.distance_km, selectedStage]);
+
+  const saveDistance = async () => {
+    if (!currentImage) return;
+    const raw = distanceInput.trim().replace(',', '.');
+    const value = raw === "" ? null : Number(raw);
+    if (value != null && (!Number.isFinite(value) || value <= 0)) {
+      toast.error("Distance invalide");
+      return;
+    }
+    setIsSavingDistance(true);
+    let query = supabase
+      .from('course_route_images')
+      .update({ distance_km: value })
+      .eq('course_id', raceId);
+    query = selectedStage == null
+      ? query.is('etape_numero', null)
+      : query.eq('etape_numero', selectedStage);
+    const { error } = await query;
+    setIsSavingDistance(false);
+    if (error) {
+      toast.error("Enregistrement impossible", { description: error.message });
+      return;
+    }
+    toast.success("Distance enregistrée");
+    loadExistingImages();
+  };
+
+  const distanceField = currentImage && (
+    <div className="flex items-center gap-2">
+      <label className="text-xs text-muted-foreground whitespace-nowrap">
+        Distance {selectedStage != null ? `Ét. ${selectedStage}` : ''} (km)
+      </label>
+      <Input
+        type="number"
+        inputMode="decimal"
+        step="0.1"
+        min="0"
+        value={distanceInput}
+        onChange={(e) => setDistanceInput(e.target.value)}
+        placeholder="ex. 181,5"
+        className="h-7 w-28 text-xs"
+      />
+      <Button variant="outline" size="sm" className="h-7" onClick={saveDistance} disabled={isSavingDistance}>
+        <Check className="h-3.5 w-3.5 mr-1" />
+        Enregistrer
+      </Button>
+    </div>
+  );
+
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
