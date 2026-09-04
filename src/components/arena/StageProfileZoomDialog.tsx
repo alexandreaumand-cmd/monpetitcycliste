@@ -151,19 +151,23 @@ export const StageProfileZoomDialog = ({
           onDoubleClick={() => (zoom > 1 ? reset() : zoomButton(2))}
         >
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 flex items-center justify-center"
             style={{
               transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
               transformOrigin: "0 0",
             }}
           >
-            <img
-              src={imageUrl}
-              alt={alt}
-              draggable={false}
-              className="w-full h-full object-contain"
-            />
+            <div className="relative max-w-full max-h-full">
+              <img
+                src={imageUrl}
+                alt={alt}
+                draggable={false}
+                className="max-w-full max-h-full object-contain block"
+              />
+              <StageProgressOverlay kmRemaining={kmRemaining} totalKm={totalKm} />
+            </div>
           </div>
+
         </div>
       </DialogContent>
     </Dialog>
