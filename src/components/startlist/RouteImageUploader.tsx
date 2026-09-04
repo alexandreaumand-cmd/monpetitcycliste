@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Image as ImageIcon, Check } from "lucide-react";
@@ -34,9 +34,11 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
   const [distanceInput, setDistanceInput] = useState("");
-  const [axis, setAxis] = useState({ startKm: "", endKm: "", leftPct: "", rightPct: "" });
+  const [handles, setHandles] = useState({ left: 0, right: 100 });
   const [testKm, setTestKm] = useState("");
   const [isSavingDistance, setIsSavingDistance] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef<"left" | "right" | null>(null);
 
   const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
 
