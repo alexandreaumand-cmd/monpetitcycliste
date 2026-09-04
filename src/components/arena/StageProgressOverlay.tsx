@@ -1,13 +1,9 @@
 import { cn } from "@/lib/utils";
 
 export interface StageAxisCalibration {
-  /** Kilométrage lu sur l'axe au repère de gauche. */
-  axisStartKm?: number | null;
-  /** Kilométrage lu sur l'axe au repère de droite. */
-  axisEndKm?: number | null;
-  /** Position (%) du repère de gauche sur la largeur de l'image. */
+  /** Position (%) du départ (0 km) sur la largeur de l'image. */
   axisLeftPct?: number | null;
-  /** Position (%) du repère de droite sur la largeur de l'image. */
+  /** Position (%) de l'arrivée sur la largeur de l'image. */
   axisRightPct?: number | null;
 }
 
