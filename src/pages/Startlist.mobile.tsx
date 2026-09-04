@@ -524,7 +524,7 @@ export const StartlistMobile = () => {
               const sortedStarters = [...manager.starters].sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0));
               return <AccordionItem key={manager.manager_id} value={manager.manager_id} className="border rounded-2xl px-3 bg-card">
                     <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center gap-3 w-full">
+                      <div className="flex items-start gap-3 w-full">
                         {/* Maillot */}
                         {manager.jersey_image_url ? <img src={manager.jersey_image_url} alt="Maillot" className="h-12 w-12 object-contain flex-shrink-0" /> : <Avatar className="h-12 w-12 flex-shrink-0">
                             <AvatarFallback className="bg-primary/10">
@@ -534,11 +534,11 @@ export const StartlistMobile = () => {
                         
                         {/* Infos manager */}
                         <div className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm truncate">
                               {manager.manager_nom}
                             </span>
-                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                            <Badge variant="outline" className="text-[11px] h-5 px-1.5 shrink-0">
                               {manager.starters_count} {t('startlist.riders')}
                             </Badge>
                           </div>
@@ -549,14 +549,13 @@ export const StartlistMobile = () => {
                             </p>}
                           
                           {/* Etoiles + Classements */}
-                          <div className="flex items-center justify-between gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                             <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
-                            <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>Ph: #{manager.rank_phase || "-"}{manager.points_phase > 0 && ` (${Math.round(manager.points_phase)}pts)`}</span>
-                              <span>CG: #{manager.rank_total || "-"}{manager.points_total > 0 && ` (${Math.round(manager.points_total)}pts)`}</span>
-                              <span>Course: {Math.round(manager.points_course || 0)}pts</span>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                              <span className="whitespace-nowrap">Ph: #{manager.rank_phase || "-"}{manager.points_phase > 0 && ` (${Math.round(manager.points_phase)}pts)`}</span>
+                              <span className="whitespace-nowrap">CG: #{manager.rank_total || "-"}{manager.points_total > 0 && ` (${Math.round(manager.points_total)}pts)`}</span>
+                              <span className="whitespace-nowrap font-medium text-foreground">Course: {Math.round(manager.points_course || 0)}pts</span>
                             </div>
-
                           </div>
                         </div>
                       </div>
