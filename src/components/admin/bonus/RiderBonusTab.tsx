@@ -104,6 +104,24 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
 
   const coursesMap = new Map(courses.map((c: any) => [c.id, c]));
 
+  // Étapes disponibles (depuis le ledger) pour la course choisie dans le recalcul
+  const { data: recalcEtapes = [] } = useQuery({
+    queryKey: ["recalc-etapes", phaseId, recalcCourseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("points_ledger")
+        .select("etape_numero")
+        .eq("phase_id", phaseId)
+        .eq("course_id", recalcCourseId)
+        .not("etape_numero", "is", null);
+      if (error) throw error;
+      const set = new Set<number>((data || []).map((r: any) => Number(r.etape_numero)));
+      return [...set].sort((a, b) => a - b);
+    },
+    enabled: !!phaseId && recalcCourseId !== "all",
+  });
+
+
   // Fetch existing rider bonuses
   const { data: bonuses, isLoading } = useQuery({
     queryKey: ["rider-bonuses", phaseId],
