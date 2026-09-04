@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Image as ImageIcon, Route } from "lucide-react";
+import { ChevronDown, Image as ImageIcon, Route, Maximize2 } from "lucide-react";
+import { StageProfileZoomDialog } from "./StageProfileZoomDialog";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   // Multi-select for desktop (max 2)
   const [activeCourseIds, setActiveCourseIds] = useState<string[]>([]);
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: managerId } = useCurrentManagerId();
@@ -319,19 +321,41 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                       <span className="text-[11px] text-muted-foreground">Étape {stageImage.etape_numero}</span>
                     )}
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                  <div className="flex items-center gap-2">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      onClick={(e) => { e.stopPropagation(); setZoomOpen(true); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setZoomOpen(true); } }}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Agrandir
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                  </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-3">
                     <img
                       src={stageImage.image_url}
                       alt={stageImage.label || `Étape ${stageImage.etape_numero ?? ''}`}
-                      className="w-full h-auto rounded-md border"
+                      className="w-full h-auto rounded-md border cursor-zoom-in"
                       loading="lazy"
+                      onClick={() => setZoomOpen(true)}
                     />
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+            {stageImage && (
+              <StageProfileZoomDialog
+                open={zoomOpen}
+                onOpenChange={setZoomOpen}
+                imageUrl={stageImage.image_url}
+                title={stageImage.etape_numero != null ? `Profil — Étape ${stageImage.etape_numero}` : "Profil du parcours"}
+                alt={stageImage.label || "Profil de l'étape"}
+              />
             )}
 
             <Collapsible defaultOpen className="border rounded-xl overflow-hidden bg-background">
@@ -424,19 +448,41 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                   <span className="text-[11px] text-muted-foreground">Étape {desktopStageImage.etape_numero}</span>
                 )}
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              <div className="flex items-center gap-2">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                  onClick={(e) => { e.stopPropagation(); setZoomOpen(true); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setZoomOpen(true); } }}
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  Agrandir
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 bg-background min-h-0">
               <div className="h-full p-2 flex items-center justify-center min-h-0">
                 <img
                   src={desktopStageImage.image_url}
                   alt={desktopStageImage.label || (desktopStageImage.etape_numero ? `Étape ${desktopStageImage.etape_numero}` : "Parcours")}
-                  className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted"
+                  className="max-w-full max-h-[260px] h-auto object-contain rounded-md border bg-muted cursor-zoom-in"
                   loading="lazy"
+                  onClick={() => setZoomOpen(true)}
                 />
               </div>
             </CollapsibleContent>
           </Collapsible>
+        )}
+        {desktopStageImage && (
+          <StageProfileZoomDialog
+            open={zoomOpen}
+            onOpenChange={setZoomOpen}
+            imageUrl={desktopStageImage.image_url}
+            title={desktopStageImage.etape_numero != null ? `Profil — Étape ${desktopStageImage.etape_numero}` : "Profil du parcours"}
+            alt={desktopStageImage.label || "Profil de l'étape"}
+          />
         )}
       </div>
 
