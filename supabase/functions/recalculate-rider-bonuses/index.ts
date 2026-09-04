@@ -60,7 +60,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phase_id, coureur_id } = await req.json();
+    const body = await req.json();
+    const {
+      phase_id,
+      coureur_id,
+      course_id,
+      etape_numero,
+      etape_scope, // 'all' | 'stage' | 'final'
+    } = body ?? {};
 
     if (!phase_id) {
       return new Response(
@@ -69,7 +76,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Recalculating rider bonuses for phase ${phase_id}${coureur_id ? ` (coureur: ${coureur_id})` : ' (all riders)'}`);
+    const scopeStage = etape_scope === 'stage' && Number.isFinite(Number(etape_numero));
+    const scopeFinal = etape_scope === 'final';
+    const stageNum = scopeStage ? Number(etape_numero) : null;
+
+    const scopeLabel = [
+      course_id ? `course=${course_id}` : 'toutes courses',
+      scopeStage ? `etape=${stageNum}` : scopeFinal ? 'classements finaux' : 'toutes etapes',
+      coureur_id ? `coureur=${coureur_id}` : 'tous coureurs',
+    ].join(' / ');
+
+    console.log(`Recalculating rider bonuses for phase ${phase_id} [${scopeLabel}]`);
+
 
     // 1. Get bonus_rider_selections for this phase
     let selectionsQuery = supabase
