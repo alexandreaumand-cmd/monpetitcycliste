@@ -1,6 +1,17 @@
 import { cn } from "@/lib/utils";
 
-interface StageProgressOverlayProps {
+export interface StageAxisCalibration {
+  /** Kilométrage lu sur l'axe au repère de gauche. */
+  axisStartKm?: number | null;
+  /** Kilométrage lu sur l'axe au repère de droite. */
+  axisEndKm?: number | null;
+  /** Position (%) du repère de gauche sur la largeur de l'image. */
+  axisLeftPct?: number | null;
+  /** Position (%) du repère de droite sur la largeur de l'image. */
+  axisRightPct?: number | null;
+}
+
+interface StageProgressOverlayProps extends StageAxisCalibration {
   /** Kilomètres restants (issus de la situation de course). */
   kmRemaining?: number | null;
   /** Distance totale de l'étape (saisie en admin, sinon estimée). */
@@ -17,6 +28,10 @@ interface StageProgressOverlayProps {
 export const StageProgressOverlay = ({
   kmRemaining,
   totalKm,
+  axisStartKm,
+  axisEndKm,
+  axisLeftPct,
+  axisRightPct,
   compact = false,
   className,
 }: StageProgressOverlayProps) => {
@@ -26,8 +41,28 @@ export const StageProgressOverlay = ({
   if (!Number.isFinite(km) || !Number.isFinite(total) || total <= 0) return null;
   if (km < 0 || km > total) return null;
 
-  const ratio = Math.min(1, Math.max(0, (total - km) / total));
-  const pct = ratio * 100;
+  const done = total - km;
+
+  // Calage sur l'axe imprimé sur l'image quand il est renseigné, sinon 0 → total sur toute la largeur
+  const startKm = Number(axisStartKm);
+  const endKm = Number(axisEndKm);
+  const leftPct = Number(axisLeftPct);
+  const rightPct = Number(axisRightPct);
+  const calibrated =
+    Number.isFinite(startKm) &&
+    Number.isFinite(endKm) &&
+    Number.isFinite(leftPct) &&
+    Number.isFinite(rightPct) &&
+    endKm > startKm &&
+    rightPct > leftPct;
+
+  let pct: number;
+  if (calibrated) {
+    const raw = leftPct + ((done - startKm) / (endKm - startKm)) * (rightPct - leftPct);
+    pct = Math.min(rightPct, Math.max(leftPct, raw));
+  } else {
+    pct = Math.min(100, Math.max(0, (done / total) * 100));
+  }
 
   return (
     <div className={cn("pointer-events-none absolute inset-0 overflow-hidden rounded-md", className)}>

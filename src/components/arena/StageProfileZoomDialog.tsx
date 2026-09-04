@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
-import { StageProgressOverlay } from "./StageProgressOverlay";
+import { StageProgressOverlay, type StageAxisCalibration } from "./StageProgressOverlay";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-interface StageProfileZoomDialogProps {
+interface StageProfileZoomDialogProps extends StageAxisCalibration {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageUrl: string;
@@ -27,7 +27,12 @@ export const StageProfileZoomDialog = ({
   alt,
   kmRemaining,
   totalKm,
+  axisStartKm,
+  axisEndKm,
+  axisLeftPct,
+  axisRightPct,
 }: StageProfileZoomDialogProps) => {
+
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -164,7 +169,15 @@ export const StageProfileZoomDialog = ({
                 draggable={false}
                 className="max-w-full max-h-full object-contain block"
               />
-              <StageProgressOverlay kmRemaining={kmRemaining} totalKm={totalKm} />
+              <StageProgressOverlay
+                kmRemaining={kmRemaining}
+                totalKm={totalKm}
+                axisStartKm={axisStartKm}
+                axisEndKm={axisEndKm}
+                axisLeftPct={axisLeftPct}
+                axisRightPct={axisRightPct}
+              />
+
             </div>
           </div>
 

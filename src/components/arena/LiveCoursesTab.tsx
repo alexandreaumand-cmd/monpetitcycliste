@@ -114,7 +114,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!activeCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label, distance_km")
+        .select("etape_numero, image_url, label, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct")
         .eq("course_id", activeCourseId);
       return data ?? [];
     },
@@ -172,7 +172,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
       if (!desktopCourseId) return [];
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label, distance_km")
+        .select("etape_numero, image_url, label, distance_km, axis_start_km, axis_end_km, axis_left_pct, axis_right_pct")
         .eq("course_id", desktopCourseId);
       return data ?? [];
     },
@@ -401,6 +401,10 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                       <StageProgressOverlay
                         kmRemaining={latestSituation?.kmRemaining}
                         totalKm={stageTotalKm}
+                        axisStartKm={(stageImage as any)?.axis_start_km}
+                        axisEndKm={(stageImage as any)?.axis_end_km}
+                        axisLeftPct={(stageImage as any)?.axis_left_pct}
+                        axisRightPct={(stageImage as any)?.axis_right_pct}
                       />
                     </div>
                   </div>
@@ -417,6 +421,10 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                 alt={stageImage.label || "Profil de l'étape"}
                 kmRemaining={latestSituation?.kmRemaining}
                 totalKm={stageTotalKm}
+                        axisStartKm={(stageImage as any)?.axis_start_km}
+                        axisEndKm={(stageImage as any)?.axis_end_km}
+                        axisLeftPct={(stageImage as any)?.axis_left_pct}
+                        axisRightPct={(stageImage as any)?.axis_right_pct}
 
               />
             )}
@@ -538,6 +546,10 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                   <StageProgressOverlay
                     kmRemaining={desktopKmRemaining}
                     totalKm={desktopTotalKm}
+                    axisStartKm={(desktopStageImage as any)?.axis_start_km}
+                    axisEndKm={(desktopStageImage as any)?.axis_end_km}
+                    axisLeftPct={(desktopStageImage as any)?.axis_left_pct}
+                    axisRightPct={(desktopStageImage as any)?.axis_right_pct}
                   />
                 </div>
               </div>
@@ -553,6 +565,10 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             alt={desktopStageImage.label || "Profil de l'étape"}
             kmRemaining={desktopKmRemaining}
             totalKm={desktopTotalKm}
+                    axisStartKm={(desktopStageImage as any)?.axis_start_km}
+                    axisEndKm={(desktopStageImage as any)?.axis_end_km}
+                    axisLeftPct={(desktopStageImage as any)?.axis_left_pct}
+                    axisRightPct={(desktopStageImage as any)?.axis_right_pct}
           />
         )}
 
