@@ -413,6 +413,9 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                 imageUrl={stageImage.image_url}
                 title={stageImage.etape_numero != null ? `Profil — Étape ${stageImage.etape_numero}` : "Profil du parcours"}
                 alt={stageImage.label || "Profil de l'étape"}
+                kmRemaining={latestSituation?.kmRemaining}
+                totalKm={stageTotalKm}
+
               />
             )}
 
