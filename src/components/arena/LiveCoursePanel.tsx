@@ -354,8 +354,13 @@ export const LiveCoursePanel = ({
                 <StageProgressOverlay
                   kmRemaining={latestSituation?.kmRemaining}
                   totalKm={stageTotalKm}
+                  axisStartKm={(stageImage as any)?.axis_start_km}
+                  axisEndKm={(stageImage as any)?.axis_end_km}
+                  axisLeftPct={(stageImage as any)?.axis_left_pct}
+                  axisRightPct={(stageImage as any)?.axis_right_pct}
                   compact
                 />
+
               </div>
             </div>
 
