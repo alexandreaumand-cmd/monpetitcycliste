@@ -2242,6 +2242,10 @@ export type Database = {
       }
       course_route_images: {
         Row: {
+          axis_end_km: number | null
+          axis_left_pct: number | null
+          axis_right_pct: number | null
+          axis_start_km: number | null
           course_id: string
           created_at: string
           distance_km: number | null
@@ -2252,6 +2256,10 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          axis_end_km?: number | null
+          axis_left_pct?: number | null
+          axis_right_pct?: number | null
+          axis_start_km?: number | null
           course_id: string
           created_at?: string
           distance_km?: number | null
@@ -2262,6 +2270,10 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          axis_end_km?: number | null
+          axis_left_pct?: number | null
+          axis_right_pct?: number | null
+          axis_start_km?: number | null
           course_id?: string
           created_at?: string
           distance_km?: number | null
