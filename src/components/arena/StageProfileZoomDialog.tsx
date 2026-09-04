@@ -169,7 +169,15 @@ export const StageProfileZoomDialog = ({
                 draggable={false}
                 className="max-w-full max-h-full object-contain block"
               />
-              <StageProgressOverlay kmRemaining={kmRemaining} totalKm={totalKm} />
+              <StageProgressOverlay
+                kmRemaining={kmRemaining}
+                totalKm={totalKm}
+                axisStartKm={axisStartKm}
+                axisEndKm={axisEndKm}
+                axisLeftPct={axisLeftPct}
+                axisRightPct={axisRightPct}
+              />
+
             </div>
           </div>
 
