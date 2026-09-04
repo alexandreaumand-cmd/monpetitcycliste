@@ -24,8 +24,6 @@ interface StageProgressOverlayProps extends StageAxisCalibration {
 export const StageProgressOverlay = ({
   kmRemaining,
   totalKm,
-  axisStartKm,
-  axisEndKm,
   axisLeftPct,
   axisRightPct,
   compact = false,
@@ -39,26 +37,15 @@ export const StageProgressOverlay = ({
 
   const done = total - km;
 
-  // Calage sur l'axe imprimé sur l'image quand il est renseigné, sinon 0 → total sur toute la largeur
-  const startKm = Number(axisStartKm);
-  const endKm = Number(axisEndKm);
-  const leftPct = Number(axisLeftPct);
-  const rightPct = Number(axisRightPct);
-  const calibrated =
-    Number.isFinite(startKm) &&
-    Number.isFinite(endKm) &&
-    Number.isFinite(leftPct) &&
-    Number.isFinite(rightPct) &&
-    endKm > startKm &&
-    rightPct > leftPct;
+  // Bords du dessin sur l'image (départ / arrivée), sinon toute la largeur
+  const rawLeft = Number(axisLeftPct);
+  const rawRight = Number(axisRightPct);
+  const leftPct = Number.isFinite(rawLeft) ? Math.min(100, Math.max(0, rawLeft)) : 0;
+  const rightPctCandidate = Number.isFinite(rawRight) ? Math.min(100, Math.max(0, rawRight)) : 100;
+  const rightPct = rightPctCandidate > leftPct ? rightPctCandidate : 100;
 
-  let pct: number;
-  if (calibrated) {
-    const raw = leftPct + ((done - startKm) / (endKm - startKm)) * (rightPct - leftPct);
-    pct = Math.min(rightPct, Math.max(leftPct, raw));
-  } else {
-    pct = Math.min(100, Math.max(0, (done / total) * 100));
-  }
+  const pct = leftPct + (done / total) * (rightPct - leftPct);
+
 
   return (
     <div className={cn("pointer-events-none absolute inset-0 overflow-hidden rounded-md", className)}>
