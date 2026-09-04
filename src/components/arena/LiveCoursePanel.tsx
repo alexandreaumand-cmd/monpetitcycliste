@@ -180,6 +180,19 @@ export const LiveCoursePanel = ({
     ? (liveSituationRow?.situation_updated_at as string | null)
     : null;
 
+  /** Distance totale : saisie admin, sinon plus grand « km restants » observé sur l'étape. */
+  const observedTotalKm = useMemo(() => {
+    let max: number | null = null;
+    for (const msg of filteredMessages) {
+      const km = Number((msg.metadata as any)?.race_situation?.kmRemaining);
+      if (Number.isFinite(km) && (max == null || km > max)) max = km;
+    }
+    return max;
+  }, [filteredMessages]);
+  const stageTotalKm = Number((stageImage as any)?.distance_km) || observedTotalKm;
+
+
+
   /** Kilométrage restant du dernier évènement de la timeline (parsé du texte « — à 106 km »). */
   const latestEventKm = useMemo(() => {
     for (const msg of filteredMessages) {
