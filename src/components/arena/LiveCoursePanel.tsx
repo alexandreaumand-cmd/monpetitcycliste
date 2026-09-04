@@ -77,13 +77,14 @@ export const LiveCoursePanel = ({
     queryFn: async () => {
       const { data } = await supabase
         .from("course_route_images")
-        .select("etape_numero, image_url, label")
+        .select("etape_numero, image_url, label, distance_km")
         .eq("course_id", courseId);
       return data ?? [];
     },
     enabled: !!courseId,
     staleTime: 5 * 60 * 1000,
   });
+
 
   const activeEtape = selectedEtape ?? stageStatus.etape;
   const stageImage = useMemo(() => {
