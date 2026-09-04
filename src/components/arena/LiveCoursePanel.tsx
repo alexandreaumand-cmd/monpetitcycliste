@@ -327,13 +327,20 @@ export const LiveCoursePanel = ({
           </div>
           <CollapsibleContent>
             <div className="p-2">
-              <img
-                src={stageImage.image_url}
-                alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
-                className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted cursor-zoom-in"
-                loading="lazy"
-                onClick={() => setZoomOpen(true)}
-              />
+              <div className="relative inline-block max-w-full">
+                <img
+                  src={stageImage.image_url}
+                  alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+                  className="w-full h-auto max-h-56 object-contain object-center rounded-md border bg-muted cursor-zoom-in block"
+                  loading="lazy"
+                  onClick={() => setZoomOpen(true)}
+                />
+                <StageProgressOverlay
+                  kmRemaining={latestSituation?.kmRemaining}
+                  totalKm={stageTotalKm}
+                  compact
+                />
+              </div>
             </div>
 
           </CollapsibleContent>
@@ -349,8 +356,11 @@ export const LiveCoursePanel = ({
             .filter(Boolean)
             .join(" — ") || "Profil du parcours"}
           alt={stageImage.label || (stageImage.etape_numero ? `Étape ${stageImage.etape_numero}` : "Parcours")}
+          kmRemaining={latestSituation?.kmRemaining}
+          totalKm={stageTotalKm}
         />
       )}
+
 
       {/* Content: timeline + situation side by side */}
       <div className="flex flex-1 overflow-hidden min-h-0">
