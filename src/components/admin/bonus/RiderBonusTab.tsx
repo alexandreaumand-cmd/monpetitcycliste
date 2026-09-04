@@ -172,9 +172,11 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
           manager_id,
           course_id,
           league_id,
+          etape_numero,
           created_at,
           coureur:coureurs!bonus_points_coureur_id_fkey(id, nom),
-          manager:managers!bonus_points_manager_id_fkey(id, nom)
+          manager:managers!bonus_points_manager_id_fkey(id, nom),
+          phase:phases!bonus_points_phase_id_fkey(id, index_dans_saison)
         `)
         .eq("phase_id", phaseId)
         .in("bonus_type", ['first_win', 'coureur_bonuse', 'itt'])
