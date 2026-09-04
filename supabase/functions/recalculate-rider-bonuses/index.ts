@@ -145,28 +145,40 @@ Deno.serve(async (req) => {
     for (const selection of selections) {
       const { coureur_id: riderId, manager_id: managerId, league_id: leagueId } = selection;
 
-      // 2a. Get existing bonuses for this coureur/manager/league/phase to calculate total_before
-      const { data: existingBonuses } = await supabase
-        .from('bonus_points')
-        .select('id, points')
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId)
-        .eq('manager_id', managerId)
-        .eq('league_id', leagueId)
-        .eq('bonus_type', 'coureur_bonuse');
+      // Helper: applique le périmètre (course / étape) à une requête bonus_points ou points_ledger
+      const applyScope = (q: any) => {
+        if (course_id) q = q.eq('course_id', course_id);
+        if (scopeStage) q = q.eq('etape_numero', stageNum);
+        if (scopeFinal) q = q.is('etape_numero', null);
+        return q;
+      };
+
+      // 2a. Get existing bonuses in scope for this coureur/manager/league/phase (total_before)
+      const { data: existingBonuses } = await applyScope(
+        supabase
+          .from('bonus_points')
+          .select('id, points')
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+          .eq('manager_id', managerId)
+          .eq('league_id', leagueId)
+          .eq('bonus_type', 'coureur_bonuse')
+      );
 
       const existingTotal = (existingBonuses || []).reduce((sum, b) => sum + Number(b.points), 0);
       totalBefore += existingTotal;
 
-      // 2b. Delete existing coureur_bonuse for this coureur/manager/league/phase
-      const { error: deleteError } = await supabase
-        .from('bonus_points')
-        .delete()
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId)
-        .eq('manager_id', managerId)
-        .eq('league_id', leagueId)
-        .eq('bonus_type', 'coureur_bonuse');
+      // 2b. Delete existing coureur_bonuse in scope only
+      const { error: deleteError } = await applyScope(
+        supabase
+          .from('bonus_points')
+          .delete()
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+          .eq('manager_id', managerId)
+          .eq('league_id', leagueId)
+          .eq('bonus_type', 'coureur_bonuse')
+      );
 
       if (deleteError) {
         console.error(`Error deleting bonuses for rider ${riderId}:`, deleteError);
@@ -180,12 +192,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 2c. Get all points_ledger entries for this coureur/phase
-      const { data: ledgerEntries, error: ledgerError } = await supabase
-        .from('points_ledger')
-        .select('id, points, course_id, type_classement, etape_numero')
-        .eq('phase_id', phase_id)
-        .eq('coureur_id', riderId);
+      // 2c. Get points_ledger entries in scope for this coureur/phase
+      const { data: ledgerEntries, error: ledgerError } = await applyScope(
+        supabase
+          .from('points_ledger')
+          .select('id, points, course_id, type_classement, etape_numero')
+          .eq('phase_id', phase_id)
+          .eq('coureur_id', riderId)
+      );
 
       if (ledgerError) {
         console.error(`Error fetching ledger for rider ${riderId}:`, ledgerError);
@@ -193,14 +207,14 @@ Deno.serve(async (req) => {
       }
 
       if (!ledgerEntries || ledgerEntries.length === 0) {
-        console.log(`No ledger entries for rider ${riderId} in phase ${phase_id}`);
+        console.log(`No ledger entries for rider ${riderId} in phase ${phase_id} [${scopeLabel}]`);
         continue;
       }
 
       // 2d. Calculate 25% for each entry within league scope and insert
       const bonusInserts = ledgerEntries
-        .filter(entry => Number(entry.points) > 0 && scopeCourses.has(entry.course_id))
-        .map(entry => {
+        .filter((entry: any) => Number(entry.points) > 0 && scopeCourses.has(entry.course_id))
+        .map((entry: any) => {
           const bonusPoints = Math.round(Number(entry.points) * 0.25 * 100) / 100;
           const etapeLabel = entry.etape_numero ? ` Etape ${entry.etape_numero}` : '';
           return {
@@ -208,6 +222,9 @@ Deno.serve(async (req) => {
             coureur_id: riderId,
             manager_id: managerId,
             league_id: leagueId,
+            course_id: entry.course_id,
+            etape_numero: entry.etape_numero ?? null,
+            type_classement: entry.type_classement ?? null,
             bonus_type: 'coureur_bonuse',
             points: bonusPoints,
             commentaire: `Bonus coureur automatique (25%) - ${entry.course_id} - ${entry.type_classement}${etapeLabel} [recalculé]`,
@@ -215,6 +232,7 @@ Deno.serve(async (req) => {
             target_manager_id: null,
           };
         });
+
 
       if (bonusInserts.length > 0) {
         const { error: insertError } = await supabase
