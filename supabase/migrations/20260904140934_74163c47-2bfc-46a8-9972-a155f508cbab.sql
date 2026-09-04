@@ -1,0 +1,1 @@
+ALTER TABLE public.course_route_images ADD COLUMN IF NOT EXISTS distance_km numeric NULL;
