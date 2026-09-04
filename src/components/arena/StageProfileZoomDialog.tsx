@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { StageProgressOverlay } from "./StageProgressOverlay";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
@@ -14,6 +15,8 @@ interface StageProfileZoomDialogProps {
   imageUrl: string;
   title: string;
   alt: string;
+  kmRemaining?: number | null;
+  totalKm?: number | null;
 }
 
 export const StageProfileZoomDialog = ({
@@ -22,7 +25,10 @@ export const StageProfileZoomDialog = ({
   imageUrl,
   title,
   alt,
+  kmRemaining,
+  totalKm,
 }: StageProfileZoomDialogProps) => {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
