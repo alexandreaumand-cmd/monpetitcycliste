@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { PcsSlugDialog } from "./PcsSlugDialog";
