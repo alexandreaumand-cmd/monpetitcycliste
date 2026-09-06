@@ -7285,6 +7285,10 @@ export type Database = {
         }
         Returns: Json
       }
+      compute_points_for_course_internal: {
+        Args: { p_actor_manager_id?: string; p_course_id: string }
+        Returns: Json
+      }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
@@ -7763,6 +7767,7 @@ export type Database = {
         Args: { p_league_id: string }
         Returns: undefined
       }
+      reconcile_missing_points: { Args: { p_days?: number }; Returns: Json }
       refresh_standings_cache: { Args: never; Returns: undefined }
       refresh_standings_mv: { Args: never; Returns: undefined }
       refresh_standings_views: { Args: never; Returns: undefined }
