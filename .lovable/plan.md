@@ -1,20 +1,26 @@
-# Pourquoi le repère tombe au mauvais endroit sur l'étape 14
+# Étape 15 de la Vuelta absente du classement CopaVUELTA
 
-## La cause, vérifiée
+## Ce que montrent les données
 
-Pour l'étape 14 de la Vuelta, les deux poignées (départ / arrivée) sont bien posées sur l'image, mais **la distance de l'étape n'est pas renseignée** (elle est vide en base ; seule l'étape 13 a 192,8 km d'enregistré).
+- Les résultats de l'étape 15 sont bien enregistrés : classement d'étape (10 places) + 4 porteurs de maillot, enregistrés le 6 septembre à 21h05 (heure de Paris).
+- En revanche, le calcul des points de cette étape n'a produit qu'une seule ligne (6 pts, maillot jeune de Oscar Onley), datée de 19h06 — donc **avant** la saisie de l'étape 15.
+- Le journal interne confirme que le dernier calcul des points pour la Vuelta a eu lieu à 19h06. Aucun calcul n'a été lancé après la saisie de 21h05.
 
-Faute de distance, l'app se rabat sur une estimation : le plus grand « km restants » vu depuis le début du suivi (ici environ 70 km, car le suivi a démarré en cours d'étape). Le calcul devient donc « 70 − 11,9 » au lieu de « 154,5 − 11,9 », et le repère se retrouve trop à gauche, vers 123 km, au lieu de 142,6 km.
+Conclusion : les résultats sont là, mais le recalcul automatique des points qui suit normalement l'enregistrement ne s'est pas exécuté (ou a échoué sans message). Le classement de la ligue reflète donc les étapes 1 à 14 seulement.
 
-## Ce qui change
+## Correction proposée
 
-1. **Saisir la distance des étapes concernées.** C'est le geste qui corrige immédiatement l'affichage : 154,5 km pour l'étape 14 (et les autres étapes de la Vuelta déjà calées mais sans distance).
-2. **Ne plus afficher un repère faux.** Quand la distance n'est pas renseignée, le repère est masqué plutôt que placé sur une estimation trompeuse. Un petit message dans l'écran d'administration signale « distance manquante » pour les images déjà calées.
-3. **Rappel visible côté admin** : sur la vignette d'une étape sans distance, un point d'avertissement, pour repérer d'un coup d'œil les étapes à compléter.
+1. Relancer le calcul des points de la Vuelta pour rattraper l'étape 15, puis vérifier que chaque manager de CopaVUELTA reçoit bien ses points d'étape et de maillots, et que les bonus coureurs liés à cette étape sont créés.
+2. Rendre le rattrapage automatique : ajouter une vérification côté serveur qui, après enregistrement de résultats, s'assure que les points existent réellement, et relance le calcul si ce n'est pas le cas (au lieu de dépendre uniquement de l'appel lancé depuis l'écran de saisie, qui peut échouer silencieusement).
+3. Ajouter un contrôle quotidien léger qui détecte les courses ayant des résultats sans points calculés et les recalcule, afin qu'un incident isolé ne bloque plus un classement.
+4. Signaler visiblement l'échec dans l'écran de saisie super-admin : message d'erreur explicite et bouton « Recalculer les points » si la vérification échoue, plutôt qu'un simple avertissement en console.
 
 ## Détails techniques
 
-- `src/components/arena/LiveCoursesTab.tsx` et `src/components/arena/LiveCoursePanel.tsx` : supprimer le repli `observedTotalKm` (max des `kmRemaining` observés) ; `stageTotalKm` / `desktopTotalKm` valent uniquement `Number(distance_km)` ou `null`. `StageProgressOverlay` retourne déjà `null` si `totalKm` n'est pas exploitable, donc aucun autre changement n'est nécessaire pour masquer le repère.
-- `src/components/startlist/RouteImageUploader.tsx` : afficher un avertissement discret sous le champ « Distance (km) » quand `distance_km` est nul, et un point d'alerte sur les vignettes des étapes sans distance.
-- Données : renseigner `course_route_images.distance_km` pour l'étape 14 (154,5) via l'écran d'administration ; les autres étapes Vuelta sans distance restent à compléter au fil des jours.
-- Aucune migration, aucun changement de logique live ni de scraping.
+- Résultats : `race_results` (course `la-vuelta-ciclista-a-espana-mj6wf7a8`, `etape_numero = 15`) → 14 lignes `finished`.
+- Points : `points_ledger` ne contient qu'une ligne pour l'étape 15 ; `audits` (action `admin_compute_points_for_course`) : dernier passage 2026-09-06 17:06 UTC, saisie des résultats à 19:05 UTC.
+- Le recalcul est déclenché uniquement côté client (`ResultsEntryStudio.desktop.tsx` / `.mobile.tsx` → fonction `compute-points` → RPC `admin_compute_points_for_course`). Le desktop tente déjà un retry, mais sans garantie ni alerte utilisateur.
+- Étape 1 : appel de `admin_compute_points_for_course('la-vuelta-ciclista-a-espana-mj6wf7a8')`, puis contrôle des vues de classement (`v_manager_standings_by_*`, cache de standings rafraîchi par trigger sur `points_ledger`).
+- Étape 2 : ajouter dans `admin_result_save_lot` (ou une fonction d'orchestration appelée après le lot complet) le recalcul des points, afin que l'écriture des résultats et le calcul soient dans le même appel serveur.
+- Étape 3 : tâche planifiée (cron existant) comparant `race_results` et `points_ledger` par (course, étape, type de classement) et relançant le calcul sur les écarts.
+- Étape 4 : dans les deux `ResultsEntryStudio`, remonter l'échec du calcul via un toast d'erreur et un bouton de relance manuelle.
