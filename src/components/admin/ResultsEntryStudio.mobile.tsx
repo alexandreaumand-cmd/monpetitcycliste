@@ -717,22 +717,66 @@ export const ResultsEntryStudioMobile = ({
       }
 
       // Recalculate points via compute-points edge function (same as desktop)
-      const { data: computeData, error: computeError } = await supabase.functions.invoke('compute-points', {
-        body: { course_id: course.course_id },
-      });
+      const savedEtape = courseIsStageRace && currentClassement === "Etape" ? Number(currentStage) : null;
 
-      const computeFailed = !!computeError || !!(computeData as any)?.error;
+      const runCompute = async () => {
+        const { data, error } = await supabase.functions.invoke('compute-points', {
+          body: { course_id: course.course_id },
+        });
+        return !error && !(data as any)?.error;
+      };
 
-      if (computeFailed) {
-        console.error('Error computing points:', computeError || (computeData as any)?.error);
+      const countLedger = async () => {
+        let q = supabase
+          .from('points_ledger')
+          .select('*', { count: 'exact', head: true })
+          .eq('course_id', course.course_id);
+        q = savedEtape === null ? q.is('etape_numero', null) : q.eq('etape_numero', savedEtape);
+        const { count, error } = await q;
+        return error ? null : (count ?? 0);
+      };
+
+      let ok = await runCompute();
+      let ledgerCount = ok ? await countLedger() : null;
+
+      if (!ok || ledgerCount === 0) {
+        ok = await runCompute();
+        ledgerCount = ok ? await countLedger() : null;
       }
 
-      return { success: true, computeFailed };
+      const computeFailed = ledgerCount === null || ledgerCount === 0;
+      if (computeFailed) {
+        console.error('Points non calculés après sauvegarde', { course: course.course_id, savedEtape });
+      }
+
+      return { success: true, computeFailed, savedEtape };
     },
     onSuccess: (result) => {
       setLastSaved(new Date());
       if ((result as any)?.computeFailed) {
-        toast.error("Résultats enregistrés mais points NON recalculés — utilisez « Recalcul Points »", { duration: 10000 });
+        const etape = (result as any)?.savedEtape;
+        toast.error(
+          etape
+            ? `Étape ${etape} enregistrée mais points NON calculés`
+            : "Résultats enregistrés mais points NON calculés",
+          {
+            duration: 15000,
+            action: {
+              label: "Recalculer",
+              onClick: async () => {
+                const { data, error } = await supabase.functions.invoke('compute-points', {
+                  body: { course_id: course.course_id },
+                });
+                if (error || (data as any)?.error) {
+                  toast.error("Calcul toujours en échec — utilisez « Recalcul Points »");
+                } else {
+                  toast.success("Points recalculés");
+                  loadResults();
+                }
+              },
+            },
+          }
+        );
       } else {
         toast.success("Résultats enregistrés");
       }
@@ -740,6 +784,7 @@ export const ResultsEntryStudioMobile = ({
       tttManuallySet.current = false;
       loadResults();
     },
+
     onError: (error: Error) => {
       toast.error(`Erreur: ${error.message}`);
     },
