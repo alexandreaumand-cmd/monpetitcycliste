@@ -864,65 +864,76 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       }
 
       // Now recompute points for this course (after jersey holders are saved)
-      const { data: computeData, error: computeError } = await supabase.functions.invoke('compute-points', {
-        body: { course_id: course.course_id }
-      });
-      
-      if (computeError) {
-        console.error('❌ Error recomputing points after save:', computeError);
-        toast({
-          title: "⚠️ Erreur calcul de points",
-          description: "Les résultats sont sauvegardés mais les points n'ont pas été recalculés. Utilisez l'onglet 'Recalcul Points'.",
-          variant: "destructive",
-        });
-      } else {
-        console.log('✅ Points recalculés avec succès:', computeData);
-        
-        // Post-compute verification: check points_ledger has entries
-        const { count: ledgerCount, error: ledgerError } = await supabase
+      const savedEtape = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+
+      const countLedgerForSelection = async () => {
+        let q = supabase
           .from('points_ledger')
           .select('*', { count: 'exact', head: true })
           .eq('course_id', course.course_id);
-        
-        if (ledgerError) {
-          console.error('❌ Error checking points_ledger:', ledgerError);
+        q = savedEtape === null ? q.is('etape_numero', null) : q.eq('etape_numero', savedEtape);
+        const { count, error } = await q;
+        if (error) {
+          console.error('❌ Error checking points_ledger:', error);
+          return null;
         }
-        
-        if (!ledgerError && (ledgerCount ?? 0) === 0) {
-          console.warn('⚠️ Points ledger vide après compute-points! Tentative de retry...');
-          
-          // Retry once
-          const { error: retryError } = await supabase.functions.invoke('compute-points', {
-            body: { course_id: course.course_id }
-          });
-          
-          const { count: retryCount } = await supabase
-            .from('points_ledger')
-            .select('*', { count: 'exact', head: true })
-            .eq('course_id', course.course_id);
-          
-          if (retryError || (retryCount ?? 0) === 0) {
-            toast({
-              title: "⚠️ Points non attribués",
-              description: "Les résultats sont enregistrés mais le calcul de points semble avoir échoué. Vérifiez dans l'onglet 'Recalcul Points'.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "✅ Points calculés (2ème tentative)",
-              description: `${retryCount} lignes de points attribuées.`,
-            });
-          }
-        } else {
-          toast({
-            title: "✅ Points calculés",
-            description: `${ledgerCount} lignes de points attribuées.`,
-          });
-        }
-        
+        return count ?? 0;
+      };
+
+      const runCompute = async () => {
+        const { data, error } = await supabase.functions.invoke('compute-points', {
+          body: { course_id: course.course_id }
+        });
+        return { ok: !error && !(data as any)?.error, data, error: error || (data as any)?.error };
+      };
+
+      const first = await runCompute();
+      let ledgerCount = first.ok ? await countLedgerForSelection() : null;
+
+      if (!first.ok || ledgerCount === 0) {
+        console.warn('⚠️ Calcul de points incomplet, nouvelle tentative...', first.error);
+        const retry = await runCompute();
+        ledgerCount = retry.ok ? await countLedgerForSelection() : null;
+      }
+
+      if (ledgerCount === null || ledgerCount === 0) {
+        toast({
+          title: "⚠️ Points non attribués",
+          description: savedEtape
+            ? `Les résultats de l'étape ${savedEtape} sont enregistrés mais aucun point n'a été calculé. Relancez le calcul.`
+            : "Les résultats sont enregistrés mais aucun point n'a été calculé. Relancez le calcul.",
+          variant: "destructive",
+          duration: 15000,
+          action: (
+            <ToastAction
+              altText="Recalculer les points"
+              onClick={async () => {
+                const again = await runCompute();
+                const c = again.ok ? await countLedgerForSelection() : null;
+                if (c && c > 0) {
+                  toast({ title: "✅ Points calculés", description: `${c} lignes de points attribuées.` });
+                } else {
+                  toast({
+                    title: "❌ Calcul toujours en échec",
+                    description: "Utilisez l'onglet « Recalcul Points ».",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Recalculer
+            </ToastAction>
+          ),
+        });
+      } else {
+        toast({
+          title: "✅ Points calculés",
+          description: `${ledgerCount} lignes de points attribuées.`,
+        });
         // Reset manual TTT flag after successful save
         tttManuallySet.current = false;
       }
+
 
 
       // Save Combatif winner if on finals tab for WT GT
