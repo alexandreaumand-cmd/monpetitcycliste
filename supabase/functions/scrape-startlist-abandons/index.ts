@@ -189,15 +189,58 @@ async function processRace(
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const CRON_SECRET = Deno.env.get('LIVE_BROADCAST_CRON_SECRET') ?? '';
+
+    // --- Auth gate: cron secret OR authenticated superadmin ---
+    const cronHeader = req.headers.get('x-cron-secret');
+    const isCronCall = Boolean(CRON_SECRET && cronHeader && cronHeader === CRON_SECRET);
+
+    let actorManagerId: string | null = null;
+
+    if (!isCronCall) {
+      const authHeader = req.headers.get('Authorization') ?? '';
+      if (!authHeader) {
+        return new Response(JSON.stringify({ ok: false, error: 'Non authentifié' }), { status: 401, headers: jsonHeaders });
+      }
+
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: userData, error: userError } = await userClient.auth.getUser();
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ ok: false, error: 'Non authentifié' }), { status: 401, headers: jsonHeaders });
+      }
+
+      const { data: isSuperAdmin, error: roleError } = await userClient.rpc('is_superadmin');
+      if (roleError || !isSuperAdmin) {
+        console.error('[abandons] superadmin check failed', roleError);
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Accès refusé: réservé aux superadministrateurs' }),
+          { status: 403, headers: jsonHeaders },
+        );
+      }
+
+      const { data: currentManager } = await userClient
+        .from('managers')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+      actorManagerId = currentManager?.id ?? null;
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     let body: any = {};
     try { body = await req.json(); } catch (_) { /* empty body OK */ }
     const targetRaceId: string | null = body?.race_id ?? null;
+
 
     const today = new Date().toISOString().split('T')[0];
 
