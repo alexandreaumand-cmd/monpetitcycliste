@@ -287,10 +287,25 @@ Deno.serve(async (req) => {
       results.push(await processRace(supabase, t));
     }
 
+    try {
+      await supabase.from('audits').insert({
+        actor_manager_id: actorManagerId,
+        action: 'scrape_startlist_abandons',
+        payload_json: JSON.stringify({
+          via: isCronCall ? 'cron' : 'superadmin',
+          race_id: targetRaceId,
+          processed: results.length,
+        }),
+      });
+    } catch (auditError) {
+      console.error('[abandons] audit insert failed', auditError);
+    }
+
     return new Response(
       JSON.stringify({ ok: true, processed: results.length, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { headers: jsonHeaders },
     );
+
   } catch (e: any) {
     console.error('[abandons] fatal', e);
     return new Response(
