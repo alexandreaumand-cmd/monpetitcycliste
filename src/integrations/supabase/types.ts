@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _debug_standings_audit: {
-        Row: {
-          league_id: string | null
-          manager_id: string | null
-          saison_id: string | null
-          total_race_pts: number | null
-        }
-        Insert: {
-          league_id?: string | null
-          manager_id?: string | null
-          saison_id?: string | null
-          total_race_pts?: number | null
-        }
-        Update: {
-          league_id?: string | null
-          manager_id?: string | null
-          saison_id?: string | null
-          total_race_pts?: number | null
-        }
-        Relationships: []
-      }
       annonces: {
         Row: {
           auction_id: string

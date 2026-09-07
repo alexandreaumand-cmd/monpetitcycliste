@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public._debug_standings_audit;
