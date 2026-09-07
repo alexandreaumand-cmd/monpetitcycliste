@@ -3,8 +3,9 @@ import { fetchPcs, PcsFetchError } from '../_shared/pcsFetch.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
+
 
 const PCS_BASE = 'https://www.procyclingstats.com';
 
@@ -189,15 +190,58 @@ async function processRace(
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const CRON_SECRET = Deno.env.get('LIVE_BROADCAST_CRON_SECRET') ?? '';
+
+    // --- Auth gate: cron secret OR authenticated superadmin ---
+    const cronHeader = req.headers.get('x-cron-secret');
+    const isCronCall = Boolean(CRON_SECRET && cronHeader && cronHeader === CRON_SECRET);
+
+    let actorManagerId: string | null = null;
+
+    if (!isCronCall) {
+      const authHeader = req.headers.get('Authorization') ?? '';
+      if (!authHeader) {
+        return new Response(JSON.stringify({ ok: false, error: 'Non authentifié' }), { status: 401, headers: jsonHeaders });
+      }
+
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: userData, error: userError } = await userClient.auth.getUser();
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ ok: false, error: 'Non authentifié' }), { status: 401, headers: jsonHeaders });
+      }
+
+      const { data: isSuperAdmin, error: roleError } = await userClient.rpc('is_superadmin');
+      if (roleError || !isSuperAdmin) {
+        console.error('[abandons] superadmin check failed', roleError);
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Accès refusé: réservé aux superadministrateurs' }),
+          { status: 403, headers: jsonHeaders },
+        );
+      }
+
+      const { data: currentManager } = await userClient
+        .from('managers')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+      actorManagerId = currentManager?.id ?? null;
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     let body: any = {};
     try { body = await req.json(); } catch (_) { /* empty body OK */ }
     const targetRaceId: string | null = body?.race_id ?? null;
+
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -243,10 +287,25 @@ Deno.serve(async (req) => {
       results.push(await processRace(supabase, t));
     }
 
+    try {
+      await supabase.from('audits').insert({
+        actor_manager_id: actorManagerId,
+        action: 'scrape_startlist_abandons',
+        payload_json: JSON.stringify({
+          via: isCronCall ? 'cron' : 'superadmin',
+          race_id: targetRaceId,
+          processed: results.length,
+        }),
+      });
+    } catch (auditError) {
+      console.error('[abandons] audit insert failed', auditError);
+    }
+
     return new Response(
       JSON.stringify({ ok: true, processed: results.length, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { headers: jsonHeaders },
     );
+
   } catch (e: any) {
     console.error('[abandons] fatal', e);
     return new Response(
