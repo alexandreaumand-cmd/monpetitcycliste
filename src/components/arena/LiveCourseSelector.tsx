@@ -21,6 +21,9 @@ interface LiveCourse {
   course_id: string;
   is_active: boolean;
   current_etape: number | null;
+  current_race_situation?: any;
+  situation_updated_at?: string | null;
+  scrape_schedule?: any;
   courses?: {
     nom: string;
     categorie: string | null;
@@ -36,12 +39,17 @@ export function useLiveCourses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arena_live_courses")
-        .select("id, course_id, is_active, current_etape, courses(nom, categorie, date_debut, date_fin, type_course)")
+        .select(
+          "id, course_id, is_active, current_etape, current_race_situation, situation_updated_at, scrape_schedule, courses(nom, categorie, date_debut, date_fin, type_course)"
+        )
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as LiveCourse[];
     },
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
   });
 }
 
@@ -92,6 +100,14 @@ export function useDeactivateLiveCourse() {
       queryClient.invalidateQueries({ queryKey: ["arena-live-courses"] });
     },
   });
+}
+
+/** « 🏁 40,2 km » si la situation live fournit un kilométrage, sinon « – km ». */
+function formatKmRemaining(situation: any): string {
+  const km = Number(situation?.kmRemaining);
+  if (!Number.isFinite(km)) return "– km";
+  const rounded = Math.round(km * 10) / 10;
+  return `🏁 ${rounded.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km`;
 }
 
 export const LiveCourseSelector = ({
@@ -194,6 +210,15 @@ export const LiveCourseSelector = ({
                   {lc.courses.categorie}
                 </Badge>
               )}
+              <span
+                className={cn(
+                  "text-[10px] tabular-nums whitespace-nowrap ml-0.5",
+                  selected ? "text-primary-foreground/80" : "text-muted-foreground"
+                )}
+                title="Kilométrage restant"
+              >
+                {formatKmRemaining(lc.current_race_situation)}
+              </span>
             </button>
           );
         })}
