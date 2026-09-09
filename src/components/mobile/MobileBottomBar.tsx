@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Users, BarChart3, ListChecks, Trophy, Swords, MoreHorizontal, Radio } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { MobileMoreSheet } from "./MobileMoreSheet";
+import { useAnyLiveNow } from "@/hooks/useAnyLiveNow";
 
 interface MobileBottomBarProps {
   isAdmin: boolean;
@@ -22,6 +23,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
   const queryClient = useQueryClient();
   const { selectedSeason } = useSeasonContext();
   const [moreOpen, setMoreOpen] = useState(false);
+  const anyLiveNow = useAnyLiveNow();
 
   const prefetchPageData = (path: string) => {
     if (!currentLeagueId) return;
@@ -51,7 +53,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
     { label: t("navigation.teams"), path: "/dashboard/mon-equipe", icon: Users },
     { label: t("navigation.startlist"), path: "/dashboard/startlist", icon: ListChecks },
     { label: t("navigation.results"), path: "/dashboard/resultats", icon: Trophy },
-    { label: "Live", path: "/dashboard/live", icon: Radio },
+    { label: "Live", path: "/dashboard/live", icon: Radio, isLive: true },
     { label: t("navigation.arena"), path: "/dashboard/arene", icon: Swords },
   ];
 
@@ -70,6 +72,7 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
           {mainRoutes.map((route) => {
             const Icon = route.icon;
             const active = isActive(route.path);
+            const liveHighlight = Boolean((route as any).isLive) && anyLiveNow;
 
             return (
               <button
@@ -80,13 +83,17 @@ export const MobileBottomBar = ({ isAdmin, manager, onSignOut }: MobileBottomBar
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg transition-all min-w-0 flex-1",
                   "active:scale-95",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
-                    : "text-white/80 hover:text-bordure-gold"
+                  liveHighlight
+                    ? active
+                      ? "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/40"
+                      : "text-destructive"
+                    : active
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
+                      : "text-white/80 hover:text-bordure-gold"
                 )}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={cn("h-4 w-4 shrink-0", liveHighlight && "animate-pulse")} />
                 <span className="text-[9px] font-montserrat font-semibold leading-none truncate max-w-full">
                   {route.label}
                 </span>

@@ -16,7 +16,7 @@ interface LiveCourseSelectorProps {
 }
 
 
-interface LiveCourse {
+export interface LiveCourse {
   id: string;
   course_id: string;
   is_active: boolean;
