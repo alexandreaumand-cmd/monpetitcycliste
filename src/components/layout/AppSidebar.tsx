@@ -49,6 +49,8 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const location = useLocation();
   const { leagueId } = useLeague();
   const { roles, isLoading: rolesLoading } = useUserLeagues();
+  const anyLiveNow = useAnyLiveNow();
+
 
   // Vérifier si l'utilisateur est admin/owner de la ligue sélectionnée
   const isAdminOfCurrentLeague = !rolesLoading && leagueId && roles[leagueId] && 
