@@ -163,12 +163,16 @@ Deno.serve(async (req) => {
 
         // Check if race is current (today is between start and end)
         if (raceStart <= todayDate && todayDate <= raceEnd) {
-          racesByRider[riderId].current_races.push(race);
+          // Un coureur ayant abandonné (DNF/DNS) n'est plus "en course"
+          if (!entry.abandon_type) {
+            racesByRider[riderId].current_races.push(race);
+          }
         }
         // Check if race is upcoming (starts after today but within 10 days)
         else if (raceStart > todayDate) {
           racesByRider[riderId].upcoming_races.push(race);
         }
+
       }
     }
 
