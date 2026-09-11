@@ -114,12 +114,12 @@ export const StartlistCalendarView = ({
   const getCourseColor = (course: Course) => {
     // Color based on category - using gold/amber for WorldTour matching the legend
     const cat = course.categorie?.toLowerCase() || '';
-    // WorldTour: matches .uwt patterns OR contains "wt" (e.g., "Classiques WT Cat 2")
-    if (cat.includes('.uwt') || cat.includes(' wt ') || cat.includes(' wt') || cat.startsWith('wt ')) return 'bg-amber-400/30 border-amber-500 text-amber-900 dark:text-amber-100';
+    if (isTopTier(cat)) return 'bg-amber-400/30 border-amber-500 text-amber-900 dark:text-amber-100';
     if (cat.includes('.pro') || cat.includes('proseries')) return 'bg-sky-400/30 border-sky-500 text-sky-900 dark:text-sky-100';
     if (cat.includes('.1')) return 'bg-emerald-400/30 border-emerald-500 text-emerald-900 dark:text-emerald-100';
     return 'bg-muted border-border text-muted-foreground';
   };
+
 
   return (
     <Card>
