@@ -8,6 +8,7 @@ import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInCalendarDays } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
+import { getCourseCategoryPriority } from "@/lib/coursePriority";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
