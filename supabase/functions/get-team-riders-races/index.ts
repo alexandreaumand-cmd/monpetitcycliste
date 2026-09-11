@@ -103,9 +103,10 @@ Deno.serve(async (req) => {
     // Step 3: Query startlist entries for all riders, but ONLY in the latest startlists
     const { data: entries, error } = await supabase
       .from('startlist_entries')
-      .select('coureur_id, startlist_id')
+      .select('coureur_id, startlist_id, abandon_type')
       .in('coureur_id', rider_ids)
       .in('startlist_id', latestStartlistIds);
+
 
     if (error) {
       console.error('Error fetching entries:', error);
@@ -162,12 +163,16 @@ Deno.serve(async (req) => {
 
         // Check if race is current (today is between start and end)
         if (raceStart <= todayDate && todayDate <= raceEnd) {
-          racesByRider[riderId].current_races.push(race);
+          // Un coureur ayant abandonné (DNF/DNS) n'est plus "en course"
+          if (!entry.abandon_type) {
+            racesByRider[riderId].current_races.push(race);
+          }
         }
         // Check if race is upcoming (starts after today but within 10 days)
         else if (raceStart > todayDate) {
           racesByRider[riderId].upcoming_races.push(race);
         }
+
       }
     }
 

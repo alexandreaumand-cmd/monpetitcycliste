@@ -201,10 +201,23 @@ Deno.serve(async (req) => {
           // 3. Récupérer les entrées de startlist pour ces imports et ces coureurs
           const { data: entries } = await supabase
             .from('startlist_entries')
-            .select('startlist_id, coureur_id')
+            .select('startlist_id, coureur_id, abandon_type, abandon_etape')
             .in('startlist_id', startlistIds)
             .in('coureur_id', coureurIds);
-          
+
+          // 3b. Dates d'étapes pour convertir un numéro d'étape en date
+          const { data: stageConfigs } = await supabase
+            .from('course_stage_config')
+            .select('course_id, etape_numero, stage_date')
+            .in('course_id', courseIds);
+
+          const stageDatesByCourse = new Map<string, Map<number, string>>();
+          for (const sc of stageConfigs || []) {
+            if (!sc.stage_date) continue;
+            if (!stageDatesByCourse.has(sc.course_id)) stageDatesByCourse.set(sc.course_id, new Map());
+            stageDatesByCourse.get(sc.course_id)!.set(Number(sc.etape_numero), sc.stage_date);
+          }
+
           if (entries && entries.length > 0) {
             // Créer un map startlist_id -> race_id
             const startlistToRace = new Map<string, string>();
@@ -214,7 +227,9 @@ Deno.serve(async (req) => {
             
             // Créer un map race_id -> jours
             const raceDaysPerCourse = new Map<string, number>();
+            const courseById = new Map<string, any>();
             for (const course of filteredCourses) {
+              courseById.set(course.id, course);
             if (course.date_debut && course.date_fin) {
                 const debut = new Date(course.date_debut);
                 const fin = new Date(course.date_fin);
@@ -224,16 +239,47 @@ Deno.serve(async (req) => {
                 raceDaysPerCourse.set(course.id, days);
               }
             }
-            
+
+            // Jours réellement disputés, en tenant compte des abandons (DNF/DNS)
+            const daysRidden = (raceId: string, entry: any): number => {
+              const maxDays = raceDaysPerCourse.get(raceId) || 0;
+              if (maxDays <= 0) return 0;
+              if (!entry.abandon_type) return maxDays;
+
+              const etape = entry.abandon_etape ? Number(entry.abandon_etape) : null;
+              const isDns = String(entry.abandon_type).toUpperCase() === 'DNS';
+
+              // Course d'un jour (ou étape inconnue)
+              if (!etape) {
+                if (maxDays === 1) return isDns ? 0 : 1;
+                return maxDays;
+              }
+
+              const lastStage = isDns ? etape - 1 : etape;
+              if (lastStage <= 0) return 0;
+
+              const course = courseById.get(raceId);
+              const stageDates = stageDatesByCourse.get(raceId);
+              const lastDate = stageDates?.get(lastStage);
+              if (course?.date_debut && lastDate) {
+                const debut = new Date(course.date_debut);
+                const fin = new Date(lastDate);
+                const computed = Math.round((fin.getTime() - debut.getTime()) / 86400000) + 1;
+                return Math.max(0, Math.min(maxDays, computed));
+              }
+              return Math.min(maxDays, lastStage);
+            };
+
             // Sommer les jours par coureur
             for (const entry of entries) {
               const raceId = startlistToRace.get(entry.startlist_id);
               if (raceId) {
-                const days = raceDaysPerCourse.get(raceId) || 0;
+                const days = daysRidden(raceId, entry);
                 raceDaysMap.set(entry.coureur_id, (raceDaysMap.get(entry.coureur_id) || 0) + days);
               }
             }
           }
+
         }
       }
     }
