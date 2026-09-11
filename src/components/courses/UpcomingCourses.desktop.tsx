@@ -103,7 +103,13 @@ export const UpcomingCourses = () => {
       const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
       return matchesSearch && matchesPhase;
     })
-    ?.sort((a, b) => a.date_debut.localeCompare(b.date_debut));
+    ?.sort((a, b) => {
+      const dateCmp = a.date_debut.localeCompare(b.date_debut);
+      if (dateCmp !== 0) return dateCmp;
+      const priorityCmp = getCourseCategoryPriority(b.categorie) - getCourseCategoryPriority(a.categorie);
+      if (priorityCmp !== 0) return priorityCmp;
+      return a.nom.localeCompare(b.nom);
+    });
 
   if (isLoading || isLoadingContext) {
     return (
