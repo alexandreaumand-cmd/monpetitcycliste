@@ -103,9 +103,10 @@ Deno.serve(async (req) => {
     // Step 3: Query startlist entries for all riders, but ONLY in the latest startlists
     const { data: entries, error } = await supabase
       .from('startlist_entries')
-      .select('coureur_id, startlist_id')
+      .select('coureur_id, startlist_id, abandon_type')
       .in('coureur_id', rider_ids)
       .in('startlist_id', latestStartlistIds);
+
 
     if (error) {
       console.error('Error fetching entries:', error);
