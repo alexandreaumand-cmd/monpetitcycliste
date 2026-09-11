@@ -166,7 +166,19 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
           courseMap.get(c.course_id)!.items.push(c);
         }
         const courses = Array.from(courseMap.entries())
-          .map(([courseId, { courseName, items }]) => ({ courseId, courseName, items }))
+          .map(([courseId, { courseName, items }]) => ({
+            courseId,
+            courseName,
+            items: [...items].sort((a, b) => {
+              const aOwner = rosterMap?.get(a.coureur_id || "");
+              const bOwner = rosterMap?.get(b.coureur_id || "");
+              const aPriority = aOwner?.managerId === currentManager?.id ? 0 : aOwner ? 1 : 2;
+              const bPriority = bOwner?.managerId === currentManager?.id ? 0 : bOwner ? 1 : 2;
+
+              if (aPriority !== bPriority) return aPriority - bPriority;
+              return new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime();
+            }),
+          }))
           .sort((a, b) => (courseOrder.get(a.courseId) ?? 999) - (courseOrder.get(b.courseId) ?? 999));
         const label =
           dayKey === todayKey
@@ -176,7 +188,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
               : format(new Date(`${dayKey}T12:00:00`), "EEEE d MMMM yyyy", { locale: fr });
         return { dayKey, label, total: dayItems.length, courses };
       });
-  }, [changes, courseOrder]);
+  }, [changes, courseOrder, currentManager?.id, rosterMap]);
 
 
   if (isLoading) {
