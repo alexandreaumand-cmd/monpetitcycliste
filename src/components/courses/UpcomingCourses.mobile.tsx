@@ -8,6 +8,7 @@ import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInCalendarDays } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
+import { getCourseCategoryPriority } from "@/lib/coursePriority";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -97,7 +98,13 @@ export const UpcomingCoursesMobile = () => {
       const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
       return matchesSearch && matchesPhase;
     })
-    ?.sort((a, b) => a.date_debut.localeCompare(b.date_debut));
+    ?.sort((a, b) => {
+      const dateCmp = a.date_debut.localeCompare(b.date_debut);
+      if (dateCmp !== 0) return dateCmp;
+      const priorityCmp = getCourseCategoryPriority(b.categorie) - getCourseCategoryPriority(a.categorie);
+      if (priorityCmp !== 0) return priorityCmp;
+      return a.nom.localeCompare(b.nom);
+    });
 
   const phaseItems = [
     { value: "all", label: t('courses.allPhases') },
