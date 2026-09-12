@@ -11,7 +11,7 @@ export function useCurrentManager() {
       
       const { data: manager } = await supabase
         .from("managers")
-        .select("id, nom, user_id, avatar_url, sponsor, email")
+        .select("id, nom, user_id, avatar_url, sponsor, email, preferred_league_id")
         .eq("user_id", session.user.id)
         .maybeSingle();
       
