@@ -43,7 +43,17 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
   // Batch fetch all league card data
   const { data: leagueCardsData, isLoading: isLoadingCardsData } = useLeagueCardsData(leagueInfos);
 
-  const activeLeagues = leagues.filter(league => league.status !== 'completed');
+  const preferredLeagueId = manager?.preferred_league_id as string | null | undefined;
+
+  const activeLeagues = useMemo(() => {
+    const list = leagues.filter(league => league.status !== 'completed');
+    if (!preferredLeagueId) return list;
+    return [...list].sort((a, b) => {
+      const aPref = a.id === preferredLeagueId ? 0 : 1;
+      const bPref = b.id === preferredLeagueId ? 0 : 1;
+      return aPref - bPref;
+    });
+  }, [leagues, preferredLeagueId]);
   const completedLeagues = leagues.filter(league => league.status === 'completed');
 
   const buildNavUrl = (path: string) => {
