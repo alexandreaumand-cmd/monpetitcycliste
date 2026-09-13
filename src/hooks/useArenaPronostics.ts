@@ -613,9 +613,12 @@ export interface StartlistRider {
   coureur_id: string;
   nom: string;
   team: string | null;
+  total_points: number;
 }
 
 export function useStartlistRiders(courseId: string | null) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ['arena-startlist-riders', courseId],
     queryFn: async () => {
@@ -623,7 +626,7 @@ export function useStartlistRiders(courseId: string | null) {
 
       const { data: importData } = await supabase
         .from('startlist_imports')
-        .select('id')
+        .select('id, saison_id')
         .eq('race_id', courseId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -640,26 +643,52 @@ export function useStartlistRiders(courseId: string | null) {
 
       if (error) throw error;
 
-      const coureurIds = (entries || []).map(e => e.coureur_id!).filter(Boolean);
+      const coureurIds = (entries || [])
+        .map((entry) => entry.coureur_id)
+        .filter((id): id is string => Boolean(id));
       if (coureurIds.length === 0) return [];
 
-      const { data: coureurs } = await supabase
-        .from('coureurs')
-        .select('id, nom')
-        .in('id', coureurIds);
+      const [{ data: coureurs }, seasonRiders] = await Promise.all([
+        supabase
+          .from('coureurs')
+          .select('id, nom')
+          .in('id', coureurIds),
+        importData.saison_id
+          ? queryClient.ensureQueryData({
+              queryKey: ['arena-season-rider-points', importData.saison_id],
+              queryFn: async () => {
+                const { data, error: pointsError } = await supabase.rpc('get_riders_data_for_season', {
+                  p_saison_id: importData.saison_id,
+                });
+                if (pointsError) throw pointsError;
+                return data || [];
+              },
+              staleTime: 1000 * 60 * 10,
+            })
+          : Promise.resolve([]),
+      ]);
 
       const coureurMap: Record<string, string> = {};
       for (const c of (coureurs || [])) {
         coureurMap[c.id] = c.nom;
       }
 
+      const pointsMap = new Map(
+        seasonRiders.map((rider) => [rider.coureur_id, Number(rider.total_points) || 0])
+      );
+
       return (entries || [])
-        .filter(e => e.coureur_id)
-        .map(e => ({
-          coureur_id: e.coureur_id!,
-          nom: coureurMap[e.coureur_id!] || e.source_name,
-          team: e.source_team,
-        })) as StartlistRider[];
+        .filter((entry): entry is typeof entry & { coureur_id: string } => Boolean(entry.coureur_id))
+        .map((entry) => ({
+          coureur_id: entry.coureur_id,
+          nom: coureurMap[entry.coureur_id] || entry.source_name,
+          team: entry.source_team,
+          total_points: pointsMap.get(entry.coureur_id) || 0,
+        }))
+        .sort((a, b) => {
+          if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+          return a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+        }) as StartlistRider[];
     },
     enabled: !!courseId,
     staleTime: 1000 * 60 * 10,
