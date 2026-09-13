@@ -620,7 +620,7 @@ export const RankingsMobile = () => {
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
                 className="h-10"
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1">
                   {(['all', 'with', 'without'] as const).map((key) => (
                     <button
@@ -628,7 +628,7 @@ export const RankingsMobile = () => {
                       type="button"
                       onClick={() => setManagerFilter(key)}
                       className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap",
                         managerFilter === key
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted/40 text-muted-foreground"
