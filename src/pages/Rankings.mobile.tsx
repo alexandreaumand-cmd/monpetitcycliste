@@ -628,7 +628,7 @@ export const RankingsMobile = () => {
                       type="button"
                       onClick={() => setManagerFilter(key)}
                       className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap",
                         managerFilter === key
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted/40 text-muted-foreground"
