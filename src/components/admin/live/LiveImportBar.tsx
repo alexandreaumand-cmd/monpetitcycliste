@@ -25,6 +25,10 @@ interface LiveImportBarProps {
   onScheduleChange: (s: ScrapeWindow[]) => void;
   lastAutoScrapeAt: Date | null;
   nextScrapeAt: Date | null;
+  /** "HH:MM" (Paris) of the next window later today, when currently out of window */
+  nextWindowStart?: string | null;
+  /** Human label of the windows actually used (stage plan vs course-level) */
+  scheduleSource?: string;
   scrapeStats: { total: number; matched: number; unmatched: string[] } | null;
   sticky?: boolean;
 }
