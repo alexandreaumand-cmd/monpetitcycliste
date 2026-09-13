@@ -620,7 +620,7 @@ export const RankingsMobile = () => {
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
                 className="h-10"
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1">
                   {(['all', 'with', 'without'] as const).map((key) => (
                     <button
