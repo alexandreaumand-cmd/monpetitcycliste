@@ -29,7 +29,8 @@ import { RaceTimeline, type TimelineEvent } from "@/components/arena/RaceTimelin
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
-import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
+import { useLiveStageStatus, parisDateKey } from "@/hooks/useLiveStageStatus";
+import { getNextWindowStart } from "@/components/arena/ScrapeScheduleEditor";
 import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
 import { StagePlanEditor } from "@/components/admin/live/StagePlanEditor";
 
