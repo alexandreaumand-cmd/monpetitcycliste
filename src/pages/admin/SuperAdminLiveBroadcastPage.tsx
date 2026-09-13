@@ -29,7 +29,8 @@ import { RaceTimeline, type TimelineEvent } from "@/components/arena/RaceTimelin
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LiveImportBar } from "@/components/admin/live/LiveImportBar";
-import { useLiveStageStatus } from "@/hooks/useLiveStageStatus";
+import { useLiveStageStatus, parisDateKey } from "@/hooks/useLiveStageStatus";
+import { getNextWindowStart } from "@/components/arena/ScrapeScheduleEditor";
 import { ActiveCourseHeader } from "@/components/admin/live/ActiveCourseHeader";
 import { StagePlanEditor } from "@/components/admin/live/StagePlanEditor";
 
@@ -85,6 +86,36 @@ export const SuperAdminLiveBroadcastPage = () => {
     (lc) => lc.course_id === activeCourseId
   );
   const stageStatus = useLiveStageStatus(activeCourseId, selectedCourse?.current_etape ?? null);
+
+  // Today's stage plan (Paris) overrides the course-level windows — same rule as the server
+  const todayKey = parisDateKey();
+  const { data: todayPlan } = useQuery({
+    queryKey: ["live-stage-plan-schedule", activeCourseId, todayKey],
+    enabled: !!activeCourseId,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("live_stage_plans" as any) as any)
+        .select("etape_numero, scrape_schedule")
+        .eq("course_id", activeCourseId as string)
+        .eq("is_enabled", true)
+        .eq("stage_date", todayKey)
+        .maybeSingle();
+      return (data as any) ?? null;
+    },
+  });
+
+  const planSchedule: ScrapeWindow[] =
+    Array.isArray(todayPlan?.scrape_schedule) && todayPlan!.scrape_schedule.length > 0
+      ? (todayPlan!.scrape_schedule as ScrapeWindow[])
+      : [];
+  const effectiveSchedule = planSchedule.length > 0 ? planSchedule : schedule;
+  const scheduleSource =
+    planSchedule.length > 0
+      ? todayPlan?.etape_numero != null
+        ? `plages de l'étape ${todayPlan.etape_numero}`
+        : "plages de l'étape du jour"
+      : "plages de la course";
   const isMultiStage =
     selectedCourse?.courses?.type_course === "stage_race" ||
     (selectedCourse?.courses?.date_debut &&
@@ -614,15 +645,17 @@ export const SuperAdminLiveBroadcastPage = () => {
             nextScrapeAt={(() => {
               if (!autoScrapeEnabled) return nextScrapeAt;
               const now = new Date();
-              if (nextScrapeAt && nextScrapeAt.getTime() > now.getTime()) return nextScrapeAt;
-              const interval = getActiveInterval(schedule, now);
+              const interval = getActiveInterval(effectiveSchedule, now);
               if (interval == null) return null;
+              if (nextScrapeAt && nextScrapeAt.getTime() > now.getTime()) return nextScrapeAt;
               const base = lastAutoScrapeAt ?? now;
               const fromBase = new Date(base.getTime() + interval * 1000);
               return fromBase.getTime() > now.getTime()
                 ? fromBase
                 : new Date(now.getTime() + interval * 1000);
             })()}
+            nextWindowStart={getNextWindowStart(effectiveSchedule, new Date())}
+            scheduleSource={scheduleSource}
             scrapeStats={scrapeStats}
             sticky={isMobile}
           />

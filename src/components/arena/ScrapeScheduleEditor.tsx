@@ -102,13 +102,28 @@ export const ScrapeScheduleEditor = ({ schedule, onChange, disabled }: Props) =>
   );
 };
 
+const toMin = (s: string) => {
+  const [h, m] = String(s).split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+/** Minutes since midnight, Paris time (schedules are entered in Paris time). */
+export const parisMinutesOfDay = (now: Date): number => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return h * 60 + m;
+};
+
 // Returns the matching window's interval (sec) for a given Date, or null if none matches.
 export const getActiveInterval = (schedule: ScrapeWindow[], now: Date): number | null => {
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const toMin = (s: string) => {
-    const [h, m] = s.split(":").map(Number);
-    return (h || 0) * 60 + (m || 0);
-  };
+  if (!Array.isArray(schedule)) return null;
+  const minutes = parisMinutesOfDay(now);
   for (const w of schedule) {
     const start = toMin(w.start);
     const end = toMin(w.end);
@@ -117,6 +132,17 @@ export const getActiveInterval = (schedule: ScrapeWindow[], now: Date): number |
     }
   }
   return null;
+};
+
+/** "HH:MM" of the next window starting later today (Paris), or null if none left. */
+export const getNextWindowStart = (schedule: ScrapeWindow[], now: Date): string | null => {
+  if (!Array.isArray(schedule) || schedule.length === 0) return null;
+  const minutes = parisMinutesOfDay(now);
+  const upcoming = schedule
+    .map((w) => ({ label: w.start, min: toMin(w.start) }))
+    .filter((w) => w.min > minutes)
+    .sort((a, b) => a.min - b.min);
+  return upcoming[0]?.label ?? null;
 };
 
 export const describeSchedule = (schedule: ScrapeWindow[]): string => {
