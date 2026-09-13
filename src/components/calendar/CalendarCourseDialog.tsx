@@ -406,6 +406,19 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
       }));
   }, [startlistData?.entries]);
 
+  const movementCount = movements?.length || 0;
+
+  useEffect(() => {
+    if (!open) {
+      setMobileMovementsOpen(false);
+      return;
+    }
+
+    if (movementCount > 0) {
+      setMobileMovementsOpen(true);
+    }
+  }, [course?.course_id, movementCount, open]);
+
   if (!course) return null;
 
   const formatDate = (dateStr: string | null) => {
@@ -491,19 +504,6 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
 
   const maxPoints = Math.max(...pointsData.map(d => d.points), 1);
   const stats = startlistData?.stats;
-  const movementCount = movements?.length || 0;
-
-  useEffect(() => {
-    if (!open) {
-      setMobileMovementsOpen(false);
-      return;
-    }
-
-    if (movementCount > 0) {
-      setMobileMovementsOpen(true);
-    }
-  }, [course.course_id, movementCount, open]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0 sm:h-auto sm:max-h-[92vh]">
