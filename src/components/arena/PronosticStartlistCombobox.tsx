@@ -110,13 +110,18 @@ export const PronosticStartlistCombobox = ({
                         value === rider.coureur_id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{rider.nom}</span>
-                      {rider.team && (
-                        <span className="text-xs text-muted-foreground">
-                          {rider.team}
-                        </span>
-                      )}
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium">{rider.nom}</span>
+                        {rider.team && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {rider.team}
+                          </span>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums text-primary">
+                        {rider.total_points.toLocaleString("fr-FR")} {rider.total_points === 1 ? "pt" : "pts"}
+                      </span>
                     </div>
                   </CommandItem>
                 ))}
