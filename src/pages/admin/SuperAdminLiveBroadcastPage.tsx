@@ -645,15 +645,17 @@ export const SuperAdminLiveBroadcastPage = () => {
             nextScrapeAt={(() => {
               if (!autoScrapeEnabled) return nextScrapeAt;
               const now = new Date();
-              if (nextScrapeAt && nextScrapeAt.getTime() > now.getTime()) return nextScrapeAt;
-              const interval = getActiveInterval(schedule, now);
+              const interval = getActiveInterval(effectiveSchedule, now);
               if (interval == null) return null;
+              if (nextScrapeAt && nextScrapeAt.getTime() > now.getTime()) return nextScrapeAt;
               const base = lastAutoScrapeAt ?? now;
               const fromBase = new Date(base.getTime() + interval * 1000);
               return fromBase.getTime() > now.getTime()
                 ? fromBase
                 : new Date(now.getTime() + interval * 1000);
             })()}
+            nextWindowStart={getNextWindowStart(effectiveSchedule, new Date())}
+            scheduleSource={scheduleSource}
             scrapeStats={scrapeStats}
             sticky={isMobile}
           />
