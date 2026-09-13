@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -493,10 +493,21 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   const stats = startlistData?.stats;
   const movementCount = movements?.length || 0;
 
+  useEffect(() => {
+    if (!open) {
+      setMobileMovementsOpen(false);
+      return;
+    }
+
+    if (movementCount > 0) {
+      setMobileMovementsOpen(true);
+    }
+  }, [course.course_id, movementCount, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-muted/30">
+      <DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0 sm:h-auto sm:max-h-[92vh]">
+        <DialogHeader className="border-b bg-muted/30 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
           <DialogTitle className="text-xl font-semibold">{course.nom}</DialogTitle>
           <DialogDescription className="sr-only">{t('drawer.description')}</DialogDescription>
           <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -521,7 +532,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
         </DialogHeader>
 
         {/* Section visibility toggles */}
-        <div className="px-6 py-2 border-b bg-muted/20 flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2 sm:px-6">
           <span className="text-xs text-muted-foreground mr-1">Afficher :</span>
           {programme && programme.length > 0 && (
             <button
@@ -568,8 +579,8 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
           </button>
         </div>
 
-        <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
-          <div className={cn("grid grid-cols-1 gap-6 p-6", showRiders ? "lg:grid-cols-[340px_1fr]" : "lg:grid-cols-1")}>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className={cn("grid grid-cols-1 gap-4 p-4 sm:gap-6 sm:p-6", showRiders ? "lg:grid-cols-[340px_1fr]" : "lg:grid-cols-1")}>
             {/* Left Column - Points & Route */}
             <div className="space-y-4">
               {/* Total Points */}
@@ -711,6 +722,38 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               </div>
             </div>
 
+            {/* Startlist movements - Mobile, before the long riders list */}
+            <div className="lg:hidden">
+              <Collapsible open={mobileMovementsOpen} onOpenChange={setMobileMovementsOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
+                    <span className="font-medium text-sm flex items-center gap-2">
+                      <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
+                      {t('drawer.movements.title')}
+                      {movementCount > 0 && (
+                        <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
+                      )}
+                    </span>
+                    {mobileMovementsOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <div className="rounded-lg border bg-card p-2">
+                    <StartlistMovementsCompact
+                      items={movements || []}
+                      isLoading={loadingMovements}
+                      resolveTeam={resolveTeam}
+                      scrollMaxClass="max-h-[400px]"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
             {/* Right Column - Startlist */}
             {showRiders && (
               <div className="space-y-3">
@@ -772,7 +815,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                   </div>
                 ) : groupedStartlistEntries.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
-                    <div className="max-h-[550px] overflow-y-auto p-3 space-y-4">
+                    <div className="space-y-4 p-3 lg:max-h-[550px] lg:overflow-y-auto">
                       {groupedStartlistEntries.map(({ team, entries, confirmed }) => {
                         const half = Math.ceil(entries.length / 2);
                         const col1 = entries.slice(0, half);
@@ -804,37 +847,6 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                   </div>
                 )}
 
-                {/* Startlist movements - Mobile only (collapsible at bottom) */}
-                <div className="lg:hidden">
-                  <Collapsible open={mobileMovementsOpen} onOpenChange={setMobileMovementsOpen}>
-                    <CollapsibleTrigger asChild>
-                      <button className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors">
-                        <span className="font-medium text-sm flex items-center gap-2">
-                          <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
-                          {t('drawer.movements.title')}
-                          {movementCount > 0 && (
-                            <Badge variant="secondary" className="text-xs">{movementCount}</Badge>
-                          )}
-                        </span>
-                        {mobileMovementsOpen ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-2">
-                      <div className="rounded-lg border bg-card p-2">
-                        <StartlistMovementsCompact
-                          items={movements || []}
-                          isLoading={loadingMovements}
-                          resolveTeam={resolveTeam}
-                          scrollMaxClass="max-h-[400px]"
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
               </div>
             )}
           </div>
