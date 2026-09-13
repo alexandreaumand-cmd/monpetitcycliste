@@ -44,6 +44,8 @@ export const LiveImportBar = ({
   onScheduleChange,
   lastAutoScrapeAt,
   nextScrapeAt,
+  nextWindowStart,
+  scheduleSource,
   scrapeStats,
   sticky,
 }: LiveImportBarProps) => {
@@ -144,9 +146,18 @@ export const LiveImportBar = ({
                 )}
                 {nextScrapeAt ? (
                   <span>→ {format(nextScrapeAt, "HH:mm:ss")}</span>
+                ) : nextWindowStart ? (
+                  <span className="text-muted-foreground">
+                    ⏸ Hors plage — reprise à {nextWindowStart}
+                  </span>
                 ) : (
-                  <span className="text-muted-foreground">⏸ Hors plage</span>
+                  <span className="text-muted-foreground">⏸ Terminé pour aujourd'hui</span>
                 )}
+              </span>
+            )}
+            {autoScrapeEnabled && scheduleSource && (
+              <span className="w-full text-[10px] text-muted-foreground">
+                Selon les {scheduleSource} (heure de Paris)
               </span>
             )}
           </div>
