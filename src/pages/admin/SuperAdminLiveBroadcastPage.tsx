@@ -96,7 +96,7 @@ export const SuperAdminLiveBroadcastPage = () => {
     refetchInterval: 60_000,
     queryFn: async () => {
       const { data } = await (supabase.from("live_stage_plans" as any) as any)
-        .select("etape_numero, scrape_schedule")
+        .select("etape_numero, scrape_url, scrape_schedule")
         .eq("course_id", activeCourseId as string)
         .eq("is_enabled", true)
         .eq("stage_date", todayKey)
@@ -493,24 +493,26 @@ export const SuperAdminLiveBroadcastPage = () => {
   const handleToggleAuto = async () => {
     if (!activeCourseId) return;
     const next = !autoScrapeEnabled;
+    const planUrl: string | null = todayPlan?.scrape_url || null;
     if (next) {
-      if (!scrapeUrl) {
-        toast.error("Entrez une URL d'abord");
+      if (!scrapeUrl && !planUrl) {
+        toast.error(
+          "Aucun lien disponible : saisissez une URL ou renseignez le planning de l'étape du jour"
+        );
         return;
       }
-      if (!schedule.length) {
+      if (!schedule.length && planSchedule.length === 0) {
         toast.error("Configurez au moins une plage horaire");
         return;
       }
     }
     setAutoScrapeEnabled(next);
+    const patch: Record<string, unknown> = { auto_scrape_enabled: next };
+    if (scrapeUrl) patch.live_scrape_url = scrapeUrl;
+    if (schedule.length > 0) patch.scrape_schedule = schedule;
     const { error } = await supabase
       .from("arena_live_courses")
-      .update({
-        auto_scrape_enabled: next,
-        live_scrape_url: scrapeUrl,
-        scrape_schedule: schedule,
-      } as any)
+      .update(patch as any)
       .eq("course_id", activeCourseId)
       .eq("is_active", true);
     if (error) {
@@ -519,7 +521,9 @@ export const SuperAdminLiveBroadcastPage = () => {
       return;
     }
     if (next) {
-      toast.success(`Auto-import serveur activé — ${describeSchedule(schedule)}`);
+      toast.success(
+        `Auto-import serveur activé — ${describeSchedule(effectiveSchedule)} (${scheduleSource})`
+      );
     } else {
       toast.success("Auto-import désactivé");
       setNextScrapeAt(null);
