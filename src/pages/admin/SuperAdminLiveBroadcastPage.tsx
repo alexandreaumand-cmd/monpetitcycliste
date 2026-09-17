@@ -521,7 +521,9 @@ export const SuperAdminLiveBroadcastPage = () => {
       return;
     }
     if (next) {
-      toast.success(`Auto-import serveur activé — ${describeSchedule(schedule)}`);
+      toast.success(
+        `Auto-import serveur activé — ${describeSchedule(effectiveSchedule)} (${scheduleSource})`
+      );
     } else {
       toast.success("Auto-import désactivé");
       setNextScrapeAt(null);
