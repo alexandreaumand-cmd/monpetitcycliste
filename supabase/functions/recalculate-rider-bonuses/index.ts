@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { refreshStandingsInBackground } from '../_shared/refreshStandings.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { refreshStandingsInBackground } from '../_shared/refreshStandings.ts';
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -58,9 +60,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Standings are served from a cached snapshot — refresh once after the whole batch
-      const { error: bulkRefreshErr } = await supabaseClient.rpc('refresh_standings_cache');
-      if (bulkRefreshErr) console.error('[admin-recompute-course] standings refresh error:', bulkRefreshErr.message);
+      // Standings are served from a cached snapshot — refresh in the background
+      refreshStandingsInBackground(supabaseClient, 'admin-recompute-course');
+
 
       return new Response(
         JSON.stringify({
@@ -91,9 +93,9 @@ Deno.serve(async (req) => {
 
     console.log('Résultat du recalcul:', data);
 
-    // Standings are served from a cached snapshot — refresh it after recomputing
-    const { error: refreshErr } = await supabaseClient.rpc('refresh_standings_cache');
-    if (refreshErr) console.error('[admin-recompute-course] standings refresh error:', refreshErr.message);
+    // Standings are served from a cached snapshot — refresh in the background
+    refreshStandingsInBackground(supabaseClient, 'admin-recompute-course');
+
 
     return new Response(
       JSON.stringify({
