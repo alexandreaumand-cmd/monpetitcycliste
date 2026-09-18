@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { refreshStandingsInBackground } from '../_shared/refreshStandings.ts';
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -45,9 +47,9 @@ Deno.serve(async (req) => {
       result = data;
     }
 
-    // Standings are served from a cached snapshot — refresh it so the UI shows the new points
-    const { error: refreshError } = await supabaseClient.rpc('refresh_standings_cache');
-    if (refreshError) console.error('[compute-points] standings refresh error:', refreshError.message);
+    // Standings are served from a cached snapshot — refresh it in the background
+    refreshStandingsInBackground(supabaseClient, 'compute-points');
+
 
     return new Response(
       JSON.stringify(result),
