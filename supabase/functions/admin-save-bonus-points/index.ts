@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { refreshStandingsInBackground } from '../_shared/refreshStandings.ts';
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,9 +128,9 @@ Deno.serve(async (req) => {
 
     console.log(`Bonus points saved: ${upserted} upserted, ${deleted} deleted`);
 
-    // Standings are served from a cached snapshot — refresh it so the UI reflects the bonuses
-    const { error: refreshErr } = await supabase.rpc('refresh_standings_cache');
-    if (refreshErr) console.error('[admin-save-bonus-points] standings refresh error:', refreshErr.message);
+    // Standings are served from a cached snapshot — refresh in the background
+    refreshStandingsInBackground(supabase, 'admin-save-bonus-points');
+
 
 
     return new Response(
