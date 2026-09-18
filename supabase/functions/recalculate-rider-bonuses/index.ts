@@ -256,14 +256,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Refresh materialized views
-    console.log('Refreshing standings materialized views...');
-    const { error: refreshError } = await supabase.rpc('refresh_standings_views');
-    if (refreshError) {
-      console.error('Error refreshing standings views:', refreshError);
-    } else {
-      console.log('Standings views refreshed successfully');
-    }
+    // 3. Refresh materialized views (background, non-blocking)
+    refreshStandingsInBackground(supabase, 'recalculate-rider-bonuses');
+
 
     // 4. Audit log
     await supabase.from('audits').insert({
