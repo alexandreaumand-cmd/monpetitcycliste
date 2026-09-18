@@ -8,6 +8,13 @@
       "when": 1789741757710,
       "tag": "0000_standings_refresh_timeout",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789741798219,
+      "tag": "0001_idx_points_ledger_coureur_course",
+      "breakpoints": true
     }
   ]
 }
