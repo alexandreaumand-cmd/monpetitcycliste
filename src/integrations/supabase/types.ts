@@ -7732,6 +7732,10 @@ export type Database = {
       n_mv: { Args: never; Returns: undefined }
       n_views: { Args: never; Returns: undefined }
       normalize_text: { Args: { txt: string }; Returns: string }
+      purge_live_broadcast_data: {
+        Args: { p_grace_days?: number }
+        Returns: Json
+      }
       purge_old_app_data: { Args: never; Returns: Json }
       purge_old_notifications: { Args: never; Returns: number }
       read_email_batch: {

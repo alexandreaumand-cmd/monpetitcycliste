@@ -15,6 +15,20 @@
       "when": 1789741798219,
       "tag": "0001_idx_points_ledger_coureur_course",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789936163955,
+      "tag": "0002_purge_live_broadcast_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789936198392,
+      "tag": "0003_purge_live_broadcast_data_fix_author",
+      "breakpoints": true
     }
   ]
 }
