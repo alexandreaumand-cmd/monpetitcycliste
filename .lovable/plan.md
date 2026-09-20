@@ -1,21 +1,27 @@
-# « Oups, une erreur est survenue » à l'ouverture de l'appli
+# Supprimer les données de live des courses terminées
 
-## Ce qui se passe
+## Constat (vérifié en base)
+- Les messages de live (`admin_broadcast`) représentent 56 Mo, soit la plus grosse table de la base (2,2 Go au total).
+- 38 415 messages de live existent, dont **37 080 appartiennent à des courses déjà finies** (date de fin passée). Seuls 1 335 concernent des courses à venir ou en cours.
+- 31 plannings d'étapes sur 39 et 32 activations de live sur 37 concernent aussi des courses déjà finies.
+- Les courses n'ont pas de champ « archivée » : le statut reste « programmée » même après la course. Le critère retenu est donc **la date de fin passée depuis plus de 3 jours** (marge pour laisser le temps de consulter le live juste après l'arrivée).
 
-Le message exact — « Failed to fetch dynamically imported module: .../assets/Dashboard-B4Cznoex.js » — veut dire que le téléphone essaie de charger un morceau de l'appli qui n'existe plus sur le serveur.
+## Ce qui sera fait
 
-Pourquoi : la page d'accueil de l'appli est gardée en mémoire par le navigateur pendant 1 heure (et bien plus longtemps encore quand l'appli est installée sur l'écran d'accueil). Chaque fois que vous publiez une nouvelle version, les fichiers de pages reçoivent un nouveau nom et les anciens disparaissent. L'utilisateur qui ouvre l'appli avec l'ancienne page en mémoire demande donc un fichier supprimé : les pages étant chargées à la demande, l'écran d'erreur remplace tout l'écran. Comme vous publiez souvent en ce moment, il le voit souvent. Le bouton « Recharger la page » marche parfois seulement, car la page d'accueil en mémoire est resservie telle quelle.
+1. **Nettoyage immédiat de l'historique**
+   Suppression des messages de live, des plannings d'étapes et des activations de live pour toutes les courses finies depuis plus de 3 jours. Gain attendu : environ 50 Mo libérés tout de suite.
 
-## Correctifs
+2. **Nettoyage automatique en continu**
+   Une tâche quotidienne supprimera ces mêmes données dès qu'une course dépasse 3 jours après son arrivée. Plus besoin d'y penser.
 
-1. **Ne plus garder la page d'accueil en mémoire** : dans `public/_headers`, servir le document HTML en `no-cache` (revalidation à chaque ouverture) tout en gardant les fichiers `/assets/*` en cache long. L'utilisateur reçoit alors toujours la liste à jour des fichiers de pages.
-
-2. **Se rattraper automatiquement quand un fichier manque** : un petit utilitaire de chargement de page (`src/lib/lazyWithRetry.ts`) qui, en cas d'échec de chargement, réessaie une fois, puis recharge l'appli une seule fois (drapeau posé dans `sessionStorage` pour éviter toute boucle). Toutes les pages chargées à la demande dans `src/App.tsx` passent par cet utilitaire.
-
-3. **Message plus doux en dernier recours** : dans `src/components/shared/ErrorBoundary.tsx`, reconnaître ce type d'erreur (« Failed to fetch dynamically imported module », « Importing a module script failed ») et afficher « Une nouvelle version est disponible » avec un bouton de rechargement forcé, au lieu de l'écran d'erreur rouge générique.
+3. **Ce qui est conservé**
+   Les discussions des joueurs, les sondages, les pronostics, les résultats et les points ne sont jamais touchés. Seuls les messages générés automatiquement par le live et la configuration d'import liée à ces courses passées sont supprimés.
 
 ## Détails techniques
-
-- `public/_headers` : ajouter une règle `/index.html` + `/` en `Cache-Control: no-cache` ; conserver `immutable` sur `/assets/*`.
-- `lazyWithRetry(importFn)` : `React.lazy` enveloppé, `catch` → un retry immédiat, puis `sessionStorage.setItem('chunk-reload', ...)` + `window.location.reload()` si pas déjà tenté ; le drapeau est effacé au chargement réussi.
-- Aucune modification du SDK LaunchKit dans `src/main.tsx`, aucun changement de base de données, aucun service worker d'application ajouté (le worker de notifications `sw-push.js` reste intact et ne met rien en cache).
+- Nouvelle fonction `public.purge_live_broadcast_data(p_grace_days int default 3)` (SECURITY DEFINER, `search_path = public`) :
+  - `DELETE FROM arena_messages` où `message_type IN ('admin_broadcast','system')`, `author_manager_id IS NULL`, `course_id` d'une course dont `date_fin < current_date - p_grace_days`.
+  - `DELETE FROM live_stage_plans` et `DELETE FROM arena_live_courses` pour ces mêmes courses.
+  - Retourne le nombre de lignes supprimées par table (JSON) pour le suivi.
+- Appel de cette fonction depuis `purge_old_app_data()` afin de réutiliser le cron de purge existant (sinon, ajout d'un job `pg_cron` quotidien dédié).
+- Exécution unique de la fonction après la migration pour purger l'historique, suivie d'un `VACUUM (ANALYZE)` sur `arena_messages` pour rendre l'espace disque.
+- Aucun changement côté application : les hooks du live (`useLiveCourses`, `useArenaMessages`, `useLiveStageStatus`) continuent de fonctionner à l'identique sur les courses en cours.
