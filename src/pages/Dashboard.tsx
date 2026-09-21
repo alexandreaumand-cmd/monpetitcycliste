@@ -131,7 +131,9 @@ const Dashboard = () => {
           isAdmin={isAnyAdmin}
           onSignOut={handleSignOut}
         >
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
+
             <Route index element={<Navigate to="/dashboard/home" replace />} />
             <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
             <Route path="data" element={<RidersData />} />
