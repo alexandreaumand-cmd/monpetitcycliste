@@ -393,7 +393,7 @@ serve(async (req) => {
   // before loading channels, leagues and stage plans.
   const { data: rows, error } = await admin
     .from("arena_live_courses")
-    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin, nom, phase_id)")
+    .select("course_id, live_scrape_url, scrape_schedule, last_auto_scrape_at, next_auto_scrape_at, activated_by, current_etape, courses(type_course, date_debut, date_fin, nom, phase_id)")
     .eq("is_active", true)
     .eq("auto_scrape_enabled", true);
 
@@ -412,19 +412,56 @@ serve(async (req) => {
     });
   }
 
+  // Today's stage plans (Paris) override the course-level url/schedule.
+  const { data: todayPlans } = await admin
+    .from("live_stage_plans")
+    .select("id, course_id, etape_numero, scrape_url, scrape_schedule, last_auto_scrape_at, next_auto_scrape_at")
+    .eq("is_enabled", true)
+    .eq("stage_date", parisDate);
+
+  const planByCourse = new Map<string, any>();
+  for (const plan of (todayPlans || []) as any[]) {
+    if (plan.scrape_url) planByCourse.set(plan.course_id, plan);
+  }
+
+  // Second cheap gate: if no course is due right now and no plan alignment is
+  // pending, stop here instead of loading channels and leagues.
+  const needsWork = (rows as any[]).some((row) => {
+    const plan = planByCourse.get(row.course_id) || null;
+    if (plan) {
+      if (plan.scrape_url && plan.scrape_url !== row.live_scrape_url) return true;
+      if (plan.etape_numero != null && plan.etape_numero !== row.current_etape) return true;
+    }
+    const effectiveUrl = plan?.scrape_url ?? row.live_scrape_url ?? null;
+    if (!effectiveUrl) return false;
+    const schedule = (plan
+      ? (Array.isArray(plan.scrape_schedule) && plan.scrape_schedule.length > 0
+          ? plan.scrape_schedule
+          : row.scrape_schedule)
+      : row.scrape_schedule) as ScrapeWindow[] | null;
+    const interval = getActiveInterval(schedule, now);
+    if (interval == null) {
+      // Only a pending "next run" marker still needs clearing.
+      return row.next_auto_scrape_at != null || (plan && plan.next_auto_scrape_at != null);
+    }
+    const lastAt = plan ? (plan.last_auto_scrape_at ?? row.last_auto_scrape_at) : row.last_auto_scrape_at;
+    const last = lastAt ? new Date(lastAt).getTime() : 0;
+    return (now.getTime() - last) / 1000 >= interval;
+  });
+
+  if (!needsWork) {
+    console.log(`[auto-scrape] ${parisTime} Paris — nothing due (${rows.length} course(s) armed)`);
+    return new Response(JSON.stringify({ ran: 0, skipped: rows.length, paris_time: parisTime }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const [
     { data: liveChannels, error: channelsError },
     { data: activeLeagues, error: leaguesError },
-    { data: todayPlans },
   ] = await Promise.all([
     admin.from("arena_channels").select("id, league_id").eq("slug", "live-courses"),
     admin.from("leagues").select("id, name").eq("status", "active"),
-    // Stage plans scheduled for today (Paris) — these override the course-level url/schedule
-    admin
-      .from("live_stage_plans")
-      .select("id, course_id, etape_numero, scrape_url, scrape_schedule, last_auto_scrape_at")
-      .eq("is_enabled", true)
-      .eq("stage_date", parisDate),
   ]);
 
   if (channelsError || leaguesError) {
@@ -441,17 +478,12 @@ serve(async (req) => {
   );
   const broadcastChannels = (liveChannels || []).filter((channel: any) => activeLeagueIds.has(channel.league_id));
 
-  const planByCourse = new Map<string, any>();
-  for (const plan of (todayPlans || []) as any[]) {
-    if (plan.scrape_url) planByCourse.set(plan.course_id, plan);
-  }
-
-
   let ran = 0;
   let skipped = 0;
   const errors: Array<{ course_id: string; error: string }> = [];
 
   console.log(`[auto-scrape] ${parisTime} Paris — ${rows.length} course(s) with auto-scrape enabled`);
+
 
   for (const row of rows as any[]) {
     const plan = planByCourse.get(row.course_id) || null;
