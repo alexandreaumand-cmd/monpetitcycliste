@@ -29,6 +29,13 @@
       "when": 1789936198392,
       "tag": "0003_purge_live_broadcast_data_fix_author",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789973834023,
+      "tag": "0004_purge_cron_job_run_details",
+      "breakpoints": true
     }
   ]
 }

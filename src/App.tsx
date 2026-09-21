@@ -13,27 +13,28 @@ import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { ScrollToTop } from "./components/shared/ScrollToTop";
 import { useLanguageSync } from "./hooks/useLanguageSync";
+import { lazyWithRetry } from "./lib/lazyWithRetry";
 
 // Lazy-loaded pages
-const Index = React.lazy(() => import("./pages/Index"));
-const Auth = React.lazy(() => import("./pages/Auth"));
-const Dashboard = React.lazy(() => import("./pages/Dashboard"));
-const NotFound = React.lazy(() => import("./pages/NotFound"));
-const InstallPage = React.lazy(() => import("./pages/InstallPage"));
-const JoinLeaguePage = React.lazy(() => import("./pages/JoinLeaguePage").then(m => ({ default: m.JoinLeaguePage })));
-const InvitePage = React.lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
-const InviteShortPage = React.lazy(() => import("./pages/InviteShortPage").then(m => ({ default: m.InviteShortPage })));
-const CompleteProfile = React.lazy(() => import("./pages/CompleteProfile"));
-const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
-const AboutPage = React.lazy(() => import("./pages/AboutPage"));
-const RulesPage = React.lazy(() => import("./pages/RulesPage"));
-const HowToPlayPage = React.lazy(() => import("./pages/HowToPlayPage"));
-const LegalNoticePage = React.lazy(() => import("./pages/LegalNoticePage"));
-const TermsPage = React.lazy(() => import("./pages/TermsPage"));
-const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
-const TeamPage = React.lazy(() => import("./pages/TeamPage"));
-const ContactPage = React.lazy(() => import("./pages/ContactPage"));
-const Unsubscribe = React.lazy(() => import("./pages/Unsubscribe"));
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const Auth = lazyWithRetry(() => import("./pages/Auth"));
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const InstallPage = lazyWithRetry(() => import("./pages/InstallPage"));
+const JoinLeaguePage = lazyWithRetry(() => import("./pages/JoinLeaguePage").then(m => ({ default: m.JoinLeaguePage })));
+const InvitePage = lazyWithRetry(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
+const InviteShortPage = lazyWithRetry(() => import("./pages/InviteShortPage").then(m => ({ default: m.InviteShortPage })));
+const CompleteProfile = lazyWithRetry(() => import("./pages/CompleteProfile"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
+const AboutPage = lazyWithRetry(() => import("./pages/AboutPage"));
+const RulesPage = lazyWithRetry(() => import("./pages/RulesPage"));
+const HowToPlayPage = lazyWithRetry(() => import("./pages/HowToPlayPage"));
+const LegalNoticePage = lazyWithRetry(() => import("./pages/LegalNoticePage"));
+const TermsPage = lazyWithRetry(() => import("./pages/TermsPage"));
+const PrivacyPage = lazyWithRetry(() => import("./pages/PrivacyPage"));
+const TeamPage = lazyWithRetry(() => import("./pages/TeamPage"));
+const ContactPage = lazyWithRetry(() => import("./pages/ContactPage"));
+const Unsubscribe = lazyWithRetry(() => import("./pages/Unsubscribe"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
