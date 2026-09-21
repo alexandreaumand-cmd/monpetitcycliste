@@ -195,7 +195,9 @@ const Dashboard = () => {
             "flex-1 container mx-auto px-4 pb-8",
             isHomePage ? "pt-0" : "pt-0"
           )}>
+            <Suspense fallback={<LoadingSpinner />}>
             <Routes>
+
               <Route index element={<Navigate to="/dashboard/home" replace />} />
               <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
               <Route path="data" element={<RidersData />} />
