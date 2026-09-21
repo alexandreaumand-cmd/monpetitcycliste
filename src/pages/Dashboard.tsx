@@ -102,18 +102,21 @@ const Dashboard = () => {
       <>
         <AnnouncementBanner />
         <SuperAdminGuard>
-          <Routes>
-            <Route 
-              path="super-admin/*" 
-              element={
-                <SuperAdminPage 
-                  manager={manager} 
-                  onSignOut={handleSignOut} 
-                />
-              } 
-            />
-          </Routes>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route 
+                path="super-admin/*" 
+                element={
+                  <SuperAdminPage 
+                    manager={manager} 
+                    onSignOut={handleSignOut} 
+                  />
+                } 
+              />
+            </Routes>
+          </Suspense>
         </SuperAdminGuard>
+
       </>
     );
   }
