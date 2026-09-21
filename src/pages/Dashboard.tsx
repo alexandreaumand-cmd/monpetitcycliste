@@ -12,25 +12,43 @@ import { TopBar } from "@/components/layout/TopBar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { AuctionsList } from "@/components/auction/AuctionsList";
-import { MyTeam } from "@/components/team/MyTeam";
-import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
-import { ResultsPage } from "./ResultsPage";
-import Rankings from "./Rankings";
-import { AdminPage } from "./AdminPage";
-import Startlist from "./Startlist";
-import Statistics from "./Statistics";
-import AccountPage from "./AccountPage";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import DashboardHome from "./DashboardHome";
-import RidersData from "./RidersData";
-import CalendarPage from "./CalendarPage";
-import { LeagueDetailPage } from "./admin/LeagueDetailPage";
-import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
-import ArenaPage from "./ArenaPage";
-import LivePage from "./LivePage";
-import TeamStartlistMovements from "./TeamStartlistMovements";
-import ManagerProfile from "./ManagerProfile";
+
+// Heavy sections are loaded on demand so the first dashboard paint stays light on mobile.
+const AuctionsList = lazyWithRetry(() =>
+  import("@/components/auction/AuctionsList").then((m) => ({ default: m.AuctionsList })),
+);
+const MyTeam = lazyWithRetry(() =>
+  import("@/components/team/MyTeam").then((m) => ({ default: m.MyTeam })),
+);
+const UpcomingCourses = lazyWithRetry(() =>
+  import("@/components/courses/UpcomingCourses").then((m) => ({ default: m.UpcomingCourses })),
+);
+const ResultsPage = lazyWithRetry(() =>
+  import("./ResultsPage").then((m) => ({ default: m.ResultsPage })),
+);
+const Rankings = lazyWithRetry(() => import("./Rankings"));
+const AdminPage = lazyWithRetry(() =>
+  import("./AdminPage").then((m) => ({ default: m.AdminPage })),
+);
+const Startlist = lazyWithRetry(() => import("./Startlist"));
+const Statistics = lazyWithRetry(() => import("./Statistics"));
+const AccountPage = lazyWithRetry(() => import("./AccountPage"));
+const RidersData = lazyWithRetry(() => import("./RidersData"));
+const CalendarPage = lazyWithRetry(() => import("./CalendarPage"));
+const LeagueDetailPage = lazyWithRetry(() =>
+  import("./admin/LeagueDetailPage").then((m) => ({ default: m.LeagueDetailPage })),
+);
+const SuperAdminPage = lazyWithRetry(() =>
+  import("./SuperAdminPage").then((m) => ({ default: m.SuperAdminPage })),
+);
+const ArenaPage = lazyWithRetry(() => import("./ArenaPage"));
+const LivePage = lazyWithRetry(() => import("./LivePage"));
+const TeamStartlistMovements = lazyWithRetry(() => import("./TeamStartlistMovements"));
+const ManagerProfile = lazyWithRetry(() => import("./ManagerProfile"));
+
 
 
 const Dashboard = () => {
