@@ -36,6 +36,13 @@
       "when": 1789973834023,
       "tag": "0004_purge_cron_job_run_details",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789986195835,
+      "tag": "0005_perf_indexes_startlist_tracker_and_coureurs_saisons",
+      "breakpoints": true
     }
   ]
 }
