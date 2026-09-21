@@ -529,15 +529,18 @@ serve(async (req) => {
     const interval = getActiveInterval(effectiveSchedule, now);
     if (interval == null) {
       console.log(`[auto-scrape] ${row.course_id}: out of schedule window at ${parisTime} Paris — skipped`);
-      // Out of window — clear next time
-      await admin
-        .from("arena_live_courses")
-        .update({ next_auto_scrape_at: null })
-        .eq("course_id", row.course_id)
-        .eq("is_active", true);
-      if (plan) {
+      // Out of window — clear next time (only when something is still set)
+      if (row.next_auto_scrape_at != null) {
+        await admin
+          .from("arena_live_courses")
+          .update({ next_auto_scrape_at: null })
+          .eq("course_id", row.course_id)
+          .eq("is_active", true);
+      }
+      if (plan && plan.next_auto_scrape_at != null) {
         await admin.from("live_stage_plans").update({ next_auto_scrape_at: null }).eq("id", plan.id);
       }
+
       skipped++;
       continue;
     }
