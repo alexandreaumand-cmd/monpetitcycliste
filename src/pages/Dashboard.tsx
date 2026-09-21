@@ -228,6 +228,8 @@ const Dashboard = () => {
             )}
             {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
+            </Suspense>
+
           </main>
         </SidebarInset>
       </div>
