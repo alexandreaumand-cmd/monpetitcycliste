@@ -93,7 +93,7 @@ export function useLiveStageStatus(
   const { data } = useQuery({
     queryKey: ["live-stage-plan-today", courseId, dateKey],
     queryFn: async () => {
-      const [planRes, courseRes] = await Promise.all([
+      const [planRes, anyPlanRes, courseRes] = await Promise.all([
         supabase
           .from("live_stage_plans")
           .select("etape_numero, scrape_schedule")
@@ -102,14 +102,23 @@ export function useLiveStageStatus(
           .eq("stage_date", dateKey)
           .maybeSingle(),
         supabase
+          .from("live_stage_plans")
+          .select("id, stage_date")
+          .eq("course_id", courseId as string)
+          .eq("is_enabled", true)
+          .order("stage_date", { ascending: true }),
+        supabase
           .from("arena_live_courses")
           .select("scrape_schedule")
           .eq("course_id", courseId as string)
           .eq("is_active", true)
           .maybeSingle(),
       ]);
+      const allPlans = (anyPlanRes.data as any[]) ?? [];
       return {
         plan: (planRes.data as any) ?? null,
+        hasPlans: allPlans.length > 0,
+        firstPlanDate: allPlans[0]?.stage_date ?? null,
         courseSchedule: (courseRes.data as any)?.scrape_schedule ?? null,
       };
     },
@@ -119,6 +128,15 @@ export function useLiveStageStatus(
 
   const planEtape = data?.plan?.etape_numero ?? null;
   const planSchedule = normalizeWindows(data?.plan?.scrape_schedule);
+
+  // A stage race with a planning is only live on a day that has a planned stage.
+  if (data?.hasPlans && !data.plan) {
+    return {
+      etape: fallbackEtape ?? null,
+      state: data.firstPlanDate && dateKey < data.firstPlanDate ? "upcoming" : "finished",
+    };
+  }
+
   const schedule = planSchedule.length > 0 ? planSchedule : data?.courseSchedule ?? null;
 
   return {
@@ -126,3 +144,4 @@ export function useLiveStageStatus(
     state: stageStateFromSchedule(schedule),
   };
 }
+
