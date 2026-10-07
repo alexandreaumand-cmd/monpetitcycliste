@@ -246,7 +246,18 @@ export function RiderResultsPanel({
                 return (
                   <div key={courseName} className="rounded-lg border bg-card">
                     <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
-                      <span className="text-sm font-semibold truncate">{courseName}</span>
+                      <span className="text-sm font-semibold truncate flex items-center gap-2">
+                        <span className="truncate">{courseName}</span>
+                        {rows[0]?.phase_index > 0 && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 shrink-0 text-muted-foreground"
+                            title={rows[0]?.phase_nom}
+                          >
+                            P{rows[0].phase_index}
+                          </Badge>
+                        )}
+                      </span>
                       <span className="text-xs font-bold text-primary ml-2 whitespace-nowrap">
                         {Math.round(courseTotal)} pts
                       </span>
