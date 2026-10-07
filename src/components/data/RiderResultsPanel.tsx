@@ -11,7 +11,7 @@ import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Eye, EyeOff } from "lucide-react";
+import { Trophy, Eye, EyeOff, X } from "lucide-react";
 import { useState } from "react";
 import { sortPointsRows } from "@/lib/pointsRowOrder";
 
@@ -153,7 +153,14 @@ export function RiderResultsPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 rounded-lg max-sm:w-full max-sm:h-[100dvh] max-sm:max-h-none max-sm:rounded-none">
-        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12">
+        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12 relative">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors"
+            aria-label="Fermer"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <Trophy className="h-4 w-4 text-primary shrink-0" />
