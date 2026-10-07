@@ -279,6 +279,7 @@ export function RiderResultsPanel({
                         </div>
                       ))}
                     </div>
+                    )}
                   </div>
                 );
               })}
