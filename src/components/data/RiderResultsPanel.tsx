@@ -156,7 +156,7 @@ export function RiderResultsPanel({
         <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12 relative">
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors"
+            className="absolute right-1 top-1 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-background hover:bg-muted transition-colors"
             aria-label="Fermer"
           >
             <X className="h-4 w-4" />
