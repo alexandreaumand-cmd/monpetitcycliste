@@ -251,6 +251,7 @@ export function RiderResultsPanel({
                         {Math.round(courseTotal)} pts
                       </span>
                     </div>
+                    {showDetails && (
                     <div className="divide-y">
                       {rows.map((row, idx) => (
                         <div
