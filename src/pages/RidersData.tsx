@@ -54,6 +54,7 @@ interface RiderWithPoints {
   saison_annee: number;
   total_points: number;
   is_favorite: boolean;
+  prev_points?: number | null;
 }
 
 interface UpcomingRace {
@@ -61,6 +62,31 @@ interface UpcomingRace {
   race_nom: string;
   date_debut: string;
   is_confirmed: boolean;
+}
+
+function ProgressionBadge({ rider, prevYear, compact }: { rider: RiderWithPoints; prevYear?: number; compact?: boolean }) {
+  if (rider.prev_points == null || !prevYear) return <span className="text-muted-foreground">-</span>;
+  const prev = rider.prev_points;
+  const delta = rider.total_points - prev;
+  const pct = prev > 0 ? Math.round((delta / prev) * 100) : null;
+  const tone = delta > 0 ? "text-green-500" : delta < 0 ? "text-destructive" : "text-muted-foreground";
+  const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "=";
+  const sign = delta > 0 ? "+" : "";
+  const suffix = prev === 0 ? (delta > 0 ? " (Nouv.)" : "") : ` (${pct! > 0 ? "+" : ""}${pct}%)`;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn("whitespace-nowrap font-medium", tone, compact && "text-xs")}>
+            {arrow} {sign}{delta}{suffix}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {prevYear} : {prev} pts ➔ {prevYear + 1} : {rider.total_points} pts
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export default function RidersData() {
@@ -90,7 +116,7 @@ export default function RidersData() {
   const [resultsPanelOpen, setResultsPanelOpen] = useState(false);
   
   // Sorting state - primary and secondary sort
-  type SortColumn = 'cote' | 'points' | 'equipe';
+  type SortColumn = 'cote' | 'points' | 'equipe' | 'progression';
   const [primarySort, setPrimarySort] = useState<{ column: SortColumn; direction: 'asc' | 'desc' } | null>(null);
   const [secondarySort, setSecondarySort] = useState<{ column: SortColumn; direction: 'asc' | 'desc' } | null>(null);
 
@@ -136,7 +162,7 @@ export default function RidersData() {
   };
 
   // Fetch riders with points for selected season using RPC (bypasses row limits)
-  const { data: ridersData, isLoading: ridersLoading } = useQuery({
+  const { data: ridersDataRaw, isLoading: ridersLoading } = useQuery({
     queryKey: ["riders-data", localSelectedSeason?.id, managerId],
     queryFn: async () => {
       if (!localSelectedSeason?.id) return [];
@@ -226,6 +252,40 @@ export default function RidersData() {
     },
     enabled: !!localSelectedSeason?.id,
   });
+
+  // Previous season (for "Progression" column)
+  const prevSeason = useMemo(() => {
+    if (!allSeasons || !localSelectedSeason) return null;
+    return allSeasons.find((s) => s.annee === localSelectedSeason.annee - 1) ?? null;
+  }, [allSeasons, localSelectedSeason]);
+
+  const { data: prevPointsMap } = useQuery({
+    queryKey: ["riders-data-prev-points", prevSeason?.id],
+    queryFn: async () => {
+      const map = new Map<string, number>();
+      const pageSize = 1000;
+      let from = 0;
+      while (from < 50000) {
+        const { data, error } = await supabase
+          .rpc("get_riders_data_for_season", { p_saison_id: prevSeason!.id })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        (data ?? []).forEach((r: any) => map.set(r.coureur_id, Number(r.total_points) || 0));
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return map;
+    },
+    enabled: !!prevSeason?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const ridersData = useMemo(() => {
+    if (!ridersDataRaw) return ridersDataRaw;
+    if (!prevSeason) return ridersDataRaw.map((r) => ({ ...r, prev_points: null }));
+    if (!prevPointsMap) return ridersDataRaw;
+    return ridersDataRaw.map((r) => ({ ...r, prev_points: prevPointsMap.get(r.coureur_id) ?? 0 }));
+  }, [ridersDataRaw, prevPointsMap, prevSeason]);
 
   // Fetch upcoming races program from startlists (with pagination to handle >1000 entries)
   const { data: programData } = useQuery({
@@ -548,6 +608,14 @@ export default function RidersData() {
           ? valueB.localeCompare(valueA) 
           : valueA.localeCompare(valueB);
       }
+      if (column === 'progression') {
+        const va = a.prev_points == null ? null : a.total_points - a.prev_points;
+        const vb = b.prev_points == null ? null : b.total_points - b.prev_points;
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        return direction === 'desc' ? vb - va : va - vb;
+      }
       const valueA = column === 'cote' ? a.prix_initial : a.total_points;
       const valueB = column === 'cote' ? b.prix_initial : b.total_points;
       return direction === 'desc' ? valueB - valueA : valueA - valueB;
@@ -579,6 +647,8 @@ export default function RidersData() {
       [t('export.columns.cote')]: rider.prix_initial,
       [t('export.columns.points')]: rider.total_points,
       [t('export.columns.favorite')]: rider.is_favorite ? t('export.columns.yes') : t('export.columns.no'),
+      "Points N-1": rider.prev_points ?? "",
+      "Progression (pts)": rider.prev_points == null ? "" : rider.total_points - rider.prev_points,
     }));
 
     const workbook = new ExcelJS.Workbook();
@@ -945,6 +1015,7 @@ export default function RidersData() {
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold">{rider.total_points} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
                       <p className="text-xs text-muted-foreground">{t('table.cote')}: {rider.prix_initial}</p>
+                      <div className="text-xs"><ProgressionBadge rider={rider} prevYear={prevSeason?.annee} compact /></div>
                     </div>
                   </div>
                   {/* Row 2: Category + Program */}
@@ -983,13 +1054,16 @@ export default function RidersData() {
                 <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('points')}>
                   {t('table.points')} {getSortIcon('points')}
                 </TableHead>
+                <TableHead className="w-36 text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('progression')}>
+                  Progression {getSortIcon('progression')}
+                </TableHead>
                 <TableHead className="min-w-[300px]">{t('table.program')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedRiders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</TableCell>
                 </TableRow>
               ) : (
                 sortedRiders.map((rider) => {
@@ -1011,6 +1085,7 @@ export default function RidersData() {
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
                       <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>
                       <TableCell className="w-20 text-right font-semibold">{rider.total_points}</TableCell>
+                      <TableCell className="w-36 text-right"><ProgressionBadge rider={rider} prevYear={prevSeason?.annee} /></TableCell>
                       <TableCell className="min-w-[300px]">
                         {upcomingRaces.length === 0 ? (
                           <span className="text-muted-foreground text-sm">-</span>
