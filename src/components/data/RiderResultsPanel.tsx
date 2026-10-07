@@ -10,7 +10,9 @@ import {
 import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Trophy, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import { sortPointsRows } from "@/lib/pointsRowOrder";
 
 
@@ -84,13 +86,19 @@ export function RiderResultsPanel({
 
 
   const bonusRows = data?.rows?.filter((r) => r.is_bonus) || [];
+  const [showDetails, setShowDetails] = useState(true);
 
-  // KPIs
+  // KPIs — on exclut les porteurs de maillot (points attribués sur étapes)
   const raceRows = data?.rows?.filter((r) => !r.is_bonus) || [];
+  const kpiRows = raceRows.filter(
+    (r) =>
+      !r.type_classement?.startsWith("Porteur") &&
+      !r.type_classement?.startsWith("Combatif")
+  );
   const total = Math.round(data?.total ?? 0);
-  const wins = raceRows.filter((r) => r.position === 1).length;
-  const podiums = raceRows.filter((r) => r.position && r.position <= 3).length;
-  const top10 = raceRows.filter((r) => r.position && r.position <= 10).length;
+  const wins = kpiRows.filter((r) => r.position === 1).length;
+  const podiums = kpiRows.filter((r) => r.position && r.position <= 3).length;
+  const top10 = kpiRows.filter((r) => r.position && r.position <= 10).length;
   const scoredCourses = new Set(raceRows.filter((r) => r.points > 0).map((r) => r.course_nom)).size;
   const ratio = cote && cote > 0 ? (total / cote).toFixed(1) : null;
 
@@ -210,6 +218,28 @@ export function RiderResultsPanel({
             </div>
           ) : (
             <>
+              {/* Toggle détail des courses */}
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setShowDetails((v) => !v)}
+                >
+                  {showDetails ? (
+                    <>
+                      <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+                      Masquer le détail
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      Afficher le détail
+                    </>
+                  )}
+                </Button>
+              </div>
+
               {/* Race results grouped by course */}
               {Object.entries(courseGroups).map(([courseName, rows]) => {
                 const courseTotal = rows.reduce((s, r) => s + r.points, 0);
@@ -221,6 +251,7 @@ export function RiderResultsPanel({
                         {Math.round(courseTotal)} pts
                       </span>
                     </div>
+                    {showDetails && (
                     <div className="divide-y">
                       {rows.map((row, idx) => (
                         <div
@@ -248,6 +279,7 @@ export function RiderResultsPanel({
                         </div>
                       ))}
                     </div>
+                    )}
                   </div>
                 );
               })}
