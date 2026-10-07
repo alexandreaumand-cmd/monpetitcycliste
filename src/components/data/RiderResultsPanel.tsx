@@ -152,7 +152,7 @@ export function RiderResultsPanel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-lg">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 rounded-lg max-sm:w-full max-sm:h-[100dvh] max-sm:max-h-none max-sm:rounded-none">
         <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-base font-bold flex items-center gap-2">
