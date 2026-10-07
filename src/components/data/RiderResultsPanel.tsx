@@ -153,7 +153,7 @@ export function RiderResultsPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 rounded-lg max-sm:w-full max-sm:h-[100dvh] max-sm:max-h-none max-sm:rounded-none">
-        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12 relative">
+        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12">
           <button
             onClick={() => onOpenChange(false)}
             className="absolute right-1 top-1 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-background hover:bg-muted transition-colors"
