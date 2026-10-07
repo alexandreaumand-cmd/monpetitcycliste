@@ -218,6 +218,28 @@ export function RiderResultsPanel({
             </div>
           ) : (
             <>
+              {/* Toggle détail des courses */}
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setShowDetails((v) => !v)}
+                >
+                  {showDetails ? (
+                    <>
+                      <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+                      Masquer le détail
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      Afficher le détail
+                    </>
+                  )}
+                </Button>
+              </div>
+
               {/* Race results grouped by course */}
               {Object.entries(courseGroups).map(([courseName, rows]) => {
                 const courseTotal = rows.reduce((s, r) => s + r.points, 0);
