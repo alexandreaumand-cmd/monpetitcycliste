@@ -86,7 +86,7 @@ export default function RidersData() {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   
   // Rider results panel state
-  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string } | null>(null);
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; cote?: number } | null>(null);
   const [resultsPanelOpen, setResultsPanelOpen] = useState(false);
   
   // Sorting state - primary and secondary sort
@@ -934,7 +934,7 @@ export default function RidersData() {
                     </Button>
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
+                      onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom, cote: rider.prix_initial }); setResultsPanelOpen(true); }}
                     >
                       <p className="font-semibold text-sm leading-tight truncate flex items-center gap-1">
                         <span className="truncate">{rider.coureur_nom}</span>
@@ -1005,7 +1005,7 @@ export default function RidersData() {
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
-                        onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
+                        onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom, cote: rider.prix_initial }); setResultsPanelOpen(true); }}
                       ><span className="inline-flex items-center gap-1">{rider.coureur_nom}<InjuryBadge coureurId={rider.coureur_id} /></span></TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
@@ -1043,6 +1043,7 @@ export default function RidersData() {
         riderId={selectedRider?.id ?? null}
         riderName={selectedRider?.nom ?? null}
         saisonId={localSelectedSeason?.id ?? null}
+        cote={selectedRider?.cote ?? null}
       />
     </div>
   );

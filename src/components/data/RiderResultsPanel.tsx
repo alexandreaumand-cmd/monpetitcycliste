@@ -1,16 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy } from "lucide-react";
 import { sortPointsRows } from "@/lib/pointsRowOrder";
 
 
@@ -20,6 +20,7 @@ interface RiderResultsPanelProps {
   riderId: string | null;
   riderName: string | null;
   saisonId: string | null;
+  cote?: number | null;
 }
 
 interface ResultRow {
@@ -41,6 +42,7 @@ export function RiderResultsPanel({
   riderId,
   riderName,
   saisonId,
+  cote,
 }: RiderResultsPanelProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["rider-results-panel", riderId, saisonId],
@@ -83,6 +85,28 @@ export function RiderResultsPanel({
 
   const bonusRows = data?.rows?.filter((r) => r.is_bonus) || [];
 
+  // KPIs
+  const raceRows = data?.rows?.filter((r) => !r.is_bonus) || [];
+  const total = Math.round(data?.total ?? 0);
+  const wins = raceRows.filter((r) => r.position === 1).length;
+  const podiums = raceRows.filter((r) => r.position && r.position <= 3).length;
+  const top10 = raceRows.filter((r) => r.position && r.position <= 10).length;
+  const scoredCourses = new Set(raceRows.filter((r) => r.points > 0).map((r) => r.course_nom)).size;
+  const ratio = cote && cote > 0 ? (total / cote).toFixed(1) : null;
+
+  // Points by phase
+  const phaseData = (() => {
+    const map = new Map<number, number>();
+    (data?.rows || []).forEach((r) => {
+      if (r.phase_index > 0) map.set(r.phase_index, (map.get(r.phase_index) || 0) + r.points);
+    });
+    const maxIdx = Math.max(5, ...map.keys());
+    return Array.from({ length: maxIdx }, (_, i) => ({
+      phase: `P${i + 1}`,
+      points: Math.round(map.get(i + 1) || 0),
+    }));
+  })();
+
   const getPositionBadge = (position: number | null) => {
     if (!position) return null;
     if (position <= 3) {
@@ -119,40 +143,58 @@ export function RiderResultsPanel({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
-      <SheetContent
-        side="right"
-        className="w-full sm:w-[420px] md:w-[480px] overflow-y-auto p-0 border-l"
-      >
-        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
-          <SheetHeader className="space-y-1">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-base font-bold flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-primary" />
-                {riderName || "Coureur"}
-              </SheetTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 -mr-2"
-                onClick={() => onOpenChange(false)}
-                aria-label="Fermer"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <SheetDescription className="text-xs">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-lg">
+        <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 pr-12">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary shrink-0" />
+              <span className="truncate">{riderName || "Coureur"}</span>
+              {cote != null && (
+                <Badge variant="outline" className="text-xs shrink-0">Cote {cote}</Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               {data?.rider?.equipe && data.rider.equipe !== 'N/A' && (
                 <span>{data.rider.equipe} · </span>
               )}
-              <span className="font-semibold text-foreground">
-                {Math.round(data?.total ?? 0)} pts
-              </span>
-            </SheetDescription>
-          </SheetHeader>
+              <span className="font-semibold text-foreground">{total} pts</span>
+            </DialogDescription>
+          </DialogHeader>
         </div>
 
-        <div className="px-4 py-3 space-y-3">
+        {!isLoading && data && data.rows.length > 0 && (
+          <div className="px-4 pt-4 space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { label: "Points", value: total },
+                { label: "Points / cote", value: ratio ?? "-" },
+                { label: "Victoires · Podiums · Top 10", value: `${wins} · ${podiums} · ${top10}` },
+                { label: "Courses scorées", value: scoredCourses },
+              ].map((k) => (
+                <div key={k.label} className="rounded-lg border bg-card px-3 py-2">
+                  <div className="text-[11px] text-muted-foreground leading-tight">{k.label}</div>
+                  <div className="text-lg font-bold tabular-nums">{k.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2">
+              <div className="text-sm font-semibold mb-1">Points par phase</div>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={phaseData} margin={{ top: 20, right: 4, left: 4, bottom: 0 }}>
+                    <XAxis dataKey="phase" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <Bar dataKey="points" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="points" position="top" style={{ fontSize: 11, fill: "hsl(var(--foreground))" }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="px-4 py-4 space-y-3">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(6)].map((_, i) => (
@@ -239,7 +281,7 @@ export function RiderResultsPanel({
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
