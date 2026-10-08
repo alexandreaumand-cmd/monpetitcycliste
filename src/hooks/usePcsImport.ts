@@ -104,9 +104,11 @@ export function usePcsImport() {
         return { results: null, error: { type: 'other', message: msg } };
       }
 
-      const results = data.results as PcsResult[];
-      const matched = data.matched as number;
-      const total = data.total as number;
+      const results = (data.results ?? []) as PcsResult[];
+      const total = typeof data.total === "number" ? data.total : results.length;
+      const matched = typeof data.matched === "number"
+        ? data.matched
+        : results.filter((r) => r.matched_coureur_id).length;
       const unmatched = total - matched;
 
       if (total === 0) {

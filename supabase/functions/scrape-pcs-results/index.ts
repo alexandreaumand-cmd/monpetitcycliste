@@ -80,7 +80,8 @@ function parseResultsRegex(html: string): ScrapedResult[] {
   const results: ScrapedResult[] = [];
   
   // Find the results table section
-  const tableMatch = html.match(/<table[^>]*class="results[^"]*"[^>]*>[\s\S]*?<\/table>/i);
+  // PCS markup varies: class="results ..." or class="unit results ..."
+  const tableMatch = html.match(/<table[^>]*class="[^"]*\bresults\b[^"]*"[^>]*>[\s\S]*?<\/table>/i);
   if (!tableMatch) {
     console.log("No results table found via regex");
     return [];
@@ -89,42 +90,41 @@ function parseResultsRegex(html: string): ScrapedResult[] {
   const tableHtml = tableMatch[0];
   console.log(`Results table HTML length: ${tableHtml.length}`);
   
-  // Match individual rows
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
   
   while ((rowMatch = rowRegex.exec(tableHtml)) !== null) {
     const rowContent = rowMatch[1];
     
-    // Extract position (first <td> content - must be a number)
     const posMatch = rowContent.match(/<td[^>]*>\s*(\d+)\s*<\/td>/);
     if (!posMatch) continue;
     const position = parseInt(posMatch[1]);
     if (isNaN(position) || position <= 0) continue;
     
-    // Extract rider info from ridername cell
-    // PCS format: <td class="ridername ..."><div class="cont"><span class="flag xx"></span> <a ... href="...rider/SLUG..."><span class="uppercase">LASTNAME</span> FIRSTNAME</a>
-    const riderCellMatch = rowContent.match(/class="ridername[^"]*"[^>]*>([\s\S]*?)<\/td>/i);
-    if (!riderCellMatch) continue;
-    
-    const riderCell = riderCellMatch[1];
-    
-    // Extract rider slug from href - handle both relative and absolute URLs
-    const slugMatch = riderCell.match(/href="[^"]*?rider\/([^"/?#]+)"/i);
-    const riderPcsSlug = slugMatch ? slugMatch[1] : "";
-    
-    // Extract last name from uppercase span
-    const lastNameMatch = riderCell.match(/<span[^>]*class="uppercase"[^>]*>([^<]+)<\/span>/i);
-    const lastName = lastNameMatch ? lastNameMatch[1].trim() : "";
-    
-    // Extract first name: text after </span> before </a>
-    const firstNameMatch = riderCell.match(/<\/span>\s*([^<]+)\s*<\/a>/i);
-    const firstName = firstNameMatch ? firstNameMatch[1].trim() : "";
-    
-    const riderName = `${firstName} ${lastName}`.trim();
+    // Rider link (works with or without td.ridername / span.uppercase)
+    const linkMatch = rowContent.match(/<a[^>]*href="[^"]*?rider\/([^"/?#]+)"[^>]*>([\s\S]*?)<\/a>/i);
+    if (!linkMatch) continue;
+    const riderPcsSlug = linkMatch[1];
+    const inner = linkMatch[2];
+
+    let riderName = "";
+    const lastNameMatch = inner.match(/<span[^>]*class="uppercase"[^>]*>([^<]+)<\/span>\s*([^<]*)/i);
+    if (lastNameMatch) {
+      riderName = `${lastNameMatch[2].trim()} ${lastNameMatch[1].trim()}`.trim();
+    } else {
+      // Format "LASTNAME Firstname": uppercase tokens = last name
+      const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const tokens = text.split(" ");
+      const last: string[] = [];
+      const first: string[] = [];
+      for (const t of tokens) {
+        if (first.length === 0 && t === t.toUpperCase() && /\p{L}/u.test(t)) last.push(t);
+        else first.push(t);
+      }
+      riderName = `${first.join(" ")} ${last.join(" ")}`.trim() || text;
+    }
     if (!riderName || riderName.length < 2) continue;
     
-    // Extract team from cu600 cell
     const teamMatch = rowContent.match(/class="cu600[^"]*"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i);
     const team = teamMatch ? teamMatch[1].trim() : "";
     
@@ -336,8 +336,11 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           results: [], 
+          matched: 0,
+          total: 0,
           message: "No results found on PCS page",
-          pcs_url: pcsUrl 
+          pcs_url: pcsUrl,
+          slug_used: pcsSlug,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
