@@ -463,16 +463,28 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
       // Group labels are restricted to known PCS labels (case-insensitive) so that a
       // rider's "rank bib NAME" (e.g. "14 235 KULSET Johannes P Peloton +2:45") is
       // never swallowed into the next group marker.
-      const groupRx = /(?:^|\s)(\d{1,2}|P)\s+((?:THE\s+)?(?:BREAK(?:AWAY)?|PELOTON|CHASERS?|CHASE\s+GROUP|GROUP(?:E)?(?:\s+\d+)?|LEADERS?|HEAD\s+OF\s+(?:THE\s+)?RACE|GRUPETTO|ÉCHAPPÉE|ECHAPPEE))\s+\+(\d+:\d+)/gi;
+      // Label is optional: PCS also writes bare markers like "1 +0:10", "P +1:00" in fragmented finales.
+      const profileCut = sitText.search(/Detail profile/i);
+      const sitScan = profileCut > 0 ? sitText.substring(0, profileCut) : sitText;
+      const groupRx = /(?:^|\s)(\d{1,2}|P)\s+(?:((?:THE\s+)?(?:BREAK(?:AWAY)?|PELOTON|CHASERS?|CHASE\s+GROUP|GROUP(?:E)?(?:\s+\d+)?|LEADERS?|HEAD\s+OF\s+(?:THE\s+)?RACE|GRUPETTO|ÉCHAPPÉE|ECHAPPEE))\s+)?\+(\d+:\d+(?::\d+)?)/gi;
       let gm;
-      const foundGroups: { name: string; gap: string; index: number; endIndex: number }[] = [];
+      const foundGroups: { name: string; gap: string; index: number; endIndex: number; isP: boolean }[] = [];
       
-      while ((gm = groupRx.exec(sitText)) !== null) {
+      while ((gm = groupRx.exec(sitScan)) !== null) {
+        const marker = gm[1];
+        const isP = marker.toUpperCase() === "P";
+        let name = (gm[2] || "").trim();
+        if (!name) {
+          if (isP) name = "Peloton";
+          else if (foundGroups.length === 0) name = "Tête de course";
+          else name = `Groupe ${foundGroups.length + 1}`;
+        }
         foundGroups.push({
-          name: gm[2].trim(),
+          name,
           gap: `+${gm[3]}`,
           index: gm.index,
           endIndex: gm.index + gm[0].length,
+          isP,
         });
       }
 
@@ -481,18 +493,18 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
       // For each group, extract riders from the text between this group marker and the next
       for (let i = 0; i < foundGroups.length; i++) {
         const fg = foundGroups[i];
-        const isPeloton = fg.name.toLowerCase().includes("peloton");
-        const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : Math.min(fg.endIndex + 3000, sitText.length);
+        const isPeloton = fg.isP || fg.name.toLowerCase().includes("peloton");
+        const nextGroupStart = i + 1 < foundGroups.length ? foundGroups[i + 1].index : Math.min(fg.endIndex + 3000, sitScan.length);
         // Clean trailing single uppercase letters (e.g. "P" from next group marker like "P PELOTON")
-        const groupText = sitText.substring(fg.endIndex, nextGroupStart).trim().replace(/\s+[A-Z]\s*$/, '');
+        const groupText = sitScan.substring(fg.endIndex, nextGroupStart).trim().replace(/\s+[A-Z]\s*$/, '');
         
         const groupRiders: string[] = [];
         const groupBibs: string[] = [];
         const groupGcGaps: string[] = [];
         const groupPcsSlugs: string[] = [];
         
-        // Only extract riders for non-peloton groups
-        if (!isPeloton && groupText.length > 3) {
+        // Extract listed riders (peloton included when PCS enumerates a small bunch)
+        if (groupText.length > 3) {
           // Pattern: "RANK BIB LASTNAME Firstname" repeated
           // Use lookahead that stops at next "rank bib UPPERCASE" pattern OR end of string
           const riderRx = /(\d{1,2})\s+(\d{1,3})\s+([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸa-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ \u0027'-]+[a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]+)(?=\s+\d{1,2}\s+\d{1,3}\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]|[^A-Za-z0-9]*$)/g;
