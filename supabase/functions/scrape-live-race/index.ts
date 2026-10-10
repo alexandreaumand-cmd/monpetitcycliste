@@ -459,8 +459,11 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
       console.log(`[PCS Live] Situation text (first 500): ${sitText.substring(0, 500)}`);
       
       // Parse groups: pattern is "NUMBER_OR_P GroupName +M:SS"
-      // Examples: "1 THE BREAKAWAY +0:00", "P PELOTON +4:50", "2 CHASERS +1:30"
-      const groupRx = /(?:^|\s)(\d+|P)\s+((?:THE\s+)?[A-Z][A-Za-zÀ-ÿé\s]+?)\s+\+(\d+:\d+)/g;
+      // Examples: "1 THE BREAKAWAY +0:00", "P PELOTON +4:50", "2 CHASERS +1:30", "1 break +0:00"
+      // Group labels are restricted to known PCS labels (case-insensitive) so that a
+      // rider's "rank bib NAME" (e.g. "14 235 KULSET Johannes P Peloton +2:45") is
+      // never swallowed into the next group marker.
+      const groupRx = /(?:^|\s)(\d{1,2}|P)\s+((?:THE\s+)?(?:BREAK(?:AWAY)?|PELOTON|CHASERS?|CHASE\s+GROUP|GROUP(?:E)?(?:\s+\d+)?|LEADERS?|HEAD\s+OF\s+(?:THE\s+)?RACE|GRUPETTO|ÉCHAPPÉE|ECHAPPEE))\s+\+(\d+:\d+)/gi;
       let gm;
       const foundGroups: { name: string; gap: string; index: number; endIndex: number }[] = [];
       
