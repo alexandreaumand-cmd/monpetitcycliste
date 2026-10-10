@@ -698,10 +698,11 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
   const out: LiveTextEvent[] = [];
   const items = doc.querySelectorAll("li.event");
   for (const li of items) {
-    const uid = li.getAttribute?.("data-uid") || li.getAttribute?.("data-tid") || "";
+    const uid = li.getAttribute?.("data-uid") || li.getAttribute?.("data-tid") || li.getAttribute?.("data-id") ||
+      li.querySelector?.("[data-created_ts]")?.getAttribute?.("data-created_ts") || "";
     if (!uid) continue;
 
-    const textCont = li.querySelector?.("div.textCont");
+    const textCont = li.querySelector?.("div.textCont") || li.querySelector?.("div.cont");
     if (!textCont) continue;
     const rawText = (textCont.textContent || "").replace(/\s+/g, " ").trim();
     if (!rawText || rawText.length < 5) continue;
@@ -720,7 +721,11 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
       classified.type = "intermediate_sprint";
     }
 
-    const tsAttr = li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") || "";
+    const tsAttr =
+      li.querySelector?.("div.timeago2")?.getAttribute?.("data-ts") ||
+      li.getAttribute?.("data-updated_ts") ||
+      li.querySelector?.("span.eventTimeAgo")?.getAttribute?.("data-created_ts") ||
+      li.querySelector?.("[data-created_ts]")?.getAttribute?.("data-created_ts") || "";
     const ts = /^\d+$/.test(tsAttr) ? Number(tsAttr) : null;
 
     // "Finish" has no rider link — publish it as a standalone timeline event
@@ -746,8 +751,17 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
     for (const riderLink of riderLinks) {
       const href = riderLink.getAttribute?.("href") || "";
       const slug = href.match(/rider\/([^/?#]+)/)?.[1] || "";
-      const lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
       const fullText = (riderLink.textContent || "").replace(/\s+/g, " ").trim();
+      let lastName = riderLink.querySelector?.("span")?.textContent?.trim() || "";
+      if (!lastName) {
+        // New PCS format: "BERTHET Clément" (uppercase last name tokens first)
+        const toks = fullText.split(" ");
+        const up: string[] = [];
+        for (const t of toks) {
+          if (t.length > 1 && t === t.toUpperCase() && /\p{L}/u.test(t)) up.push(t); else break;
+        }
+        if (up.length > 0 && up.length < toks.length) lastName = up.join(" ");
+      }
       const firstName = lastName ? fullText.replace(lastName, "").trim() : "";
       const riderName = firstName ? `${firstName} ${lastName}` : fullText;
       if (!riderName || riderName.length < 3) continue;

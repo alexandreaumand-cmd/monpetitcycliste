@@ -33,9 +33,9 @@ function parsePcsStartlist(html: string): ParsedRider[] {
   // Strip scripts/styles
   const cleaned = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
 
-  // PCS marks abandoned riders with class="dropout" on the <li>. Target only those.
-  // Use a lazy non-greedy match up to the next <li or </ul (rider lists are flat per team).
-  const dropoutRegex = /<li[^>]*class="[^"]*\bdropout\b[^"]*"[^>]*>([\s\S]*?)(?=<li\b|<\/ul>)/gi;
+  // PCS no longer uses class="dropout": scan every <li> and keep only those whose
+  // text carries a "(DNF #N)" / "(DNS #N)" / "(OTL #N)" / "(DSQ #N)" marker (filtered below).
+  const dropoutRegex = /<li\b[^>]*>([\s\S]*?)(?=<li\b|<\/ul>)/gi;
   let m: RegExpExecArray | null;
   while ((m = dropoutRegex.exec(cleaned)) !== null) {
     const liContent = m[1];
