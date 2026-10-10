@@ -698,7 +698,8 @@ function parsePCSLiveText(doc: any): LiveTextEvent[] {
   const out: LiveTextEvent[] = [];
   const items = doc.querySelectorAll("li.event");
   for (const li of items) {
-    const uid = li.getAttribute?.("data-uid") || li.getAttribute?.("data-tid") || "";
+    const uid = li.getAttribute?.("data-uid") || li.getAttribute?.("data-tid") || li.getAttribute?.("data-id") ||
+      li.querySelector?.("[data-created_ts]")?.getAttribute?.("data-created_ts") || "";
     if (!uid) continue;
 
     const textCont = li.querySelector?.("div.textCont") || li.querySelector?.("div.cont");
