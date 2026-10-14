@@ -153,6 +153,10 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
     for (const grp of newGroupEls as any[]) {
       // gap
       const timeEl = grp.querySelector(":scope > div.time, div.time");
+      const riderLiCount = grp.querySelectorAll(":scope > ul > li, ul > li").length;
+      const hasName = !!((grp.querySelector("div.groupname")?.textContent || "").trim());
+      // Skip empty/template li.group elements (no gap, no riders, no name)
+      if (!timeEl && riderLiCount === 0 && !hasName) continue;
       let gap = "0:00";
       if (timeEl) {
         const dataSec = timeEl.getAttribute?.("data-sec");
