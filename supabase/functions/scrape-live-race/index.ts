@@ -386,7 +386,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
 
     rawGroups.forEach((g, idx) => {
       let groupName = g.name;
-      const explicitPeloton = /peloton/i.test(groupName);
+      const explicitPeloton = /peloton/i.test(groupName) || g.isPelotonFlag;
       const trailingEmpty = rawGroups.length > 1 && idx === lastIdx && g.riders.length <= 2 && lastSec > 0;
       const isPeloton = explicitPeloton || g.riderCount >= 20 || trailingEmpty;
       if (!groupName) {
@@ -452,9 +452,10 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
     }
   }
 
-  // Fallback: parse from text if no DOM groups found
-  // Skipped for stage races — text fallback's regex confuses individual GC gaps with group gaps.
-  if (situationGroups.length === 0 && !isStageRace) {
+  // Fallback: parse from text if no DOM groups found.
+  // Safe for stage races too: the situation text is cut before "Detail profile",
+  // so GC standings below can no longer pollute the group parsing.
+  if (situationGroups.length === 0) {
     console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
 
     // Look for "Situation" section in text
