@@ -139,17 +139,24 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
     teams: string[];
     gcGaps: string[];
     riderCount: number;
+    isPelotonFlag: boolean;
   };
 
   const rawGroups: RawGroup[] = [];
 
-  const newGroupEls = Array.from(doc.querySelectorAll("ul.situ5b > li.group"));
-  console.log(`[PCS Live] Using ul.situ5b parser, found ${newGroupEls.length} li.group`);
+  // PCS renamed the situation list class (situ5b → situ7, Oct 2026). Match any
+  // ul whose class starts with "situ" inside the situation container.
+  const newGroupEls = Array.from(doc.querySelectorAll("div.situCont ul[class*='situ'] > li.group, ul[class*='situ'] > li.group"));
+  console.log(`[PCS Live] Using situ* parser, found ${newGroupEls.length} li.group`);
 
   if (newGroupEls.length > 0) {
     for (const grp of newGroupEls as any[]) {
       // gap
       const timeEl = grp.querySelector(":scope > div.time, div.time");
+      const riderLiCount = grp.querySelectorAll(":scope > ul > li, ul > li").length;
+      const hasName = !!((grp.querySelector("div.groupname")?.textContent || "").trim());
+      // Skip empty/template li.group elements (no gap, no riders, no name)
+      if (!timeEl && riderLiCount === 0 && !hasName) continue;
       let gap = "0:00";
       if (timeEl) {
         const dataSec = timeEl.getAttribute?.("data-sec");
@@ -231,6 +238,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         teams,
         gcGaps,
         riderCount,
+        isPelotonFlag: grp.getAttribute?.("data-peloton") === "1",
       });
     }
   } else {
@@ -356,6 +364,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         teams: groupRiders.map(() => ""),
         gcGaps: groupGcGaps,
         riderCount: groupRiders.length,
+        isPelotonFlag: false,
       });
     }
   }
@@ -381,7 +390,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
 
     rawGroups.forEach((g, idx) => {
       let groupName = g.name;
-      const explicitPeloton = /peloton/i.test(groupName);
+      const explicitPeloton = /peloton/i.test(groupName) || g.isPelotonFlag;
       const trailingEmpty = rawGroups.length > 1 && idx === lastIdx && g.riders.length <= 2 && lastSec > 0;
       const isPeloton = explicitPeloton || g.riderCount >= 20 || trailingEmpty;
       if (!groupName) {
@@ -447,9 +456,10 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
     }
   }
 
-  // Fallback: parse from text if no DOM groups found
-  // Skipped for stage races — text fallback's regex confuses individual GC gaps with group gaps.
-  if (situationGroups.length === 0 && !isStageRace) {
+  // Fallback: parse from text if no DOM groups found.
+  // Safe for stage races too: the situation text is cut before "Detail profile",
+  // so GC standings below can no longer pollute the group parsing.
+  if (situationGroups.length === 0) {
     console.log(`[PCS Live] No .sit-grp found, trying text-based parsing`);
 
     // Look for "Situation" section in text
