@@ -234,6 +234,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         teams,
         gcGaps,
         riderCount,
+        isPelotonFlag: grp.getAttribute?.("data-peloton") === "1",
       });
     }
   } else {
@@ -359,6 +360,7 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
         teams: groupRiders.map(() => ""),
         gcGaps: groupGcGaps,
         riderCount: groupRiders.length,
+        isPelotonFlag: false,
       });
     }
   }
