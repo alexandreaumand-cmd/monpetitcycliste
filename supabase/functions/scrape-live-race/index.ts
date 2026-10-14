@@ -139,12 +139,15 @@ function parsePCSLive(doc: any, html: string, opts: { isStageRace?: boolean } = 
     teams: string[];
     gcGaps: string[];
     riderCount: number;
+    isPelotonFlag: boolean;
   };
 
   const rawGroups: RawGroup[] = [];
 
-  const newGroupEls = Array.from(doc.querySelectorAll("ul.situ5b > li.group"));
-  console.log(`[PCS Live] Using ul.situ5b parser, found ${newGroupEls.length} li.group`);
+  // PCS renamed the situation list class (situ5b → situ7, Oct 2026). Match any
+  // ul whose class starts with "situ" inside the situation container.
+  const newGroupEls = Array.from(doc.querySelectorAll("div.situCont ul[class*='situ'] > li.group, ul[class*='situ'] > li.group"));
+  console.log(`[PCS Live] Using situ* parser, found ${newGroupEls.length} li.group`);
 
   if (newGroupEls.length > 0) {
     for (const grp of newGroupEls as any[]) {
