@@ -124,7 +124,10 @@ Détails du SQL :
 - **Les 14 jobs sont créés désactivés** (décision du propriétaire) : tant que Lovable tourne, la copie ne doit pas envoyer de rappels push, de récaps ni de tweets en double. On teste un job en exécutant sa commande à la main, et on active tout à la bascule : `SELECT cron.alter_job(jobid, active := true) FROM cron.job;`.
 - Le job `process-email-queue` (migrations) n'existe pas dans le backup. La fonction `public.email_queue_wake()` (qui le créerait) et `email_queue_dispatch()` visent encore l'ancien projet ; elles sont inertes tant que les files `pgmq` ne sont pas recréées (phase 2, emails).
 
-### Étape 8 : Realtime 📝 (SQL prêt, non exécuté)
+### Étape 8 : Realtime ✅ (option A, 2026-11-19)
+- `08-realtime.sql` exécuté avec l'option A (décision du propriétaire) : `supabase_realtime` publie `annonces` et `notifications`, comme Lovable. Les autres tables restent non publiées, et l'option B reste disponible plus tard, table par table.
+
+Détails :
 - Fichier : `scripts/migration/sql/08-realtime.sql`. Par défaut, il reproduit l'état réel de Lovable (backup) : `annonces`, `notifications`.
 - Le front s'abonne aussi à `arena_messages`, `arena_reactions`, `coureurs`, `courses`, `equipes`, `rosters`, `scoring_rules`, qui n'étaient pas publiées sur Lovable au 18/11. L'option B, en commentaire dans le fichier, les ajoute.
 
