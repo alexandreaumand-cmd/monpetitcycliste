@@ -30,7 +30,7 @@ export const ResultatsExportCard = () => {
     setExporting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('export-resultats-csv', {
+      const { data, error } = await supabase.functions.invoke('exports/resultats-csv', {
         body: courseId === "all" ? {} : { course_id: courseId },
       });
 

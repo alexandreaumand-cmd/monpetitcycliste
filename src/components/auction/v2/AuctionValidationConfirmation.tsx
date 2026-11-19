@@ -26,7 +26,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
   const { data: status, isLoading, refetch } = useQuery({
     queryKey: ["auction-validation-status", phaseId, auctionId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("auction-get-validation-status", {
+      const { data, error } = await supabase.functions.invoke("auction-get/validation-status", {
         body: { 
           phase_id: phaseId, 
           auction_id: auctionId,

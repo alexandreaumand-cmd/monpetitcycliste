@@ -158,7 +158,7 @@ export const SuperAdminAuctionsMonitor = () => {
       await Promise.all(
         openAuctions.map(async (auction) => {
           try {
-            const { data } = await supabase.functions.invoke("auction-get-validation-status", {
+            const { data } = await supabase.functions.invoke("auction-get/validation-status", {
               body: { auction_id: auction.id, league_id: auction.league_id },
             });
             if (data && !data.error) {

@@ -47,7 +47,7 @@ export function InvitePage() {
 
       // Fetch invite info
       try {
-        const { data, error } = await supabase.functions.invoke('leagues-get-invite-info', {
+        const { data, error } = await supabase.functions.invoke('league-invites/info', {
           body: { token },
         });
 

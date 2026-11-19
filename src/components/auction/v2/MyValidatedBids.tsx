@@ -17,7 +17,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
   const { data: bids, isLoading } = useQuery({
     queryKey: ["validated-bids", phaseId, managerId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("auction-get-context", {
+      const { data, error } = await supabase.functions.invoke("auction-get/context", {
         body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
@@ -34,7 +34,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
   const { data: context } = useQuery({
     queryKey: ["auction-context", phaseId, managerId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("auction-get-context", {
+      const { data, error } = await supabase.functions.invoke("auction-get/context", {
         body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;

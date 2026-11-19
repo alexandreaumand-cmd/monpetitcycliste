@@ -51,7 +51,7 @@ export function LeagueInvitesBottomSheet({
   const loadInvites = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke("leagues-list-invites", {
+      const { data, error } = await supabase.functions.invoke("league-invites/list", {
         body: { league_id: leagueId },
       });
 
@@ -90,7 +90,7 @@ export function LeagueInvitesBottomSheet({
       let token = activeInvites[0]?.token;
       
       if (!token) {
-        const { data, error } = await supabase.functions.invoke("leagues-create-invite", {
+        const { data, error } = await supabase.functions.invoke("league-invites/create", {
           body: {
             league_id: leagueId,
             expires_at: null,

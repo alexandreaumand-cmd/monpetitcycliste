@@ -39,7 +39,7 @@ export const CoureursExportCard = () => {
     setExporting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('export-coureurs-csv', {
+      const { data, error } = await supabase.functions.invoke('exports/coureurs-csv', {
         body: { saison_id: selectedSaison }
       });
 

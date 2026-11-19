@@ -102,7 +102,7 @@ export const RoundControlCenter = () => {
     queryKey: ['auction-stats', currentAuction?.id, selectedPhaseId, leagueId],
     queryFn: async () => {
       if (!currentAuction?.id || !selectedPhaseId) return null;
-      const { data, error } = await supabase.functions.invoke('auction-get-validation-status', {
+      const { data, error } = await supabase.functions.invoke('auction-get/validation-status', {
         body: { auction_id: currentAuction.id, phase_id: selectedPhaseId, league_id: leagueId }
       });
       if (error) throw error;
@@ -118,7 +118,7 @@ export const RoundControlCenter = () => {
     queryFn: async () => {
       if (!currentAuction?.id || !selectedPhaseId) return [];
       
-      const { data, error } = await supabase.functions.invoke('auction-get-managers-status', {
+      const { data, error } = await supabase.functions.invoke('auction-get/managers-status', {
         body: { 
           auction_id: currentAuction.id,
           phase_id: selectedPhaseId 

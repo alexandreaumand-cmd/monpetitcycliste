@@ -22,7 +22,7 @@ export const FullDatabaseExportCard = () => {
         setProgress(prev => Math.min(prev + 5, 90));
       }, 500);
 
-      const { data, error } = await supabase.functions.invoke('export-all-tables', {
+      const { data, error } = await supabase.functions.invoke('exports/all-tables', {
         method: 'POST',
       });
 

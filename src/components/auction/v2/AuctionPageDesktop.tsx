@@ -65,7 +65,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const { data: context, isLoading: contextLoading } = useQuery({
     queryKey: ["auction-context", phaseId, managerId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("auction-get-context", {
+      const { data, error } = await supabase.functions.invoke("auction-get/context", {
         body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
@@ -157,7 +157,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const { data: availableTeams = [] } = useQuery({
     queryKey: ["auction-teams", phaseId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("auction-get-teams", {
+      const { data, error } = await supabase.functions.invoke("auction-get/teams", {
         body: { phase_id: phaseId },
       });
       if (error) throw error;

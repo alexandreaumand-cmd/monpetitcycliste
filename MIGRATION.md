@@ -85,8 +85,23 @@ Détails de l'inventaire Storage :
 - **URLs publiques de l'ancien projet** (`oisfvryhpovwxaxqbmow.supabase.co/storage/...`) stockées en base, dans 444 lignes : `course_route_images` (240), `courses` (119), `startlist_imports` (32), `manager_sponsors` (27), `communication_batches` (17), `managers` (8), `communication_templates` (1). Elles fonctionnent tant que Lovable Cloud existe. Il faudra les réécrire vers le nouveau projet au moment de la bascule.
 - `arena_recap_runs` : 466 lignes mentionnent les anciens refs (journaux d'exécution), sans impact.
 
-### Étape 6 : edge functions ⏳ (bloquée)
-- 124 fonctions dans le repo. **Déployée : 1** (`course-leaderboard`, test : active, `verify_jwt = true`, CORS OK, 401 sans jeton).
+### Étape 6 : edge functions ✅ (98 sur 100, toutes les fonctions utiles)
+- **Limite du forfait gratuit confirmée : 100 fonctions par projet.** La 101ᵉ est refusée (`402 function.max_count`).
+- **Regroupement** pour tenir sous la limite : 22 fonctions sont devenues 4 fonctions « aiguilleurs », qui sélectionnent l'action par sous-chemin (`supabase.functions.invoke("admin-users/create")`) :
+  - `admin-users` : `create`, `delete`, `resend-confirmation`, `reset-password`, `set-role`, `list`, `toggle-ban` (ex-`admin-user-*`, `admin-users-list`)
+  - `exports` : `all-tables`, `baremes-csv`, `coureurs-csv`, `courses-csv`, `resultats-csv`, `rosters-csv` (ex-`export-*`)
+  - `auction-get` : `context`, `live-status`, `managers-status`, `teams`, `validation-status` (ex-`auction-get-*`)
+  - `league-invites` : `create`, `list`, `revoke`, `info` (ex-`leagues-create-invite`, `leagues-list-invites`, `leagues-revoke-invite`, `leagues-get-invite-info`)
+  - Code : `supabase/functions/<groupe>/handlers/<action>.ts` (fichier d'origine déplacé avec `git mv`). Seules l'en-tête et la ligne `serve(` → `registerHandler("<action>",` changent. Aiguillage : `supabase/functions/_shared/router.ts`. Front : 33 appels mis à jour dans 20 fichiers (`scripts/migration/group-functions*.ps1`).
+  - Vérifié (`scripts/migration/verify-routers.ps1`) : action inconnue → 404 de l'aiguilleur ; chaque action répond avec les messages de son code d'origine ; CORS OK.
+- **98 fonctions déployées = toutes les fonctions utiles.** Les 9 anciennes versions séparées (`auction-get-*`, invitations) ont été supprimées du nouveau projet. Restent non déployées, volontairement : les 7 inutiles et `process-email-queue` (Lovable).
+- ⚠️ **Ne jamais lancer `supabase functions deploy` sans nom de fonction** : le repo contient 106 dossiers, au-delà de la limite. Utiliser `deploy-functions-batches.ps1 -Needed C:\LaBordure-data\functions_needed.txt` (liste des 98).
+- ⚠️ **Le front de la branche ne fonctionne qu'avec le nouveau projet** (les aiguilleurs n'existent pas sur Lovable). Ne pas fusionner dans `main` avant la bascule.
+- Build du front (`npm run build`) **pas encore lancé** (dépendances non installées).
+- `verify_jwt = false` confirmé pour : `arena-recaps`, `live-broadcast-auto-scrape`, `scrape-rider-injuries`, `scrape-startlist-abandons`, `scrape-pcs-transfers`, `handle-email-unsubscribe`.
+
+Historique de cette étape :
+- Test initial : `course-leaderboard` (active, `verify_jwt = true`, CORS OK, 401 sans jeton).
 - Déploiement groupé refusé : `402 Max number of functions reached for project` (`function.max_count`). Le forfait actuel n'accepte pas 124 fonctions.
 - Tri (`C:\LaBordure-data\functions_usage.csv`) : **117 fonctions réellement appelées** (front, crons, SQL, appels entre fonctions). 7 inutiles : `auth-email-hook`, `handle-email-suppression`, `preview-transactional-email` (Lovable), `tweet`, `arena-recap-watchdog`, `arena-pronostic-standings`, `rider-points-detail`. `process-email-queue` est appelée mais dépend de Lovable.
 - Déploiement par lots (`scripts/migration/deploy-functions-batches.ps1`, priorité crons > joueurs > admin) interrompu par le réseau (Wi-Fi instable : `TransportError`). Aucun lot n'a été appliqué.
@@ -110,7 +125,7 @@ Détails de l'inventaire Storage :
 - Hors Lovable, ces boutons ne fonctionneront pas. Concerne 80 comptes (73 Google, 7 Apple), sur 158.
 
 ### À faire (dans l'ordre)
-1. Réseau stable, puis décision sur la limite de fonctions (forfait Pro, ou regroupement de fonctions), puis déploiement des 116 à 117 fonctions utiles (`deploy-functions-batches.ps1`).
+1. Installer les dépendances et lancer `npm run build` pour valider le front modifié (appels des fonctions regroupées), puis tester les écrans admin, exports, enchères et invitations sur le nouveau projet.
 2. Saisir les secrets d'edge functions (liste ci-dessus).
 3. Créer les 4 secrets Vault, puis relire et exécuter `07-crons.sql`.
 4. Choisir l'option Realtime, puis relire et exécuter `08-realtime.sql`.
@@ -122,7 +137,8 @@ Détails de l'inventaire Storage :
 - **80 comptes Google/Apple** (73 + 7) passent par le broker Lovable (`lovable.auth`) : ils ne pourront pas se connecter hors Lovable tant que Google et Apple ne sont pas configurés sur le nouveau projet et que `src/pages/Auth.tsx` n'est pas adapté (phase 2).
 - Sessions non transférées : tous les utilisateurs devront se reconnecter.
 - **Données figées au 18/11 à 10:48** : la copie est une répétition. La bascule demandera un nouvel export (avec pause des écritures sur Lovable).
-- Limite de fonctions du forfait : sans Pro, toutes les fonctions utiles ne tiendront pas sur le projet.
+- Limite de 100 fonctions (forfait gratuit) : 98 utilisées. Toute nouvelle fonction devra rejoindre un aiguilleur existant, ou il faudra passer en Pro.
+- Fonctions regroupées : si une de ces 22 fonctions est modifiée dans Lovable (`main`) d'ici la bascule, reporter la modification à la main dans `supabase/functions/<groupe>/handlers/<action>.ts`.
 - Emails (inscription, réinitialisation de mot de passe, transactionnels) : dépendent de Lovable, pas encore remplacés.
 - Le bucket `database_export_18_11_26` est celui des exports Lovable (il contient le backup lui-même) : ne pas y copier de fichiers.
 - `pg_net` est installé dans le schéma `public` (comme sur Lovable), et non dans `extensions`.

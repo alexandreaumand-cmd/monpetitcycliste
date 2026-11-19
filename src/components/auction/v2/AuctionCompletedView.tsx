@@ -64,7 +64,7 @@ export function AuctionCompletedView({
     queryKey: ['auction-validation-status', phaseId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke(
-        'auction-get-validation-status',
+        'auction-get/validation-status',
         { body: { phase_id: phaseId, league_id: leagueId } }
       );
       if (error) throw error;

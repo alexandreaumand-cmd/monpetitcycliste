@@ -44,7 +44,7 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
       return;
     }
     
-    const { data, error } = await supabase.functions.invoke('leagues-list-invites', {
+    const { data, error } = await supabase.functions.invoke('league-invites/list', {
       body: { league_id: leagueId },
     });
 
@@ -67,7 +67,7 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
   async function createInvite() {
     setCreating(true);
 
-    const { data, error } = await supabase.functions.invoke('leagues-create-invite', {
+    const { data, error } = await supabase.functions.invoke('league-invites/create', {
       body: {
         league_id: leagueId,
         expires_at: expiresAt || null,
@@ -99,7 +99,7 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
   async function revokeInvite(token: string) {
     if (!confirm("Voulez-vous vraiment révoquer cette invitation ?")) return;
 
-    const { data, error } = await supabase.functions.invoke('leagues-revoke-invite', {
+    const { data, error } = await supabase.functions.invoke('league-invites/revoke', {
       body: { league_id: leagueId, token },
     });
 

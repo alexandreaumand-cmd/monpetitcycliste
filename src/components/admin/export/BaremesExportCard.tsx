@@ -29,7 +29,7 @@ export const BaremesExportCard = () => {
     setExporting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('export-baremes-csv', {
+      const { data, error } = await supabase.functions.invoke('exports/baremes-csv', {
         body: saisonId === "all" ? {} : { saison_id: saisonId },
       });
 

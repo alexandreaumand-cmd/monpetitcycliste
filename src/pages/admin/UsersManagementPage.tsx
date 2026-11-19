@@ -90,7 +90,7 @@ export default function UsersManagementPage() {
   const { data: users, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['admin-users-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('admin-users-list');
+      const { data, error } = await supabase.functions.invoke('admin-users/list');
       if (error) throw error;
       return data.users as UserData[];
     }
@@ -99,7 +99,7 @@ export default function UsersManagementPage() {
   // Set role mutation
   const setRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-set-role', {
+      const { data, error } = await supabase.functions.invoke('admin-users/set-role', {
         body: { user_id: userId, role }
       });
       if (error) throw error;
@@ -118,7 +118,7 @@ export default function UsersManagementPage() {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (email: string) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-reset-password', {
+      const { data, error } = await supabase.functions.invoke('admin-users/reset-password', {
         body: { email }
       });
       if (error) throw error;
@@ -137,7 +137,7 @@ export default function UsersManagementPage() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: { email: string; manager_name: string; role: string; send_invitation: boolean }) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-create', {
+      const { data, error } = await supabase.functions.invoke('admin-users/create', {
         body: userData
       });
       if (error) throw error;
@@ -164,7 +164,7 @@ export default function UsersManagementPage() {
   // Toggle ban mutation
   const toggleBanMutation = useMutation({
     mutationFn: async ({ userId, ban }: { userId: string; ban: boolean }) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-toggle-ban', {
+      const { data, error } = await supabase.functions.invoke('admin-users/toggle-ban', {
         body: { user_id: userId, ban }
       });
       if (error) throw error;
@@ -184,7 +184,7 @@ export default function UsersManagementPage() {
   // Resend confirmation mutation
   const resendConfirmationMutation = useMutation({
     mutationFn: async (email: string) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-resend-confirmation', {
+      const { data, error } = await supabase.functions.invoke('admin-users/resend-confirmation', {
         body: { email }
       });
       if (error) throw error;
@@ -201,7 +201,7 @@ export default function UsersManagementPage() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke('admin-user-delete', {
+      const { data, error } = await supabase.functions.invoke('admin-users/delete', {
         body: { user_id: userId }
       });
       if (error) throw error;

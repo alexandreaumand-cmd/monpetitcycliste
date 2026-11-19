@@ -29,7 +29,7 @@ export const RostersExportCard = () => {
     setExporting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('export-rosters-csv', {
+      const { data, error } = await supabase.functions.invoke('exports/rosters-csv', {
         body: phaseId === "all" ? {} : { phase_id: phaseId },
       });
 

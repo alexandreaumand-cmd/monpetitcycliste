@@ -78,7 +78,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
       if (openAuction) {
         // Récupérer le statut de validation pour l'enchère ouverte
         const { data: validationData, error } = await supabase.functions.invoke(
-          'auction-get-validation-status',
+          'auction-get/validation-status',
           {
             body: { auction_id: openAuction.id, league_id: leagueId }
           }

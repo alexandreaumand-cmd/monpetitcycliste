@@ -97,7 +97,7 @@ export function AuctionLiveAnnouncements({
   const { data: liveStatus, refetch } = useQuery({
     queryKey: ['auction-live-status', effectiveAuctionId, managerId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('auction-get-live-status', {
+      const { data, error } = await supabase.functions.invoke('auction-get/live-status', {
         body: { auction_id: effectiveAuctionId, phase_id: phaseId, league_id: leagueId },
       });
       if (error) throw error;

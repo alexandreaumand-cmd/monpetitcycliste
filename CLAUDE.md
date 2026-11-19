@@ -5,6 +5,7 @@ App de fantasy cyclisme (labordure.app). Construite avec Lovable, backend Lovabl
 ## Stack
 - Front : React 18 + Vite + TypeScript, Tailwind + shadcn/ui (Radix), TanStack Query, i18next, framer-motion.
 - Backend : Supabase (Postgres, Auth, Storage, Realtime, Edge Functions Deno dans `supabase/functions`, 124 fonctions + `_shared`).
+- Fonctions regroupées (limite de 100 par projet) : `admin-users`, `exports`, `auction-get`, `league-invites`. Chaque action est dans `supabase/functions/<groupe>/handlers/<action>.ts`, aiguillée par `_shared/router.ts`, et appelée par `supabase.functions.invoke("<groupe>/<action>")`. Une nouvelle fonction d'admin ou d'export doit devenir une action d'un groupe. Ne jamais lancer `supabase functions deploy` sans nom de fonction (106 dossiers > 100).
 - Migrations SQL : `supabase/migrations` (~600 fichiers, générés par Lovable).
 - `drizzle/` + `drizzle.config.ts` : schéma Drizzle annexe (lit `LOVABLE_DB_MIGRATION_URL`), pas utilisé par le build.
 - Lovable : `@lovable.dev/cloud-auth-js` (Google/Apple sign-in, `src/integrations/lovable`), `@lovable.dev/email-js` et `@lovable.dev/webhooks-js` (edge functions email).

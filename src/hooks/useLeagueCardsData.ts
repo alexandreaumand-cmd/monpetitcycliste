@@ -153,7 +153,7 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
           ? supabase.from('annonces').select('auction_id').in('auction_id', allAuctionIds).eq('published', true)
           : Promise.resolve({ data: [] as { auction_id: string }[] }),
         ...openAuctions.map(auction =>
-          supabase.functions.invoke('auction-get-validation-status', {
+          supabase.functions.invoke('auction-get/validation-status', {
             body: { auction_id: auction.id, league_id: auction.league_id }
           }).then(({ data }) => ({ auctionId: auction.id, data })).catch(() => ({ auctionId: auction.id, data: null }))
         ),
