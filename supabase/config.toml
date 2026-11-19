@@ -11,3 +11,19 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+# Appelées par pg_cron sans jeton : elles vérifient elles-mêmes l'en-tête x-cron-secret.
+[functions.arena-recaps]
+verify_jwt = false
+
+[functions.live-broadcast-auto-scrape]
+verify_jwt = false
+
+[functions.scrape-rider-injuries]
+verify_jwt = false
+
+[functions.scrape-startlist-abandons]
+verify_jwt = false
+
+[functions.scrape-pcs-transfers]
+verify_jwt = false

@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Migration Supabase : jamais de secrets ni de données dans git
+.env
+.env.*
+!.env.example
+*.backup
+*.dump
+*.sql.gz
+*.zst
+supabase/.temp/
+supabase/.branches/
+migration-data/
