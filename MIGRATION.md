@@ -157,6 +157,12 @@ Détails :
 
 ## 3. Checklist de test (sur le nouveau projet, avant toute bascule)
 
+**Préparation du test local (fait le 2026-11-19)**
+- `.env.local` (ignoré par git) branche le front local sur `tokvwkkhwrgncurmipjh` (URL, clé anon publique, ref). Il remplace les valeurs de `.env` (Lovable) en local uniquement.
+- `.claude/launch.json` : configuration `labordure-copie` (`npm run dev`, port 8080, Node portable).
+- À lancer sur un réseau stable : `npm install`, puis `npm run build` (valide le front modifié), puis `npm run dev`.
+- Périmètre du 1er test (propriétaire, compte email et mot de passe) : connexion et navigation, enchères en lecture seule. Le test à plusieurs joueurs se fera plus tard, sur une copie hébergée (phase 2).
+
 **Connexion**
 - [ ] Un compte email existant se connecte avec son mot de passe actuel (hachage conservé).
 - [ ] Réinitialisation de mot de passe : l'email arrive ? (dépend du fournisseur d'email, probablement KO avant la phase 2).
