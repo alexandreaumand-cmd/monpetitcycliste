@@ -106,9 +106,17 @@ Historique de cette étape :
 - Tri (`C:\LaBordure-data\functions_usage.csv`) : **117 fonctions réellement appelées** (front, crons, SQL, appels entre fonctions). 7 inutiles : `auth-email-hook`, `handle-email-suppression`, `preview-transactional-email` (Lovable), `tweet`, `arena-recap-watchdog`, `arena-pronostic-standings`, `rider-points-detail`. `process-email-queue` est appelée mais dépend de Lovable.
 - Déploiement par lots (`scripts/migration/deploy-functions-batches.ps1`, priorité crons > joueurs > admin) interrompu par le réseau (Wi-Fi instable : `TransportError`). Aucun lot n'a été appliqué.
 - `supabase/config.toml` : `verify_jwt = false` ajouté pour les 5 fonctions appelées par cron sans jeton, qui vérifient elles-mêmes `x-cron-secret` (`arena-recaps`, `live-broadcast-auto-scrape`, `scrape-rider-injuries`, `scrape-startlist-abandons`, `scrape-pcs-transfers`).
+- **Twitter/X abandonné** (décision du propriétaire : l'API est payante). Les secrets `TWITTER_*`, `X_*` et `RELAY_PASSWORD` ne seront pas saisis, et `tweet-race-result` échouera si elle est appelée. À retirer du front et des fonctions en phase 2, ce qui libérera aussi une place de fonction.
+- VAPID (push) : non saisi en phase 1, pour éviter les envois en double. À la bascule, reprendre les clés d'origine si possible, sinon les joueurs devront réactiver les notifications.
 - Secrets d'edge functions **à saisir par le propriétaire** (Edge Functions → Secrets) : `CRON_SECRET`, `LIVE_BROADCAST_CRON_SECRET`, `EMAIL_FROM_DOMAIN`, `EMAIL_ROOT_DOMAIN`, `EMAIL_SENDER_DOMAIN`, `EMAIL_SITE_NAME`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `TWITTER_CONSUMER_KEY`, `TWITTER_CONSUMER_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`, `RELAY_PASSWORD`. Ne marchent qu'avec Lovable : `LOVABLE_API_KEY`, `LOVABLE_SEND_URL`.
 
-### Étape 7 : crons 📝 (SQL prêt, non exécuté)
+### Étape 7 : crons ✅ (créés désactivés, 2026-11-19)
+- `07-crons.sql` exécuté : 14 jobs, tous `active = false`, aucun ne visant l'ancien projet. Secrets Vault créés par le propriétaire. `CRON_SECRET` et `LIVE_BROADCAST_CRON_SECRET` sont de **nouvelles valeurs** (absentes ou illisibles sur Lovable), identiques entre Vault et les secrets des fonctions.
+- Tests (`07b-test-crons.sql`) : `refresh_standings_cache()` OK (9,6 s) ; appel pg_net avec l'URL et la clé anon lues dans Vault → 404 de l'aiguilleur, donc la clé est acceptée par la passerelle.
+- Pas encore testé : un cron avec `x-cron-secret` de bout en bout (ces fonctions font du scraping et écrivent dans la copie).
+- Sur Lovable, la liste des secrets ne contient pas de `CRON_SECRET` : les fonctions qui l'attendent (`arena-recaps`, `scrape-rider-injuries`, `scrape-pcs-transfers`) ne le recevaient pas. Les journaux Lovable n'ont pas été consultés.
+
+Détails du SQL :
 - Fichier : `scripts/migration/sql/07-crons.sql`. Il recrée les 14 jobs du backup (6 purement SQL, 8 appels HTTP) avec les mêmes horaires, corps et conditions. Les URLs visent le nouveau projet et les secrets sont lus dans Vault (rien en dur). Le script s'arrête si un secret manque.
 - Il réécrit aussi `public.trigger_auto_open_auctions()`, restaurée avec l'URL et la clé **de l'ancien projet** en dur (elle appellerait la prod Lovable).
 - Changement volontaire : `scrape-pcs-transfers-daily` envoie en plus `x-cron-secret` (sur Lovable, il n'envoyait que `apikey`, que la fonction refuse ; le cron échouait donc probablement).
