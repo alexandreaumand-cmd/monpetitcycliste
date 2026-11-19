@@ -11,6 +11,7 @@
 --   live_broadcast_cron_secret  = même valeur que le secret d'edge function LIVE_BROADCAST_CRON_SECRET
 -- Et les edge functions appelées doivent être déployées (étape 6), sinon les appels HTTP renverront 404.
 --
+-- Les 14 jobs sont créés DÉSACTIVÉS (voir section 5), à activer au moment de la bascule.
 -- pg_cron et pg_net sont déjà actifs (restaurés avec le backup).
 -- cron.schedule(nom, …) remplace un job du même nom : ce script peut être relancé.
 -- =====================================================================
@@ -177,7 +178,22 @@ select net.http_post(
 );
 $c$);
 
--- 5. Contrôle : 14 jobs, aucun ne vise un autre projet.
+-- 5. Tous les jobs sont créés DÉSACTIVÉS : tant que la prod tourne sur Lovable, la copie ne doit
+--    pas envoyer de rappels push, de récaps ni de tweets en double aux vrais joueurs.
+--    (Même transaction : pg_cron ne voit les jobs qu'au COMMIT, donc aucun ne s'exécute entre-temps.)
+--    Tester un job à la main : exécuter sa commande (SELECT command FROM cron.job WHERE jobname = '…').
+--    Activer à la bascule : SELECT cron.alter_job(jobid, active := true) FROM cron.job;
+SELECT cron.alter_job(jobid, active := false)
+FROM cron.job
+WHERE jobname IN (
+  'reconcile-missing-points', 'auto-archive-completed-leagues', 'auto-close-ghost-auctions',
+  'auto-open-scheduled-auctions', 'refresh-standings-cache', 'purge-old-app-data',
+  'scrape-pcs-transfers-daily', 'arena-weekly-recap', 'arena-daily-recap', 'live-broadcast-auto-scrape',
+  'arena-pronostic-reminder', 'startlist-tracker-sync', 'scrape-rider-injuries-daily',
+  'scrape-startlist-abandons-daily'
+);
+
+-- 6. Contrôle : 14 jobs, tous inactifs, aucun ne vise un autre projet.
 SELECT jobname, schedule, active,
        command ~ 'oisfvryhpovwxaxqbmow|khahpetvqjoyrwambaqn' AS vise_ancien_projet
 FROM cron.job ORDER BY jobname;

@@ -113,6 +113,7 @@ Historique de cette étape :
 - Il réécrit aussi `public.trigger_auto_open_auctions()`, restaurée avec l'URL et la clé **de l'ancien projet** en dur (elle appellerait la prod Lovable).
 - Changement volontaire : `scrape-pcs-transfers-daily` envoie en plus `x-cron-secret` (sur Lovable, il n'envoyait que `apikey`, que la fonction refuse ; le cron échouait donc probablement).
 - Prérequis (Vault, saisi par le propriétaire) : `project_ref`, `project_anon_key`, `cron_secret`, `live_broadcast_cron_secret`. Les edge functions appelées doivent être déployées avant.
+- **Les 14 jobs sont créés désactivés** (décision du propriétaire) : tant que Lovable tourne, la copie ne doit pas envoyer de rappels push, de récaps ni de tweets en double. On teste un job en exécutant sa commande à la main, et on active tout à la bascule : `SELECT cron.alter_job(jobid, active := true) FROM cron.job;`.
 - Le job `process-email-queue` (migrations) n'existe pas dans le backup. La fonction `public.email_queue_wake()` (qui le créerait) et `email_queue_dispatch()` visent encore l'ancien projet ; elles sont inertes tant que les files `pgmq` ne sont pas recréées (phase 2, emails).
 
 ### Étape 8 : Realtime 📝 (SQL prêt, non exécuté)
@@ -166,8 +167,9 @@ Historique de cette étape :
 - [ ] Les logs des fonctions (dashboard) ne signalent aucun secret manquant.
 
 **Crons**
-- [ ] `SELECT jobname, active FROM cron.job;` : 14 jobs, aucun ne vise l'ancien projet.
-- [ ] Après un passage (15 min) : `SELECT status, return_message FROM cron.job_run_details ORDER BY start_time DESC LIMIT 20;` sans échec.
+- [ ] `SELECT jobname, active FROM cron.job;` : 14 jobs, tous `active = false` en phase 1, aucun ne vise l'ancien projet.
+- [ ] Test manuel d'un job sans effet visible pour les joueurs (par exemple `SELECT public.refresh_standings_cache();` ou la commande de `scrape-rider-injuries-daily`).
+- [ ] À la bascule, après activation : `SELECT status, return_message FROM cron.job_run_details ORDER BY start_time DESC LIMIT 20;` sans échec.
 - [ ] `SELECT status_code, count(*) FROM net._http_response GROUP BY 1;` : des 200, pas de 401 ni de 404.
 
 **Realtime**
