@@ -200,3 +200,22 @@ Détails :
 **Realtime**
 - [ ] `pg_publication_tables` contient les tables choisies.
 - [ ] Une nouvelle annonce ou notification apparaît en direct dans un second navigateur, sans recharger la page.
+
+## 4. Phase 2 : pré-prod (en cours)
+
+**Organisation (décision du propriétaire, 2026-11-20)**
+- **Prod** = `tokvwkkhwrgncurmipjh` (le projet de la phase 1, données du 18/11, Irlande). Les données Lovable ne doivent pas évoluer d'ici la bascule ; un export de contrôle (comparaison des comptes de lignes) sera fait juste avant.
+- **Pré-prod** = `ltfmtbbthjvdjqosyanp` (« La Bordure preprod », Irlande, mot de passe distinct de la prod). Restaurée depuis le même backup, puis **anonymisée**.
+- `psql-target.ps1` exige désormais `-Ref` (prod ou pré-prod) et affiche la cible ; `pgpass.conf` contient une ligne par projet.
+
+**Pré-prod : fait**
+- Restauration (même `restore.sql`) : 0 écart sur 80 tables (179 374 lignes), structure identique à la prod.
+- Anonymisation (`scripts/migration/sql/preprod-anonymize.sql`, répétée à blanc puis appliquée) : 152 comptes anonymisés (`joueur-N@preprod.labordure.invalid`, mot de passe vidé, identités Google/Apple neutralisées), managers « Joueur NNN » / « Sponsor NNN », chat de l'Arena remplacé, emails et noms masqués dans les textes libres, push, messages de contact et journaux d'emails supprimés. **6 testeurs volontaires conservés** (liste locale `C:\LaBordure-data\preprod-testeurs.txt`, hors git) ; 5 ont un mot de passe, le 6ᵉ (Google/Apple) aura besoin d'un mot de passe de test.
+- Garde-fous : le script refuse toute autre cible que la pré-prod, et s'arrête si un email de la liste ne correspond à aucun compte. Prod vérifiée intacte après l'opération.
+- Limite : seuls les noms de 4 caractères et plus, tels qu'écrits dans `managers`, sont remplacés dans les textes libres.
+
+**Pré-prod : à faire**
+- Storage (maillots, images de parcours ; pas d'avatars).
+- 98 fonctions, secrets (`CRON_SECRET`, `LIVE_BROADCAST_CRON_SECRET` propres à la pré-prod ; jamais VAPID ni emails réels).
+- Vault + crons désactivés (`07-crons.sql` à paramétrer pour la ref pré-prod), Realtime option A.
+- Réglage Auth : désactiver « Confirm email » pour permettre la création de comptes de test.

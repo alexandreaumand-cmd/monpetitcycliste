@@ -1,5 +1,6 @@
 # LECTURE SEULE : compare storage.objects de la cible au manifeste du backup (chemin, taille, type MIME).
 param(
+  [Parameter(Mandatory)] [string] $Ref,
   [string] $Manifest = 'C:\LaBordure-data\storage\storage_manifest.csv',
   [string] $Buckets = 'email-assets,manager-avatars,sponsor-jerseys,startlist-route-images'   # liste séparée par des virgules
 )
@@ -15,7 +16,7 @@ $csv = 'C:\LaBordure-data\target_storage_objects.csv'
 SELECT bucket_id, name, metadata->>'size', metadata->>'mimetype' FROM storage.objects;
 \o
 "@ | Set-Content $sqlFile -Encoding ascii
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'psql-target.ps1') -File $sqlFile | Out-Null
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'psql-target.ps1') -Ref $Ref -File $sqlFile | Out-Null
 
 $target = @{}
 Get-Content $csv -Encoding UTF8 | Where-Object { $_ } | ForEach-Object {
