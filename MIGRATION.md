@@ -214,8 +214,12 @@ Détails :
 - Garde-fous : le script refuse toute autre cible que la pré-prod, et s'arrête si un email de la liste ne correspond à aucun compte. Prod vérifiée intacte après l'opération.
 - Limite : seuls les noms de 4 caractères et plus, tels qu'écrits dans `managers`, sont remplacés dans les textes libres.
 
+- Storage : 407 fichiers (`email-assets`, `sponsor-jerseys`, `startlist-route-images`), 0 écart ; avatars volontairement non copiés.
+- 98 fonctions déployées (`deploy-functions-batches.ps1 -Ref ltfmtbbthjvdjqosyanp -BatchSize 5`), les 6 `verify_jwt = false` attendues.
+- Secrets propres à la pré-prod (`CRON_SECRET`, `LIVE_BROADCAST_CRON_SECRET`, Vault `project_ref`, `project_anon_key`, `cron_secret`, `live_broadcast_cron_secret`). Jamais VAPID ni emails réels.
+- Crons : `07-crons.sql` (garde-fou désormais paramétré par le projet visé) → 14 jobs désactivés ; `trigger_auto_open_auctions` vise la pré-prod. Realtime option A. Tests `07b` OK (cache des classements 9,5 s ; appel pg_net via Vault → 404 de l'aiguilleur).
+
 **Pré-prod : à faire**
-- Storage (maillots, images de parcours ; pas d'avatars).
-- 98 fonctions, secrets (`CRON_SECRET`, `LIVE_BROADCAST_CRON_SECRET` propres à la pré-prod ; jamais VAPID ni emails réels).
-- Vault + crons désactivés (`07-crons.sql` à paramétrer pour la ref pré-prod), Realtime option A.
 - Réglage Auth : désactiver « Confirm email » pour permettre la création de comptes de test.
+- Donner un mot de passe de test au 6ᵉ testeur (compte Google/Apple) via l'API d'administration, quand il en aura besoin.
+- Front de la pré-prod : hébergement à choisir (Vercel, Netlify, Scaleway…) avec un `.env` qui vise `ltfmtbbthjvdjqosyanp`. En attendant, test local possible avec un `.env.local` pointé sur la pré-prod.

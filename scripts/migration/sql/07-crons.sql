@@ -1,10 +1,10 @@
 -- =====================================================================
--- Étape 7 : recréer les 14 crons sur le nouveau projet (tokvwkkhwrgncurmipjh)
+-- Étape 7 : recréer les 14 crons sur un projet (prod tokvwkkhwrgncurmipjh ou pré-prod ltfmtbbthjvdjqosyanp)
 -- À RELIRE avant exécution. Aucun secret dans ce fichier : tout est lu
 -- dans Supabase Vault au moment de l'exécution du cron.
 --
 -- PRÉREQUIS (à faire toi-même dans le dashboard : Integrations → Vault → Add new secret)
---   project_ref                 = tokvwkkhwrgncurmipjh
+--   project_ref                 = la ref du projet visé (celle passée à psql-target.ps1 -Ref)
 --   project_anon_key            = clé "anon" (legacy, commence par eyJ…) du NOUVEAU projet
 --                                 (Project Settings → API Keys → Legacy API keys)
 --   cron_secret                 = même valeur que le secret d'edge function CRON_SECRET
@@ -17,6 +17,8 @@
 -- =====================================================================
 
 BEGIN;
+-- Ref du projet visé, transmise par psql-target.ps1 (-v target_ref=...).
+SELECT set_config('migration.target_ref', :'target_ref', true);
 
 -- 0. Garde-fou : on refuse d'aller plus loin s'il manque un secret Vault.
 DO $$
@@ -29,8 +31,8 @@ BEGIN
   IF v_missing IS NOT NULL THEN
     RAISE EXCEPTION 'Secrets Vault manquants : %', v_missing;
   END IF;
-  IF (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_ref') <> 'tokvwkkhwrgncurmipjh' THEN
-    RAISE EXCEPTION 'project_ref dans Vault ne vaut pas tokvwkkhwrgncurmipjh';
+  IF (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_ref') <> current_setting('migration.target_ref') THEN
+    RAISE EXCEPTION 'project_ref dans Vault (%) ne correspond pas au projet visé (%)', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_ref'), current_setting('migration.target_ref');
   END IF;
 END $$;
 
