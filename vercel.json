@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm install --no-audit --no-fund",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"preprod\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"production\" ]; then exit 1; else exit 0; fi",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
