@@ -143,7 +143,13 @@ Détails :
 4. Choisir l'option Realtime, puis relire et exécuter `08-realtime.sql`.
 5. Commit de la branche `migration/supabase-phase1` (sans `.backup` ni `.env`) ; ne pas pousser sur `main`.
 6. Fin de phase 1 : supprimer `%APPDATA%\postgresql\pgpass.conf` ; garder `C:\LaBordure-data` hors OneDrive, puis le supprimer une fois la migration validée (données personnelles, hachages de mots de passe).
-7. Phase 2 et suivantes (hors périmètre) : Google/Apple sans `lovable.auth`, emails sans Lovable (`auth-email-hook`, `process-email-queue`, files `pgmq`), `.env` et `config.toml` vers le nouveau projet, réécriture des 444 URLs Storage en base, hébergement, puis un export frais juste avant la bascule (le backup date du 18/11 ; tout ce qui a été écrit depuis sur Lovable n'est pas dans la copie).
+7. **Besoin exprimé (2026-11-20) : une prod ET une pré-prod.** À concevoir en phase 2 :
+   - **Base :** deux projets Supabase. Le forfait gratuit permet 2 projets actifs par compte, le projet actuel `tokvwkkhwrgncurmipjh` étant le premier. L'autre option est le « branching » Supabase (forfait payant).
+   - **Front :** deux adresses (par exemple `labordure.app` et `preprod.labordure.app`), chacune avec son `.env`.
+   - **Fonctions et SQL :** chaque projet a sa limite de 100 fonctions, ses secrets, son Vault et ses crons. Les crons de la pré-prod doivent rester désactivés ou ne rien envoyer aux vrais joueurs.
+   - **Données de la pré-prod :** copie de la prod (comme cette phase 1) ou jeu de test.
+   - **Processus :** les migrations SQL et les fonctions passent d'abord par la pré-prod, puis par la prod. On ne rejoue plus le backup à la main.
+8. Phase 2 et suivantes (hors périmètre) : Google/Apple sans `lovable.auth`, emails sans Lovable (`auth-email-hook`, `process-email-queue`, files `pgmq`), `.env` et `config.toml` vers le nouveau projet, réécriture des 444 URLs Storage en base, hébergement, puis un export frais juste avant la bascule (le backup date du 18/11 ; tout ce qui a été écrit depuis sur Lovable n'est pas dans la copie).
 
 ### Risques relevés
 - **80 comptes Google/Apple** (73 + 7) passent par le broker Lovable (`lovable.auth`) : ils ne pourront pas se connecter hors Lovable tant que Google et Apple ne sont pas configurés sur le nouveau projet et que `src/pages/Auth.tsx` n'est pas adapté (phase 2).
@@ -163,8 +169,10 @@ Détails :
 - À lancer sur un réseau stable : `npm install`, puis `npm run build` (valide le front modifié), puis `npm run dev`.
 - Périmètre du 1er test (propriétaire, compte email et mot de passe) : connexion et navigation, enchères en lecture seule. Le test à plusieurs joueurs se fera plus tard, sur une copie hébergée (phase 2).
 
+**Résultat du test local du 2026-11-20 (propriétaire)** : front de la branche en local (`npm run dev`, `.env.local` sur la copie), connexion par email et mot de passe, puis navigation dans les écrans : **« fonctionne bien »** (retour du propriétaire). Côté copie : 1 connexion enregistrée (`auth.users.last_sign_in_at`, 2026-11-20 08:18 UTC), 2 sessions. Le build (`npm run build`) passe ; le bundle ne vise que `tokvwkkhwrgncurmipjh`. Non testé : enchères à plusieurs joueurs (à faire sur une copie hébergée), emails, Google/Apple, crons avec `x-cron-secret`.
+
 **Connexion**
-- [ ] Un compte email existant se connecte avec son mot de passe actuel (hachage conservé).
+- [x] Un compte email existant se connecte avec son mot de passe actuel (hachage conservé), testé le 2026-11-20.
 - [ ] Réinitialisation de mot de passe : l'email arrive ? (dépend du fournisseur d'email, probablement KO avant la phase 2).
 - [ ] Les boutons Google et Apple : échec attendu tant que `lovable.auth` est en place (à noter, pas à corriger en phase 1).
 - [ ] Création d'un compte de test, puis présence dans `auth.users` et dans `public.managers` (triggers).

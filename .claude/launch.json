@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "labordure-copie",
-      "runtimeExecutable": "C:\\Users\\LudovicBRIAND\\tools\\node-v26.13.1-win-x64\\npm.cmd",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\LaBordure\\scripts\\migration\\dev-copie.ps1"],
       "port": 8080
     }
   ]
